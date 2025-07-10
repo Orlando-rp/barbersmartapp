@@ -2,6 +2,7 @@ import Layout from "@/components/layout/Layout";
 import StatsCard from "@/components/dashboard/StatsCard";
 import AppointmentList from "@/components/dashboard/AppointmentList";
 import RevenueChart from "@/components/dashboard/RevenueChart";
+import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -30,10 +31,12 @@ const Index = () => {
                 Gerencie sua barbearia de forma inteligente e eficiente
               </p>
             </div>
-            <Button variant="premium" size="lg" className="shadow-gold">
-              <UserPlus className="mr-2 h-5 w-5" />
-              Novo Agendamento
-            </Button>
+            <AppointmentDialog>
+              <Button variant="premium" size="lg" className="shadow-gold">
+                <UserPlus className="mr-2 h-5 w-5" />
+                Novo Agendamento
+              </Button>
+            </AppointmentDialog>
           </div>
         </div>
 
@@ -70,9 +73,9 @@ const Index = () => {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Appointments List */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             <AppointmentList />
           </div>
 

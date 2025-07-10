@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import { ServiceDialog } from "@/components/dialogs/ServiceDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -70,10 +71,12 @@ const Services = () => {
             <h1 className="text-3xl font-bold text-foreground">Serviços</h1>
             <p className="text-muted-foreground">Gerencie o catálogo de serviços da sua barbearia</p>
           </div>
-          <Button variant="premium" size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Novo Serviço
-          </Button>
+          <ServiceDialog>
+            <Button variant="premium" size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Novo Serviço
+            </Button>
+          </ServiceDialog>
         </div>
 
         {/* Stats Cards */}

@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import { ClientDialog } from "@/components/dialogs/ClientDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,10 +53,12 @@ const Clients = () => {
             <h1 className="text-3xl font-bold text-foreground">Clientes</h1>
             <p className="text-muted-foreground">Gerencie a base de clientes da sua barbearia</p>
           </div>
-          <Button variant="premium" size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Novo Cliente
-          </Button>
+          <ClientDialog>
+            <Button variant="premium" size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Novo Cliente
+            </Button>
+          </ClientDialog>
         </div>
 
         {/* Stats Cards */}

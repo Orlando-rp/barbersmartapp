@@ -85,7 +85,18 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
-  }
+  /* Enhanced Animations */
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s ease-out;
+  --bounce-in: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Enhanced Shadows */
+  --shadow-soft: 0 2px 8px -2px hsl(var(--primary) / 0.1);
+  --shadow-medium: 0 4px 16px -4px hsl(var(--primary) / 0.15);
+  --shadow-large: 0 8px 32px -8px hsl(var(--primary) / 0.2);
+  --shadow-gold: 0 4px 20px -4px hsl(var(--warning) / 0.3);
+  --shadow-glow: 0 0 20px hsl(var(--primary) / 0.4);
+}
 
   .dark {
     /* Dark theme - Professional barbershop at night */
@@ -200,5 +211,89 @@
 
   .bg-brand-glow {
     @apply bg-primary shadow-gold;
+  }
+
+  /* Enhanced Component Classes */
+  .barbershop-card {
+    @apply bg-card/80 backdrop-blur-sm border-border/50 shadow-soft transition-all duration-300 hover:shadow-medium hover:bg-card;
+  }
+
+  .barbershop-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+  }
+
+  .gradient-subtle {
+    background: linear-gradient(135deg, hsl(var(--background)), hsl(var(--accent) / 0.3));
+  }
+
+  .gradient-gold {
+    background: linear-gradient(135deg, hsl(var(--warning)), hsl(var(--warning) / 0.8));
+  }
+
+  /* Interactive Elements */
+  .interactive-scale {
+    @apply transition-transform duration-200 hover:scale-105 active:scale-95;
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 2s infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.2);
+    }
+    50% {
+      box-shadow: 0 0 30px hsl(var(--primary) / 0.4);
+    }
+  }
+
+  /* Loading States */
+  .skeleton {
+    @apply animate-pulse bg-muted/50 rounded;
+  }
+
+  /* Enhanced Buttons */
+  .btn-loading {
+    @apply opacity-70 cursor-not-allowed;
+  }
+
+  .btn-loading::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Notification Styles */
+  .notification-badge {
+    @apply absolute -top-1 -right-1 h-5 w-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center text-xs font-medium;
+  }
+
+  /* Page Transitions */
+  .page-enter {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  .page-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
   }
 }

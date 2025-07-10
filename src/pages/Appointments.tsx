@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Plus, Filter, Search } from "lucide-react";
@@ -14,10 +15,12 @@ const Appointments = () => {
             <h1 className="text-3xl font-bold text-foreground">Agendamentos</h1>
             <p className="text-muted-foreground">Gerencie todos os agendamentos da sua barbearia</p>
           </div>
-          <Button variant="premium" size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Novo Agendamento
-          </Button>
+          <AppointmentDialog>
+            <Button variant="premium" size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Novo Agendamento
+            </Button>
+          </AppointmentDialog>
         </div>
 
         {/* Filters */}
