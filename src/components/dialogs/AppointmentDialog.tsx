@@ -14,7 +14,7 @@ export const AppointmentDialog = ({ children }: AppointmentDialogProps) => {
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto z-[60]">
         <DialogTitle className="sr-only">Novo Agendamento</DialogTitle>
         <DialogDescription className="sr-only">
           Formulário para criar um novo agendamento na barbearia
