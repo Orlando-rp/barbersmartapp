@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,11 +10,22 @@ import { CalendarIcon, User, Mail, Phone, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { z } from "zod";
 
 interface ClientFormProps {
   onClose?: () => void;
   editingClient?: any;
 }
+
+const clientSchema = z.object({
+  name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  phone: z.string().min(10, "Telefone deve ter no mínimo 10 caracteres").max(20),
+  address: z.string().max(500).optional(),
+  notes: z.string().max(1000).optional(),
+});
 
 export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
   const [name, setName] = useState(editingClient?.name || "");
@@ -22,44 +33,96 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
   const [phone, setPhone] = useState(editingClient?.phone || "");
   const [address, setAddress] = useState(editingClient?.address || "");
   const [birthDate, setBirthDate] = useState<Date | undefined>(
-    editingClient?.birthDate ? new Date(editingClient.birthDate) : undefined
+    editingClient?.birth_date ? new Date(editingClient.birth_date) : undefined
   );
   const [notes, setNotes] = useState(editingClient?.notes || "");
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<any>({});
   
   const { toast } = useToast();
+  const { barbershopId } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
     
-    if (!name || !phone) {
+    if (!barbershopId) {
       toast({
         title: "Erro",
-        description: "Nome e telefone são obrigatórios.",
+        description: "Barbearia não encontrada. Por favor, faça login novamente.",
         variant: "destructive",
       });
       return;
     }
 
-    const clientData = {
-      id: editingClient?.id || Date.now().toString(),
-      name,
-      email,
-      phone,
-      address,
-      birthDate: birthDate ? format(birthDate, "yyyy-MM-dd") : null,
-      notes,
-      createdAt: editingClient?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      const validatedData = clientSchema.parse({
+        name,
+        email: email || undefined,
+        phone,
+        address: address || undefined,
+        notes: notes || undefined,
+      });
 
-    console.log("Cliente salvo:", clientData);
-    
-    toast({
-      title: editingClient ? "Cliente Atualizado!" : "Cliente Cadastrado!",
-      description: `${name} foi ${editingClient ? "atualizado" : "cadastrado"} com sucesso.`,
-    });
+      setLoading(true);
 
-    onClose?.();
+      const clientData = {
+        barbershop_id: barbershopId,
+        name: validatedData.name,
+        email: validatedData.email || null,
+        phone: validatedData.phone,
+        birth_date: birthDate ? format(birthDate, "yyyy-MM-dd") : null,
+        address: validatedData.address || null,
+        notes: validatedData.notes || null,
+        active: true,
+      };
+
+      if (editingClient?.id) {
+        const { error } = await supabase
+          .from('clients')
+          .update(clientData)
+          .eq('id', editingClient.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Cliente Atualizado!",
+          description: `${name} foi atualizado com sucesso.`,
+        });
+      } else {
+        const { error } = await supabase
+          .from('clients')
+          .insert([clientData]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Cliente Cadastrado!",
+          description: `${name} foi cadastrado com sucesso.`,
+        });
+      }
+
+      onClose?.();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const formattedErrors: any = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            formattedErrors[err.path[0]] = err.message;
+          }
+        });
+        setErrors(formattedErrors);
+      } else {
+        console.error("Error saving client:", error);
+        toast({
+          title: "Erro ao salvar cliente",
+          description: error.message || "Ocorreu um erro ao salvar o cliente.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -87,6 +150,9 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Nome completo do cliente"
                 />
+                {errors.name && (
+                  <p className="text-sm text-destructive">{errors.name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefone *</Label>
@@ -100,6 +166,9 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
                     className="pl-10"
                   />
                 </div>
+                {errors.phone && (
+                  <p className="text-sm text-destructive">{errors.phone}</p>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -116,6 +185,9 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
                     className="pl-10"
                   />
                 </div>
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Data de Nascimento</Label>
@@ -183,11 +255,11 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
 
           {/* Actions */}
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" variant="premium">
-              {editingClient ? "Atualizar Cliente" : "Cadastrar Cliente"}
+            <Button type="submit" variant="premium" disabled={loading}>
+              {loading ? "Salvando..." : editingClient ? "Atualizar Cliente" : "Cadastrar Cliente"}
             </Button>
           </div>
         </form>

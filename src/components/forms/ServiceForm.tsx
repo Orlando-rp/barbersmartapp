@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Scissors, DollarSign, Clock, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { z } from "zod";
 
 interface ServiceFormProps {
   onClose?: () => void;
@@ -23,57 +26,107 @@ const serviceCategories = [
   "Outros"
 ];
 
+const serviceSchema = z.object({
+  name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
+  description: z.string().max(500).optional(),
+  category: z.string().min(1, "Selecione uma categoria"),
+  price: z.number().positive("Preço deve ser maior que zero"),
+  duration: z.number().positive("Duração deve ser maior que zero"),
+});
+
 export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
   const [name, setName] = useState(editingService?.name || "");
   const [description, setDescription] = useState(editingService?.description || "");
   const [category, setCategory] = useState(editingService?.category || "");
   const [price, setPrice] = useState(editingService?.price?.toString() || "");
   const [duration, setDuration] = useState(editingService?.duration?.toString() || "");
-  const [isActive, setIsActive] = useState(editingService?.isActive ?? true);
+  const [isActive, setIsActive] = useState(editingService?.active ?? true);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<any>({});
   
   const { toast } = useToast();
+  const { barbershopId } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name || !category || !price || !duration) {
+    setErrors({});
+
+    if (!barbershopId) {
       toast({
         title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
+        description: "Barbearia não encontrada. Por favor, faça login novamente.",
         variant: "destructive",
       });
       return;
     }
 
-    if (isNaN(Number(price)) || isNaN(Number(duration))) {
-      toast({
-        title: "Erro",
-        description: "Preço e duração devem ser números válidos.",
-        variant: "destructive",
+    try {
+      const validatedData = serviceSchema.parse({
+        name,
+        description: description || undefined,
+        category,
+        price: Number(price),
+        duration: Number(duration),
       });
-      return;
+
+      setLoading(true);
+
+      const serviceData = {
+        barbershop_id: barbershopId,
+        name: validatedData.name,
+        description: validatedData.description || null,
+        category: validatedData.category,
+        price: validatedData.price,
+        duration: validatedData.duration,
+        active: isActive,
+      };
+
+      if (editingService?.id) {
+        const { error } = await supabase
+          .from('services')
+          .update(serviceData)
+          .eq('id', editingService.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Serviço Atualizado!",
+          description: `${name} foi atualizado com sucesso.`,
+        });
+      } else {
+        const { error } = await supabase
+          .from('services')
+          .insert([serviceData]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Serviço Cadastrado!",
+          description: `${name} foi cadastrado com sucesso.`,
+        });
+      }
+
+      onClose?.();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const formattedErrors: any = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            formattedErrors[err.path[0]] = err.message;
+          }
+        });
+        setErrors(formattedErrors);
+      } else {
+        console.error("Error saving service:", error);
+        toast({
+          title: "Erro ao salvar serviço",
+          description: error.message || "Ocorreu um erro ao salvar o serviço.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setLoading(false);
     }
-
-    const serviceData = {
-      id: editingService?.id || Date.now().toString(),
-      name,
-      description,
-      category,
-      price: Number(price),
-      duration: Number(duration),
-      isActive,
-      createdAt: editingService?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    console.log("Serviço salvo:", serviceData);
-    
-    toast({
-      title: editingService ? "Serviço Atualizado!" : "Serviço Cadastrado!",
-      description: `${name} foi ${editingService ? "atualizado" : "cadastrado"} com sucesso.`,
-    });
-
-    onClose?.();
   };
 
   return (
@@ -101,6 +154,9 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: Corte Social"
                 />
+                {errors.name && (
+                  <p className="text-sm text-destructive">{errors.name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Categoria *</Label>
@@ -116,6 +172,9 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.category && (
+                  <p className="text-sm text-destructive">{errors.category}</p>
+                )}
               </div>
             </div>
             <div className="space-y-2">
@@ -152,6 +211,9 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
                     className="pl-10"
                   />
                 </div>
+                {errors.price && (
+                  <p className="text-sm text-destructive">{errors.price}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="duration">Duração (minutos) *</Label>
@@ -167,6 +229,9 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
                     className="pl-10"
                   />
                 </div>
+                {errors.duration && (
+                  <p className="text-sm text-destructive">{errors.duration}</p>
+                )}
               </div>
             </div>
           </div>
@@ -191,11 +256,11 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
 
           {/* Actions */}
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" variant="premium">
-              {editingService ? "Atualizar Serviço" : "Cadastrar Serviço"}
+            <Button type="submit" variant="premium" disabled={loading}>
+              {loading ? "Salvando..." : editingService ? "Atualizar Serviço" : "Cadastrar Serviço"}
             </Button>
           </div>
         </form>
