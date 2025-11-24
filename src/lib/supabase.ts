@@ -1,0 +1,112 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export type Database = {
+  public: {
+    Tables: {
+      barbershops: {
+        Row: {
+          id: string;
+          name: string;
+          address: string | null;
+          phone: string | null;
+          email: string | null;
+          logo_url: string | null;
+          settings: any;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['barbershops']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['barbershops']['Insert']>;
+      };
+      profiles: {
+        Row: {
+          id: string;
+          barbershop_id: string | null;
+          full_name: string | null;
+          avatar_url: string | null;
+          phone: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
+      };
+      user_roles: {
+        Row: {
+          id: string;
+          user_id: string;
+          role: 'super_admin' | 'admin' | 'barbeiro' | 'recepcionista';
+          barbershop_id: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['user_roles']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['user_roles']['Insert']>;
+      };
+      clients: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          name: string;
+          email: string | null;
+          phone: string;
+          birth_date: string | null;
+          address: string | null;
+          notes: string | null;
+          tags: string[];
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['clients']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['clients']['Insert']>;
+      };
+      services: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          name: string;
+          description: string | null;
+          category: string;
+          price: number;
+          duration: number;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['services']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['services']['Insert']>;
+      };
+      appointments: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          client_id: string | null;
+          staff_id: string | null;
+          service_id: string | null;
+          appointment_date: string;
+          appointment_time: string;
+          status: 'pendente' | 'confirmado' | 'concluido' | 'cancelado' | 'falta';
+          notes: string | null;
+          client_name: string | null;
+          client_phone: string | null;
+          service_name: string | null;
+          service_price: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['appointments']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['appointments']['Insert']>;
+      };
+    };
+  };
+};
