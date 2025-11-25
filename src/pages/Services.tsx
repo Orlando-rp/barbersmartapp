@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { ServiceDialog } from "@/components/dialogs/ServiceDialog";
 import { Button } from "@/components/ui/button";
@@ -5,62 +6,59 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Scissors, Plus, Search, Filter, Clock, DollarSign, Edit, Trash2 } from "lucide-react";
-
-const mockServices = [
-  {
-    id: "1",
-    name: "Corte Social",
-    description: "Corte clássico masculino com acabamento profissional",
-    price: 35,
-    duration: 30,
-    category: "Corte",
-    popular: true,
-    active: true,
-  },
-  {
-    id: "2",
-    name: "Corte + Barba",
-    description: "Corte completo com barba aparada e finalizada",
-    price: 60,
-    duration: 45,
-    category: "Combo",
-    popular: true,
-    active: true,
-  },
-  {
-    id: "3",
-    name: "Barba",
-    description: "Aparar e finalizar barba com navalha",
-    price: 25,
-    duration: 25,
-    category: "Barba",
-    popular: false,
-    active: true,
-  },
-  {
-    id: "4",
-    name: "Sobrancelha",
-    description: "Design e alinhamento de sobrancelhas",
-    price: 15,
-    duration: 15,
-    category: "Estética",
-    popular: false,
-    active: true,
-  },
-  {
-    id: "5",
-    name: "Corte Degradê",
-    description: "Corte moderno com degradê nas laterais",
-    price: 45,
-    duration: 40,
-    category: "Corte",
-    popular: true,
-    active: true,
-  },
-];
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const Services = () => {
-  const categories = ["Todos", "Corte", "Barba", "Combo", "Estética"];
+  const { barbershopId } = useAuth();
+  const { toast } = useToast();
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("Todos");
+
+  useEffect(() => {
+    if (barbershopId) {
+      fetchServices();
+    }
+  }, [barbershopId]);
+
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('barbershop_id', barbershopId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao carregar serviços',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categories = ["Todos", ...Array.from(new Set(services.map(s => s.category)))];
+  const filteredServices = selectedCategory === "Todos" 
+    ? services 
+    : services.filter(s => s.category === selectedCategory);
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -83,14 +81,14 @@ const Services = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="barbershop-card">
             <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-foreground">{mockServices.length}</div>
+              <div className="text-2xl font-bold text-foreground">{services.length}</div>
               <p className="text-sm text-muted-foreground">Total de Serviços</p>
             </CardContent>
           </Card>
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-primary">
-                R$ {Math.round(mockServices.reduce((sum, s) => sum + s.price, 0) / mockServices.length)}
+                R$ {services.length > 0 ? Math.round(services.reduce((sum, s) => sum + s.price, 0) / services.length) : 0}
               </div>
               <p className="text-sm text-muted-foreground">Preço Médio</p>
             </CardContent>
@@ -98,15 +96,15 @@ const Services = () => {
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-success">
-                {mockServices.filter(s => s.popular).length}
+                {services.filter(s => s.active).length}
               </div>
-              <p className="text-sm text-muted-foreground">Mais Populares</p>
+              <p className="text-sm text-muted-foreground">Serviços Ativos</p>
             </CardContent>
           </Card>
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-warning">
-                {Math.round(mockServices.reduce((sum, s) => sum + s.duration, 0) / mockServices.length)}min
+                {services.length > 0 ? Math.round(services.reduce((sum, s) => sum + s.duration, 0) / services.length) : 0}min
               </div>
               <p className="text-sm text-muted-foreground">Duração Média</p>
             </CardContent>
@@ -124,12 +122,13 @@ const Services = () => {
                   className="pl-10"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {categories.map((category) => (
                   <Button 
                     key={category}
-                    variant={category === "Todos" ? "default" : "outline"}
+                    variant={category === selectedCategory ? "default" : "outline"}
                     size="sm"
+                    onClick={() => setSelectedCategory(category)}
                   >
                     {category}
                   </Button>
@@ -141,7 +140,16 @@ const Services = () => {
 
         {/* Services Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockServices.map((service) => (
+          {filteredServices.length === 0 ? (
+            <div className="col-span-full text-center py-8">
+              <p className="text-muted-foreground">
+                {services.length === 0 
+                  ? 'Nenhum serviço cadastrado ainda. Clique em "Novo Serviço" para começar.'
+                  : 'Nenhum serviço encontrado para esta categoria.'}
+              </p>
+            </div>
+          ) : (
+            filteredServices.map((service) => (
             <Card key={service.id} className="barbershop-card hover:shadow-medium">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -149,9 +157,6 @@ const Services = () => {
                     <CardTitle className="text-lg">{service.name}</CardTitle>
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="outline">{service.category}</Badge>
-                      {service.popular && (
-                        <Badge className="bg-primary text-primary-foreground">Popular</Badge>
-                      )}
                     </div>
                   </div>
                   <div className="flex gap-1">
@@ -188,7 +193,8 @@ const Services = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          ))
+          )}
         </div>
       </div>
     </Layout>

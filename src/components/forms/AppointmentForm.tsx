@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,23 +11,12 @@ import { CalendarIcon, Clock, User, Scissors } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AppointmentFormProps {
   onClose?: () => void;
 }
-
-const mockServices = [
-  { id: "1", name: "Corte Social", duration: 30, price: 25 },
-  { id: "2", name: "Corte + Barba", duration: 45, price: 35 },
-  { id: "3", name: "Barba", duration: 20, price: 15 },
-  { id: "4", name: "Sobrancelha", duration: 15, price: 10 },
-];
-
-const mockBarbers = [
-  { id: "1", name: "João Silva" },
-  { id: "2", name: "Pedro Santos" },
-  { id: "3", name: "Carlos Lima" },
-];
 
 const timeSlots = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -35,6 +24,9 @@ const timeSlots = [
 ];
 
 export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
+  const { barbershopId } = useAuth();
+  const { toast } = useToast();
+  
   const [date, setDate] = useState<Date>();
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
@@ -42,10 +34,57 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
   const [selectedBarber, setSelectedBarber] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
   
-  const { toast } = useToast();
+  const [services, setServices] = useState<any[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (barbershopId) {
+      fetchServices();
+      fetchStaff();
+    }
+  }, [barbershopId]);
+
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('barbershop_id', barbershopId)
+        .eq('active', true);
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao carregar serviços',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchStaff = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('barbershop_id', barbershopId)
+        .eq('active', true);
+
+      if (error) throw error;
+      setStaff(data || []);
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao carregar equipe',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!date || !clientName || !clientPhone || !selectedService || !selectedBarber || !selectedTime) {
@@ -57,23 +96,74 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
       return;
     }
 
-    const appointmentData = {
-      date: format(date, "dd/MM/yyyy"),
-      time: selectedTime,
-      client: { name: clientName, phone: clientPhone },
-      service: mockServices.find(s => s.id === selectedService),
-      barber: mockBarbers.find(b => b.id === selectedBarber),
-      notes
-    };
+    setLoading(true);
 
-    console.log("Agendamento criado:", appointmentData);
-    
-    toast({
-      title: "Agendamento Criado!",
-      description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
-    });
+    try {
+      // Find or create client
+      let clientId = null;
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('barbershop_id', barbershopId)
+        .eq('phone', clientPhone)
+        .single();
 
-    onClose?.();
+      if (existingClient) {
+        clientId = existingClient.id;
+      } else {
+        const { data: newClient, error: clientError } = await supabase
+          .from('clients')
+          .insert({
+            barbershop_id: barbershopId,
+            name: clientName,
+            phone: clientPhone,
+            active: true,
+          })
+          .select('id')
+          .single();
+
+        if (clientError) throw clientError;
+        clientId = newClient.id;
+      }
+
+      // Get service details
+      const service = services.find(s => s.id === selectedService);
+
+      // Create appointment
+      const { error: appointmentError } = await supabase
+        .from('appointments')
+        .insert({
+          barbershop_id: barbershopId,
+          client_id: clientId,
+          staff_id: selectedBarber,
+          service_id: selectedService,
+          appointment_date: format(date, "yyyy-MM-dd"),
+          appointment_time: selectedTime,
+          status: 'pendente',
+          notes,
+          client_name: clientName,
+          client_phone: clientPhone,
+          service_name: service?.name,
+          service_price: service?.price,
+        });
+
+      if (appointmentError) throw appointmentError;
+
+      toast({
+        title: "Agendamento Criado!",
+        description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
+      });
+
+      onClose?.();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao criar agendamento',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -128,7 +218,7 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
                     <SelectValue placeholder="Selecione o serviço" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockServices.map((service) => (
+                    {services.map((service) => (
                       <SelectItem key={service.id} value={service.id}>
                         <div className="flex justify-between items-center w-full">
                           <span>{service.name}</span>
@@ -148,9 +238,9 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
                     <SelectValue placeholder="Selecione o barbeiro" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockBarbers.map((barber) => (
-                      <SelectItem key={barber.id} value={barber.id}>
-                        {barber.name}
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -225,11 +315,11 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
 
           {/* Actions */}
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" variant="premium">
-              Criar Agendamento
+            <Button type="submit" variant="premium" disabled={loading}>
+              {loading ? 'Criando...' : 'Criar Agendamento'}
             </Button>
           </div>
         </form>
