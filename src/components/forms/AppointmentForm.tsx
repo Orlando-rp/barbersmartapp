@@ -67,24 +67,36 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
 
   const fetchStaff = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: staffData, error: staffError } = await supabase
         .from('staff')
-        .select(`
-          id,
-          profiles!staff_user_id_fkey (
-            full_name
-          )
-        `)
+        .select('id, user_id')
         .eq('barbershop_id', barbershopId)
         .eq('active', true);
 
-      if (error) throw error;
-      
-      // Transform data to have name directly
-      const transformedStaff = (data || []).map((member: any) => ({
-        id: member.id,
-        name: member.profiles?.full_name
-      }));
+      if (staffError) throw staffError;
+
+      if (!staffData || staffData.length === 0) {
+        setStaff([]);
+        return;
+      }
+
+      // Fetch profiles for these staff members
+      const userIds = staffData.map(s => s.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Combine staff with their profiles
+      const transformedStaff = staffData.map((member) => {
+        const profile = profilesData?.find(p => p.id === member.user_id);
+        return {
+          id: member.id,
+          name: profile?.full_name || 'Nome não disponível'
+        };
+      });
       
       setStaff(transformedStaff);
     } catch (error: any) {

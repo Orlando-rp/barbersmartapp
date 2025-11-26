@@ -59,24 +59,36 @@ const Appointments = () => {
 
   const fetchStaff = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: staffData, error: staffError } = await supabase
         .from('staff')
-        .select(`
-          id,
-          profiles!staff_user_id_fkey (
-            full_name
-          )
-        `)
+        .select('id, user_id')
         .eq('barbershop_id', barbershopId)
         .eq('active', true);
 
-      if (error) throw error;
-      
-      // Transform data to have name directly
-      const transformedStaff = (data || []).map((member: any) => ({
-        id: member.id,
-        name: member.profiles?.full_name
-      }));
+      if (staffError) throw staffError;
+
+      if (!staffData || staffData.length === 0) {
+        setStaff([]);
+        return;
+      }
+
+      // Fetch profiles for these staff members
+      const userIds = staffData.map(s => s.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Combine staff with their profiles
+      const transformedStaff = staffData.map((member) => {
+        const profile = profilesData?.find(p => p.id === member.user_id);
+        return {
+          id: member.id,
+          name: profile?.full_name || 'Nome não disponível'
+        };
+      });
       
       setStaff(transformedStaff);
     } catch (error: any) {
@@ -87,7 +99,9 @@ const Appointments = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Fetch appointments
+      const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select(`
           id,
@@ -99,29 +113,58 @@ const Appointments = () => {
           client_phone,
           service_name,
           service_price,
-          staff:staff_id (
-            id,
-            profiles!staff_user_id_fkey (
-              full_name
-            )
-          )
+          staff_id
         `)
         .eq('barbershop_id', barbershopId)
         .order('appointment_date', { ascending: true })
         .order('appointment_time', { ascending: true });
 
-      if (error) throw error;
-      
-      // Transform data to handle staff relationship
-      const transformedData = (data || []).map((apt: any) => {
-        const staffData = apt.staff;
-        const staffName = staffData?.profiles?.full_name;
-        
-        return {
-          ...apt,
-          staff: staffData ? { name: staffName } : null
-        };
+      if (appointmentsError) throw appointmentsError;
+
+      if (!appointmentsData || appointmentsData.length === 0) {
+        setAppointments([]);
+        return;
+      }
+
+      // Get unique staff IDs
+      const staffIds = [...new Set(appointmentsData.map(a => a.staff_id).filter(Boolean))];
+
+      if (staffIds.length === 0) {
+        setAppointments(appointmentsData.map(apt => ({ ...apt, staff: null })));
+        return;
+      }
+
+      // Fetch staff data
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('id, user_id')
+        .in('id', staffIds);
+
+      if (staffError) throw staffError;
+
+      // Fetch profiles for staff
+      const userIds = staffData?.map(s => s.user_id) || [];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create staff name lookup
+      const staffNameMap = new Map();
+      staffData?.forEach(staff => {
+        const profile = profilesData?.find(p => p.id === staff.user_id);
+        if (profile) {
+          staffNameMap.set(staff.id, profile.full_name);
+        }
       });
+
+      // Transform appointments with staff names
+      const transformedData = appointmentsData.map(apt => ({
+        ...apt,
+        staff: apt.staff_id ? { name: staffNameMap.get(apt.staff_id) || 'Nome não disponível' } : null
+      }));
       
       setAppointments(transformedData);
     } catch (error: any) {
