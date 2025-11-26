@@ -46,7 +46,7 @@ VALUES (
 -- Super Admin (não vinculado a barbearia)
 INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '11a2b3c4-d5e6-7890-abcd-ef1234567890', -- ID do usuário super admin
+  '38348d56-4000-4a83-852a-b37dbda2be20', -- ID do usuário super admin
   NULL,
   'Super Administrador',
   '(11) 99999-9999',
@@ -58,7 +58,7 @@ VALUES (
 -- Admin da Barbearia
 INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '22b3c4d5-e6f7-8901-bcde-f12345678901', -- ID do usuário admin
+  '3609c84d-ece0-4cf9-929d-d9a097f78f2d', -- ID do usuário admin
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
   'Carlos Silva',
   '(11) 98765-4321',
@@ -70,7 +70,7 @@ VALUES (
 -- Barbeiro 1 - Paulo Silva
 INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '33c4d5e6-f7a8-9012-cdef-123456789012', -- ID do usuário barbeiro 1
+  '0626954e-32c4-4258-82b6-dfca351e9734', -- ID do usuário barbeiro 1
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
   'Paulo Silva',
   '(11) 98765-1111',
@@ -82,7 +82,7 @@ VALUES (
 -- Barbeiro 2 - Ricardo Santos
 INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '44d5e6f7-a8b9-0123-def1-234567890123', -- ID do usuário barbeiro 2
+  '5a297b0a-a329-41e0-aea4-1d2e7f1dc211', -- ID do usuário barbeiro 2
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
   'Ricardo Santos',
   '(11) 98765-2222',
@@ -94,7 +94,7 @@ VALUES (
 -- Recepcionista
 INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '55e6f7a8-b9c0-1234-ef12-345678901234', -- ID do usuário recepcionista
+  '50120abc-d3c7-4618-a64f-851ea82bb2e4', -- ID do usuário recepcionista
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
   'Ana Costa',
   '(11) 98765-3333',
@@ -110,7 +110,7 @@ VALUES (
 -- Super Admin
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '11a2b3c4-d5e6-7890-abcd-ef1234567890',
+  '38348d56-4000-4a83-852a-b37dbda2be20',
   'super_admin',
   NULL
 );
@@ -118,7 +118,7 @@ VALUES (
 -- Admin da Barbearia
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '22b3c4d5-e6f7-8901-bcde-f12345678901',
+  '3609c84d-ece0-4cf9-929d-d9a097f78f2d',
   'admin',
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890'
 );
@@ -126,7 +126,7 @@ VALUES (
 -- Barbeiro 1
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '33c4d5e6-f7a8-9012-cdef-123456789012',
+  '0626954e-32c4-4258-82b6-dfca351e9734',
   'barbeiro',
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890'
 );
@@ -134,7 +134,7 @@ VALUES (
 -- Barbeiro 2
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '44d5e6f7-a8b9-0123-def1-234567890123',
+  '5a297b0a-a329-41e0-aea4-1d2e7f1dc211',
   'barbeiro',
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890'
 );
@@ -142,7 +142,7 @@ VALUES (
 -- Recepcionista
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '55e6f7a8-b9c0-1234-ef12-345678901234',
+  '50120abc-d3c7-4618-a64f-851ea82bb2e4',
   'recepcionista',
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890'
 );
@@ -156,7 +156,7 @@ INSERT INTO public.staff (id, barbershop_id, user_id, specialties, commission_ra
 VALUES (
   '11e6f7g8-h9i0-1234-9012-345678901234',
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
-  '33c4d5e6-f7a8-9012-cdef-123456789012',
+  '0626954e-32c4-4258-82b6-dfca351e9734',
   ARRAY['Cortes clássicos', 'degradê']::text[],
   40.00,
   '{
@@ -177,7 +177,7 @@ INSERT INTO public.staff (id, barbershop_id, user_id, specialties, commission_ra
 VALUES (
   '22f7g8h9-i0j1-2345-0123-456789012345',
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
-  '44d5e6f7-a8b9-0123-def1-234567890123',
+  '5a297b0a-a329-41e0-aea4-1d2e7f1dc211',
   ARRAY['Barbas', 'tratamentos']::text[],
   45.00,
   '{
@@ -249,16 +249,16 @@ VALUES
 INSERT INTO public.transactions (id, barbershop_id, appointment_id, type, amount, category, payment_method, description, transaction_date, created_by, created_at, updated_at)
 VALUES
   -- Receitas de agendamentos concluídos
-  ('11i0j1k2-l3m4-4567-3456-789012345678', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 35.00, 'Serviço', 'dinheiro', 'Corte Simples - João Silva', CURRENT_DATE - INTERVAL '1 day', '33c4d5e6-f7a8-9012-cdef-123456789012', NOW(), NOW()),
-  ('22j1k2l3-m4n5-5678-4567-890123456789', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 55.00, 'Serviço', 'cartao_credito', 'Corte + Barba - Pedro Santos', CURRENT_DATE - INTERVAL '1 day', '44d5e6f7-a8b9-0123-def1-234567890123', NOW(), NOW()),
-  ('33k2l3m4-n5o6-6789-5678-901234567890', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 30.00, 'Serviço', 'pix', 'Barba Completa - Carlos Oliveira', CURRENT_DATE - INTERVAL '2 days', '33c4d5e6-f7a8-9012-cdef-123456789012', NOW(), NOW()),
-  ('44l3m4n5-o6p7-7890-6789-012345678901', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 120.00, 'Serviço', 'cartao_credito', 'Combo Premium - Marcos Alves', CURRENT_DATE - INTERVAL '3 days', '44d5e6f7-a8b9-0123-def1-234567890123', NOW(), NOW()),
-  ('55m4n5o6-p7q8-8901-7890-123456789012', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 45.00, 'Serviço', 'dinheiro', 'Hidratação Capilar - Fernando Costa', CURRENT_DATE - INTERVAL '4 days', '33c4d5e6-f7a8-9012-cdef-123456789012', NOW(), NOW()),
-  ('66n5o6p7-q8r9-9012-8901-234567890123', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 80.00, 'Serviço', 'pix', 'Pigmentação de Barba - Gabriel Souza', CURRENT_DATE - INTERVAL '5 days', '44d5e6f7-a8b9-0123-def1-234567890123', NOW(), NOW()),
+  ('11i0j1k2-l3m4-4567-3456-789012345678', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 35.00, 'Serviço', 'dinheiro', 'Corte Simples - João Silva', CURRENT_DATE - INTERVAL '1 day', '0626954e-32c4-4258-82b6-dfca351e9734', NOW(), NOW()),
+  ('22j1k2l3-m4n5-5678-4567-890123456789', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 55.00, 'Serviço', 'cartao_credito', 'Corte + Barba - Pedro Santos', CURRENT_DATE - INTERVAL '1 day', '5a297b0a-a329-41e0-aea4-1d2e7f1dc211', NOW(), NOW()),
+  ('33k2l3m4-n5o6-6789-5678-901234567890', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 30.00, 'Serviço', 'pix', 'Barba Completa - Carlos Oliveira', CURRENT_DATE - INTERVAL '2 days', '0626954e-32c4-4258-82b6-dfca351e9734', NOW(), NOW()),
+  ('44l3m4n5-o6p7-7890-6789-012345678901', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 120.00, 'Serviço', 'cartao_credito', 'Combo Premium - Marcos Alves', CURRENT_DATE - INTERVAL '3 days', '5a297b0a-a329-41e0-aea4-1d2e7f1dc211', NOW(), NOW()),
+  ('55m4n5o6-p7q8-8901-7890-123456789012', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 45.00, 'Serviço', 'dinheiro', 'Hidratação Capilar - Fernando Costa', CURRENT_DATE - INTERVAL '4 days', '0626954e-32c4-4258-82b6-dfca351e9734', NOW(), NOW()),
+  ('66n5o6p7-q8r9-9012-8901-234567890123', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 80.00, 'Serviço', 'pix', 'Pigmentação de Barba - Gabriel Souza', CURRENT_DATE - INTERVAL '5 days', '5a297b0a-a329-41e0-aea4-1d2e7f1dc211', NOW(), NOW()),
   
   -- Despesas operacionais
-  ('77o6p7q8-r9s0-0123-9012-345678901234', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'despesa', 350.00, 'Produtos', 'dinheiro', 'Compra de produtos (shampoo, pomadas, etc)', CURRENT_DATE - INTERVAL '3 days', '22b3c4d5-e6f7-8901-bcde-f12345678901', NOW(), NOW()),
-  ('88p7q8r9-s0t1-1234-0123-456789012345', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'despesa', 850.00, 'Aluguel', 'pix', 'Aluguel do mês', CURRENT_DATE - INTERVAL '5 days', '22b3c4d5-e6f7-8901-bcde-f12345678901', NOW(), NOW());
+  ('77o6p7q8-r9s0-0123-9012-345678901234', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'despesa', 350.00, 'Produtos', 'dinheiro', 'Compra de produtos (shampoo, pomadas, etc)', CURRENT_DATE - INTERVAL '3 days', '3609c84d-ece0-4cf9-929d-d9a097f78f2d', NOW(), NOW()),
+  ('88p7q8r9-s0t1-1234-0123-456789012345', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'despesa', 850.00, 'Aluguel', 'pix', 'Aluguel do mês', CURRENT_DATE - INTERVAL '5 days', '3609c84d-ece0-4cf9-929d-d9a097f78f2d', NOW(), NOW());
 
 -- ==================================================
 -- PASSO 9: CRIAR CAMPANHAS DE MARKETING DE TESTE
