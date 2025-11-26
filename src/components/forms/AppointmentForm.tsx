@@ -71,7 +71,7 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
         .from('staff')
         .select(`
           id,
-          profiles:user_id (
+          profiles!staff_user_id_fkey (
             full_name
           )
         `)
@@ -83,7 +83,7 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
       // Transform data to have name directly
       const transformedStaff = (data || []).map((member: any) => ({
         id: member.id,
-        name: Array.isArray(member.profiles) ? member.profiles[0]?.full_name : member.profiles?.full_name
+        name: member.profiles?.full_name
       }));
       
       setStaff(transformedStaff);
