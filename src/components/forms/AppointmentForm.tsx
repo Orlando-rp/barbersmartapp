@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface AppointmentFormProps {
+  appointment?: any;
   onClose?: () => void;
 }
 
@@ -23,17 +24,19 @@ const timeSlots = [
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
 ];
 
-export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
+export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) => {
   const { barbershopId } = useAuth();
   const { toast } = useToast();
   
-  const [date, setDate] = useState<Date>();
-  const [clientName, setClientName] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
-  const [selectedService, setSelectedService] = useState("");
-  const [selectedBarber, setSelectedBarber] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
-  const [notes, setNotes] = useState("");
+  const [date, setDate] = useState<Date | undefined>(
+    appointment?.appointment_date ? new Date(appointment.appointment_date) : undefined
+  );
+  const [clientName, setClientName] = useState(appointment?.client_name || "");
+  const [clientPhone, setClientPhone] = useState(appointment?.client_phone || "");
+  const [selectedService, setSelectedService] = useState(appointment?.service_id || "");
+  const [selectedBarber, setSelectedBarber] = useState(appointment?.staff_id || "");
+  const [selectedTime, setSelectedTime] = useState(appointment?.appointment_time || "");
+  const [notes, setNotes] = useState(appointment?.notes || "");
   const [loading, setLoading] = useState(false);
   
   const [services, setServices] = useState<any[]>([]);
@@ -124,64 +127,85 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
 
     try {
       // Find or create client
-      let clientId = null;
-      const { data: existingClient } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('barbershop_id', barbershopId)
-        .eq('phone', clientPhone)
-        .maybeSingle();
-
-      if (existingClient) {
-        clientId = existingClient.id;
-      } else {
-        const { data: newClient, error: clientError } = await supabase
+      let clientId = appointment?.client_id || null;
+      
+      if (!clientId) {
+        const { data: existingClient } = await supabase
           .from('clients')
-          .insert({
-            barbershop_id: barbershopId,
-            name: clientName,
-            phone: clientPhone,
-            active: true,
-          })
           .select('id')
-          .single();
+          .eq('barbershop_id', barbershopId)
+          .eq('phone', clientPhone)
+          .maybeSingle();
 
-        if (clientError) throw clientError;
-        clientId = newClient.id;
+        if (existingClient) {
+          clientId = existingClient.id;
+        } else {
+          const { data: newClient, error: clientError } = await supabase
+            .from('clients')
+            .insert({
+              barbershop_id: barbershopId,
+              name: clientName,
+              phone: clientPhone,
+              active: true,
+            })
+            .select('id')
+            .single();
+
+          if (clientError) throw clientError;
+          clientId = newClient.id;
+        }
       }
 
       // Get service details
       const service = services.find(s => s.id === selectedService);
 
-      // Create appointment
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .insert({
-          barbershop_id: barbershopId,
-          client_id: clientId,
-          staff_id: selectedBarber,
-          service_id: selectedService,
-          appointment_date: format(date, "yyyy-MM-dd"),
-          appointment_time: selectedTime,
-          status: 'pendente',
-          notes,
-          client_name: clientName,
-          client_phone: clientPhone,
-          service_name: service?.name,
-          service_price: service?.price,
+      // Create or update appointment
+      const appointmentData = {
+        barbershop_id: barbershopId,
+        client_id: clientId,
+        staff_id: selectedBarber,
+        service_id: selectedService,
+        appointment_date: format(date, "yyyy-MM-dd"),
+        appointment_time: selectedTime,
+        status: appointment?.status || 'pendente',
+        notes,
+        client_name: clientName,
+        client_phone: clientPhone,
+        service_name: service?.name,
+        service_price: service?.price,
+      };
+
+      if (appointment) {
+        // Update existing appointment
+        const { error: appointmentError } = await supabase
+          .from('appointments')
+          .update(appointmentData)
+          .eq('id', appointment.id);
+
+        if (appointmentError) throw appointmentError;
+
+        toast({
+          title: "Agendamento Atualizado!",
+          description: `Agendamento para ${clientName} atualizado com sucesso.`,
         });
+      } else {
+        // Create new appointment
+        const { error: appointmentError } = await supabase
+          .from('appointments')
+          .insert(appointmentData);
 
-      if (appointmentError) throw appointmentError;
+        if (appointmentError) throw appointmentError;
 
-      toast({
-        title: "Agendamento Criado!",
-        description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
-      });
+        toast({
+          title: "Agendamento Criado!",
+          description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
+        });
+      }
 
       onClose?.();
     } catch (error: any) {
       toast({
-        title: 'Erro ao criar agendamento',
+        title: appointment ? 'Erro ao atualizar agendamento' : 'Erro ao criar agendamento',
         description: error.message,
         variant: 'destructive',
       });
@@ -195,7 +219,7 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-primary" />
-          Novo Agendamento
+          {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -343,7 +367,7 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
               Cancelar
             </Button>
             <Button type="submit" variant="premium" disabled={loading}>
-              {loading ? 'Criando...' : 'Criar Agendamento'}
+              {loading ? (appointment ? 'Atualizando...' : 'Criando...') : (appointment ? 'Atualizar Agendamento' : 'Criar Agendamento')}
             </Button>
           </div>
         </form>
