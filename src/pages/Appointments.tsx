@@ -63,7 +63,7 @@ const Appointments = () => {
         .from('staff')
         .select(`
           id,
-          profiles:user_id (
+          profiles!staff_user_id_fkey (
             full_name
           )
         `)
@@ -75,7 +75,7 @@ const Appointments = () => {
       // Transform data to have name directly
       const transformedStaff = (data || []).map((member: any) => ({
         id: member.id,
-        name: Array.isArray(member.profiles) ? member.profiles[0]?.full_name : member.profiles?.full_name
+        name: member.profiles?.full_name
       }));
       
       setStaff(transformedStaff);
@@ -101,7 +101,7 @@ const Appointments = () => {
           service_price,
           staff:staff_id (
             id,
-            profiles:user_id (
+            profiles!staff_user_id_fkey (
               full_name
             )
           )
@@ -114,9 +114,8 @@ const Appointments = () => {
       
       // Transform data to handle staff relationship
       const transformedData = (data || []).map((apt: any) => {
-        const staffData = Array.isArray(apt.staff) ? apt.staff[0] : apt.staff;
-        const profileData = staffData?.profiles;
-        const staffName = Array.isArray(profileData) ? profileData[0]?.full_name : profileData?.full_name;
+        const staffData = apt.staff;
+        const staffName = staffData?.profiles?.full_name;
         
         return {
           ...apt,
