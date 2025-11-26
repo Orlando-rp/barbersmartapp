@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { ClientDialog } from "@/components/dialogs/ClientDialog";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Plus, Search, Phone, Mail, Calendar, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Users, Plus, Search, Phone, Mail, Calendar, MoreVertical, Pencil, Trash2, BarChart } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +32,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 const Clients = () => {
   const { barbershopId } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
   const [filteredClients, setFilteredClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -251,6 +253,10 @@ const Clients = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => navigate(`/client-history/${client.id}`)}>
+                        <BarChart className="h-4 w-4 mr-2" />
+                        Ver Histórico
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setEditingClient(client)}>
                         <Pencil className="h-4 w-4 mr-2" />
                         Editar
