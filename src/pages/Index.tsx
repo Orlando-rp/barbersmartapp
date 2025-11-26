@@ -9,6 +9,11 @@ import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { RevenueWidget } from "@/components/dashboard/widgets/RevenueWidget";
+import { AppointmentsWidget } from "@/components/dashboard/widgets/AppointmentsWidget";
+import { ClientsWidget } from "@/components/dashboard/widgets/ClientsWidget";
+import { OccupancyWidget } from "@/components/dashboard/widgets/OccupancyWidget";
+import { WidgetSelector, defaultWidgets, WidgetConfig } from "@/components/dashboard/WidgetSelector";
 import { 
   Calendar, 
   Users, 
@@ -17,7 +22,8 @@ import {
   TrendingUp,
   UserPlus,
   Clock,
-  Star
+  Star,
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,6 +42,11 @@ const Index = () => {
   const { barbershopId } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [widgets, setWidgets] = useState<WidgetConfig[]>(() => {
+    const saved = localStorage.getItem('dashboard-widgets');
+    return saved ? JSON.parse(saved) : defaultWidgets;
+  });
+  const [customizeMode, setCustomizeMode] = useState(false);
 
   useEffect(() => {
     if (barbershopId) {
@@ -133,6 +144,23 @@ const Index = () => {
     }
   };
 
+  const handleToggleWidget = (widgetId: string) => {
+    const updated = widgets.map(w => 
+      w.id === widgetId ? { ...w, enabled: !w.enabled } : w
+    );
+    setWidgets(updated);
+    localStorage.setItem('dashboard-widgets', JSON.stringify(updated));
+  };
+
+  const handleRemoveWidget = (widgetId: string) => {
+    const updated = widgets.map(w => 
+      w.id === widgetId ? { ...w, enabled: false } : w
+    );
+    setWidgets(updated);
+    localStorage.setItem('dashboard-widgets', JSON.stringify(updated));
+    toast.success('Widget removido');
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -157,42 +185,76 @@ const Index = () => {
                 Gerencie sua barbearia de forma inteligente e eficiente
               </p>
             </div>
-            <AppointmentDialog>
-              <Button variant="premium" size="lg" className="shadow-gold">
-                <UserPlus className="mr-2 h-5 w-5" />
-                Novo Agendamento
+            <div className="flex gap-2">
+              <Button
+                variant={customizeMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCustomizeMode(!customizeMode)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                {customizeMode ? 'Salvar' : 'Personalizar'}
               </Button>
-            </AppointmentDialog>
+              {customizeMode && (
+                <WidgetSelector
+                  widgets={widgets}
+                  onToggleWidget={handleToggleWidget}
+                />
+              )}
+              <AppointmentDialog>
+                <Button variant="premium" size="lg" className="shadow-gold">
+                  <UserPlus className="mr-2 h-5 w-5" />
+                  Novo Agendamento
+                </Button>
+              </AppointmentDialog>
+            </div>
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard
-            title="Agendamentos Hoje"
-            value={stats?.todayAppointments || 0}
-            icon={Calendar}
-            variant="primary"
-          />
-          <StatsCard
-            title="Receita do Mês"
-            value={`R$ ${stats?.monthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-            icon={DollarSign}
-            variant="success"
-          />
-          <StatsCard
-            title="Clientes Ativos"
-            value={stats?.activeClients || 0}
-            icon={Users}
-            variant="default"
-          />
-          <StatsCard
-            title="Avaliação Média"
-            value={stats?.averageRating || 0}
-            icon={Star}
-            variant="warning"
-          />
+        {/* Real-time Widgets */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {widgets.find(w => w.id === 'revenue')?.enabled && (
+            <RevenueWidget onRemove={customizeMode ? () => handleRemoveWidget('revenue') : undefined} />
+          )}
+          {widgets.find(w => w.id === 'appointments')?.enabled && (
+            <AppointmentsWidget onRemove={customizeMode ? () => handleRemoveWidget('appointments') : undefined} />
+          )}
+          {widgets.find(w => w.id === 'clients')?.enabled && (
+            <ClientsWidget onRemove={customizeMode ? () => handleRemoveWidget('clients') : undefined} />
+          )}
+          {widgets.find(w => w.id === 'occupancy')?.enabled && (
+            <OccupancyWidget onRemove={customizeMode ? () => handleRemoveWidget('occupancy') : undefined} />
+          )}
         </div>
+
+        {/* Legacy Quick Stats - Only show if no widgets are enabled */}
+        {!widgets.some(w => w.enabled) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatsCard
+              title="Agendamentos Hoje"
+              value={stats?.todayAppointments || 0}
+              icon={Calendar}
+              variant="primary"
+            />
+            <StatsCard
+              title="Receita do Mês"
+              value={`R$ ${stats?.monthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+              icon={DollarSign}
+              variant="success"
+            />
+            <StatsCard
+              title="Clientes Ativos"
+              value={stats?.activeClients || 0}
+              icon={Users}
+              variant="default"
+            />
+            <StatsCard
+              title="Avaliação Média"
+              value={stats?.averageRating || 0}
+              icon={Star}
+              variant="warning"
+            />
+          </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
