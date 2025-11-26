@@ -7,91 +7,85 @@ Este documento explica como popular o banco de dados com dados de teste para des
 O script `seed-data.sql` irá criar:
 
 ### 🏪 1 Barbearia
-- **Barber Smart Premium** - Uma barbearia completa com horários, contato e logo
+- **Barbearia Estilo & Classe** - Uma barbearia completa com horários, contato e logo
 
 ### 👥 5 Usuários com diferentes roles
 - **Super Admin** - Acesso total ao sistema
-- **Admin da Barbearia** - Gerencia a barbearia
-- **2 Barbeiros** (João Santos e Maria Oliveira)
+- **Admin da Barbearia** - Gerencia a barbearia (Carlos Silva)
+- **2 Barbeiros** (Paulo Silva e Ricardo Santos)
 - **1 Recepcionista** (Ana Costa)
 
 ### 💼 8 Serviços
 - Corte Simples (R$ 35,00)
 - Corte + Barba (R$ 55,00)
 - Barba Completa (R$ 30,00)
-- Degradê (R$ 45,00)
-- Corte Infantil (R$ 28,00)
-- Sobrancelha (R$ 15,00)
-- Luzes (R$ 120,00)
-- Pacote Premium (R$ 85,00)
+- Design de Sobrancelha (R$ 15,00)
+- Hidratação Capilar (R$ 45,00)
+- Pigmentação de Barba (R$ 80,00)
+- Corte Infantil (R$ 25,00)
+- Combo Premium (R$ 120,00)
 
 ### 👨‍🦱 8 Clientes
 - Clientes fictícios com telefone, email e observações
 
 ### 📅 9 Agendamentos
-- 4 agendamentos para hoje
-- 3 agendamentos para amanhã
-- 2 agendamentos para depois de amanhã
+- 5 agendamentos para hoje
+- 4 agendamentos para os próximos dias
 
 ### 💰 8 Transações
-- 7 transações de receita (serviços concluídos)
-- 1 transação de despesa
-- Histórico dos últimos 30 dias
+- 6 transações de receita (serviços concluídos)
+- 2 transações de despesa
+- Histórico dos últimos 5 dias
 
 ### 📢 1 Campanha de Marketing
-- Promoção Dia dos Pais ativa
+- Promoção Corte + Barba ativa
 
 ---
 
 ## 🚀 Como Executar
 
-### Passo 1: Criar os Usuários no Supabase Auth
+### Passo 0: Executar Migrations
 
-**IMPORTANTE:** Primeiro você precisa criar os usuários manualmente no Supabase Dashboard ou através da funcionalidade de SignUp da aplicação.
+Antes de inserir os dados, certifique-se de que as tabelas necessárias existem:
 
-#### Opção A: Via Supabase Dashboard
+1. Acesse o Dashboard do Supabase
+2. Vá em **Database** → **Migrations**
+3. Execute as seguintes migrations na ordem:
+   - `20250126000002_create_missing_tables.sql` - Cria as tabelas staff, transactions e campaigns
+   - `20250126000003_add_rls_for_new_tables.sql` - Adiciona políticas RLS para as novas tabelas
 
-1. Acesse o Supabase Dashboard
-2. Vá em **Authentication** > **Users**
-3. Clique em **Add User** e crie os seguintes usuários:
+### Passo 1: Criar Usuários no Supabase Auth
 
-| Email | Senha | Nome Completo |
-|-------|-------|---------------|
-| super@admin.com | Admin123! | Super Administrador |
-| admin@barbersmartpremium.com.br | Admin123! | Carlos Silva |
-| joao@barbersmartpremium.com.br | Barbeiro123! | João Santos |
-| maria@barbersmartpremium.com.br | Barbeiro123! | Maria Oliveira |
-| recep@barbersmartpremium.com.br | Recep123! | Ana Costa |
+Primeiro, você precisa criar os usuários no Supabase Authentication:
 
-4. **Anote os IDs (UUID) de cada usuário criado** - você precisará deles no próximo passo
+1. Acesse o Dashboard do Supabase
+2. Vá em **Authentication** → **Users**
+3. Clique em "Add user" → "Create new user"
+4. Crie os seguintes usuários (anote os IDs gerados):
 
-#### Opção B: Via Interface da Aplicação
+| Email | Senha | Função |
+|-------|-------|--------|
+| superadmin@barbersmart.com | Admin@123 | Super Administrador |
+| admin@estiloeclasse.com | Admin@123 | Administrador da Barbearia |
+| barbeiro1@estiloeclasse.com | Barber@123 | Barbeiro 1 (Paulo Silva) |
+| barbeiro2@estiloeclasse.com | Barber@123 | Barbeiro 2 (Ricardo Santos) |
+| recepcionista@estiloeclasse.com | Recep@123 | Recepcionista |
 
-1. Acesse a página de SignUp da aplicação
-2. Registre cada usuário com os dados acima
-3. Copie os IDs dos usuários criados (você pode consultar na tabela `auth.users`)
+**IMPORTANTE:** Anote os UUIDs de cada usuário criado. Você precisará substituí-los no script SQL.
 
 ### Passo 2: Atualizar os IDs no Script SQL
 
 1. Abra o arquivo `docs/seed-data.sql`
-2. Localize as seções com comentário `-- Substituir pelo ID real`
-3. Substitua os UUIDs de exemplo pelos IDs reais dos usuários que você criou:
+2. Localize todos os IDs de exemplo e substitua pelos IDs reais:
 
-```sql
--- Exemplo: Se o ID do super admin for '123e4567-e89b-12d3-a456-426614174000'
--- Substitua em todas as ocorrências:
+**IDs a substituir:**
+- `11a2b3c4-d5e6-7890-abcd-ef1234567890` → ID do Super Admin
+- `22b3c4d5-e6f7-8901-bcde-f12345678901` → ID do Admin
+- `33c4d5e6-f7a8-9012-cdef-123456789012` → ID do Barbeiro 1 (Paulo)
+- `44d5e6f7-a8b9-0123-def1-234567890123` → ID do Barbeiro 2 (Ricardo)
+- `55e6f7a8-b9c0-1234-ef12-345678901234` → ID da Recepcionista
 
--- ANTES (exemplo):
-'00000000-0000-0000-0000-000000000001'
-
--- DEPOIS (com ID real):
-'123e4567-e89b-12d3-a456-426614174000'
-```
-
-**Locais que precisam ser atualizados:**
-- Seção 3: CRIAR PERFIS DE USUÁRIOS (5 substituições)
-- Seção 4: ATRIBUIR ROLES AOS USUÁRIOS (5 substituições)
-- Seção 5: CRIAR EQUIPE (2 substituições)
+Use o comando "Find and Replace" do seu editor para substituir todos os IDs de uma vez.
 
 ### Passo 3: Executar o Script
 
@@ -126,7 +120,7 @@ SELECT * FROM services;
 SELECT * FROM clients;
 
 -- Verificar agendamentos
-SELECT * FROM appointments ORDER BY appointment_date, start_time;
+SELECT * FROM appointments ORDER BY appointment_date, appointment_time;
 
 -- Verificar transações
 SELECT * FROM transactions ORDER BY transaction_date DESC;
@@ -142,28 +136,28 @@ SELECT * FROM campaigns;
 Após executar o script, você pode fazer login com qualquer um dos usuários criados:
 
 ### Super Admin
-- **Email:** super@admin.com
-- **Senha:** Admin123!
+- **Email:** superadmin@barbersmart.com
+- **Senha:** Admin@123
 - **Acesso:** Total (todas as barbearias)
 
 ### Admin da Barbearia
-- **Email:** admin@barbersmartpremium.com.br
-- **Senha:** Admin123!
-- **Acesso:** Gerencia a Barber Smart Premium
+- **Email:** admin@estiloeclasse.com
+- **Senha:** Admin@123
+- **Acesso:** Gerencia a Barbearia Estilo & Classe
 
-### Barbeiro (João)
-- **Email:** joao@barbersmartpremium.com.br
-- **Senha:** Barbeiro123!
+### Barbeiro 1 (Paulo Silva)
+- **Email:** barbeiro1@estiloeclasse.com
+- **Senha:** Barber@123
 - **Acesso:** Ver e gerenciar seus próprios agendamentos
 
-### Barbeira (Maria)
-- **Email:** maria@barbersmartpremium.com.br
-- **Senha:** Barbeiro123!
+### Barbeiro 2 (Ricardo Santos)
+- **Email:** barbeiro2@estiloeclasse.com
+- **Senha:** Barber@123
 - **Acesso:** Ver e gerenciar seus próprios agendamentos
 
 ### Recepcionista
-- **Email:** recep@barbersmartpremium.com.br
-- **Senha:** Recep123!
+- **Email:** recepcionista@estiloeclasse.com
+- **Senha:** Recep@123
 - **Acesso:** Gerenciar agendamentos e clientes
 
 ---
@@ -194,15 +188,17 @@ DELETE FROM barbershops;
 
 ## 📝 Notas Importantes
 
-1. **RLS Policies:** Certifique-se de que as políticas RLS foram aplicadas antes de executar este script (veja `docs/rls-policies.sql`)
+1. **Migrations Primeiro:** Certifique-se de executar as migrations de criação das tabelas antes do script de seed
 
-2. **UUIDs Únicos:** Não execute este script múltiplas vezes sem limpar os dados primeiro, pois os UUIDs são fixos e causarão erros de duplicação
+2. **RLS Policies:** As políticas RLS devem estar aplicadas (arquivo `docs/rls-policies.sql`)
 
-3. **Datas Dinâmicas:** Os agendamentos usam `CURRENT_DATE`, então sempre terão datas relativas ao dia em que o script for executado
+3. **UUIDs Únicos:** Não execute este script múltiplas vezes sem limpar os dados primeiro
 
-4. **Comissões:** As taxas de comissão dos barbeiros são 40% (João) e 45% (Maria)
+4. **Datas Dinâmicas:** Os agendamentos usam `CURRENT_DATE`, então sempre terão datas relativas ao dia da execução
 
-5. **Horários:** A barbearia funciona de Segunda a Sábado, fechada aos Domingos
+5. **Comissões:** As taxas de comissão são 40% (Paulo) e 45% (Ricardo)
+
+6. **Horários:** A barbearia funciona de Segunda a Sábado, fechada aos Domingos
 
 ---
 
@@ -220,6 +216,10 @@ Após popular o banco de dados:
 
 ## 🆘 Problemas Comuns
 
+### Erro: "column does not exist"
+- **Causa:** As migrations de criação das tabelas não foram executadas
+- **Solução:** Execute as migrations no Passo 0 antes do script de seed
+
 ### Erro: "duplicate key value violates unique constraint"
 - **Causa:** Você já executou este script antes
 - **Solução:** Execute o script de limpeza de dados ou use UUIDs diferentes
@@ -230,7 +230,7 @@ Após popular o banco de dados:
 
 ### Erro: "new row violates row-level security policy"
 - **Causa:** As políticas RLS não foram aplicadas corretamente
-- **Solução:** Execute primeiro o script `docs/rls-policies.sql`
+- **Solução:** Execute o script `docs/rls-policies.sql` e também a migration de RLS
 
 ### Não consigo fazer login
 - **Causa:** O usuário não foi criado no Supabase Auth
@@ -241,7 +241,8 @@ Após popular o banco de dados:
 ## 📞 Suporte
 
 Se encontrar problemas, verifique:
-1. As políticas RLS estão ativas?
-2. Os IDs dos usuários foram substituídos corretamente?
-3. Os usuários foram criados no Supabase Auth?
-4. Você está logado com o usuário correto para os dados que está tentando acessar?
+1. As migrations foram executadas?
+2. As políticas RLS estão ativas?
+3. Os IDs dos usuários foram substituídos corretamente?
+4. Os usuários foram criados no Supabase Auth?
+5. Você está logado com o usuário correto para os dados que está tentando acessar?

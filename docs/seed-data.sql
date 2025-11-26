@@ -7,117 +7,110 @@
 -- Os UUIDs abaixo são exemplos - você precisará substituí-los pelos IDs reais
 -- dos usuários criados no auth.users do seu projeto Supabase
 
--- =====================================================
--- 1. CRIAR BARBEARIA DE TESTE
--- =====================================================
+-- ==================================================
+-- PASSO 1: CRIAR BARBEARIA
+-- ==================================================
 
-INSERT INTO public.barbershops (id, name, address, phone, email, opening_hours, logo_url, created_at, updated_at)
+-- Insere uma barbearia de exemplo
+INSERT INTO public.barbershops (id, name, address, phone, email, settings, logo_url, active, created_at, updated_at)
 VALUES (
-  '550e8400-e29b-41d4-a716-446655440001',
-  'Barber Smart Premium',
-  'Rua das Flores, 123 - Centro, São Paulo - SP, 01234-567',
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
+  'Barbearia Estilo & Classe',
+  'Rua das Barbas, 123 - Centro',
   '(11) 98765-4321',
-  'contato@barbersmartpremium.com.br',
-  jsonb_build_object(
-    'segunda', jsonb_build_object('open', '09:00', 'close', '19:00'),
-    'terca', jsonb_build_object('open', '09:00', 'close', '19:00'),
-    'quarta', jsonb_build_object('open', '09:00', 'close', '19:00'),
-    'quinta', jsonb_build_object('open', '09:00', 'close', '19:00'),
-    'sexta', jsonb_build_object('open', '09:00', 'close', '20:00'),
-    'sabado', jsonb_build_object('open', '09:00', 'close', '18:00'),
-    'domingo', jsonb_build_object('open', null, 'close', null)
-  ),
-  'https://images.unsplash.com/photo-1585747860715-2ba37e788b70',
-  now(),
-  now()
+  'contato@estiloeclasse.com.br',
+  '{
+    "opening_hours": {
+      "segunda": {"abertura": "09:00", "fechamento": "19:00"},
+      "terca": {"abertura": "09:00", "fechamento": "19:00"},
+      "quarta": {"abertura": "09:00", "fechamento": "19:00"},
+      "quinta": {"abertura": "09:00", "fechamento": "19:00"},
+      "sexta": {"abertura": "09:00", "fechamento": "20:00"},
+      "sabado": {"abertura": "08:00", "fechamento": "17:00"},
+      "domingo": {"abertura": null, "fechamento": null}
+    }
+  }'::jsonb,
+  'https://placeholder.svg?height=100&width=100&text=Logo',
+  true,
+  NOW(),
+  NOW()
 );
 
--- =====================================================
--- 2. CRIAR USUÁRIOS DE TESTE (auth.users)
--- =====================================================
--- NOTA: Estes usuários devem ser criados manualmente via Supabase Dashboard
--- ou através do signUp da aplicação. Os IDs abaixo são exemplos.
--- 
--- Usuários sugeridos para criar:
--- 1. super@admin.com (senha: Admin123!) - Super Admin
--- 2. admin@barbersmartpremium.com.br (senha: Admin123!) - Admin da Barbearia
--- 3. joao@barbersmartpremium.com.br (senha: Barbeiro123!) - Barbeiro
--- 4. maria@barbersmartpremium.com.br (senha: Barbeiro123!) - Barbeira
--- 5. recep@barbersmartpremium.com.br (senha: Recep123!) - Recepcionista
+-- ==================================================
+-- PASSO 2: CRIAR PERFIS DE USUÁRIOS
+-- ==================================================
 
--- =====================================================
--- 3. CRIAR PERFIS DE USUÁRIOS
--- =====================================================
--- Substitua os UUIDs pelos IDs reais dos usuários criados
+-- NOTA: Os usuários devem ser criados primeiro no Supabase Auth
+-- Substitua os IDs abaixo pelos IDs reais dos usuários criados
 
--- Super Admin (não associado a nenhuma barbearia)
-INSERT INTO public.profiles (id, full_name, phone, avatar_url, barbershop_id, created_at, updated_at)
+-- Super Admin (não vinculado a barbearia)
+INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000001', -- Substituir pelo ID real
+  '11a2b3c4-d5e6-7890-abcd-ef1234567890', -- ID do usuário super admin
+  NULL,
   'Super Administrador',
   '(11) 99999-9999',
   'https://api.dicebear.com/7.x/avataaars/svg?seed=SuperAdmin',
-  NULL,
-  now(),
-  now()
+  NOW(),
+  NOW()
 );
 
 -- Admin da Barbearia
-INSERT INTO public.profiles (id, full_name, phone, avatar_url, barbershop_id, created_at, updated_at)
+INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000002', -- Substituir pelo ID real
+  '22b3c4d5-e6f7-8901-bcde-f12345678901', -- ID do usuário admin
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
   'Carlos Silva',
   '(11) 98765-4321',
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Carlos',
-  '550e8400-e29b-41d4-a716-446655440001',
-  now(),
-  now()
+  NOW(),
+  NOW()
 );
 
--- Barbeiro 1
-INSERT INTO public.profiles (id, full_name, phone, avatar_url, barbershop_id, created_at, updated_at)
+-- Barbeiro 1 - Paulo Silva
+INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000003', -- Substituir pelo ID real
-  'João Santos',
+  '33c4d5e6-f7a8-9012-cdef-123456789012', -- ID do usuário barbeiro 1
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
+  'Paulo Silva',
   '(11) 98765-1111',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Joao',
-  '550e8400-e29b-41d4-a716-446655440001',
-  now(),
-  now()
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Paulo',
+  NOW(),
+  NOW()
 );
 
--- Barbeira 2
-INSERT INTO public.profiles (id, full_name, phone, avatar_url, barbershop_id, created_at, updated_at)
+-- Barbeiro 2 - Ricardo Santos
+INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000004', -- Substituir pelo ID real
-  'Maria Oliveira',
+  '44d5e6f7-a8b9-0123-def1-234567890123', -- ID do usuário barbeiro 2
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
+  'Ricardo Santos',
   '(11) 98765-2222',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria',
-  '550e8400-e29b-41d4-a716-446655440001',
-  now(),
-  now()
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Ricardo',
+  NOW(),
+  NOW()
 );
 
 -- Recepcionista
-INSERT INTO public.profiles (id, full_name, phone, avatar_url, barbershop_id, created_at, updated_at)
+INSERT INTO public.profiles (id, barbershop_id, full_name, phone, avatar_url, created_at, updated_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000005', -- Substituir pelo ID real
+  '55e6f7a8-b9c0-1234-ef12-345678901234', -- ID do usuário recepcionista
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
   'Ana Costa',
   '(11) 98765-3333',
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Ana',
-  '550e8400-e29b-41d4-a716-446655440001',
-  now(),
-  now()
+  NOW(),
+  NOW()
 );
 
--- =====================================================
--- 4. ATRIBUIR ROLES AOS USUÁRIOS
--- =====================================================
+-- ==================================================
+-- PASSO 3: ATRIBUIR ROLES
+-- ==================================================
 
 -- Super Admin
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '00000000-0000-0000-0000-000000000001', -- Substituir pelo ID real
+  '11a2b3c4-d5e6-7890-abcd-ef1234567890',
   'super_admin',
   NULL
 );
@@ -125,588 +118,164 @@ VALUES (
 -- Admin da Barbearia
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '00000000-0000-0000-0000-000000000002', -- Substituir pelo ID real
+  '22b3c4d5-e6f7-8901-bcde-f12345678901',
   'admin',
-  '550e8400-e29b-41d4-a716-446655440001'
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890'
 );
 
 -- Barbeiro 1
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '00000000-0000-0000-0000-000000000003', -- Substituir pelo ID real
+  '33c4d5e6-f7a8-9012-cdef-123456789012',
   'barbeiro',
-  '550e8400-e29b-41d4-a716-446655440001'
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890'
 );
 
--- Barbeira 2
+-- Barbeiro 2
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '00000000-0000-0000-0000-000000000004', -- Substituir pelo ID real
+  '44d5e6f7-a8b9-0123-def1-234567890123',
   'barbeiro',
-  '550e8400-e29b-41d4-a716-446655440001'
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890'
 );
 
 -- Recepcionista
 INSERT INTO public.user_roles (user_id, role, barbershop_id)
 VALUES (
-  '00000000-0000-0000-0000-000000000005', -- Substituir pelo ID real
+  '55e6f7a8-b9c0-1234-ef12-345678901234',
   'recepcionista',
-  '550e8400-e29b-41d4-a716-446655440001'
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890'
 );
 
--- =====================================================
--- 5. CRIAR EQUIPE (STAFF)
--- =====================================================
+-- ==================================================
+-- PASSO 4: CRIAR EQUIPE (STAFF)
+-- ==================================================
 
--- João Santos - Barbeiro
-INSERT INTO public.staff (id, barbershop_id, user_id, name, specialty, commission_rate, is_active, schedule, created_at, updated_at)
+-- Paulo Silva - Barbeiro
+INSERT INTO public.staff (id, barbershop_id, user_id, specialty, commission_rate, work_schedule, active, created_at, updated_at)
 VALUES (
-  '660e8400-e29b-41d4-a716-446655440001',
-  '550e8400-e29b-41d4-a716-446655440001',
-  '00000000-0000-0000-0000-000000000003', -- Substituir pelo ID real
-  'João Santos',
+  '11e6f7g8-h9i0-1234-9012-345678901234',
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
+  '33c4d5e6-f7a8-9012-cdef-123456789012',
   'Cortes clássicos e degradê',
-  0.40, -- 40% de comissão
+  40.00,
+  '{
+    "segunda": ["09:00", "13:00", "14:00", "19:00"],
+    "terca": ["09:00", "13:00", "14:00", "19:00"],
+    "quarta": ["09:00", "13:00", "14:00", "19:00"],
+    "quinta": ["09:00", "13:00", "14:00", "19:00"],
+    "sexta": ["09:00", "13:00", "14:00", "20:00"],
+    "sabado": ["08:00", "17:00"]
+  }'::jsonb,
   true,
-  jsonb_build_object(
-    'segunda', jsonb_build_array('09:00', '13:00', '14:00', '19:00'),
-    'terca', jsonb_build_array('09:00', '13:00', '14:00', '19:00'),
-    'quarta', jsonb_build_array('09:00', '13:00', '14:00', '19:00'),
-    'quinta', jsonb_build_array('09:00', '13:00', '14:00', '19:00'),
-    'sexta', jsonb_build_array('09:00', '13:00', '14:00', '20:00'),
-    'sabado', jsonb_build_array('09:00', '18:00')
-  ),
-  now(),
-  now()
+  NOW(),
+  NOW()
 );
 
--- Maria Oliveira - Barbeira
-INSERT INTO public.staff (id, barbershop_id, user_id, name, specialty, commission_rate, is_active, schedule, created_at, updated_at)
+-- Ricardo Santos - Barbeiro
+INSERT INTO public.staff (id, barbershop_id, user_id, specialty, commission_rate, work_schedule, active, created_at, updated_at)
 VALUES (
-  '660e8400-e29b-41d4-a716-446655440002',
-  '550e8400-e29b-41d4-a716-446655440001',
-  '00000000-0000-0000-0000-000000000004', -- Substituir pelo ID real
-  'Maria Oliveira',
+  '22f7g8h9-i0j1-2345-0123-456789012345',
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
+  '44d5e6f7-a8b9-0123-def1-234567890123',
   'Barbas e tratamentos',
-  0.45, -- 45% de comissão
+  45.00,
+  '{
+    "segunda": ["10:00", "14:00", "15:00", "19:00"],
+    "terca": ["10:00", "14:00", "15:00", "19:00"],
+    "quarta": ["10:00", "14:00", "15:00", "19:00"],
+    "quinta": ["10:00", "14:00", "15:00", "19:00"],
+    "sexta": ["10:00", "14:00", "15:00", "20:00"],
+    "sabado": ["10:00", "17:00"]
+  }'::jsonb,
   true,
-  jsonb_build_object(
-    'segunda', jsonb_build_array('10:00', '14:00', '15:00', '19:00'),
-    'terca', jsonb_build_array('10:00', '14:00', '15:00', '19:00'),
-    'quarta', jsonb_build_array('10:00', '14:00', '15:00', '19:00'),
-    'quinta', jsonb_build_array('10:00', '14:00', '15:00', '19:00'),
-    'sexta', jsonb_build_array('10:00', '14:00', '15:00', '20:00'),
-    'sabado', jsonb_build_array('10:00', '18:00')
-  ),
-  now(),
-  now()
+  NOW(),
+  NOW()
 );
 
--- =====================================================
--- 6. CRIAR CATÁLOGO DE SERVIÇOS
--- =====================================================
+-- ==================================================
+-- PASSO 5: CRIAR SERVIÇOS
+-- ==================================================
 
-INSERT INTO public.services (id, barbershop_id, name, description, duration, price, category, is_active, created_at, updated_at)
-VALUES 
-  (
-    '770e8400-e29b-41d4-a716-446655440001',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Corte Simples',
-    'Corte de cabelo masculino tradicional',
-    30,
-    35.00,
-    'corte',
-    true,
-    now(),
-    now()
-  ),
-  (
-    '770e8400-e29b-41d4-a716-446655440002',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Corte + Barba',
-    'Corte de cabelo + acabamento de barba',
-    45,
-    55.00,
-    'combo',
-    true,
-    now(),
-    now()
-  ),
-  (
-    '770e8400-e29b-41d4-a716-446655440003',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Barba Completa',
-    'Aparar e modelar barba com navalha',
-    30,
-    30.00,
-    'barba',
-    true,
-    now(),
-    now()
-  ),
-  (
-    '770e8400-e29b-41d4-a716-446655440004',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Degradê',
-    'Corte degradê moderno',
-    40,
-    45.00,
-    'corte',
-    true,
-    now(),
-    now()
-  ),
-  (
-    '770e8400-e29b-41d4-a716-446655440005',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Corte Infantil',
-    'Corte de cabelo para crianças até 12 anos',
-    25,
-    28.00,
-    'corte',
-    true,
-    now(),
-    now()
-  ),
-  (
-    '770e8400-e29b-41d4-a716-446655440006',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Sobrancelha',
-    'Design e modelagem de sobrancelhas',
-    15,
-    15.00,
-    'outros',
-    true,
-    now(),
-    now()
-  ),
-  (
-    '770e8400-e29b-41d4-a716-446655440007',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Luzes',
-    'Aplicação de luzes no cabelo',
-    90,
-    120.00,
-    'outros',
-    true,
-    now(),
-    now()
-  ),
-  (
-    '770e8400-e29b-41d4-a716-446655440008',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Pacote Premium',
-    'Corte + Barba + Sobrancelha + Hidratação',
-    75,
-    85.00,
-    'combo',
-    true,
-    now(),
-    now()
-  );
+INSERT INTO public.services (id, barbershop_id, name, description, category, price, duration, active, created_at, updated_at)
+VALUES
+  ('11a2b3c4-d5e6-7890-abcd-ef1234567890', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Corte Simples', 'Corte de cabelo tradicional', 'corte', 35.00, 30, true, NOW(), NOW()),
+  ('22b3c4d5-e6f7-8901-bcde-f12345678901', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Corte + Barba', 'Corte de cabelo + Barba completa', 'combo', 55.00, 45, true, NOW(), NOW()),
+  ('33c4d5e6-f7a8-9012-cdef-123456789012', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Barba Completa', 'Barba com navalha e toalha quente', 'barba', 30.00, 30, true, NOW(), NOW()),
+  ('44d5e6f7-a8b9-0123-def1-234567890123', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Design de Sobrancelha', 'Design e aparar sobrancelhas', 'outros', 15.00, 15, true, NOW(), NOW()),
+  ('55e6f7a8-b9c0-1234-ef12-345678901234', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Hidratação Capilar', 'Tratamento com produtos profissionais', 'tratamento', 45.00, 40, true, NOW(), NOW()),
+  ('66f7a8b9-c0d1-2345-f123-456789012345', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Pigmentação de Barba', 'Preenchimento de falhas na barba', 'barba', 80.00, 60, true, NOW(), NOW()),
+  ('77a8b9c0-d1e2-3456-1234-567890123456', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Corte Infantil', 'Corte para crianças até 12 anos', 'corte', 25.00, 25, true, NOW(), NOW()),
+  ('88b9c0d1-e2f3-4567-2345-678901234567', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Combo Premium', 'Corte + Barba + Sobrancelha + Hidratação', 'combo', 120.00, 90, true, NOW(), NOW());
 
--- =====================================================
--- 7. CRIAR CLIENTES DE TESTE
--- =====================================================
+-- ==================================================
+-- PASSO 6: CRIAR CLIENTES DE TESTE
+-- ==================================================
 
-INSERT INTO public.clients (id, barbershop_id, name, phone, email, birth_date, notes, created_at, updated_at)
-VALUES 
-  (
-    '880e8400-e29b-41d4-a716-446655440001',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Pedro Henrique',
-    '(11) 99876-5432',
-    'pedro.henrique@email.com',
-    '1990-05-15',
-    'Cliente VIP - Prefere João Santos',
-    now(),
-    now()
-  ),
-  (
-    '880e8400-e29b-41d4-a716-446655440002',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Lucas Fernandes',
-    '(11) 99876-5433',
-    'lucas.fernandes@email.com',
-    '1985-08-22',
-    'Alérgico a produtos com fragrância forte',
-    now(),
-    now()
-  ),
-  (
-    '880e8400-e29b-41d4-a716-446655440003',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Rafael Souza',
-    '(11) 99876-5434',
-    'rafael.souza@email.com',
-    '1992-03-10',
-    'Gosta de estilos modernos',
-    now(),
-    now()
-  ),
-  (
-    '880e8400-e29b-41d4-a716-446655440004',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Gabriel Costa',
-    '(11) 99876-5435',
-    'gabriel.costa@email.com',
-    '1988-11-30',
-    NULL,
-    now(),
-    now()
-  ),
-  (
-    '880e8400-e29b-41d4-a716-446655440005',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Thiago Lima',
-    '(11) 99876-5436',
-    'thiago.lima@email.com',
-    '1995-07-18',
-    'Pagamento preferencial: PIX',
-    now(),
-    now()
-  ),
-  (
-    '880e8400-e29b-41d4-a716-446655440006',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Bruno Alves',
-    '(11) 99876-5437',
-    'bruno.alves@email.com',
-    '1987-12-05',
-    NULL,
-    now(),
-    now()
-  ),
-  (
-    '880e8400-e29b-41d4-a716-446655440007',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Fernando Santos',
-    '(11) 99876-5438',
-    'fernando.santos@email.com',
-    '1993-09-25',
-    'Prefere horários de manhã',
-    now(),
-    now()
-  ),
-  (
-    '880e8400-e29b-41d4-a716-446655440008',
-    '550e8400-e29b-41d4-a716-446655440001',
-    'Ricardo Oliveira',
-    '(11) 99876-5439',
-    'ricardo.oliveira@email.com',
-    '1991-04-14',
-    NULL,
-    now(),
-    now()
-  );
+INSERT INTO public.clients (id, barbershop_id, name, email, phone, birth_date, address, notes, tags, active, created_at, updated_at)
+VALUES
+  ('11i0j1k2-l3m4-6789-4567-890123456789', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'João Silva', 'joao.silva@email.com', '(11) 91234-5678', '1990-05-15', 'Rua A, 100', 'Cliente frequente', ARRAY['vip', 'frequente'], true, NOW(), NOW()),
+  ('22j1k2l3-m4n5-7890-5678-901234567890', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Pedro Santos', 'pedro.s@email.com', '(11) 92345-6789', '1985-08-22', 'Rua B, 200', NULL, ARRAY['novo'], true, NOW(), NOW()),
+  ('33k2l3m4-n5o6-8901-6789-012345678901', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Carlos Oliveira', 'carlos.o@email.com', '(11) 93456-7890', '1992-03-10', 'Rua C, 300', 'Prefere horários pela manhã', ARRAY['regular'], true, NOW(), NOW()),
+  ('44l3m4n5-o6p7-9012-7890-123456789012', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Roberto Lima', 'roberto.l@email.com', '(11) 94567-8901', '1988-12-05', 'Rua D, 400', NULL, ARRAY['novo'], true, NOW(), NOW()),
+  ('55m4n5o6-p7q8-0123-8901-234567890123', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Fernando Costa', 'fernando.c@email.com', '(11) 95678-9012', '1995-07-18', 'Rua E, 500', 'Alérgico a certos produtos', ARRAY['atencao'], true, NOW(), NOW()),
+  ('66n5o6p7-q8r9-1234-9012-345678901234', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Marcos Alves', 'marcos.a@email.com', '(11) 96789-0123', '1987-01-30', 'Rua F, 600', 'Cliente há 2 anos', ARRAY['fidelizado'], true, NOW(), NOW()),
+  ('77o6p7q8-r9s0-2345-0123-456789012345', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Gabriel Souza', 'gabriel.s@email.com', '(11) 97890-1234', '1993-09-25', 'Rua G, 700', NULL, ARRAY['regular'], true, NOW(), NOW()),
+  ('88p7q8r9-s0t1-3456-1234-567890123456', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', 'Henrique Rodrigues', 'henrique.r@email.com', '(11) 98901-2345', '1996-11-20', 'Rua H, 800', 'Gosta de estilos modernos', ARRAY['vip'], true, NOW(), NOW());
 
--- =====================================================
--- 8. CRIAR AGENDAMENTOS DE TESTE
--- =====================================================
+-- ==================================================
+-- PASSO 7: CRIAR AGENDAMENTOS DE TESTE
+-- ==================================================
 
--- Agendamentos para hoje e próximos dias
-INSERT INTO public.appointments (id, barbershop_id, client_id, staff_id, service_id, appointment_date, start_time, end_time, status, notes, created_at, updated_at)
-VALUES 
-  -- Hoje
-  (
-    '990e8400-e29b-41d4-a716-446655440001',
-    '550e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440001',
-    '660e8400-e29b-41d4-a716-446655440001',
-    '770e8400-e29b-41d4-a716-446655440002',
-    CURRENT_DATE,
-    '10:00',
-    '10:45',
-    'confirmado',
-    NULL,
-    now(),
-    now()
-  ),
-  (
-    '990e8400-e29b-41d4-a716-446655440002',
-    '550e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440002',
-    '660e8400-e29b-41d4-a716-446655440002',
-    '770e8400-e29b-41d4-a716-446655440003',
-    CURRENT_DATE,
-    '11:00',
-    '11:30',
-    'confirmado',
-    NULL,
-    now(),
-    now()
-  ),
-  (
-    '990e8400-e29b-41d4-a716-446655440003',
-    '550e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440003',
-    '660e8400-e29b-41d4-a716-446655440001',
-    '770e8400-e29b-41d4-a716-446655440001',
-    CURRENT_DATE,
-    '14:00',
-    '14:30',
-    'pendente',
-    NULL,
-    now(),
-    now()
-  ),
-  (
-    '990e8400-e29b-41d4-a716-446655440004',
-    '550e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440004',
-    '660e8400-e29b-41d4-a716-446655440002',
-    '770e8400-e29b-41d4-a716-446655440004',
-    CURRENT_DATE,
-    '15:00',
-    '15:40',
-    'confirmado',
-    NULL,
-    now(),
-    now()
-  ),
-  -- Amanhã
-  (
-    '990e8400-e29b-41d4-a716-446655440005',
-    '550e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440005',
-    '660e8400-e29b-41d4-a716-446655440001',
-    '770e8400-e29b-41d4-a716-446655440008',
-    CURRENT_DATE + INTERVAL '1 day',
-    '09:00',
-    '10:15',
-    'pendente',
-    'Cliente novo - primeira visita',
-    now(),
-    now()
-  ),
-  (
-    '990e8400-e29b-41d4-a716-446655440006',
-    '550e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440006',
-    '660e8400-e29b-41d4-a716-446655440002',
-    '770e8400-e29b-41d4-a716-446655440002',
-    CURRENT_DATE + INTERVAL '1 day',
-    '10:30',
-    '11:15',
-    'confirmado',
-    NULL,
-    now(),
-    now()
-  ),
-  (
-    '990e8400-e29b-41d4-a716-446655440007',
-    '550e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440007',
-    '660e8400-e29b-41d4-a716-446655440001',
-    '770e8400-e29b-41d4-a716-446655440001',
-    CURRENT_DATE + INTERVAL '1 day',
-    '14:00',
-    '14:30',
-    'pendente',
-    NULL,
-    now(),
-    now()
-  ),
-  -- Depois de amanhã
-  (
-    '990e8400-e29b-41d4-a716-446655440008',
-    '550e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440008',
-    '660e8400-e29b-41d4-a716-446655440001',
-    '770e8400-e29b-41d4-a716-446655440004',
-    CURRENT_DATE + INTERVAL '2 days',
-    '11:00',
-    '11:40',
-    'confirmado',
-    NULL,
-    now(),
-    now()
-  ),
-  (
-    '990e8400-e29b-41d4-a716-446655440009',
-    '550e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440001',
-    '660e8400-e29b-41d4-a716-446655440002',
-    '770e8400-e29b-41d4-a716-446655440003',
-    CURRENT_DATE + INTERVAL '2 days',
-    '16:00',
-    '16:30',
-    'confirmado',
-    NULL,
-    now(),
-    now()
-  );
+INSERT INTO public.appointments (id, barbershop_id, client_id, staff_id, service_id, appointment_date, appointment_time, status, notes, client_name, client_phone, service_name, service_price, created_at, updated_at)
+VALUES
+  -- Agendamentos para hoje
+  ('11r9s0t1-u2v3-5678-3456-789012345678', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', '11i0j1k2-l3m4-6789-4567-890123456789', '11e6f7g8-h9i0-1234-9012-345678901234', '11a2b3c4-d5e6-7890-abcd-ef1234567890', CURRENT_DATE, '09:00:00', 'confirmado', 'Cliente confirmou via WhatsApp', 'João Silva', '(11) 91234-5678', 'Corte Simples', 35.00, NOW(), NOW()),
+  ('22s0t1u2-v3w4-6789-4567-890123456789', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', '22j1k2l3-m4n5-7890-5678-901234567890', '22f7g8h9-i0j1-2345-0123-456789012345', '22b3c4d5-e6f7-8901-bcde-f12345678901', CURRENT_DATE, '10:00:00', 'confirmado', NULL, 'Pedro Santos', '(11) 92345-6789', 'Corte + Barba', 55.00, NOW(), NOW()),
+  ('33t1u2v3-w4x5-7890-5678-901234567890', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', '33k2l3m4-n5o6-8901-6789-012345678901', '11e6f7g8-h9i0-1234-9012-345678901234', '33c4d5e6-f7a8-9012-cdef-123456789012', CURRENT_DATE, '11:00:00', 'confirmado', NULL, 'Carlos Oliveira', '(11) 93456-7890', 'Barba Completa', 30.00, NOW(), NOW()),
+  ('44u2v3w4-x5y6-8901-6789-012345678901', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', '44l3m4n5-o6p7-9012-7890-123456789012', '22f7g8h9-i0j1-2345-0123-456789012345', '77a8b9c0-d1e2-3456-1234-567890123456', CURRENT_DATE, '14:00:00', 'pendente', NULL, 'Roberto Lima', '(11) 94567-8901', 'Corte Infantil', 25.00, NOW(), NOW()),
+  ('55v3w4x5-y6z7-9012-7890-123456789012', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', '55m4n5o6-p7q8-0123-8901-234567890123', '11e6f7g8-h9i0-1234-9012-345678901234', '55e6f7a8-b9c0-1234-ef12-345678901234', CURRENT_DATE, '15:00:00', 'confirmado', 'Hidratação especial', 'Fernando Costa', '(11) 95678-9012', 'Hidratação Capilar', 45.00, NOW(), NOW()),
+  
+  -- Agendamentos futuros
+  ('66w4x5y6-z7a8-0123-8901-234567890123', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', '66n5o6p7-q8r9-1234-9012-345678901234', '22f7g8h9-i0j1-2345-0123-456789012345', '88b9c0d1-e2f3-4567-2345-678901234567', CURRENT_DATE + INTERVAL '1 day', '10:00:00', 'pendente', NULL, 'Marcos Alves', '(11) 96789-0123', 'Combo Premium', 120.00, NOW(), NOW()),
+  ('77x5y6z7-a8b9-1234-9012-345678901234', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', '77o6p7q8-r9s0-2345-0123-456789012345', '11e6f7g8-h9i0-1234-9012-345678901234', '11a2b3c4-d5e6-7890-abcd-ef1234567890', CURRENT_DATE + INTERVAL '2 days', '14:30:00', 'pendente', NULL, 'Gabriel Souza', '(11) 97890-1234', 'Corte Simples', 35.00, NOW(), NOW()),
+  ('88y6z7a8-b9c0-2345-0123-456789012345', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', '88p7q8r9-s0t1-3456-1234-567890123456', '22f7g8h9-i0j1-2345-0123-456789012345', '66f7a8b9-c0d1-2345-f123-456789012345', CURRENT_DATE + INTERVAL '3 days', '11:00:00', 'pendente', 'Cliente solicitou barbeiro específico', 'Henrique Rodrigues', '(11) 98901-2345', 'Pigmentação de Barba', 80.00, NOW(), NOW()),
+  ('99z7a8b9-c0d1-3456-1234-567890123456', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', '11i0j1k2-l3m4-6789-4567-890123456789', '11e6f7g8-h9i0-1234-9012-345678901234', '44d5e6f7-a8b9-0123-def1-234567890123', CURRENT_DATE + INTERVAL '4 days', '16:00:00', 'pendente', NULL, 'João Silva', '(11) 91234-5678', 'Design de Sobrancelha', 15.00, NOW(), NOW());
 
--- =====================================================
--- 9. CRIAR TRANSAÇÕES DE TESTE (HISTÓRICO)
--- =====================================================
+-- ==================================================
+-- PASSO 8: CRIAR TRANSAÇÕES DE TESTE
+-- ==================================================
 
--- Transações de agendamentos concluídos (últimos 30 dias)
-INSERT INTO public.transactions (id, barbershop_id, appointment_id, staff_id, client_id, amount, payment_method, commission_amount, transaction_type, status, transaction_date, notes, created_at, updated_at)
-VALUES 
-  (
-    'aa0e8400-e29b-41d4-a716-446655440001',
-    '550e8400-e29b-41d4-a716-446655440001',
-    NULL,
-    '660e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440001',
-    55.00,
-    'dinheiro',
-    22.00,
-    'receita',
-    'concluida',
-    CURRENT_DATE - INTERVAL '2 days',
-    'Corte + Barba',
-    now() - INTERVAL '2 days',
-    now() - INTERVAL '2 days'
-  ),
-  (
-    'aa0e8400-e29b-41d4-a716-446655440002',
-    '550e8400-e29b-41d4-a716-446655440001',
-    NULL,
-    '660e8400-e29b-41d4-a716-446655440002',
-    '880e8400-e29b-41d4-a716-446655440002',
-    30.00,
-    'pix',
-    13.50,
-    'receita',
-    'concluida',
-    CURRENT_DATE - INTERVAL '2 days',
-    'Barba Completa',
-    now() - INTERVAL '2 days',
-    now() - INTERVAL '2 days'
-  ),
-  (
-    'aa0e8400-e29b-41d4-a716-446655440003',
-    '550e8400-e29b-41d4-a716-446655440001',
-    NULL,
-    '660e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440003',
-    35.00,
-    'cartao_credito',
-    14.00,
-    'receita',
-    'concluida',
-    CURRENT_DATE - INTERVAL '5 days',
-    'Corte Simples',
-    now() - INTERVAL '5 days',
-    now() - INTERVAL '5 days'
-  ),
-  (
-    'aa0e8400-e29b-41d4-a716-446655440004',
-    '550e8400-e29b-41d4-a716-446655440001',
-    NULL,
-    '660e8400-e29b-41d4-a716-446655440002',
-    '880e8400-e29b-41d4-a716-446655440004',
-    45.00,
-    'pix',
-    20.25,
-    'receita',
-    'concluida',
-    CURRENT_DATE - INTERVAL '5 days',
-    'Degradê',
-    now() - INTERVAL '5 days',
-    now() - INTERVAL '5 days'
-  ),
-  (
-    'aa0e8400-e29b-41d4-a716-446655440005',
-    '550e8400-e29b-41d4-a716-446655440001',
-    NULL,
-    '660e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440005',
-    85.00,
-    'cartao_debito',
-    34.00,
-    'receita',
-    'concluida',
-    CURRENT_DATE - INTERVAL '7 days',
-    'Pacote Premium',
-    now() - INTERVAL '7 days',
-    now() - INTERVAL '7 days'
-  ),
-  (
-    'aa0e8400-e29b-41d4-a716-446655440006',
-    '550e8400-e29b-41d4-a716-446655440001',
-    NULL,
-    '660e8400-e29b-41d4-a716-446655440002',
-    '880e8400-e29b-41d4-a716-446655440006',
-    28.00,
-    'dinheiro',
-    12.60,
-    'receita',
-    'concluida',
-    CURRENT_DATE - INTERVAL '10 days',
-    'Corte Infantil',
-    now() - INTERVAL '10 days',
-    now() - INTERVAL '10 days'
-  ),
-  (
-    'aa0e8400-e29b-41d4-a716-446655440007',
-    '550e8400-e29b-41d4-a716-446655440001',
-    NULL,
-    NULL,
-    NULL,
-    150.00,
-    'dinheiro',
-    NULL,
-    'despesa',
-    'concluida',
-    CURRENT_DATE - INTERVAL '15 days',
-    'Compra de produtos profissionais',
-    now() - INTERVAL '15 days',
-    now() - INTERVAL '15 days'
-  ),
-  (
-    'aa0e8400-e29b-41d4-a716-446655440008',
-    '550e8400-e29b-41d4-a716-446655440001',
-    NULL,
-    '660e8400-e29b-41d4-a716-446655440001',
-    '880e8400-e29b-41d4-a716-446655440007',
-    55.00,
-    'pix',
-    22.00,
-    'receita',
-    'concluida',
-    CURRENT_DATE - INTERVAL '20 days',
-    'Corte + Barba',
-    now() - INTERVAL '20 days',
-    now() - INTERVAL '20 days'
-  );
+INSERT INTO public.transactions (id, barbershop_id, appointment_id, staff_id, type, amount, payment_method, commission_amount, description, transaction_date, created_at, updated_at)
+VALUES
+  -- Receitas de agendamentos concluídos
+  ('11i0j1k2-l3m4-4567-3456-789012345678', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '11e6f7g8-h9i0-1234-9012-345678901234', 'receita', 35.00, 'dinheiro', 14.00, 'Corte Simples - João Silva', CURRENT_DATE - INTERVAL '1 day', NOW(), NOW()),
+  ('22j1k2l3-m4n5-5678-4567-890123456789', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '22f7g8h9-i0j1-2345-0123-456789012345', 'receita', 55.00, 'cartao', 24.75, 'Corte + Barba - Pedro Santos', CURRENT_DATE - INTERVAL '1 day', NOW(), NOW()),
+  ('33k2l3m4-n5o6-6789-5678-901234567890', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '11e6f7g8-h9i0-1234-9012-345678901234', 'receita', 30.00, 'pix', 12.00, 'Barba Completa - Carlos Oliveira', CURRENT_DATE - INTERVAL '2 days', NOW(), NOW()),
+  ('44l3m4n5-o6p7-7890-6789-012345678901', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '22f7g8h9-i0j1-2345-0123-456789012345', 'receita', 120.00, 'cartao', 54.00, 'Combo Premium - Marcos Alves', CURRENT_DATE - INTERVAL '3 days', NOW(), NOW()),
+  ('55m4n5o6-p7q8-8901-7890-123456789012', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '11e6f7g8-h9i0-1234-9012-345678901234', 'receita', 45.00, 'dinheiro', 18.00, 'Hidratação Capilar - Fernando Costa', CURRENT_DATE - INTERVAL '4 days', NOW(), NOW()),
+  ('66n5o6p7-q8r9-9012-8901-234567890123', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '22f7g8h9-i0j1-2345-0123-456789012345', 'receita', 80.00, 'pix', 36.00, 'Pigmentação de Barba - Gabriel Souza', CURRENT_DATE - INTERVAL '5 days', NOW(), NOW()),
+  
+  -- Despesas operacionais
+  ('77o6p7q8-r9s0-0123-9012-345678901234', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, NULL, 'despesa', 350.00, 'dinheiro', 0.00, 'Compra de produtos (shampoo, pomadas, etc)', CURRENT_DATE - INTERVAL '3 days', NOW(), NOW()),
+  ('88p7q8r9-s0t1-1234-0123-456789012345', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, NULL, 'despesa', 850.00, 'pix', 0.00, 'Aluguel do mês', CURRENT_DATE - INTERVAL '5 days', NOW(), NOW());
 
--- =====================================================
--- 10. CRIAR CAMPANHA DE MARKETING DE TESTE
--- =====================================================
+-- ==================================================
+-- PASSO 9: CRIAR CAMPANHAS DE MARKETING DE TESTE
+-- ==================================================
 
-INSERT INTO public.campaigns (id, barbershop_id, name, description, type, status, start_date, end_date, target_audience, message_template, created_at, updated_at)
+INSERT INTO public.campaigns (id, barbershop_id, name, type, status, start_date, end_date, target_audience, message_template, sent_count, created_at, updated_at)
 VALUES (
-  'bb0e8400-e29b-41d4-a716-446655440001',
-  '550e8400-e29b-41d4-a716-446655440001',
-  'Promoção Dia dos Pais 2025',
-  'Desconto especial de 20% em todos os serviços durante a semana do Dia dos Pais',
-  'promocao',
+  '11a2b3c4-d5e6-8901-abcd-ef1234567890',
+  'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
+  'Promoção Corte + Barba',
+  'promocional',
   'ativa',
   CURRENT_DATE,
-  CURRENT_DATE + INTERVAL '7 days',
-  jsonb_build_object(
-    'age_range', jsonb_build_array(25, 60),
-    'last_visit', '30_days'
-  ),
-  'Olá {nome}! 👔 Dia dos Pais se aproxima e temos uma promoção especial para você! Ganhe 20% de desconto em todos os serviços. Agende já: {link}',
-  now(),
-  now()
+  CURRENT_DATE + INTERVAL '30 days',
+  '{"tags": ["vip", "frequente"], "inactive_days": 30}'::jsonb,
+  'Olá {{nome}}! Aproveite nossa promoção especial: Corte + Barba por apenas R$ 45,00! Válido até {{data_fim}}. Agende já!',
+  0,
+  NOW(),
+  NOW()
 );
-
--- =====================================================
--- SCRIPT CONCLUÍDO
--- =====================================================
-
--- Para verificar os dados inseridos, execute:
--- SELECT * FROM barbershops;
--- SELECT * FROM profiles;
--- SELECT * FROM user_roles;
--- SELECT * FROM staff;
--- SELECT * FROM services;
--- SELECT * FROM clients;
--- SELECT * FROM appointments;
--- SELECT * FROM transactions;
--- SELECT * FROM campaigns;

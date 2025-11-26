@@ -103,6 +103,57 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['appointments']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['appointments']['Insert']>;
       };
+      staff: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          user_id: string;
+          specialty: string | null;
+          commission_rate: number;
+          work_schedule: any;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['staff']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['staff']['Insert']>;
+      };
+      transactions: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          appointment_id: string | null;
+          staff_id: string | null;
+          type: 'receita' | 'despesa';
+          amount: number;
+          payment_method: string | null;
+          commission_amount: number;
+          description: string | null;
+          transaction_date: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['transactions']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['transactions']['Insert']>;
+      };
+      campaigns: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          name: string;
+          type: string;
+          status: 'ativa' | 'pausada' | 'finalizada';
+          start_date: string;
+          end_date: string | null;
+          target_audience: any;
+          message_template: string | null;
+          sent_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['campaigns']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['campaigns']['Insert']>;
+      };
     };
   };
 };
