@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, User, Mail, Phone, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, User, Mail, Phone, MapPin, X, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -36,11 +37,32 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
     editingClient?.birth_date ? new Date(editingClient.birth_date) : undefined
   );
   const [notes, setNotes] = useState(editingClient?.notes || "");
+  const [tags, setTags] = useState<string[]>(editingClient?.tags || []);
+  const [newTag, setNewTag] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   
   const { toast } = useToast();
   const { barbershopId } = useAuth();
+
+  const addTag = () => {
+    const trimmedTag = newTag.trim().toLowerCase();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setNewTag("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +96,7 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
         birth_date: birthDate ? format(birthDate, "yyyy-MM-dd") : null,
         address: validatedData.address || null,
         notes: validatedData.notes || null,
+        tags: tags.length > 0 ? tags : null,
         active: true,
       };
 
@@ -251,6 +274,43 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
               placeholder="Preferências, histórico, observações especiais..."
               rows={3}
             />
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Tags
+            </h3>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Digite uma tag (ex: vip, novo, frequente)"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                <Button type="button" variant="outline" onClick={addTag}>
+                  Adicionar
+                </Button>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-sm">
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-2 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Actions */}
