@@ -1,0 +1,109 @@
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { TransactionForm, TransactionFormData } from "@/components/forms/TransactionForm";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
+
+interface TransactionDialogProps {
+  children: React.ReactNode;
+  transaction?: any;
+  onSuccess?: () => void;
+}
+
+export const TransactionDialog = ({ 
+  children, 
+  transaction,
+  onSuccess 
+}: TransactionDialogProps) => {
+  const { barbershopId, user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (data: TransactionFormData) => {
+    if (!barbershopId || !user) {
+      toast.error("Erro de autenticação");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const transactionData = {
+        barbershop_id: barbershopId,
+        type: data.type,
+        amount: parseFloat(data.amount),
+        description: data.description,
+        category: data.category,
+        payment_method: data.payment_method,
+        transaction_date: data.transaction_date,
+        notes: data.notes || null,
+        created_by: user.id,
+      };
+
+      if (transaction) {
+        // Atualizar transação existente
+        const { error } = await supabase
+          .from('transactions')
+          .update(transactionData)
+          .eq('id', transaction.id);
+
+        if (error) throw error;
+        toast.success("Transação atualizada com sucesso!");
+      } else {
+        // Criar nova transação
+        const { error } = await supabase
+          .from('transactions')
+          .insert([transactionData]);
+
+        if (error) throw error;
+        toast.success("Transação registrada com sucesso!");
+      }
+
+      setOpen(false);
+      onSuccess?.();
+    } catch (error: any) {
+      console.error('Erro ao salvar transação:', error);
+      toast.error(error.message || "Erro ao salvar transação");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const initialData = transaction ? {
+    type: transaction.type,
+    amount: transaction.amount.toString(),
+    description: transaction.description,
+    category: transaction.category,
+    payment_method: transaction.payment_method,
+    transaction_date: transaction.transaction_date,
+    notes: transaction.notes || "",
+  } : undefined;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {children}
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {transaction ? "Editar Transação" : "Nova Transação"}
+          </DialogTitle>
+        </DialogHeader>
+        <TransactionForm
+          initialData={initialData}
+          onSubmit={handleSubmit}
+          onCancel={() => setOpen(false)}
+          isLoading={isLoading}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+};
