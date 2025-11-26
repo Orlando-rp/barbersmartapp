@@ -5,11 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search } from "lucide-react";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -32,10 +31,8 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const { barbershopId } = useAuth();
   const { toast } = useToast();
   
-  // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>('client');
   
-  // Form data
   const [clientId, setClientId] = useState(appointment?.client_id || "");
   const [clientName, setClientName] = useState(appointment?.client_name || "");
   const [clientPhone, setClientPhone] = useState(appointment?.client_phone || "");
@@ -48,7 +45,6 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const [notes, setNotes] = useState(appointment?.notes || "");
   const [loading, setLoading] = useState(false);
   
-  // Data lists
   const [services, setServices] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -165,9 +161,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
       const booked = (data || []).map(apt => apt.appointment_time);
       setBookedSlots(booked);
       
-      // Filter available slots
       const available = timeSlots.filter(slot => {
-        // If editing, allow the current appointment's time
         if (appointment && appointment.appointment_time === slot) return true;
         return !booked.includes(slot);
       });
@@ -314,348 +308,350 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const selectedBarberData = staff.find(s => s.id === selectedBarber);
 
   return (
-    <Card className="barbershop-card w-full border-0 shadow-none">
-      <CardHeader className="space-y-4 px-6 pt-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <Calendar className="h-6 w-6 text-primary" />
-              {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
-            </CardTitle>
-            <CardDescription className="mt-2">
-              {currentStep === 'client' && 'Selecione ou cadastre um cliente'}
-              {currentStep === 'service' && 'Escolha o serviço e o profissional'}
-              {currentStep === 'datetime' && 'Selecione data e horário disponível'}
-              {currentStep === 'confirm' && 'Revise e confirme o agendamento'}
-            </CardDescription>
+    <div className="w-full">
+      <Card className="barbershop-card w-full border-0 shadow-none">
+        <CardHeader className="space-y-4 px-6 pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-2xl">
+                <CalendarIcon className="h-6 w-6 text-primary" />
+                {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
+              </CardTitle>
+              <CardDescription className="mt-2">
+                {currentStep === 'client' && 'Selecione ou cadastre um cliente'}
+                {currentStep === 'service' && 'Escolha o serviço e o profissional'}
+                {currentStep === 'datetime' && 'Selecione data e horário disponível'}
+                {currentStep === 'confirm' && 'Revise e confirme o agendamento'}
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="text-sm">
+              Passo {getStepNumber(currentStep)} de 4
+            </Badge>
           </div>
-          <Badge variant="outline" className="text-sm">
-            Passo {getStepNumber(currentStep)} de 4
-          </Badge>
-        </div>
 
-        {/* Progress Steps */}
-        <div className="flex items-center gap-2">
-          {(['client', 'service', 'datetime', 'confirm'] as WizardStep[]).map((step, index) => (
-            <div key={step} className="flex items-center flex-1">
-              <div className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all",
-                currentStep === step ? "border-primary bg-primary text-primary-foreground" :
-                getStepNumber(currentStep) > getStepNumber(step) ? "border-primary bg-primary/10 text-primary" :
-                "border-muted-foreground/30 text-muted-foreground"
-              )}>
-                {getStepNumber(currentStep) > getStepNumber(step) ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  <span className="text-xs font-semibold">{index + 1}</span>
+          <div className="flex items-center gap-2">
+            {(['client', 'service', 'datetime', 'confirm'] as WizardStep[]).map((step, index) => (
+              <div key={step} className="flex items-center flex-1">
+                <div className={cn(
+                  "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all",
+                  currentStep === step ? "border-primary bg-primary text-primary-foreground" :
+                  getStepNumber(currentStep) > getStepNumber(step) ? "border-primary bg-primary/10 text-primary" :
+                  "border-muted-foreground/30 text-muted-foreground"
+                )}>
+                  {getStepNumber(currentStep) > getStepNumber(step) ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <span className="text-xs font-semibold">{index + 1}</span>
+                  )}
+                </div>
+                {index < 3 && (
+                  <div className={cn(
+                    "flex-1 h-0.5 mx-2 transition-all",
+                    getStepNumber(currentStep) > getStepNumber(step) ? "bg-primary" : "bg-muted-foreground/30"
+                  )} />
                 )}
               </div>
-              {index < 3 && (
-                <div className={cn(
-                  "flex-1 h-0.5 mx-2 transition-all",
-                  getStepNumber(currentStep) > getStepNumber(step) ? "bg-primary" : "bg-muted-foreground/30"
-                )} />
-              )}
-            </div>
-          ))}
-        </div>
-      </CardHeader>
+            ))}
+          </div>
+        </CardHeader>
 
-      <CardContent className="space-y-6 px-6 pb-6">
-        {/* Step 1: Client Selection */}
-        {currentStep === 'client' && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="flex items-center gap-2 text-lg font-semibold">
-              <User className="h-5 w-5 text-primary" />
-              Informações do Cliente
-            </div>
-
+        <CardContent className="space-y-6 px-6 pb-6">
+          {/* Step 1: Client Selection */}
+          {currentStep === 'client' && (
             <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar cliente existente..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="flex items-center gap-2 text-lg font-semibold">
+                <User className="h-5 w-5 text-primary" />
+                Informações do Cliente
               </div>
 
-              {searchTerm && filteredClients.length > 0 && (
-                <div className="border rounded-lg max-h-48 overflow-y-auto bg-background shadow-lg">
-                  {filteredClients.map((client) => (
-                    <button
-                      key={client.id}
-                      onClick={() => {
-                        selectClient(client);
-                        setSearchTerm("");
-                      }}
-                      className="w-full p-3 text-left hover:bg-muted/50 transition-colors border-b last:border-b-0"
-                    >
-                      <div className="font-medium">{client.name}</div>
-                      <div className="text-sm text-muted-foreground">{client.phone}</div>
-                    </button>
-                  ))}
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                  <Input
+                    placeholder="Buscar cliente existente..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-              )}
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
+                {searchTerm && filteredClients.length > 0 && (
+                  <div className="absolute w-full left-0 right-0 border rounded-lg max-h-48 overflow-y-auto bg-card shadow-lg z-20">
+                    {filteredClients.map((client) => (
+                      <button
+                        key={client.id}
+                        type="button"
+                        onClick={() => {
+                          selectClient(client);
+                          setSearchTerm("");
+                        }}
+                        className="w-full p-3 text-left hover:bg-muted/50 transition-colors border-b last:border-b-0"
+                      >
+                        <div className="font-medium">{client.name}</div>
+                        <div className="text-sm text-muted-foreground">{client.phone}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      ou cadastre novo cliente
+                    </span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    ou cadastre novo cliente
-                  </span>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="client-name">Nome Completo *</Label>
+                    <Input
+                      id="client-name"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      placeholder="Nome do cliente"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="client-phone">Telefone *</Label>
+                    <Input
+                      id="client-phone"
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Service Selection */}
+          {currentStep === 'service' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-lg font-semibold">
+                <Scissors className="h-5 w-5 text-primary" />
+                Serviço e Profissional
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="client-name">Nome Completo *</Label>
-                  <Input
-                    id="client-name"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Nome do cliente"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="client-phone">Telefone *</Label>
-                  <Input
-                    id="client-phone"
-                    value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Service Selection */}
-        {currentStep === 'service' && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="flex items-center gap-2 text-lg font-semibold">
-              <Scissors className="h-5 w-5 text-primary" />
-              Serviço e Profissional
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Serviço *</Label>
-                <Select value={selectedService} onValueChange={setSelectedService}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o serviço" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map((service) => (
-                      <SelectItem key={service.id} value={service.id}>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="font-medium">{service.name}</span>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{service.duration}min</span>
-                            <span>•</span>
-                            <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
+                  <Label>Serviço *</Label>
+                  <Select value={selectedService} onValueChange={setSelectedService}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o serviço" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="font-medium">{service.name}</span>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{service.duration}min</span>
+                              <span>•</span>
+                              <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
+                            </div>
                           </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label>Profissional *</Label>
-                <Select value={selectedBarber} onValueChange={setSelectedBarber}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o profissional" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staff.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Label>Profissional *</Label>
+                  <Select value={selectedBarber} onValueChange={setSelectedBarber}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o profissional" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staff.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Step 3: Date & Time Selection */}
-        {currentStep === 'datetime' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center gap-2 text-lg font-semibold">
-              <Clock className="h-5 w-5 text-primary" />
-              Data e Horário
+          {/* Step 3: Date & Time Selection */}
+          {currentStep === 'datetime' && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-lg font-semibold">
+                <Clock className="h-5 w-5 text-primary" />
+                Data e Horário
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Selecione a Data *</Label>
+                  <div className="border rounded-lg p-4 bg-card">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      locale={ptBR}
+                      className="pointer-events-auto w-full mx-auto"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horários Disponíveis *</Label>
+                  {!date || !selectedBarber ? (
+                    <div className="border rounded-lg p-8 text-center text-muted-foreground">
+                      {!selectedBarber ? 'Selecione um profissional primeiro' : 'Selecione uma data'}
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <div className="border rounded-lg p-8 text-center">
+                      <p className="text-muted-foreground mb-2">Nenhum horário disponível</p>
+                      <p className="text-sm text-muted-foreground">Tente outra data</p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto bg-card">
+                      <div className="grid grid-cols-3 gap-2">
+                        {timeSlots.map((time) => {
+                          const isAvailable = availableSlots.includes(time);
+                          const isSelected = selectedTime === time;
+                          
+                          return (
+                            <Button
+                              key={time}
+                              type="button"
+                              variant={isSelected ? "default" : "outline"}
+                              disabled={!isAvailable}
+                              onClick={() => setSelectedTime(time)}
+                              className={cn(
+                                "relative transition-all",
+                                !isAvailable && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              {time}
+                              {isSelected && <CheckCircle2 className="absolute right-1 top-1 h-3 w-3" />}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
+          )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label>Selecione a Data *</Label>
-                <div className="border rounded-lg p-4 bg-background">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                    locale={ptBR}
-                    className="pointer-events-auto w-full"
+          {/* Step 4: Confirmation */}
+          {currentStep === 'confirm' && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-lg font-semibold">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                Confirmar Agendamento
+              </div>
+
+              <div className="space-y-4">
+                <Card className="barbershop-card">
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex items-start gap-3">
+                      <User className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Cliente</p>
+                        <p className="font-semibold">{clientName}</p>
+                        <p className="text-sm text-muted-foreground">{clientPhone}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Scissors className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Serviço</p>
+                        <p className="font-semibold">{selectedServiceData?.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedServiceData?.duration}min - R$ {selectedServiceData?.price.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <User className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Profissional</p>
+                        <p className="font-semibold">{selectedBarberData?.name}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <CalendarIcon className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Data e Horário</p>
+                        <p className="font-semibold">
+                          {date && format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{selectedTime}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Observações</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Adicione observações sobre o agendamento..."
+                    rows={3}
                   />
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label>Horários Disponíveis *</Label>
-                {!date || !selectedBarber ? (
-                  <div className="border rounded-lg p-8 text-center text-muted-foreground">
-                    {!selectedBarber ? 'Selecione um profissional primeiro' : 'Selecione uma data'}
-                  </div>
-                ) : availableSlots.length === 0 ? (
-                  <div className="border rounded-lg p-8 text-center">
-                    <p className="text-muted-foreground mb-2">Nenhum horário disponível</p>
-                    <p className="text-sm text-muted-foreground">Tente outra data</p>
-                  </div>
-                ) : (
-                  <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto bg-background">
-                    <div className="grid grid-cols-3 gap-2">
-                      {timeSlots.map((time) => {
-                        const isAvailable = availableSlots.includes(time);
-                        const isSelected = selectedTime === time;
-                        
-                        return (
-                          <Button
-                            key={time}
-                            type="button"
-                            variant={isSelected ? "default" : "outline"}
-                            disabled={!isAvailable}
-                            onClick={() => setSelectedTime(time)}
-                            className={cn(
-                              "relative transition-all",
-                              !isAvailable && "opacity-50 cursor-not-allowed"
-                            )}
-                          >
-                            {time}
-                            {isSelected && <CheckCircle2 className="absolute right-1 top-1 h-3 w-3" />}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Step 4: Confirmation */}
-        {currentStep === 'confirm' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center gap-2 text-lg font-semibold">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
-              Confirmar Agendamento
-            </div>
-
-            <div className="space-y-4">
-              <Card className="barbershop-card">
-                <CardContent className="pt-6 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <User className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Cliente</p>
-                      <p className="font-semibold">{clientName}</p>
-                      <p className="text-sm text-muted-foreground">{clientPhone}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Scissors className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Serviço</p>
-                      <p className="font-semibold">{selectedServiceData?.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedServiceData?.duration}min - R$ {selectedServiceData?.price.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <User className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Profissional</p>
-                      <p className="font-semibold">{selectedBarberData?.name}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <CalendarIcon className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Data e Horário</p>
-                      <p className="font-semibold">
-                        {date && format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{selectedTime}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Adicione observações sobre o agendamento..."
-                  rows={3}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-6 border-t">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={currentStep === 'client' ? onClose : handleBack}
-            disabled={loading}
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            {currentStep === 'client' ? 'Cancelar' : 'Voltar'}
-          </Button>
-
-          {currentStep === 'confirm' ? (
+          {/* Navigation Buttons */}
+          <div className="flex justify-between pt-6 border-t">
             <Button
               type="button"
-              variant="premium"
-              onClick={handleSubmit}
+              variant="outline"
+              onClick={currentStep === 'client' ? onClose : handleBack}
               disabled={loading}
             >
-              {loading ? 'Salvando...' : (appointment ? 'Atualizar Agendamento' : 'Confirmar Agendamento')}
-              <CheckCircle2 className="ml-2 h-4 w-4" />
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              {currentStep === 'client' ? 'Cancelar' : 'Voltar'}
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="premium"
-              onClick={handleNext}
-              disabled={
-                (currentStep === 'client' && !canProceedFromClient) ||
-                (currentStep === 'service' && !canProceedFromService) ||
-                (currentStep === 'datetime' && !canProceedFromDateTime)
-              }
-            >
-              Próximo
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+
+            {currentStep === 'confirm' ? (
+              <Button
+                type="button"
+                variant="premium"
+                onClick={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? 'Salvando...' : (appointment ? 'Atualizar Agendamento' : 'Confirmar Agendamento')}
+                <CheckCircle2 className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="premium"
+                onClick={handleNext}
+                disabled={
+                  (currentStep === 'client' && !canProceedFromClient) ||
+                  (currentStep === 'service' && !canProceedFromService) ||
+                  (currentStep === 'datetime' && !canProceedFromDateTime)
+                }
+              >
+                Próximo
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
