@@ -69,12 +69,24 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
     try {
       const { data, error } = await supabase
         .from('staff')
-        .select('*')
+        .select(`
+          id,
+          profiles:user_id (
+            full_name
+          )
+        `)
         .eq('barbershop_id', barbershopId)
         .eq('active', true);
 
       if (error) throw error;
-      setStaff(data || []);
+      
+      // Transform data to have name directly
+      const transformedStaff = (data || []).map((member: any) => ({
+        id: member.id,
+        name: Array.isArray(member.profiles) ? member.profiles[0]?.full_name : member.profiles?.full_name
+      }));
+      
+      setStaff(transformedStaff);
     } catch (error: any) {
       toast({
         title: 'Erro ao carregar equipe',

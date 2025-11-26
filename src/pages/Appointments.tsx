@@ -61,12 +61,24 @@ const Appointments = () => {
     try {
       const { data, error } = await supabase
         .from('staff')
-        .select('id, name')
+        .select(`
+          id,
+          profiles:user_id (
+            full_name
+          )
+        `)
         .eq('barbershop_id', barbershopId)
         .eq('active', true);
 
       if (error) throw error;
-      setStaff(data || []);
+      
+      // Transform data to have name directly
+      const transformedStaff = (data || []).map((member: any) => ({
+        id: member.id,
+        name: Array.isArray(member.profiles) ? member.profiles[0]?.full_name : member.profiles?.full_name
+      }));
+      
+      setStaff(transformedStaff);
     } catch (error: any) {
       console.error('Erro ao carregar equipe:', error);
     }
@@ -88,7 +100,10 @@ const Appointments = () => {
           service_name,
           service_price,
           staff:staff_id (
-            name
+            id,
+            profiles:user_id (
+              full_name
+            )
           )
         `)
         .eq('barbershop_id', barbershopId)
@@ -98,10 +113,16 @@ const Appointments = () => {
       if (error) throw error;
       
       // Transform data to handle staff relationship
-      const transformedData = (data || []).map(apt => ({
-        ...apt,
-        staff: Array.isArray(apt.staff) ? apt.staff[0] : apt.staff
-      }));
+      const transformedData = (data || []).map((apt: any) => {
+        const staffData = Array.isArray(apt.staff) ? apt.staff[0] : apt.staff;
+        const profileData = staffData?.profiles;
+        const staffName = Array.isArray(profileData) ? profileData[0]?.full_name : profileData?.full_name;
+        
+        return {
+          ...apt,
+          staff: staffData ? { name: staffName } : null
+        };
+      });
       
       setAppointments(transformedData);
     } catch (error: any) {
