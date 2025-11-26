@@ -207,7 +207,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
         .eq('barbershop_id', barbershopId)
         .eq('staff_id', selectedBarber)
         .eq('appointment_date', formattedDate)
-        .in('status', ['pendente', 'confirmado', 'em_atendimento']);
+        .in('status', ['pendente', 'confirmado', 'concluido']);
 
       if (error) throw error;
 
@@ -299,7 +299,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
         .eq('staff_id', selectedBarber)
         .eq('appointment_date', formattedDate)
         .eq('appointment_time', selectedTime)
-        .in('status', ['pendente', 'confirmado', 'em_atendimento']);
+        .in('status', ['pendente', 'confirmado', 'concluido']);
 
       if (conflictError) throw conflictError;
 
