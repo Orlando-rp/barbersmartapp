@@ -152,12 +152,12 @@ VALUES (
 -- ==================================================
 
 -- Paulo Silva - Barbeiro
-INSERT INTO public.staff (id, barbershop_id, user_id, specialty, commission_rate, work_schedule, active, created_at, updated_at)
+INSERT INTO public.staff (id, barbershop_id, user_id, specialties, commission_rate, schedule, active, created_at, updated_at)
 VALUES (
   '11e6f7g8-h9i0-1234-9012-345678901234',
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
   '33c4d5e6-f7a8-9012-cdef-123456789012',
-  'Cortes clássicos e degradê',
+  ARRAY['Cortes clássicos', 'degradê']::text[],
   40.00,
   '{
     "segunda": ["09:00", "13:00", "14:00", "19:00"],
@@ -173,12 +173,12 @@ VALUES (
 );
 
 -- Ricardo Santos - Barbeiro
-INSERT INTO public.staff (id, barbershop_id, user_id, specialty, commission_rate, work_schedule, active, created_at, updated_at)
+INSERT INTO public.staff (id, barbershop_id, user_id, specialties, commission_rate, schedule, active, created_at, updated_at)
 VALUES (
   '22f7g8h9-i0j1-2345-0123-456789012345',
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
   '44d5e6f7-a8b9-0123-def1-234567890123',
-  'Barbas e tratamentos',
+  ARRAY['Barbas', 'tratamentos']::text[],
   45.00,
   '{
     "segunda": ["10:00", "14:00", "15:00", "19:00"],
@@ -246,36 +246,41 @@ VALUES
 -- PASSO 8: CRIAR TRANSAÇÕES DE TESTE
 -- ==================================================
 
-INSERT INTO public.transactions (id, barbershop_id, appointment_id, staff_id, type, amount, payment_method, commission_amount, description, transaction_date, created_at, updated_at)
+INSERT INTO public.transactions (id, barbershop_id, appointment_id, type, amount, category, payment_method, description, transaction_date, created_by, created_at, updated_at)
 VALUES
   -- Receitas de agendamentos concluídos
-  ('11i0j1k2-l3m4-4567-3456-789012345678', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '11e6f7g8-h9i0-1234-9012-345678901234', 'receita', 35.00, 'dinheiro', 14.00, 'Corte Simples - João Silva', CURRENT_DATE - INTERVAL '1 day', NOW(), NOW()),
-  ('22j1k2l3-m4n5-5678-4567-890123456789', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '22f7g8h9-i0j1-2345-0123-456789012345', 'receita', 55.00, 'cartao', 24.75, 'Corte + Barba - Pedro Santos', CURRENT_DATE - INTERVAL '1 day', NOW(), NOW()),
-  ('33k2l3m4-n5o6-6789-5678-901234567890', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '11e6f7g8-h9i0-1234-9012-345678901234', 'receita', 30.00, 'pix', 12.00, 'Barba Completa - Carlos Oliveira', CURRENT_DATE - INTERVAL '2 days', NOW(), NOW()),
-  ('44l3m4n5-o6p7-7890-6789-012345678901', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '22f7g8h9-i0j1-2345-0123-456789012345', 'receita', 120.00, 'cartao', 54.00, 'Combo Premium - Marcos Alves', CURRENT_DATE - INTERVAL '3 days', NOW(), NOW()),
-  ('55m4n5o6-p7q8-8901-7890-123456789012', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '11e6f7g8-h9i0-1234-9012-345678901234', 'receita', 45.00, 'dinheiro', 18.00, 'Hidratação Capilar - Fernando Costa', CURRENT_DATE - INTERVAL '4 days', NOW(), NOW()),
-  ('66n5o6p7-q8r9-9012-8901-234567890123', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, '22f7g8h9-i0j1-2345-0123-456789012345', 'receita', 80.00, 'pix', 36.00, 'Pigmentação de Barba - Gabriel Souza', CURRENT_DATE - INTERVAL '5 days', NOW(), NOW()),
+  ('11i0j1k2-l3m4-4567-3456-789012345678', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 35.00, 'Serviço', 'dinheiro', 'Corte Simples - João Silva', CURRENT_DATE - INTERVAL '1 day', '33c4d5e6-f7a8-9012-cdef-123456789012', NOW(), NOW()),
+  ('22j1k2l3-m4n5-5678-4567-890123456789', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 55.00, 'Serviço', 'cartao_credito', 'Corte + Barba - Pedro Santos', CURRENT_DATE - INTERVAL '1 day', '44d5e6f7-a8b9-0123-def1-234567890123', NOW(), NOW()),
+  ('33k2l3m4-n5o6-6789-5678-901234567890', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 30.00, 'Serviço', 'pix', 'Barba Completa - Carlos Oliveira', CURRENT_DATE - INTERVAL '2 days', '33c4d5e6-f7a8-9012-cdef-123456789012', NOW(), NOW()),
+  ('44l3m4n5-o6p7-7890-6789-012345678901', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 120.00, 'Serviço', 'cartao_credito', 'Combo Premium - Marcos Alves', CURRENT_DATE - INTERVAL '3 days', '44d5e6f7-a8b9-0123-def1-234567890123', NOW(), NOW()),
+  ('55m4n5o6-p7q8-8901-7890-123456789012', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 45.00, 'Serviço', 'dinheiro', 'Hidratação Capilar - Fernando Costa', CURRENT_DATE - INTERVAL '4 days', '33c4d5e6-f7a8-9012-cdef-123456789012', NOW(), NOW()),
+  ('66n5o6p7-q8r9-9012-8901-234567890123', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'receita', 80.00, 'Serviço', 'pix', 'Pigmentação de Barba - Gabriel Souza', CURRENT_DATE - INTERVAL '5 days', '44d5e6f7-a8b9-0123-def1-234567890123', NOW(), NOW()),
   
   -- Despesas operacionais
-  ('77o6p7q8-r9s0-0123-9012-345678901234', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, NULL, 'despesa', 350.00, 'dinheiro', 0.00, 'Compra de produtos (shampoo, pomadas, etc)', CURRENT_DATE - INTERVAL '3 days', NOW(), NOW()),
-  ('88p7q8r9-s0t1-1234-0123-456789012345', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, NULL, 'despesa', 850.00, 'pix', 0.00, 'Aluguel do mês', CURRENT_DATE - INTERVAL '5 days', NOW(), NOW());
+  ('77o6p7q8-r9s0-0123-9012-345678901234', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'despesa', 350.00, 'Produtos', 'dinheiro', 'Compra de produtos (shampoo, pomadas, etc)', CURRENT_DATE - INTERVAL '3 days', '22b3c4d5-e6f7-8901-bcde-f12345678901', NOW(), NOW()),
+  ('88p7q8r9-s0t1-1234-0123-456789012345', 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', NULL, 'despesa', 850.00, 'Aluguel', 'pix', 'Aluguel do mês', CURRENT_DATE - INTERVAL '5 days', '22b3c4d5-e6f7-8901-bcde-f12345678901', NOW(), NOW());
 
 -- ==================================================
 -- PASSO 9: CRIAR CAMPANHAS DE MARKETING DE TESTE
 -- ==================================================
 
-INSERT INTO public.campaigns (id, barbershop_id, name, type, status, start_date, end_date, target_audience, message_template, sent_count, created_at, updated_at)
+INSERT INTO public.campaigns (id, barbershop_id, name, type, status, config, created_at, updated_at)
 VALUES (
   '11a2b3c4-d5e6-8901-abcd-ef1234567890',
   'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
   'Promoção Corte + Barba',
   'promocional',
   'ativa',
-  CURRENT_DATE,
-  CURRENT_DATE + INTERVAL '30 days',
-  '{"tags": ["vip", "frequente"], "inactive_days": 30}'::jsonb,
-  'Olá {{nome}}! Aproveite nossa promoção especial: Corte + Barba por apenas R$ 45,00! Válido até {{data_fim}}. Agende já!',
-  0,
+  '{
+    "start_date": "2025-01-26",
+    "end_date": "2025-02-25",
+    "target_audience": {
+      "tags": ["vip", "frequente"],
+      "inactive_days": 30
+    },
+    "message_template": "Olá {{nome}}! Aproveite nossa promoção especial: Corte + Barba por apenas R$ 45,00! Válido até {{data_fim}}. Agende já!",
+    "sent_count": 0
+  }'::jsonb,
   NOW(),
   NOW()
 );
