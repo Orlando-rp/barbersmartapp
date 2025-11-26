@@ -39,10 +39,10 @@ interface StaffMember {
     full_name: string;
     phone: string;
     avatar_url: string;
+    user_roles: {
+      role: string;
+    }[];
   };
-  user_roles: {
-    role: string;
-  }[];
 }
 
 const Staff = () => {
@@ -92,8 +92,12 @@ const Staff = () => {
         .from('staff')
         .select(`
           *,
-          profiles!staff_user_id_fkey(full_name, phone, avatar_url),
-          user_roles(role)
+          profiles!staff_user_id_fkey(
+            full_name, 
+            phone, 
+            avatar_url,
+            user_roles(role)
+          )
         `)
         .eq('barbershop_id', barbershopId)
         .order('active', { ascending: false })
@@ -268,9 +272,9 @@ const Staff = () => {
                         </TableCell>
                         <TableCell>{member.profiles?.phone || '-'}</TableCell>
                         <TableCell>
-                          {member.user_roles && member.user_roles.length > 0 ? (
+                          {member.profiles?.user_roles && member.profiles.user_roles.length > 0 ? (
                             <div className="flex gap-1">
-                              {member.user_roles.map((ur, idx) => (
+                              {member.profiles.user_roles.map((ur, idx) => (
                                 <Badge key={idx} variant={getRoleBadgeVariant(ur.role)}>
                                   {getRoleLabel(ur.role)}
                                 </Badge>
