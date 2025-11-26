@@ -63,6 +63,25 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   useEffect(() => {
     if (date && selectedBarber) {
       fetchAvailableSlots();
+      // Limpar horário selecionado se não estiver mais disponível (exceto ao editar)
+      if (selectedTime && !appointment) {
+        const checkIfTimeStillAvailable = async () => {
+          const formattedDate = format(date, "yyyy-MM-dd");
+          const { data } = await supabase
+            .from('appointments')
+            .select('appointment_time')
+            .eq('barbershop_id', barbershopId)
+            .eq('staff_id', selectedBarber)
+            .eq('appointment_date', formattedDate)
+            .eq('appointment_time', selectedTime)
+            .neq('status', 'cancelado');
+          
+          if (data && data.length > 0) {
+            setSelectedTime("");
+          }
+        };
+        checkIfTimeStillAvailable();
+      }
     }
   }, [date, selectedBarber]);
 
@@ -150,7 +169,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
       
       const { data, error } = await supabase
         .from('appointments')
-        .select('appointment_time')
+        .select('appointment_time, id')
         .eq('barbershop_id', barbershopId)
         .eq('staff_id', selectedBarber)
         .eq('appointment_date', formattedDate)
@@ -158,13 +177,13 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
 
       if (error) throw error;
 
-      const booked = (data || []).map(apt => apt.appointment_time);
+      const booked = (data || [])
+        .filter(apt => !appointment || apt.id !== appointment.id) // Permitir o próprio horário ao editar
+        .map(apt => apt.appointment_time);
+      
       setBookedSlots(booked);
       
-      const available = timeSlots.filter(slot => {
-        if (appointment && appointment.appointment_time === slot) return true;
-        return !booked.includes(slot);
-      });
+      const available = timeSlots.filter(slot => !booked.includes(slot));
       
       setAvailableSlots(available);
     } catch (error: any) {
@@ -216,6 +235,35 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
     setLoading(true);
 
     try {
+      // Verificar conflito de horário
+      const formattedDate = format(date, "yyyy-MM-dd");
+      const { data: conflictingAppointments, error: conflictError } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('barbershop_id', barbershopId)
+        .eq('staff_id', selectedBarber)
+        .eq('appointment_date', formattedDate)
+        .eq('appointment_time', selectedTime)
+        .neq('status', 'cancelado');
+
+      if (conflictError) throw conflictError;
+
+      // Se está editando, ignorar o próprio agendamento
+      const hasConflict = appointment 
+        ? conflictingAppointments?.some(apt => apt.id !== appointment.id)
+        : conflictingAppointments && conflictingAppointments.length > 0;
+
+      if (hasConflict) {
+        toast({
+          title: "Horário Indisponível",
+          description: "Este horário já está ocupado para o profissional selecionado. Por favor, escolha outro horário.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        setCurrentStep('datetime');
+        return;
+      }
+
       let finalClientId = clientId;
       
       if (!finalClientId) {
