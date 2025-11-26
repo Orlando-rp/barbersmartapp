@@ -12,17 +12,14 @@ interface AppointmentDialogProps {
 
 export const AppointmentDialog = ({ children, appointment, open, onOpenChange, onSuccess }: AppointmentDialogProps) => {
   const handleClose = () => {
-    onOpenChange?.(false);
     onSuccess?.();
+    onOpenChange?.(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {children && (
-        <DialogTrigger asChild>
-          {children}
-        </DialogTrigger>
-      )}
+    <>
+      {children}
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
         <DialogTitle className="sr-only">
           {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
@@ -35,5 +32,6 @@ export const AppointmentDialog = ({ children, appointment, open, onOpenChange, o
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 };

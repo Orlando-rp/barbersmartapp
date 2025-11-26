@@ -46,6 +46,7 @@ const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<string>("all");
   const [staff, setStaff] = useState<any[]>([]);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (barbershopId) {
@@ -243,16 +244,26 @@ const Appointments = () => {
           </div>
           <AppointmentDialog 
             appointment={editingAppointment} 
-            open={!!editingAppointment}
-            onOpenChange={(open) => !open && setEditingAppointment(null)}
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                setEditingAppointment(null);
+              }
+            }}
             onSuccess={() => {
               fetchAppointments();
               setEditingAppointment(null);
+              setIsDialogOpen(false);
             }}
           >
             <Button 
               variant="premium" 
               size="lg"
+              onClick={() => {
+                setEditingAppointment(null);
+                setIsDialogOpen(true);
+              }}
             >
               <Plus className="mr-2 h-5 w-5" />
               Novo Agendamento
@@ -374,7 +385,10 @@ const Appointments = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setEditingAppointment(appointment)}
+                        onClick={() => {
+                          setEditingAppointment(appointment);
+                          setIsDialogOpen(true);
+                        }}
                         className="w-full md:w-[140px]"
                       >
                         <Edit className="mr-2 h-4 w-4" />
