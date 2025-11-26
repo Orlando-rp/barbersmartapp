@@ -84,10 +84,10 @@ const Index = () => {
         .eq('barbershop_id', barbershopId)
         .eq('active', true);
 
-      // Serviços populares
+      // Serviços populares e dados de agendamentos para retenção
       const { data: appointments } = await supabase
         .from('appointments')
-        .select('service_name')
+        .select('service_name, client_id')
         .eq('barbershop_id', barbershopId)
         .gte('appointment_date', firstDayOfMonth);
 
@@ -119,6 +119,22 @@ const Index = () => {
         ? Math.round(((confirmedCount || 0) / totalAppointments) * 100)
         : 0;
 
+      // Taxa de retenção (clientes com mais de 1 agendamento no período)
+      const clientAppointmentCounts = new Map<string, number>();
+      appointments?.forEach(apt => {
+        if (apt.client_id) {
+          const count = clientAppointmentCounts.get(apt.client_id) || 0;
+          clientAppointmentCounts.set(apt.client_id, count + 1);
+        }
+      });
+
+      const clientsWithMultipleAppointments = Array.from(clientAppointmentCounts.values())
+        .filter(count => count > 1).length;
+      
+      const retentionRate = (clientCount || 0) > 0 
+        ? Math.round((clientsWithMultipleAppointments / (clientCount || 1)) * 100)
+        : 0;
+
       // Novos clientes este mês
       const { count: newClientsCount } = await supabase
         .from('clients')
@@ -126,15 +142,18 @@ const Index = () => {
         .eq('barbershop_id', barbershopId)
         .gte('created_at', firstDayOfMonth);
 
+      // Avaliação média (mock por enquanto - sistema de avaliações será implementado)
+      const averageRating = 4.8;
+
       setStats({
         todayAppointments: todayCount || 0,
         monthRevenue,
         activeClients: clientCount || 0,
-        averageRating: 4.8, // Mock - implementar sistema de avaliação depois
+        averageRating,
         popularServices,
         occupancyRate,
         newClientsThisMonth: newClientsCount || 0,
-        retentionRate: 92 // Mock - implementar cálculo de retenção depois
+        retentionRate
       });
     } catch (error) {
       console.error('Erro ao buscar estatísticas:', error);
