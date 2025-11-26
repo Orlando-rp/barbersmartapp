@@ -55,6 +55,33 @@ const Appointments = () => {
     }
   }, [barbershopId]);
 
+  // Real-time updates for appointments list
+  useEffect(() => {
+    if (!barbershopId) return;
+
+    const channel = supabase
+      .channel('appointments-list-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: `barbershop_id=eq.${barbershopId}`
+        },
+        (payload) => {
+          console.log('Appointment list changed:', payload);
+          // Recarregar lista quando houver mudanças
+          fetchAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [barbershopId]);
+
   useEffect(() => {
     filterAppointments();
   }, [appointments, searchTerm, selectedBarber, selectedDate]);

@@ -69,6 +69,52 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
     }
   }, [date, selectedBarber]);
 
+  // Real-time updates for appointments
+  useEffect(() => {
+    if (!barbershopId || !date || !selectedBarber) return;
+
+    const formattedDate = format(date, "yyyy-MM-dd");
+    
+    const channel = supabase
+      .channel('appointments-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: `barbershop_id=eq.${barbershopId}`
+        },
+        (payload: any) => {
+          console.log('Appointment changed:', payload);
+          
+          // Verificar se a mudança afeta o profissional e data selecionados
+          const affectsCurrentView = 
+            payload.new?.staff_id === selectedBarber && 
+            payload.new?.appointment_date === formattedDate;
+          
+          const wasAffected = 
+            payload.old?.staff_id === selectedBarber && 
+            payload.old?.appointment_date === formattedDate;
+
+          if (affectsCurrentView || wasAffected) {
+            // Atualizar horários disponíveis
+            fetchAvailableSlots();
+            
+            toast({
+              title: "Horários atualizados",
+              description: "A disponibilidade foi atualizada em tempo real.",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [barbershopId, date, selectedBarber]);
+
   const fetchClients = async () => {
     try {
       const { data, error } = await supabase
