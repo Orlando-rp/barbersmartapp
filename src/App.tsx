@@ -14,6 +14,7 @@ import Services from "./pages/Services";
 import Staff from "./pages/Staff";
 import Profile from "./pages/Profile";
 import Finance from "./pages/Finance";
+import AuditLogs from "./pages/AuditLogs";
 import Reports from "./pages/Reports";
 import Marketing from "./pages/Marketing";
 import SettingsPage from "./pages/Settings";
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
