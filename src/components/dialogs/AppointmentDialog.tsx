@@ -4,10 +4,16 @@ import { ReactNode, useState } from "react";
 
 interface AppointmentDialogProps {
   children: ReactNode;
+  onSuccess?: () => void;
 }
 
-export const AppointmentDialog = ({ children }: AppointmentDialogProps) => {
+export const AppointmentDialog = ({ children, onSuccess }: AppointmentDialogProps) => {
   const [open, setOpen] = useState(false);
+
+  const handleClose = () => {
+    setOpen(false);
+    onSuccess?.();
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -19,7 +25,7 @@ export const AppointmentDialog = ({ children }: AppointmentDialogProps) => {
         <DialogDescription className="sr-only">
           Formulário para criar um novo agendamento na barbearia
         </DialogDescription>
-        <AppointmentForm onClose={() => setOpen(false)} />
+        <AppointmentForm onClose={handleClose} />
       </DialogContent>
     </Dialog>
   );

@@ -106,7 +106,7 @@ export const AppointmentForm = ({ onClose }: AppointmentFormProps) => {
         .select('id')
         .eq('barbershop_id', barbershopId)
         .eq('phone', clientPhone)
-        .single();
+        .maybeSingle();
 
       if (existingClient) {
         clientId = existingClient.id;
