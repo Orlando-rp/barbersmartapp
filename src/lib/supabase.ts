@@ -150,6 +150,52 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['campaigns']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['campaigns']['Insert']>;
       };
+      coupons: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          code: string;
+          description: string | null;
+          discount_type: 'percentage' | 'fixed';
+          discount_value: number;
+          min_purchase_value: number;
+          max_uses: number | null;
+          current_uses: number;
+          valid_from: string;
+          valid_until: string;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['coupons']['Row'], 'id' | 'current_uses' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['coupons']['Insert']>;
+      };
+      loyalty_points: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          client_id: string;
+          points: number;
+          total_earned: number;
+          total_redeemed: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['loyalty_points']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['loyalty_points']['Insert']>;
+      };
+      loyalty_transactions: {
+        Row: {
+          id: string;
+          loyalty_points_id: string;
+          points: number;
+          type: 'earned' | 'redeemed' | 'expired';
+          description: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['loyalty_transactions']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['loyalty_transactions']['Insert']>;
+      };
     };
   };
 };
