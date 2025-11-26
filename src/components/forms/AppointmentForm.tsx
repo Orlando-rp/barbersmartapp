@@ -63,25 +63,9 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   useEffect(() => {
     if (date && selectedBarber) {
       fetchAvailableSlots();
-      // Limpar horário selecionado se não estiver mais disponível (exceto ao editar)
-      if (selectedTime && !appointment) {
-        const checkIfTimeStillAvailable = async () => {
-          const formattedDate = format(date, "yyyy-MM-dd");
-          const { data } = await supabase
-            .from('appointments')
-            .select('appointment_time')
-            .eq('barbershop_id', barbershopId)
-            .eq('staff_id', selectedBarber)
-            .eq('appointment_date', formattedDate)
-            .eq('appointment_time', selectedTime)
-            .neq('status', 'cancelado');
-          
-          if (data && data.length > 0) {
-            setSelectedTime("");
-          }
-        };
-        checkIfTimeStillAvailable();
-      }
+    } else {
+      setAvailableSlots([]);
+      setSelectedTime("");
     }
   }, [date, selectedBarber]);
 
@@ -162,7 +146,10 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   };
 
   const fetchAvailableSlots = async () => {
-    if (!date || !selectedBarber) return;
+    if (!date || !selectedBarber) {
+      setAvailableSlots([]);
+      return;
+    }
 
     try {
       const formattedDate = format(date, "yyyy-MM-dd");
@@ -178,16 +165,22 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
       if (error) throw error;
 
       const booked = (data || [])
-        .filter(apt => !appointment || apt.id !== appointment.id) // Permitir o próprio horário ao editar
+        .filter(apt => !appointment || apt.id !== appointment.id)
         .map(apt => apt.appointment_time);
       
       setBookedSlots(booked);
       
+      // Apenas horários realmente disponíveis
       const available = timeSlots.filter(slot => !booked.includes(slot));
-      
       setAvailableSlots(available);
+      
+      // Se o horário selecionado não está mais disponível, limpar
+      if (selectedTime && !available.includes(selectedTime) && (!appointment || appointment.appointment_time !== selectedTime)) {
+        setSelectedTime("");
+      }
     } catch (error: any) {
       console.error('Erro ao carregar horários:', error);
+      setAvailableSlots([]);
     }
   };
 
@@ -565,8 +558,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
                   ) : (
                     <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto bg-card">
                       <div className="grid grid-cols-3 gap-2">
-                        {timeSlots.map((time) => {
-                          const isAvailable = availableSlots.includes(time);
+                        {availableSlots.map((time) => {
                           const isSelected = selectedTime === time;
                           
                           return (
@@ -574,11 +566,10 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
                               key={time}
                               type="button"
                               variant={isSelected ? "default" : "outline"}
-                              disabled={!isAvailable}
                               onClick={() => setSelectedTime(time)}
                               className={cn(
-                                "relative transition-all",
-                                !isAvailable && "opacity-50 cursor-not-allowed"
+                                "relative transition-all hover:scale-105",
+                                isSelected && "ring-2 ring-primary ring-offset-2"
                               )}
                             >
                               {time}
@@ -586,6 +577,9 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
                             </Button>
                           );
                         })}
+                      </div>
+                      <div className="mt-3 pt-3 border-t text-xs text-muted-foreground text-center">
+                        {availableSlots.length} {availableSlots.length === 1 ? 'horário disponível' : 'horários disponíveis'}
                       </div>
                     </div>
                   )}
