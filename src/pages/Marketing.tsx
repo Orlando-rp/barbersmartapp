@@ -1,9 +1,187 @@
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Plus, Send, Users, Gift, Star } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { CampaignDialog } from "@/components/dialogs/CampaignDialog";
+import { CouponDialog } from "@/components/dialogs/CouponDialog";
+import { 
+  MessageSquare, 
+  Plus, 
+  Gift, 
+  Star,
+  Edit,
+  Trash2,
+  Users,
+  TrendingUp
+} from "lucide-react";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface Campaign {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  created_at: string;
+}
+
+interface Coupon {
+  id: string;
+  code: string;
+  description: string;
+  discount_type: string;
+  discount_value: number;
+  current_uses: number;
+  max_uses: number | null;
+  active: boolean;
+  valid_until: string;
+}
+
+interface LoyaltyStats {
+  totalClients: number;
+  activeParticipants: number;
+  totalPointsEarned: number;
+  totalPointsRedeemed: number;
+}
 
 const Marketing = () => {
+  const { barbershopId } = useAuth();
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [loyaltyStats, setLoyaltyStats] = useState<LoyaltyStats>({
+    totalClients: 0,
+    activeParticipants: 0,
+    totalPointsEarned: 0,
+    totalPointsRedeemed: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (barbershopId) {
+      fetchMarketingData();
+    }
+  }, [barbershopId]);
+
+  const fetchMarketingData = async () => {
+    try {
+      setLoading(true);
+
+      // Buscar campanhas
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaigns')
+        .select('id, name, type, status, created_at')
+        .eq('barbershop_id', barbershopId)
+        .order('created_at', { ascending: false });
+
+      if (campaignsError) throw campaignsError;
+      setCampaigns(campaignsData || []);
+
+      // Buscar cupons
+      const { data: couponsData, error: couponsError } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('barbershop_id', barbershopId)
+        .order('created_at', { ascending: false });
+
+      if (couponsError) throw couponsError;
+      setCoupons(couponsData || []);
+
+      // Buscar estatísticas de fidelidade
+      const { data: loyaltyData, error: loyaltyError } = await supabase
+        .from('loyalty_points')
+        .select('points, total_earned, total_redeemed')
+        .eq('barbershop_id', barbershopId);
+
+      if (loyaltyError) throw loyaltyError;
+
+      const { count: totalClients } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .eq('barbershop_id', barbershopId)
+        .eq('active', true);
+
+      const stats = {
+        totalClients: totalClients || 0,
+        activeParticipants: loyaltyData?.length || 0,
+        totalPointsEarned: loyaltyData?.reduce((sum, l) => sum + (l.total_earned || 0), 0) || 0,
+        totalPointsRedeemed: loyaltyData?.reduce((sum, l) => sum + (l.total_redeemed || 0), 0) || 0
+      };
+
+      setLoyaltyStats(stats);
+
+    } catch (error) {
+      console.error('Erro ao buscar dados de marketing:', error);
+      toast.error('Erro ao carregar dados de marketing');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCampaign = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta campanha?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Campanha excluída com sucesso!');
+      fetchMarketingData();
+    } catch (error: any) {
+      console.error('Erro ao excluir campanha:', error);
+      toast.error('Erro ao excluir campanha');
+    }
+  };
+
+  const handleDeleteCoupon = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este cupom?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('coupons')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Cupom excluído com sucesso!');
+      fetchMarketingData();
+    } catch (error: any) {
+      console.error('Erro ao excluir cupom:', error);
+      toast.error('Erro ao excluir cupom');
+    }
+  };
+
+  const getDiscountDisplay = (coupon: Coupon) => {
+    if (coupon.discount_type === 'percentage') {
+      return `${coupon.discount_value}% OFF`;
+    }
+    return `R$ ${coupon.discount_value.toFixed(2)} OFF`;
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <LoadingSpinner size="lg" />
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -13,21 +191,17 @@ const Marketing = () => {
             <h1 className="text-3xl font-bold text-foreground">Marketing</h1>
             <p className="text-muted-foreground">Ferramentas para fidelizar e atrair clientes</p>
           </div>
-          <Button variant="premium" size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Nova Campanha
-          </Button>
         </div>
 
-        {/* Marketing Stats */}
+        {/* Loyalty Program Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="flex items-center space-x-2">
-                <Send className="h-5 w-5 text-primary" />
+                <Users className="h-5 w-5 text-primary" />
                 <div>
-                  <div className="text-2xl font-bold text-foreground">1.250</div>
-                  <p className="text-sm text-muted-foreground">Mensagens Enviadas</p>
+                  <div className="text-2xl font-bold text-foreground">{loyaltyStats.totalClients}</div>
+                  <p className="text-sm text-muted-foreground">Total de Clientes</p>
                 </div>
               </div>
             </CardContent>
@@ -36,10 +210,10 @@ const Marketing = () => {
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="flex items-center space-x-2">
-                <Users className="h-5 w-5 text-success" />
+                <Star className="h-5 w-5 text-success" />
                 <div>
-                  <div className="text-2xl font-bold text-foreground">85%</div>
-                  <p className="text-sm text-muted-foreground">Taxa de Abertura</p>
+                  <div className="text-2xl font-bold text-foreground">{loyaltyStats.activeParticipants}</div>
+                  <p className="text-sm text-muted-foreground">Participantes Ativos</p>
                 </div>
               </div>
             </CardContent>
@@ -48,84 +222,247 @@ const Marketing = () => {
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="flex items-center space-x-2">
-                <Gift className="h-5 w-5 text-warning" />
+                <TrendingUp className="h-5 w-5 text-warning" />
                 <div>
-                  <div className="text-2xl font-bold text-foreground">24</div>
+                  <div className="text-2xl font-bold text-foreground">{loyaltyStats.totalPointsEarned.toLocaleString()}</div>
+                  <p className="text-sm text-muted-foreground">Pontos Ganhos</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="barbershop-card">
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2">
+                <Gift className="h-5 w-5 text-primary" />
+                <div>
+                  <div className="text-2xl font-bold text-foreground">{coupons.filter(c => c.active).length}</div>
                   <p className="text-sm text-muted-foreground">Cupons Ativos</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="barbershop-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2">
-                <Star className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="text-2xl font-bold text-foreground">4.8</div>
-                  <p className="text-sm text-muted-foreground">Avaliação Média</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Marketing Tools */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="barbershop-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                Campanhas de WhatsApp
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 border border-border rounded-lg">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-semibold">Lembrete de Aniversário</h4>
-                    <span className="text-sm text-success">Ativa</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Mensagem automática para clientes no aniversário</p>
-                </div>
-                <div className="p-4 border border-border rounded-lg">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-semibold">Promoção Mensal</h4>
-                    <span className="text-sm text-primary">Agendada</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Oferta especial para clientes inativos</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Tabs */}
+        <Tabs defaultValue="campaigns" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
+            <TabsTrigger value="coupons">Cupons</TabsTrigger>
+            <TabsTrigger value="loyalty">Fidelidade</TabsTrigger>
+          </TabsList>
 
-          <Card className="barbershop-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gift className="h-5 w-5 text-warning" />
-                Programa de Fidelidade
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 border border-border rounded-lg">
-                  <h4 className="font-semibold mb-2">Pontos por Serviço</h4>
-                  <p className="text-sm text-muted-foreground mb-2">Cliente ganha pontos a cada serviço realizado</p>
-                  <div className="text-sm">
-                    <span className="font-medium">248 clientes</span> participando
+          {/* Campaigns Tab */}
+          <TabsContent value="campaigns" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Campanhas de Marketing</h2>
+              <CampaignDialog onSuccess={fetchMarketingData}>
+                <Button variant="premium">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nova Campanha
+                </Button>
+              </CampaignDialog>
+            </div>
+
+            <Card className="barbershop-card">
+              <CardContent className="pt-6">
+                {campaigns.length === 0 ? (
+                  <div className="text-center py-12">
+                    <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <p className="text-muted-foreground">Nenhuma campanha criada ainda</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Criada em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {campaigns.map((campaign) => (
+                        <TableRow key={campaign.id}>
+                          <TableCell className="font-medium">{campaign.name}</TableCell>
+                          <TableCell className="capitalize">{campaign.type}</TableCell>
+                          <TableCell>
+                            <Badge variant={campaign.status === 'ativa' ? 'default' : 'secondary'}>
+                              {campaign.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(campaign.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                              <CampaignDialog campaign={campaign} onSuccess={fetchMarketingData}>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </CampaignDialog>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleDeleteCampaign(campaign.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Coupons Tab */}
+          <TabsContent value="coupons" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Cupons de Desconto</h2>
+              <CouponDialog onSuccess={fetchMarketingData}>
+                <Button variant="premium">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Cupom
+                </Button>
+              </CouponDialog>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {coupons.length === 0 ? (
+                <Card className="barbershop-card col-span-full">
+                  <CardContent className="pt-12 pb-12 text-center">
+                    <Gift className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <p className="text-muted-foreground">Nenhum cupom criado ainda</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                coupons.map((coupon) => (
+                  <Card key={coupon.id} className="barbershop-card">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span className="text-lg font-mono">{coupon.code}</span>
+                        <Badge variant={coupon.active ? 'default' : 'secondary'}>
+                          {coupon.active ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="text-2xl font-bold text-primary">
+                        {getDiscountDisplay(coupon)}
+                      </div>
+                      {coupon.description && (
+                        <p className="text-sm text-muted-foreground">{coupon.description}</p>
+                      )}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Usos:</span>
+                        <span className="font-medium">
+                          {coupon.current_uses}/{coupon.max_uses || '∞'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Válido até:</span>
+                        <span className="font-medium">
+                          {new Date(coupon.valid_until).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <CouponDialog coupon={coupon} onSuccess={fetchMarketingData}>
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Edit className="h-4 w-4 mr-1" />
+                            Editar
+                          </Button>
+                        </CouponDialog>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDeleteCoupon(coupon.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Loyalty Tab */}
+          <TabsContent value="loyalty" className="space-y-4">
+            <h2 className="text-xl font-semibold">Programa de Fidelidade</h2>
+            
+            <Card className="barbershop-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-primary" />
+                  Como Funciona
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                    <div className="text-3xl mb-2">💰</div>
+                    <h3 className="font-semibold mb-2">Ganhe Pontos</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Clientes ganham 1 ponto para cada R$ 1,00 gasto em serviços
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 bg-success/5 rounded-lg border border-success/20">
+                    <div className="text-3xl mb-2">🎁</div>
+                    <h3 className="font-semibold mb-2">Troque por Recompensas</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Pontos podem ser trocados por descontos em serviços futuros
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
+                    <div className="text-3xl mb-2">⭐</div>
+                    <h3 className="font-semibold mb-2">Automático</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Pontos são adicionados automaticamente quando um agendamento é concluído
+                    </p>
                   </div>
                 </div>
-                <div className="p-4 border border-border rounded-lg">
-                  <h4 className="font-semibold mb-2">Cupons de Desconto</h4>
-                  <p className="text-sm text-muted-foreground mb-2">Descontos automáticos para clientes fiéis</p>
-                  <div className="text-sm">
-                    <span className="font-medium">24 cupons</span> ativos
+
+                <div className="pt-4 border-t">
+                  <h3 className="font-semibold mb-3">Estatísticas do Programa</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-2xl font-bold text-foreground">
+                        {loyaltyStats.activeParticipants}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Participantes</p>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-success">
+                        {loyaltyStats.totalPointsEarned.toLocaleString()}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Pontos Ganhos</p>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-warning">
+                        {loyaltyStats.totalPointsRedeemed.toLocaleString()}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Pontos Resgatados</p>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">
+                        {Math.round((loyaltyStats.activeParticipants / (loyaltyStats.totalClients || 1)) * 100)}%
+                      </div>
+                      <p className="text-sm text-muted-foreground">Taxa de Adesão</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );
