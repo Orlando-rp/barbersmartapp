@@ -20,6 +20,8 @@ import Marketing from "./pages/Marketing";
 import SettingsPage from "./pages/Settings";
 import BusinessHours from "./pages/BusinessHours";
 import ClientHistory from "./pages/ClientHistory";
+import Reviews from "./pages/Reviews";
+import WhatsAppSettings from "./pages/WhatsAppSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +48,8 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/business-hours" element={<ProtectedRoute><BusinessHours /></ProtectedRoute>} />
             <Route path="/client-history/:clientId" element={<ProtectedRoute><ClientHistory /></ProtectedRoute>} />
+            <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
+            <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppSettings /></ProtectedRoute>} />
             <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

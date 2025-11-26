@@ -14,6 +14,7 @@ import {
   Home,
   Shield,
   Clock,
+  StarIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navigation = [
   { name: "Financeiro", href: "/finance", icon: DollarSign },
   { name: "Relatórios", href: "/reports", icon: BarChart3 },
   { name: "Marketing", href: "/marketing", icon: MessageSquare },
+  { name: "Avaliações", href: "/reviews", icon: StarIcon },
   { name: "Horários", href: "/business-hours", icon: Clock },
   { name: "Auditoria", href: "/audit", icon: Shield },
   { name: "Configurações", href: "/settings", icon: Settings },
