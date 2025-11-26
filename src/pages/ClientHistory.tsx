@@ -23,7 +23,9 @@ interface Client {
 
 interface Appointment {
   id: string;
+  appointment_date: string;
   appointment_time: string;
+  datetime?: Date | null;
   service_name: string;
   service_price: number;
   status: string;
@@ -84,6 +86,7 @@ const ClientHistory = () => {
         .from('appointments')
         .select(`
           id,
+          appointment_date,
           appointment_time,
           service_name,
           service_price,
@@ -92,6 +95,7 @@ const ClientHistory = () => {
         `)
         .eq('client_id', clientId)
         .eq('barbershop_id', barbershopId)
+        .order('appointment_date', { ascending: false })
         .order('appointment_time', { ascending: false });
 
       if (appointmentsError) throw appointmentsError;
@@ -125,6 +129,10 @@ const ClientHistory = () => {
       const formattedAppointments = appointmentsData.map(apt => ({
         ...apt,
         staff_name: apt.staff_id ? staffMap.get(apt.staff_id) : undefined,
+        // Combine date and time for proper datetime handling
+        datetime: apt.appointment_date && apt.appointment_time 
+          ? new Date(`${apt.appointment_date}T${apt.appointment_time}`)
+          : null,
       }));
 
       setAppointments(formattedAppointments);
@@ -143,19 +151,23 @@ const ClientHistory = () => {
     if (appointments.length === 0) return;
 
     // Total spent and average ticket
-    const completed = appointments.filter(a => a.status === 'concluido');
+    const completed = appointments.filter(a => a.status === 'concluido' && a.datetime);
     const total = completed.reduce((sum, a) => sum + (a.service_price || 0), 0);
     setTotalSpent(total);
     setAverageTicket(completed.length > 0 ? total / completed.length : 0);
 
     // Last visit
-    if (completed.length > 0) {
-      setLastVisit(completed[0].appointment_time);
+    if (completed.length > 0 && completed[0].datetime) {
+      setLastVisit(completed[0].datetime.toISOString());
     }
 
     // Visit frequency (average days between visits)
     if (completed.length > 1) {
-      const dates = completed.map(a => new Date(a.appointment_time)).sort((a, b) => a.getTime() - b.getTime());
+      const dates = completed
+        .filter(a => a.datetime)
+        .map(a => a.datetime!)
+        .sort((a, b) => a.getTime() - b.getTime());
+      
       const daysDiffs = [];
       for (let i = 1; i < dates.length; i++) {
         daysDiffs.push(differenceInDays(dates[i], dates[i - 1]));
@@ -192,9 +204,9 @@ const ClientHistory = () => {
     const sixMonthsAgo = subMonths(new Date(), 6);
 
     completed
-      .filter(a => new Date(a.appointment_time) >= sixMonthsAgo)
+      .filter(a => a.datetime && a.datetime >= sixMonthsAgo)
       .forEach(apt => {
-        const month = format(new Date(apt.appointment_time), 'MMM/yy', { locale: ptBR });
+        const month = format(apt.datetime!, 'MMM/yy', { locale: ptBR });
         const current = monthlyMap.get(month) || { appointments: 0, revenue: 0 };
         monthlyMap.set(month, {
           appointments: current.appointments + 1,
@@ -471,51 +483,51 @@ const ClientHistory = () => {
             <CardDescription>Todos os agendamentos do cliente</CardDescription>
           </CardHeader>
           <CardContent>
-            {appointments.length > 0 ? (
-              <div className="space-y-2">
-                {appointments.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold">
-                          {format(new Date(apt.appointment_time), 'dd')}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(apt.appointment_time), 'MMM/yy', { locale: ptBR })}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium">{apt.service_name}</p>
-                        <div className="flex gap-2 mt-1">
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(apt.appointment_time), "HH:mm")}
+              {appointments.length > 0 ? (
+                <div className="space-y-2">
+                  {appointments.map((apt) => (
+                    <div
+                      key={apt.id}
+                      className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold">
+                            {apt.datetime ? format(apt.datetime, 'dd') : '-'}
                           </p>
-                          {apt.staff_name && (
-                            <>
-                              <span className="text-muted-foreground">•</span>
-                              <p className="text-sm text-muted-foreground">{apt.staff_name}</p>
-                            </>
-                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {apt.datetime ? format(apt.datetime, 'MMM/yy', { locale: ptBR }) : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="font-medium">{apt.service_name}</p>
+                          <div className="flex gap-2 mt-1">
+                            <p className="text-sm text-muted-foreground">
+                              {apt.datetime ? format(apt.datetime, "HH:mm") : apt.appointment_time}
+                            </p>
+                            {apt.staff_name && (
+                              <>
+                                <span className="text-muted-foreground">•</span>
+                                <p className="text-sm text-muted-foreground">{apt.staff_name}</p>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-3">
+                        <p className="font-bold text-lg">R$ {apt.service_price?.toFixed(2)}</p>
+                        <Badge variant={
+                          apt.status === 'concluido' ? 'default' :
+                          apt.status === 'confirmado' ? 'secondary' :
+                          apt.status === 'cancelado' ? 'destructive' : 'outline'
+                        }>
+                          {apt.status}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <p className="font-bold text-lg">R$ {apt.service_price?.toFixed(2)}</p>
-                      <Badge variant={
-                        apt.status === 'concluido' ? 'default' :
-                        apt.status === 'confirmado' ? 'secondary' :
-                        apt.status === 'cancelado' ? 'destructive' : 'outline'
-                      }>
-                        {apt.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
+                  ))}
+                </div>
+              ) : (
               <p className="text-center text-muted-foreground py-8">
                 Nenhum agendamento encontrado
               </p>
