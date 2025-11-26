@@ -98,7 +98,7 @@ const Reports = () => {
       const [appointmentsRes, transactionsRes, clientsRes, servicesRes, staffRes] = await Promise.all([
         supabase
           .from('appointments')
-          .select('*, clients(*), services(*), staff!appointments_staff_id_fkey(*)')
+          .select('*')
           .eq('barbershop_id', barbershopId)
           .gte('appointment_time', startDate.toISOString())
           .order('appointment_time', { ascending: true }),
@@ -120,6 +120,7 @@ const Reports = () => {
           .from('staff')
           .select('*, profiles!staff_user_id_fkey(*)')
           .eq('barbershop_id', barbershopId)
+          .eq('active', true)
       ]);
 
       if (appointmentsRes.error || transactionsRes.error || clientsRes.error || servicesRes.error || staffRes.error) {
@@ -171,7 +172,7 @@ const Reports = () => {
 
       const clientAppointments = new Map<string, { count: number; spent: number; lastVisit: string }>();
       appointments.forEach(apt => {
-        if (!apt.clients) return;
+        if (!apt.client_id) return;
         const existing = clientAppointments.get(apt.client_id) || { count: 0, spent: 0, lastVisit: apt.appointment_time };
         existing.count++;
         existing.spent += apt.service_price || 0;
@@ -201,7 +202,7 @@ const Reports = () => {
       // Process services data
       const serviceStats = new Map<string, { count: number; revenue: number }>();
       appointments.forEach(apt => {
-        if (!apt.services) return;
+        if (!apt.service_id) return;
         const existing = serviceStats.get(apt.service_id) || { count: 0, revenue: 0 };
         existing.count++;
         existing.revenue += apt.service_price || 0;
