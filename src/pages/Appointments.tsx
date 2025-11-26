@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Plus, Search, Clock, User, Scissors, Phone } from "lucide-react";
+import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -45,6 +45,7 @@ const Appointments = () => {
   const [selectedBarber, setSelectedBarber] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>("all");
   const [staff, setStaff] = useState<any[]>([]);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
 
   useEffect(() => {
     if (barbershopId) {
@@ -240,7 +241,15 @@ const Appointments = () => {
             <h1 className="text-3xl font-bold text-foreground">Agendamentos</h1>
             <p className="text-muted-foreground">Gerencie todos os agendamentos da sua barbearia</p>
           </div>
-          <AppointmentDialog onSuccess={fetchAppointments}>
+          <AppointmentDialog 
+            appointment={editingAppointment} 
+            open={!!editingAppointment}
+            onOpenChange={(open) => !open && setEditingAppointment(null)}
+            onSuccess={() => {
+              fetchAppointments();
+              setEditingAppointment(null);
+            }}
+          >
             <Button 
               variant="premium" 
               size="lg"
@@ -362,6 +371,15 @@ const Appointments = () => {
                     </div>
 
                     <div className="flex md:flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingAppointment(appointment)}
+                        className="w-full md:w-[140px]"
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
                       <Select
                         value={appointment.status}
                         onValueChange={(value) => updateStatus(appointment.id, value)}
