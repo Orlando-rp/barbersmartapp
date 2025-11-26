@@ -6,9 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Clock, User, Scissors } from "lucide-react";
-import { format } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search } from "lucide-react";
+import { format, parse } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
@@ -21,33 +23,68 @@ interface AppointmentFormProps {
 
 const timeSlots = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
+  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"
 ];
+
+type WizardStep = 'client' | 'service' | 'datetime' | 'confirm';
 
 export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) => {
   const { barbershopId } = useAuth();
   const { toast } = useToast();
   
-  const [date, setDate] = useState<Date | undefined>(
-    appointment?.appointment_date ? new Date(appointment.appointment_date) : undefined
-  );
+  // Wizard state
+  const [currentStep, setCurrentStep] = useState<WizardStep>('client');
+  
+  // Form data
+  const [clientId, setClientId] = useState(appointment?.client_id || "");
   const [clientName, setClientName] = useState(appointment?.client_name || "");
   const [clientPhone, setClientPhone] = useState(appointment?.client_phone || "");
   const [selectedService, setSelectedService] = useState(appointment?.service_id || "");
   const [selectedBarber, setSelectedBarber] = useState(appointment?.staff_id || "");
+  const [date, setDate] = useState<Date | undefined>(
+    appointment?.appointment_date ? new Date(appointment.appointment_date) : undefined
+  );
   const [selectedTime, setSelectedTime] = useState(appointment?.appointment_time || "");
   const [notes, setNotes] = useState(appointment?.notes || "");
   const [loading, setLoading] = useState(false);
   
+  // Data lists
   const [services, setServices] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
 
   useEffect(() => {
     if (barbershopId) {
       fetchServices();
       fetchStaff();
+      fetchClients();
     }
   }, [barbershopId]);
+
+  useEffect(() => {
+    if (date && selectedBarber) {
+      fetchAvailableSlots();
+    }
+  }, [date, selectedBarber]);
+
+  const fetchClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name, phone, email')
+        .eq('barbershop_id', barbershopId)
+        .eq('active', true)
+        .order('name');
+
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error: any) {
+      console.error('Erro ao carregar clientes:', error);
+    }
+  };
 
   const fetchServices = async () => {
     try {
@@ -83,7 +120,6 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
         return;
       }
 
-      // Fetch profiles for these staff members
       const userIds = staffData.map(s => s.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
@@ -92,7 +128,6 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
 
       if (profilesError) throw profilesError;
 
-      // Combine staff with their profiles
       const transformedStaff = staffData.map((member) => {
         const profile = profilesData?.find(p => p.id === member.user_id);
         return {
@@ -111,13 +146,74 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!date || !clientName || !clientPhone || !selectedService || !selectedBarber || !selectedTime) {
+  const fetchAvailableSlots = async () => {
+    if (!date || !selectedBarber) return;
+
+    try {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('appointment_time')
+        .eq('barbershop_id', barbershopId)
+        .eq('staff_id', selectedBarber)
+        .eq('appointment_date', formattedDate)
+        .neq('status', 'cancelado');
+
+      if (error) throw error;
+
+      const booked = (data || []).map(apt => apt.appointment_time);
+      setBookedSlots(booked);
+      
+      // Filter available slots
+      const available = timeSlots.filter(slot => {
+        // If editing, allow the current appointment's time
+        if (appointment && appointment.appointment_time === slot) return true;
+        return !booked.includes(slot);
+      });
+      
+      setAvailableSlots(available);
+    } catch (error: any) {
+      console.error('Erro ao carregar horários:', error);
+    }
+  };
+
+  const selectClient = (client: any) => {
+    setClientId(client.id);
+    setClientName(client.name);
+    setClientPhone(client.phone);
+  };
+
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.phone.includes(searchTerm)
+  );
+
+  const canProceedFromClient = clientName && clientPhone;
+  const canProceedFromService = selectedService && selectedBarber;
+  const canProceedFromDateTime = date && selectedTime;
+
+  const handleNext = () => {
+    if (currentStep === 'client' && canProceedFromClient) {
+      setCurrentStep('service');
+    } else if (currentStep === 'service' && canProceedFromService) {
+      setCurrentStep('datetime');
+    } else if (currentStep === 'datetime' && canProceedFromDateTime) {
+      setCurrentStep('confirm');
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep === 'service') setCurrentStep('client');
+    else if (currentStep === 'datetime') setCurrentStep('service');
+    else if (currentStep === 'confirm') setCurrentStep('datetime');
+  };
+
+  const handleSubmit = async () => {
+    if (!date) {
       toast({
         title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
+        description: "Por favor, selecione uma data.",
         variant: "destructive",
       });
       return;
@@ -126,10 +222,9 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
     setLoading(true);
 
     try {
-      // Find or create client
-      let clientId = appointment?.client_id || null;
+      let finalClientId = clientId;
       
-      if (!clientId) {
+      if (!finalClientId) {
         const { data: existingClient } = await supabase
           .from('clients')
           .select('id')
@@ -138,7 +233,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
           .maybeSingle();
 
         if (existingClient) {
-          clientId = existingClient.id;
+          finalClientId = existingClient.id;
         } else {
           const { data: newClient, error: clientError } = await supabase
             .from('clients')
@@ -152,17 +247,15 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
             .single();
 
           if (clientError) throw clientError;
-          clientId = newClient.id;
+          finalClientId = newClient.id;
         }
       }
 
-      // Get service details
       const service = services.find(s => s.id === selectedService);
 
-      // Create or update appointment
       const appointmentData = {
         barbershop_id: barbershopId,
-        client_id: clientId,
+        client_id: finalClientId,
         staff_id: selectedBarber,
         service_id: selectedService,
         appointment_date: format(date, "yyyy-MM-dd"),
@@ -176,7 +269,6 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
       };
 
       if (appointment) {
-        // Update existing appointment
         const { error: appointmentError } = await supabase
           .from('appointments')
           .update(appointmentData)
@@ -189,7 +281,6 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
           description: `Agendamento para ${clientName} atualizado com sucesso.`,
         });
       } else {
-        // Create new appointment
         const { error: appointmentError } = await supabase
           .from('appointments')
           .insert(appointmentData);
@@ -214,50 +305,143 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
     }
   };
 
+  const getStepNumber = (step: WizardStep): number => {
+    const steps: WizardStep[] = ['client', 'service', 'datetime', 'confirm'];
+    return steps.indexOf(step) + 1;
+  };
+
+  const selectedServiceData = services.find(s => s.id === selectedService);
+  const selectedBarberData = staff.find(s => s.id === selectedBarber);
+
   return (
-    <Card className="barbershop-card w-full max-w-2xl">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
-        </CardTitle>
+    <Card className="barbershop-card w-full border-0 shadow-none">
+      <CardHeader className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <Calendar className="h-6 w-6 text-primary" />
+              {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
+            </CardTitle>
+            <CardDescription className="mt-2">
+              {currentStep === 'client' && 'Selecione ou cadastre um cliente'}
+              {currentStep === 'service' && 'Escolha o serviço e o profissional'}
+              {currentStep === 'datetime' && 'Selecione data e horário disponível'}
+              {currentStep === 'confirm' && 'Revise e confirme o agendamento'}
+            </CardDescription>
+          </div>
+          <Badge variant="outline" className="text-sm">
+            Passo {getStepNumber(currentStep)} de 4
+          </Badge>
+        </div>
+
+        {/* Progress Steps */}
+        <div className="flex items-center gap-2">
+          {(['client', 'service', 'datetime', 'confirm'] as WizardStep[]).map((step, index) => (
+            <div key={step} className="flex items-center flex-1">
+              <div className={cn(
+                "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all",
+                currentStep === step ? "border-primary bg-primary text-primary-foreground" :
+                getStepNumber(currentStep) > getStepNumber(step) ? "border-primary bg-primary/10 text-primary" :
+                "border-muted-foreground/30 text-muted-foreground"
+              )}>
+                {getStepNumber(currentStep) > getStepNumber(step) ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <span className="text-xs font-semibold">{index + 1}</span>
+                )}
+              </div>
+              {index < 3 && (
+                <div className={cn(
+                  "flex-1 h-0.5 mx-2 transition-all",
+                  getStepNumber(currentStep) > getStepNumber(step) ? "bg-primary" : "bg-muted-foreground/30"
+                )} />
+              )}
+            </div>
+          ))}
+        </div>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Client Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <User className="h-4 w-4" />
+
+      <CardContent className="space-y-6">
+        {/* Step 1: Client Selection */}
+        {currentStep === 'client' && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              <User className="h-5 w-5 text-primary" />
               Informações do Cliente
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="client-name">Nome *</Label>
+            </div>
+
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="client-name"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Nome do cliente"
+                  placeholder="Buscar cliente existente..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="client-phone">Telefone *</Label>
-                <Input
-                  id="client-phone"
-                  value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
-                  placeholder="(11) 99999-9999"
-                />
+
+              {searchTerm && filteredClients.length > 0 && (
+                <div className="border rounded-lg max-h-48 overflow-y-auto">
+                  {filteredClients.map((client) => (
+                    <button
+                      key={client.id}
+                      onClick={() => {
+                        selectClient(client);
+                        setSearchTerm("");
+                      }}
+                      className="w-full p-3 text-left hover:bg-muted/50 transition-colors border-b last:border-b-0"
+                    >
+                      <div className="font-medium">{client.name}</div>
+                      <div className="text-sm text-muted-foreground">{client.phone}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    ou cadastre novo cliente
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="client-name">Nome Completo *</Label>
+                  <Input
+                    id="client-name"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Nome do cliente"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="client-phone">Telefone *</Label>
+                  <Input
+                    id="client-phone"
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Service and Barber */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Scissors className="h-4 w-4" />
+        {/* Step 2: Service Selection */}
+        {currentStep === 'service' && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              <Scissors className="h-5 w-5 text-primary" />
               Serviço e Profissional
-            </h3>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Serviço *</Label>
@@ -268,22 +452,25 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
                   <SelectContent>
                     {services.map((service) => (
                       <SelectItem key={service.id} value={service.id}>
-                        <div className="flex justify-between items-center w-full">
-                          <span>{service.name}</span>
-                          <span className="text-sm text-muted-foreground ml-4">
-                            {service.duration}min - R$ {service.price}
-                          </span>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="font-medium">{service.name}</span>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{service.duration}min</span>
+                            <span>•</span>
+                            <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
+                          </div>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
-                <Label>Barbeiro *</Label>
+                <Label>Profissional *</Label>
                 <Select value={selectedBarber} onValueChange={setSelectedBarber}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o barbeiro" />
+                    <SelectValue placeholder="Selecione o profissional" />
                   </SelectTrigger>
                   <SelectContent>
                     {staff.map((member) => (
@@ -296,81 +483,178 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
               </div>
             </div>
           </div>
+        )}
 
-          {/* Date and Time */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Clock className="h-4 w-4" />
+        {/* Step 3: Date & Time Selection */}
+        {currentStep === 'datetime' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              <Clock className="h-5 w-5 text-primary" />
               Data e Horário
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label>Data *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "dd/MM/yyyy") : "Selecione a data"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[200]" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                      className="p-3 pointer-events-auto z-[200]"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label>Selecione a Data *</Label>
+                <div className="border rounded-lg p-4">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label>Horário *</Label>
-                <Select value={selectedTime} onValueChange={setSelectedTime}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o horário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeSlots.map((time) => (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Horários Disponíveis *</Label>
+                {!date || !selectedBarber ? (
+                  <div className="border rounded-lg p-8 text-center text-muted-foreground">
+                    {!selectedBarber ? 'Selecione um profissional primeiro' : 'Selecione uma data'}
+                  </div>
+                ) : availableSlots.length === 0 ? (
+                  <div className="border rounded-lg p-8 text-center">
+                    <p className="text-muted-foreground mb-2">Nenhum horário disponível</p>
+                    <p className="text-sm text-muted-foreground">Tente outra data</p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                    <div className="grid grid-cols-3 gap-2">
+                      {timeSlots.map((time) => {
+                        const isAvailable = availableSlots.includes(time);
+                        const isSelected = selectedTime === time;
+                        
+                        return (
+                          <Button
+                            key={time}
+                            type="button"
+                            variant={isSelected ? "default" : "outline"}
+                            disabled={!isAvailable}
+                            onClick={() => setSelectedTime(time)}
+                            className={cn(
+                              "relative transition-all",
+                              !isAvailable && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            {time}
+                            {isSelected && <CheckCircle2 className="absolute right-1 top-1 h-3 w-3" />}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+        )}
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Observações</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Observações sobre o agendamento..."
-              rows={3}
-            />
-          </div>
+        {/* Step 4: Confirmation */}
+        {currentStep === 'confirm' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              Confirmar Agendamento
+            </div>
 
-          {/* Actions */}
-          <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="premium" disabled={loading}>
-              {loading ? (appointment ? 'Atualizando...' : 'Criando...') : (appointment ? 'Atualizar Agendamento' : 'Criar Agendamento')}
-            </Button>
+            <div className="space-y-4">
+              <Card className="barbershop-card">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <User className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Cliente</p>
+                      <p className="font-semibold">{clientName}</p>
+                      <p className="text-sm text-muted-foreground">{clientPhone}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Scissors className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Serviço</p>
+                      <p className="font-semibold">{selectedServiceData?.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedServiceData?.duration}min - R$ {selectedServiceData?.price.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <User className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Profissional</p>
+                      <p className="font-semibold">{selectedBarberData?.name}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <CalendarIcon className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Data e Horário</p>
+                      <p className="font-semibold">
+                        {date && format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{selectedTime}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Observações</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Adicione observações sobre o agendamento..."
+                  rows={3}
+                />
+              </div>
+            </div>
           </div>
-        </form>
+        )}
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between pt-6 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={currentStep === 'client' ? onClose : handleBack}
+            disabled={loading}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            {currentStep === 'client' ? 'Cancelar' : 'Voltar'}
+          </Button>
+
+          {currentStep === 'confirm' ? (
+            <Button
+              type="button"
+              variant="premium"
+              onClick={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? 'Salvando...' : (appointment ? 'Atualizar Agendamento' : 'Confirmar Agendamento')}
+              <CheckCircle2 className="ml-2 h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="premium"
+              onClick={handleNext}
+              disabled={
+                (currentStep === 'client' && !canProceedFromClient) ||
+                (currentStep === 'service' && !canProceedFromService) ||
+                (currentStep === 'datetime' && !canProceedFromDateTime)
+              }
+            >
+              Próximo
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
