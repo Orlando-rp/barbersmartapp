@@ -315,7 +315,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
 
   return (
     <Card className="barbershop-card w-full border-0 shadow-none">
-      <CardHeader className="space-y-4">
+      <CardHeader className="space-y-4 px-6 pt-6">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-2xl">
@@ -361,7 +361,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 px-6 pb-6">
         {/* Step 1: Client Selection */}
         {currentStep === 'client' && (
           <div className="space-y-4 animate-fade-in">
@@ -382,7 +382,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
               </div>
 
               {searchTerm && filteredClients.length > 0 && (
-                <div className="border rounded-lg max-h-48 overflow-y-auto">
+                <div className="border rounded-lg max-h-48 overflow-y-auto bg-background shadow-lg">
                   {filteredClients.map((client) => (
                     <button
                       key={client.id}
@@ -496,14 +496,14 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>Selecione a Data *</Label>
-                <div className="border rounded-lg p-4">
+                <div className="border rounded-lg p-4 bg-background">
                   <Calendar
                     mode="single"
                     selected={date}
                     onSelect={setDate}
                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     locale={ptBR}
-                    className="pointer-events-auto"
+                    className="pointer-events-auto w-full"
                   />
                 </div>
               </div>
@@ -520,7 +520,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
                     <p className="text-sm text-muted-foreground">Tente outra data</p>
                   </div>
                 ) : (
-                  <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                  <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto bg-background">
                     <div className="grid grid-cols-3 gap-2">
                       {timeSlots.map((time) => {
                         const isAvailable = availableSlots.includes(time);
