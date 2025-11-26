@@ -17,9 +17,8 @@ export const AppointmentDialog = ({ children, appointment, open, onOpenChange, o
   };
 
   return (
-    <>
-      {children}
-      <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
         <DialogTitle className="sr-only">
           {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
@@ -32,6 +31,5 @@ export const AppointmentDialog = ({ children, appointment, open, onOpenChange, o
         </div>
       </DialogContent>
     </Dialog>
-    </>
   );
 };
