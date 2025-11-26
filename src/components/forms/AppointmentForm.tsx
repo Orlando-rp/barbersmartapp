@@ -100,11 +100,6 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
           if (affectsCurrentView || wasAffected) {
             // Atualizar horários disponíveis
             fetchAvailableSlots();
-            
-            toast({
-              title: "Horários atualizados",
-              description: "A disponibilidade foi atualizada em tempo real.",
-            });
           }
         }
       )
@@ -200,32 +195,46 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
     try {
       const formattedDate = format(date, "yyyy-MM-dd");
       
+      console.log('🔍 Buscando horários para:', {
+        date: formattedDate,
+        barber: selectedBarber,
+        barbershop: barbershopId
+      });
+      
       const { data, error } = await supabase
         .from('appointments')
-        .select('appointment_time, id')
+        .select('appointment_time, id, status')
         .eq('barbershop_id', barbershopId)
         .eq('staff_id', selectedBarber)
         .eq('appointment_date', formattedDate)
-        .neq('status', 'cancelado');
+        .in('status', ['pendente', 'confirmado', 'em_atendimento']);
 
       if (error) throw error;
+
+      console.log('📅 Agendamentos encontrados:', data);
 
       const booked = (data || [])
         .filter(apt => !appointment || apt.id !== appointment.id)
         .map(apt => apt.appointment_time);
       
+      console.log('🚫 Horários ocupados:', booked);
+      
       setBookedSlots(booked);
       
       // Apenas horários realmente disponíveis
       const available = timeSlots.filter(slot => !booked.includes(slot));
+      
+      console.log('✅ Horários disponíveis:', available);
+      
       setAvailableSlots(available);
       
       // Se o horário selecionado não está mais disponível, limpar
       if (selectedTime && !available.includes(selectedTime) && (!appointment || appointment.appointment_time !== selectedTime)) {
+        console.log('⚠️ Limpando horário selecionado:', selectedTime);
         setSelectedTime("");
       }
     } catch (error: any) {
-      console.error('Erro ao carregar horários:', error);
+      console.error('❌ Erro ao carregar horários:', error);
       setAvailableSlots([]);
     }
   };
@@ -276,16 +285,25 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
     try {
       // Verificar conflito de horário
       const formattedDate = format(date, "yyyy-MM-dd");
+      
+      console.log('🔍 Verificando conflito:', {
+        date: formattedDate,
+        time: selectedTime,
+        barber: selectedBarber
+      });
+      
       const { data: conflictingAppointments, error: conflictError } = await supabase
         .from('appointments')
-        .select('id')
+        .select('id, status')
         .eq('barbershop_id', barbershopId)
         .eq('staff_id', selectedBarber)
         .eq('appointment_date', formattedDate)
         .eq('appointment_time', selectedTime)
-        .neq('status', 'cancelado');
+        .in('status', ['pendente', 'confirmado', 'em_atendimento']);
 
       if (conflictError) throw conflictError;
+
+      console.log('⚠️ Conflitos encontrados:', conflictingAppointments);
 
       // Se está editando, ignorar o próprio agendamento
       const hasConflict = appointment 
@@ -293,6 +311,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
         : conflictingAppointments && conflictingAppointments.length > 0;
 
       if (hasConflict) {
+        console.log('❌ Conflito detectado!');
         toast({
           title: "Horário Indisponível",
           description: "Este horário já está ocupado para o profissional selecionado. Por favor, escolha outro horário.",
