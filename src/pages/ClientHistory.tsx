@@ -88,7 +88,7 @@ const ClientHistory = () => {
           service_name,
           service_price,
           status,
-          staff_user_id
+          staff_id
         `)
         .eq('client_id', clientId)
         .eq('barbershop_id', barbershopId)
@@ -97,19 +97,34 @@ const ClientHistory = () => {
       if (appointmentsError) throw appointmentsError;
 
       // Get unique staff IDs
-      const staffIds = [...new Set(appointmentsData.map(a => a.staff_user_id).filter(Boolean))];
+      const staffIds = [...new Set(appointmentsData.map(a => a.staff_id).filter(Boolean))];
       
-      // Load staff names
-      const { data: staffData } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', staffIds);
+      // Load staff information via staff table
+      let staffMap = new Map();
+      if (staffIds.length > 0) {
+        const { data: staffData } = await supabase
+          .from('staff')
+          .select('id, user_id')
+          .in('id', staffIds);
 
-      const staffMap = new Map(staffData?.map(s => [s.id, s.full_name]) || []);
+        if (staffData && staffData.length > 0) {
+          const userIds = staffData.map(s => s.user_id);
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', userIds);
+
+          // Create map: staff_id -> full_name
+          const profileMap = new Map(profilesData?.map(p => [p.id, p.full_name]) || []);
+          staffData.forEach(staff => {
+            staffMap.set(staff.id, profileMap.get(staff.user_id));
+          });
+        }
+      }
 
       const formattedAppointments = appointmentsData.map(apt => ({
         ...apt,
-        staff_name: apt.staff_user_id ? staffMap.get(apt.staff_user_id) : undefined,
+        staff_name: apt.staff_id ? staffMap.get(apt.staff_id) : undefined,
       }));
 
       setAppointments(formattedAppointments);
