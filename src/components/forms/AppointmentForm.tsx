@@ -254,6 +254,44 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const canProceedFromService = selectedService && selectedBarber;
   const canProceedFromDateTime = date && selectedTime;
 
+  const sendWhatsAppConfirmation = async (data: {
+    clientName: string;
+    clientPhone: string;
+    date: Date;
+    time: string;
+    serviceName: string;
+    barberName: string;
+  }) => {
+    try {
+      const message = `Olá ${data.clientName}! 
+
+Seu agendamento foi confirmado:
+📅 Data: ${format(data.date, "dd/MM/yyyy", { locale: ptBR })}
+⏰ Horário: ${data.time}
+✂️ Serviço: ${data.serviceName}
+👤 Profissional: ${data.barberName}
+
+Nos vemos em breve! 💈`;
+
+      const { error } = await supabase.functions.invoke('send-whatsapp', {
+        body: {
+          to: data.clientPhone,
+          message: message,
+          type: 'text'
+        }
+      });
+
+      if (error) {
+        console.error('Erro ao enviar WhatsApp:', error);
+      } else {
+        console.log('✅ Confirmação enviada via WhatsApp');
+      }
+    } catch (error) {
+      console.error('Erro ao enviar confirmação WhatsApp:', error);
+      // Não bloquear o fluxo se WhatsApp falhar
+    }
+  };
+
   const handleNext = () => {
     if (currentStep === 'client' && canProceedFromClient) {
       setCurrentStep('service');
@@ -390,6 +428,16 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
         toast({
           title: "Agendamento Criado!",
           description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
+        });
+
+        // Enviar confirmação via WhatsApp
+        sendWhatsAppConfirmation({
+          clientName,
+          clientPhone,
+          date,
+          time: selectedTime,
+          serviceName: service?.name || 'Serviço',
+          barberName: selectedBarberData?.name || 'Profissional'
         });
       }
 
