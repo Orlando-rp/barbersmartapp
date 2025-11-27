@@ -29,6 +29,7 @@ const navigation = [
   { name: "Relatórios", href: "/reports", icon: BarChart3 },
   { name: "Marketing", href: "/marketing", icon: MessageSquare },
   { name: "Avaliações", href: "/reviews", icon: StarIcon },
+  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare },
   { name: "Horários", href: "/business-hours", icon: Clock },
   { name: "Auditoria", href: "/audit", icon: Shield },
   { name: "Configurações", href: "/settings", icon: Settings },
