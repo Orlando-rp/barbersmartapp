@@ -40,7 +40,16 @@ const WhatsAppSettings = () => {
       }
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
-      toast.error(error instanceof Error ? error.message : "Erro ao enviar mensagem");
+      
+      // Detect specific error types
+      if (error instanceof Error && error.message.includes("Failed to send a request")) {
+        toast.error(
+          "A função WhatsApp não está disponível. Verifique se ela foi deployada corretamente e aguarde alguns minutos.",
+          { duration: 5000 }
+        );
+      } else {
+        toast.error(error instanceof Error ? error.message : "Erro ao enviar mensagem");
+      }
     } finally {
       setSending(false);
     }
@@ -56,6 +65,24 @@ const WhatsAppSettings = () => {
             Configure e teste a integração com WhatsApp Business API
           </p>
         </div>
+
+        {/* Alert */}
+        <Card className="border-orange-500/50 bg-orange-500/10">
+          <CardContent className="pt-6">
+            <div className="flex gap-3">
+              <MessageSquare className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-medium text-orange-900 dark:text-orange-100">
+                  Importante: Deploy da função
+                </p>
+                <p className="text-sm text-orange-800 dark:text-orange-200">
+                  A edge function <code className="bg-orange-900/20 px-1.5 py-0.5 rounded">send-whatsapp</code> precisa estar deployada no Lovable Cloud. 
+                  Após qualquer alteração, aguarde alguns minutos para o deploy ser concluído antes de testar.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Setup Instructions */}
         <Card>
