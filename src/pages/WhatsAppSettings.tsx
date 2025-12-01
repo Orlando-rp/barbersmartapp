@@ -58,10 +58,20 @@ const WhatsAppSettings = () => {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
-      setLogs(data || []);
+      if (error) {
+        // Tabela ainda não existe - ignorar erro silenciosamente
+        if (error.code === 'PGRST205' || error.code === 'PGRST204') {
+          console.warn('Tabela whatsapp_logs ainda não criada. Execute o script SQL.');
+          setLogs([]);
+        } else {
+          throw error;
+        }
+      } else {
+        setLogs(data || []);
+      }
     } catch (error) {
       console.error('Erro ao carregar logs:', error);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -77,12 +87,20 @@ const WhatsAppSettings = () => {
           days_ago: 30 
         });
 
-      if (error) throw error;
-      if (data && data.length > 0) {
+      if (error) {
+        // Função ainda não existe - ignorar erro silenciosamente
+        if (error.code === 'PGRST202' || error.code === 'PGRST204') {
+          console.warn('Função get_whatsapp_stats ainda não criada. Execute o script SQL.');
+          setStats(null);
+        } else {
+          throw error;
+        }
+      } else if (data && data.length > 0) {
         setStats(data[0]);
       }
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
+      setStats(null);
     }
   };
 
@@ -210,20 +228,54 @@ const WhatsAppSettings = () => {
           </div>
         )}
 
-        {/* Alert */}
-        <Card className="border-primary/50 bg-primary/5">
+        {/* Setup Required Alert */}
+        <Card className="border-orange-500/50 bg-orange-500/10">
           <CardContent className="pt-6">
             <div className="flex gap-3">
-              <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-medium text-foreground">
-                  Status da Integração
+              <AlertCircle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <p className="font-medium text-orange-900 dark:text-orange-100">
+                  ⚠️ Configuração Necessária
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  A edge function <code className="bg-muted px-1.5 py-0.5 rounded">send-whatsapp</code> está ativa. 
-                  Configure os secrets <code className="bg-muted px-1.5 py-0.5 rounded">WHATSAPP_API_TOKEN</code> e{' '}
-                  <code className="bg-muted px-1.5 py-0.5 rounded">WHATSAPP_PHONE_NUMBER_ID</code> para habilitar o envio.
-                </p>
+                <div className="text-sm text-orange-800 dark:text-orange-200 space-y-2">
+                  <p className="font-semibold">Para ativar o WhatsApp, execute estes passos:</p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2">
+                    <li>
+                      <strong>Execute o script SQL</strong>: Abra o{' '}
+                      <a 
+                        href="https://supabase.com/dashboard/project/nmsblmmhigwsevnqmhwn/sql/new" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="underline font-semibold"
+                      >
+                        SQL Editor do Supabase
+                      </a>
+                      {' '}e execute o conteúdo do arquivo{' '}
+                      <code className="bg-orange-900/20 px-1.5 py-0.5 rounded font-mono">
+                        docs/WHATSAPP-LOGS-SETUP.sql
+                      </code>
+                    </li>
+                    <li>
+                      <strong>Configure os Secrets</strong>: Adicione{' '}
+                      <code className="bg-orange-900/20 px-1.5 py-0.5 rounded font-mono">WHATSAPP_API_TOKEN</code>
+                      {' '}e{' '}
+                      <code className="bg-orange-900/20 px-1.5 py-0.5 rounded font-mono">WHATSAPP_PHONE_NUMBER_ID</code>
+                      {' '}no Lovable Cloud
+                    </li>
+                    <li>
+                      <strong>Aguarde o deploy</strong>: A edge function{' '}
+                      <code className="bg-orange-900/20 px-1.5 py-0.5 rounded font-mono">send-whatsapp</code>
+                      {' '}está sendo deployada (pode levar 2-5 minutos)
+                    </li>
+                  </ol>
+                  <p className="mt-2 pt-2 border-t border-orange-500/30">
+                    📚 Consulte{' '}
+                    <code className="bg-orange-900/20 px-1.5 py-0.5 rounded font-mono">
+                      docs/WHATSAPP-SETUP-INSTRUCTIONS.md
+                    </code>
+                    {' '}para instruções detalhadas
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -296,8 +348,11 @@ const WhatsAppSettings = () => {
                 Carregando logs...
               </div>
             ) : logs.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhuma mensagem enviada ainda
+              <div className="text-center py-8 space-y-2">
+                <p className="text-muted-foreground">Nenhuma mensagem enviada ainda</p>
+                <p className="text-xs text-muted-foreground">
+                  Execute o script SQL para criar a tabela de logs
+                </p>
               </div>
             ) : (
               <div className="rounded-md border">
