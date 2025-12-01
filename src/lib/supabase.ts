@@ -196,6 +196,26 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['loyalty_transactions']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['loyalty_transactions']['Insert']>;
       };
+      whatsapp_logs: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          recipient_phone: string;
+          recipient_name: string | null;
+          message_type: string;
+          message_content: string;
+          status: string;
+          whatsapp_message_id: string | null;
+          error_message: string | null;
+          appointment_id: string | null;
+          campaign_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['whatsapp_logs']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['whatsapp_logs']['Insert']>;
+      };
     };
   };
 };

@@ -28,7 +28,7 @@ const timeSlots = [
 type WizardStep = 'client' | 'service' | 'datetime' | 'confirm';
 
 export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) => {
-  const { barbershopId } = useAuth();
+  const { barbershopId, user } = useAuth();
   const { toast } = useToast();
   
   const [currentStep, setCurrentStep] = useState<WizardStep>('client');
@@ -254,14 +254,17 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const canProceedFromService = selectedService && selectedBarber;
   const canProceedFromDateTime = date && selectedTime;
 
-  const sendWhatsAppConfirmation = async (data: {
-    clientName: string;
-    clientPhone: string;
-    date: Date;
-    time: string;
-    serviceName: string;
-    barberName: string;
-  }) => {
+  const sendWhatsAppConfirmation = async (
+    appointmentId: string,
+    data: {
+      clientName: string;
+      clientPhone: string;
+      date: Date;
+      time: string;
+      serviceName: string;
+      barberName: string;
+    }
+  ) => {
     try {
       const message = `Olá ${data.clientName}! 
 
@@ -277,7 +280,11 @@ Nos vemos em breve! 💈`;
         body: {
           to: data.clientPhone,
           message: message,
-          type: 'text'
+          type: 'text',
+          barbershopId,
+          recipientName: data.clientName,
+          appointmentId,
+          createdBy: user?.id
         }
       });
 
@@ -419,9 +426,11 @@ Nos vemos em breve! 💈`;
           description: `Agendamento para ${clientName} atualizado com sucesso.`,
         });
       } else {
-        const { error: appointmentError } = await supabase
+        const { data: insertedData, error: appointmentError } = await supabase
           .from('appointments')
-          .insert(appointmentData);
+          .insert(appointmentData)
+          .select()
+          .single();
 
         if (appointmentError) throw appointmentError;
 
@@ -431,14 +440,16 @@ Nos vemos em breve! 💈`;
         });
 
         // Enviar confirmação via WhatsApp
-        sendWhatsAppConfirmation({
-          clientName,
-          clientPhone,
-          date,
-          time: selectedTime,
-          serviceName: service?.name || 'Serviço',
-          barberName: selectedBarberData?.name || 'Profissional'
-        });
+        if (insertedData?.id) {
+          sendWhatsAppConfirmation(insertedData.id, {
+            clientName,
+            clientPhone,
+            date,
+            time: selectedTime,
+            serviceName: service?.name || 'Serviço',
+            barberName: selectedBarberData?.name || 'Profissional'
+          });
+        }
       }
 
       onClose?.();
