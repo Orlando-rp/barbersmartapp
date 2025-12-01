@@ -1,22 +1,99 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { MessageSquare, Send, CheckCircle, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MessageSquare, Send, CheckCircle, XCircle, Clock, Activity, TrendingUp, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface WhatsAppLog {
+  id: string;
+  recipient_phone: string;
+  recipient_name: string | null;
+  message_content: string;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+}
+
+interface WhatsAppStats {
+  total_sent: number;
+  total_success: number;
+  total_failed: number;
+  success_rate: number;
+}
 
 const WhatsAppSettings = () => {
+  const { user, barbershopId } = useAuth();
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState("Olá! Esta é uma mensagem de teste do BarberSmart.");
   const [sending, setSending] = useState(false);
+  const [logs, setLogs] = useState<WhatsAppLog[]>([]);
+  const [stats, setStats] = useState<WhatsAppStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (barbershopId) {
+      loadLogs();
+      loadStats();
+    }
+  }, [barbershopId]);
+
+  const loadLogs = async () => {
+    if (!barbershopId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_logs')
+        .select('*')
+        .eq('barbershop_id', barbershopId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setLogs(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar logs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    if (!barbershopId) return;
+
+    try {
+      const { data, error } = await supabase
+        .rpc('get_whatsapp_stats', { 
+          barbershop_uuid: barbershopId,
+          days_ago: 30 
+        });
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setStats(data[0]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+    }
+  };
 
   const handleSendTest = async () => {
     if (!testPhone.trim() || !testMessage.trim()) {
       toast.error("Preencha o telefone e a mensagem");
+      return;
+    }
+
+    if (!barbershopId) {
+      toast.error("ID da barbearia não encontrado");
       return;
     }
 
@@ -27,7 +104,10 @@ const WhatsAppSettings = () => {
         body: {
           to: testPhone,
           message: testMessage,
-          type: 'text'
+          type: 'text',
+          barbershopId,
+          recipientName: 'Teste',
+          createdBy: user?.id
         }
       });
 
@@ -35,16 +115,18 @@ const WhatsAppSettings = () => {
 
       if (data?.success) {
         toast.success("Mensagem enviada com sucesso!");
+        loadLogs();
+        loadStats();
+        setTestPhone("");
       } else {
         throw new Error(data?.error || "Falha ao enviar mensagem");
       }
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
       
-      // Detect specific error types
       if (error instanceof Error && error.message.includes("Failed to send a request")) {
         toast.error(
-          "A função WhatsApp não está disponível. Verifique se ela foi deployada corretamente e aguarde alguns minutos.",
+          "A função WhatsApp não está disponível. Verifique se ela foi deployada corretamente.",
           { duration: 5000 }
         );
       } else {
@@ -55,6 +137,19 @@ const WhatsAppSettings = () => {
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'sent':
+        return <Badge className="bg-success/10 text-success border-success/20"><CheckCircle className="h-3 w-3 mr-1" />Enviado</Badge>;
+      case 'failed':
+        return <Badge className="bg-destructive/10 text-destructive border-destructive/20"><XCircle className="h-3 w-3 mr-1" />Falhou</Badge>;
+      case 'pending':
+        return <Badge className="bg-warning/10 text-warning border-warning/20"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -62,100 +157,74 @@ const WhatsAppSettings = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Configurações WhatsApp</h1>
           <p className="text-muted-foreground">
-            Configure e teste a integração com WhatsApp Business API
+            Gerencie a integração com WhatsApp Business API e visualize logs de envio
           </p>
         </div>
 
+        {/* Statistics */}
+        {stats && (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Enviado</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.total_sent}</div>
+                <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Sucesso</CardTitle>
+                <CheckCircle className="h-4 w-4 text-success" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-success">{stats.total_success}</div>
+                <p className="text-xs text-muted-foreground">Mensagens entregues</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Falhas</CardTitle>
+                <XCircle className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">{stats.total_failed}</div>
+                <p className="text-xs text-muted-foreground">Erros de envio</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">{stats.success_rate}%</div>
+                <p className="text-xs text-muted-foreground">Média geral</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Alert */}
-        <Card className="border-orange-500/50 bg-orange-500/10">
+        <Card className="border-primary/50 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex gap-3">
-              <MessageSquare className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-medium text-orange-900 dark:text-orange-100">
-                  Importante: Deploy da função
+                <p className="font-medium text-foreground">
+                  Status da Integração
                 </p>
-                <p className="text-sm text-orange-800 dark:text-orange-200">
-                  A edge function <code className="bg-orange-900/20 px-1.5 py-0.5 rounded">send-whatsapp</code> precisa estar deployada no Lovable Cloud. 
-                  Após qualquer alteração, aguarde alguns minutos para o deploy ser concluído antes de testar.
+                <p className="text-sm text-muted-foreground">
+                  A edge function <code className="bg-muted px-1.5 py-0.5 rounded">send-whatsapp</code> está ativa. 
+                  Configure os secrets <code className="bg-muted px-1.5 py-0.5 rounded">WHATSAPP_API_TOKEN</code> e{' '}
+                  <code className="bg-muted px-1.5 py-0.5 rounded">WHATSAPP_PHONE_NUMBER_ID</code> para habilitar o envio.
                 </p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Setup Instructions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              Como Configurar
-            </CardTitle>
-            <CardDescription>
-              Siga os passos abaixo para configurar a integração
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-start gap-3">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                  1
-                </div>
-                <div>
-                  <p className="font-medium">Criar conta WhatsApp Business API</p>
-                  <p className="text-sm text-muted-foreground">
-                    Acesse <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer" className="text-primary underline">Meta for Developers</a> e crie um app
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                  2
-                </div>
-                <div>
-                  <p className="font-medium">Obter credenciais</p>
-                  <p className="text-sm text-muted-foreground">
-                    Copie o <strong>Phone Number ID</strong> e o <strong>Access Token</strong>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                  3
-                </div>
-                <div>
-                  <p className="font-medium">Configurar secrets</p>
-                  <p className="text-sm text-muted-foreground">
-                    Adicione as credenciais nas variáveis de ambiente:
-                  </p>
-                  <ul className="text-sm text-muted-foreground list-disc list-inside mt-1">
-                    <li><code className="bg-muted px-1 py-0.5 rounded">WHATSAPP_API_TOKEN</code></li>
-                    <li><code className="bg-muted px-1 py-0.5 rounded">WHATSAPP_PHONE_NUMBER_ID</code></li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                  4
-                </div>
-                <div>
-                  <p className="font-medium">Testar integração</p>
-                  <p className="text-sm text-muted-foreground">
-                    Use o formulário abaixo para enviar uma mensagem de teste
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t">
-              <p className="text-sm text-muted-foreground">
-                📚 <a href="https://developers.facebook.com/docs/whatsapp/business-management-api/get-started" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                  Documentação oficial do WhatsApp Business API
-                </a>
-              </p>
             </div>
           </CardContent>
         </Card>
@@ -164,11 +233,11 @@ const WhatsAppSettings = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-success" />
+              <Send className="h-5 w-5 text-primary" />
               Enviar Mensagem de Teste
             </CardTitle>
             <CardDescription>
-              Teste se a integração está funcionando corretamente
+              Teste a integração enviando uma mensagem
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -210,55 +279,149 @@ const WhatsAppSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Automation Templates */}
+        {/* Logs Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Automações Disponíveis</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Histórico de Mensagens
+            </CardTitle>
             <CardDescription>
-              Mensagens automáticas que podem ser enviadas via WhatsApp
+              Últimas 50 mensagens enviadas via WhatsApp
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Carregando logs...
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhuma mensagem enviada ainda
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data/Hora</TableHead>
+                      <TableHead>Destinatário</TableHead>
+                      <TableHead>Mensagem</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Erro</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {logs.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="font-mono text-xs">
+                          {format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{log.recipient_name || "Não informado"}</div>
+                            <div className="text-xs text-muted-foreground">{log.recipient_phone}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate text-sm">{log.message_content}</div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(log.status)}</TableCell>
+                        <TableCell className="max-w-xs">
+                          {log.error_message && (
+                            <span className="text-xs text-destructive truncate block">
+                              {log.error_message}
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Setup Instructions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Como Configurar
+            </CardTitle>
+            <CardDescription>
+              Passos para configurar a integração WhatsApp Business API
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
-                <CheckCircle className="h-5 w-5 text-success" />
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold flex-shrink-0">
+                  1
+                </div>
                 <div>
-                  <p className="font-medium">Confirmação de Agendamento</p>
+                  <p className="font-medium">Criar conta WhatsApp Business API</p>
                   <p className="text-sm text-muted-foreground">
-                    Enviada automaticamente após novo agendamento
+                    Acesse{" "}
+                    <a
+                      href="https://developers.facebook.com/apps"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      Meta for Developers
+                    </a>{" "}
+                    e crie um app
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
-                <CheckCircle className="h-5 w-5 text-success" />
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold flex-shrink-0">
+                  2
+                </div>
                 <div>
-                  <p className="font-medium">Lembrete 24h Antes</p>
+                  <p className="font-medium">Obter credenciais</p>
                   <p className="text-sm text-muted-foreground">
-                    Lembrete enviado 24 horas antes do horário agendado
+                    Copie o <strong>Phone Number ID</strong> e o <strong>Access Token</strong>
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
-                <CheckCircle className="h-5 w-5 text-success" />
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold flex-shrink-0">
+                  3
+                </div>
                 <div>
-                  <p className="font-medium">Solicitação de Avaliação</p>
+                  <p className="font-medium">Configurar secrets no Lovable Cloud</p>
                   <p className="text-sm text-muted-foreground">
-                    Enviada após conclusão do serviço
+                    Adicione as seguintes variáveis de ambiente:
                   </p>
+                  <ul className="text-sm text-muted-foreground list-disc list-inside mt-1 space-y-1">
+                    <li>
+                      <code className="bg-muted px-1.5 py-0.5 rounded">WHATSAPP_API_TOKEN</code>
+                    </li>
+                    <li>
+                      <code className="bg-muted px-1.5 py-0.5 rounded">WHATSAPP_PHONE_NUMBER_ID</code>
+                    </li>
+                  </ul>
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
-                <CheckCircle className="h-5 w-5 text-success" />
-                <div>
-                  <p className="font-medium">Campanhas de Marketing</p>
-                  <p className="text-sm text-muted-foreground">
-                    Promoções e novidades para clientes
-                  </p>
-                </div>
-              </div>
+            <div className="pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                📚{" "}
+                <a
+                  href="https://developers.facebook.com/docs/whatsapp/business-management-api/get-started"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  Documentação oficial do WhatsApp Business API
+                </a>
+              </p>
             </div>
           </CardContent>
         </Card>

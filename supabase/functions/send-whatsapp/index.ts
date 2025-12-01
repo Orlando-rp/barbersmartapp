@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,8 +12,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Initialize Supabase client
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
-    const { to, message, type = 'text' } = await req.json();
+    const { to, message, type = 'text', barbershopId, recipientName, appointmentId, campaignId, createdBy } = await req.json();
+
+    console.log('Received WhatsApp request:', { to, type, barbershopId });
 
     const WHATSAPP_TOKEN = Deno.env.get('WHATSAPP_API_TOKEN');
     const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID');
@@ -62,6 +70,32 @@ serve(async (req) => {
 
     console.log('WhatsApp message sent successfully:', responseData);
 
+    // Save log to database
+    if (barbershopId) {
+      const logData = {
+        barbershop_id: barbershopId,
+        recipient_phone: phoneNumber,
+        recipient_name: recipientName || null,
+        message_type: type,
+        message_content: message,
+        status: 'sent',
+        whatsapp_message_id: responseData.messages?.[0]?.id || null,
+        appointment_id: appointmentId || null,
+        campaign_id: campaignId || null,
+        created_by: createdBy || null,
+      };
+
+      const { error: logError } = await supabase
+        .from('whatsapp_logs')
+        .insert(logData);
+
+      if (logError) {
+        console.error('Failed to save WhatsApp log:', logError);
+      } else {
+        console.log('WhatsApp log saved successfully');
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -74,6 +108,25 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in send-whatsapp function:', error);
+
+    // Save failed log to database
+    if (barbershopId) {
+      const logData = {
+        barbershop_id: barbershopId,
+        recipient_phone: to?.replace(/\D/g, '') || 'unknown',
+        recipient_name: recipientName || null,
+        message_type: type,
+        message_content: message || '',
+        status: 'failed',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        appointment_id: appointmentId || null,
+        campaign_id: campaignId || null,
+        created_by: createdBy || null,
+      };
+
+      await supabase.from('whatsapp_logs').insert(logData).catch(console.error);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false, 
