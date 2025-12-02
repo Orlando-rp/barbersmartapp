@@ -32,6 +32,17 @@ interface BlockedDate {
   reason: string;
 }
 
+interface SpecialHour {
+  id?: string;
+  date: Date;
+  reason: string;
+  isOpen: boolean;
+  openTime?: string;
+  closeTime?: string;
+  breakStart?: string;
+  breakEnd?: string;
+}
+
 const defaultSchedule: DaySchedule[] = [
   { day: 'monday', label: 'Segunda-feira', enabled: true, openTime: '09:00', closeTime: '18:00' },
   { day: 'tuesday', label: 'Terça-feira', enabled: true, openTime: '09:00', closeTime: '18:00' },
@@ -50,6 +61,14 @@ const BusinessHours = () => {
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState('');
+  const [specialHours, setSpecialHours] = useState<SpecialHour[]>([]);
+  const [selectedSpecialDate, setSelectedSpecialDate] = useState<Date | undefined>();
+  const [specialReason, setSpecialReason] = useState('');
+  const [specialIsOpen, setSpecialIsOpen] = useState(true);
+  const [specialOpenTime, setSpecialOpenTime] = useState('09:00');
+  const [specialCloseTime, setSpecialCloseTime] = useState('18:00');
+  const [specialBreakStart, setSpecialBreakStart] = useState('');
+  const [specialBreakEnd, setSpecialBreakEnd] = useState('');
 
   useEffect(() => {
     if (barbershopId) {
@@ -103,6 +122,32 @@ const BusinessHours = () => {
             id: b.id,
             date: new Date(b.blocked_date),
             reason: b.reason,
+          }))
+        );
+      }
+
+      // Load special hours
+      const { data: specialData, error: specialError } = await supabase
+        .from('special_hours')
+        .select('*')
+        .eq('barbershop_id', barbershopId)
+        .gte('special_date', new Date().toISOString().split('T')[0]);
+
+      if (specialError && specialError.code !== 'PGRST116') {
+        throw specialError;
+      }
+
+      if (specialData) {
+        setSpecialHours(
+          specialData.map(s => ({
+            id: s.id,
+            date: new Date(s.special_date),
+            reason: s.reason,
+            isOpen: s.is_open,
+            openTime: s.open_time || undefined,
+            closeTime: s.close_time || undefined,
+            breakStart: s.break_start || undefined,
+            breakEnd: s.break_end || undefined,
           }))
         );
       }
@@ -206,6 +251,84 @@ const BusinessHours = () => {
     }
   };
 
+  const addSpecialHour = async () => {
+    if (!selectedSpecialDate || !specialReason.trim() || !barbershopId) {
+      toast.error('Selecione uma data e informe o motivo');
+      return;
+    }
+
+    if (specialIsOpen && (!specialOpenTime || !specialCloseTime)) {
+      toast.error('Informe os horários de abertura e fechamento');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('special_hours')
+        .insert({
+          barbershop_id: barbershopId,
+          special_date: format(selectedSpecialDate, 'yyyy-MM-dd'),
+          reason: specialReason,
+          is_open: specialIsOpen,
+          open_time: specialIsOpen ? specialOpenTime : null,
+          close_time: specialIsOpen ? specialCloseTime : null,
+          break_start: specialBreakStart || null,
+          break_end: specialBreakEnd || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSpecialHours([
+        ...specialHours,
+        {
+          id: data.id,
+          date: selectedSpecialDate,
+          reason: specialReason,
+          isOpen: specialIsOpen,
+          openTime: specialIsOpen ? specialOpenTime : undefined,
+          closeTime: specialIsOpen ? specialCloseTime : undefined,
+          breakStart: specialBreakStart || undefined,
+          breakEnd: specialBreakEnd || undefined,
+        },
+      ]);
+
+      // Reset form
+      setSelectedSpecialDate(undefined);
+      setSpecialReason('');
+      setSpecialIsOpen(true);
+      setSpecialOpenTime('09:00');
+      setSpecialCloseTime('18:00');
+      setSpecialBreakStart('');
+      setSpecialBreakEnd('');
+
+      toast.success('Horário especial adicionado!');
+    } catch (error) {
+      console.error('Erro ao adicionar horário especial:', error);
+      toast.error('Erro ao adicionar horário especial');
+    }
+  };
+
+  const removeSpecialHour = async (id?: string) => {
+    if (!id) return;
+
+    try {
+      const { error } = await supabase
+        .from('special_hours')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setSpecialHours(specialHours.filter(s => s.id !== id));
+      toast.success('Horário especial removido');
+    } catch (error) {
+      console.error('Erro ao remover horário especial:', error);
+      toast.error('Erro ao remover horário especial');
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -232,8 +355,12 @@ const BusinessHours = () => {
               <Clock className="h-4 w-4" />
               Horários da Semana
             </TabsTrigger>
-            <TabsTrigger value="blocked" className="gap-2">
+            <TabsTrigger value="special" className="gap-2">
               <CalendarIcon className="h-4 w-4" />
+              Horários Especiais
+            </TabsTrigger>
+            <TabsTrigger value="blocked" className="gap-2">
+              <XCircle className="h-4 w-4" />
               Datas Bloqueadas
             </TabsTrigger>
           </TabsList>
@@ -310,6 +437,159 @@ const BusinessHours = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="special" className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Adicionar Horário Especial</CardTitle>
+                  <CardDescription>
+                    Configure horários diferentes para datas específicas (eventos, feriados com atendimento, etc.)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Selecione a Data</Label>
+                    <Calendar
+                      mode="single"
+                      selected={selectedSpecialDate}
+                      onSelect={setSelectedSpecialDate}
+                      disabled={(date) => date < new Date()}
+                      className="rounded-md border pointer-events-auto"
+                      locale={ptBR}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Motivo / Descrição</Label>
+                    <Input
+                      value={specialReason}
+                      onChange={(e) => setSpecialReason(e.target.value)}
+                      placeholder="Ex: Horário Estendido - Black Friday"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+                    <Label>Barbearia Aberta</Label>
+                    <Switch
+                      checked={specialIsOpen}
+                      onCheckedChange={setSpecialIsOpen}
+                    />
+                  </div>
+
+                  {specialIsOpen && (
+                    <div className="space-y-4 p-4 border border-border rounded-lg">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Abertura</Label>
+                          <Input
+                            type="time"
+                            value={specialOpenTime}
+                            onChange={(e) => setSpecialOpenTime(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Fechamento</Label>
+                          <Input
+                            type="time"
+                            value={specialCloseTime}
+                            onChange={(e) => setSpecialCloseTime(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Intervalo Início</Label>
+                          <Input
+                            type="time"
+                            value={specialBreakStart}
+                            onChange={(e) => setSpecialBreakStart(e.target.value)}
+                            placeholder="Opcional"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Intervalo Fim</Label>
+                          <Input
+                            type="time"
+                            value={specialBreakEnd}
+                            onChange={(e) => setSpecialBreakEnd(e.target.value)}
+                            placeholder="Opcional"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button onClick={addSpecialHour} className="w-full">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Horário Especial
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Horários Especiais Configurados</CardTitle>
+                  <CardDescription>
+                    Datas com horários de funcionamento diferentes do padrão
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {specialHours.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhum horário especial configurado
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {specialHours.map((special) => (
+                        <div
+                          key={special.id}
+                          className="flex items-start justify-between p-4 border border-border rounded-lg"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium">
+                                {format(special.date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                              </p>
+                              {special.isOpen ? (
+                                <Badge className="bg-success/10 text-success border-success/20">
+                                  Aberto
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">Fechado</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">{special.reason}</p>
+                            {special.isOpen && (
+                              <div className="text-xs space-y-1">
+                                <p>
+                                  <span className="font-medium">Horário:</span>{' '}
+                                  {special.openTime} - {special.closeTime}
+                                </p>
+                                {special.breakStart && special.breakEnd && (
+                                  <p>
+                                    <span className="font-medium">Intervalo:</span>{' '}
+                                    {special.breakStart} - {special.breakEnd}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeSpecialHour(special.id)}
+                          >
+                            <XCircle className="h-5 w-5 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="blocked" className="space-y-6">
