@@ -216,6 +216,50 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['whatsapp_logs']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['whatsapp_logs']['Insert']>;
       };
+      business_hours: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          day_of_week: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+          is_open: boolean;
+          open_time: string;
+          close_time: string;
+          break_start: string | null;
+          break_end: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['business_hours']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['business_hours']['Insert']>;
+      };
+      blocked_dates: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          blocked_date: string;
+          reason: string;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['blocked_dates']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['blocked_dates']['Insert']>;
+      };
+      special_hours: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          special_date: string;
+          reason: string;
+          is_open: boolean;
+          open_time: string | null;
+          close_time: string | null;
+          break_start: string | null;
+          break_end: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['special_hours']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['special_hours']['Insert']>;
+      };
     };
   };
 };
