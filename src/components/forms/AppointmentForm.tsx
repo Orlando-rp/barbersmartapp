@@ -14,16 +14,13 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusinessHoursValidation } from "@/hooks/useBusinessHoursValidation";
+import { toast as sonnerToast } from "sonner";
 
 interface AppointmentFormProps {
   appointment?: any;
   onClose?: () => void;
 }
-
-const timeSlots = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"
-];
 
 type WizardStep = 'client' | 'service' | 'datetime' | 'confirm';
 
@@ -51,6 +48,9 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const [searchTerm, setSearchTerm] = useState("");
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [dateValidationMessage, setDateValidationMessage] = useState<string>("");
+  
+  const { validateDateTime, generateTimeSlots, loading: validationLoading } = useBusinessHoursValidation(barbershopId);
 
   useEffect(() => {
     if (barbershopId) {
@@ -195,12 +195,36 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
     try {
       const formattedDate = format(date, "yyyy-MM-dd");
       
-      console.log('🔍 Buscando horários para:', {
+      console.log('🔍 Validando data/hora com business hours:', {
         date: formattedDate,
         barber: selectedBarber,
         barbershop: barbershopId
       });
+
+      // Step 1: Validate if the date is allowed (check blocked dates, business hours, special hours)
+      const dateValidation = validateDateTime(date);
       
+      if (!dateValidation.isValid) {
+        console.log('❌ Data inválida:', dateValidation.reason);
+        sonnerToast.error(dateValidation.reason || 'Data não disponível para agendamento');
+        setAvailableSlots([]);
+        setSelectedTime("");
+        return;
+      }
+
+      console.log('✅ Data válida:', dateValidation.availableHours);
+
+      // Step 2: Generate all possible time slots based on business hours
+      const possibleSlots = generateTimeSlots(date);
+      console.log('⏰ Horários possíveis gerados:', possibleSlots);
+
+      if (possibleSlots.length === 0) {
+        sonnerToast.warning('Nenhum horário disponível para esta data');
+        setAvailableSlots([]);
+        return;
+      }
+
+      // Step 3: Check which slots are already booked
       const { data, error } = await supabase
         .from('appointments')
         .select('appointment_time, id, status')
@@ -221,20 +245,21 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
       
       setBookedSlots(booked);
       
-      // Apenas horários realmente disponíveis
-      const available = timeSlots.filter(slot => !booked.includes(slot));
+      // Step 4: Filter out booked slots from possible slots
+      const available = possibleSlots.filter(slot => !booked.includes(slot));
       
-      console.log('✅ Horários disponíveis:', available);
+      console.log('✅ Horários finais disponíveis:', available);
       
       setAvailableSlots(available);
       
-      // Se o horário selecionado não está mais disponível, limpar
+      // If selected time is no longer available, clear it
       if (selectedTime && !available.includes(selectedTime) && (!appointment || appointment.appointment_time !== selectedTime)) {
         console.log('⚠️ Limpando horário selecionado:', selectedTime);
         setSelectedTime("");
       }
     } catch (error: any) {
       console.error('❌ Erro ao carregar horários:', error);
+      sonnerToast.error('Erro ao carregar horários disponíveis');
       setAvailableSlots([]);
     }
   };
@@ -331,6 +356,18 @@ Nos vemos em breve! 💈`;
       // Verificar conflito de horário
       const formattedDate = format(date, "yyyy-MM-dd");
       
+      // Validate date and time before booking
+      const validation = validateDateTime(date, selectedTime);
+      if (!validation.isValid) {
+        toast({
+          title: "Horário Indisponível",
+          description: validation.reason,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       console.log('🔍 Verificando conflito:', {
         date: formattedDate,
         time: selectedTime,
@@ -660,12 +697,55 @@ Nos vemos em breve! 💈`;
                     <Calendar
                       mode="single"
                       selected={date}
-                      onSelect={setDate}
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      onSelect={(newDate) => {
+                        if (newDate) {
+                          const validation = validateDateTime(newDate);
+                          if (!validation.isValid) {
+                            setDateValidationMessage(validation.reason || "Data indisponível");
+                            sonnerToast.error(validation.reason || "Data indisponível");
+                          } else {
+                            setDateValidationMessage("");
+                            setDate(newDate);
+                          }
+                        }
+                      }}
+                      disabled={(date) => {
+                        const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                        if (isPast) return true;
+                        
+                        const validation = validateDateTime(date);
+                        return !validation.isValid;
+                      }}
                       locale={ptBR}
                       className="pointer-events-auto w-full mx-auto"
                     />
                   </div>
+                  {dateValidationMessage && (
+                    <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                      {dateValidationMessage}
+                    </div>
+                  )}
+                  {date && !dateValidationMessage && (
+                    <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                      {(() => {
+                        const validation = validateDateTime(date);
+                        if (validation.availableHours) {
+                          return (
+                            <>
+                              <div className="font-medium text-foreground mb-1">Horário de funcionamento:</div>
+                              <div>{validation.availableHours.start} às {validation.availableHours.end}</div>
+                              {validation.availableHours.breakStart && validation.availableHours.breakEnd && (
+                                <div className="text-xs mt-1">
+                                  Intervalo: {validation.availableHours.breakStart} às {validation.availableHours.breakEnd}
+                                </div>
+                              )}
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
