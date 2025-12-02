@@ -79,12 +79,20 @@ const SettingsPage = () => {
       if (error) throw error;
 
       if (data) {
+        const dbSettings = data.settings || {};
         setSettings({
           name: data.name || '',
           address: data.address || '',
           phone: data.phone || '',
           email: data.email || '',
-          settings: data.settings || settings.settings
+          settings: {
+            opening_hours: dbSettings.opening_hours || settings.settings.opening_hours,
+            notifications: {
+              whatsapp: dbSettings.notifications?.whatsapp ?? false,
+              email: dbSettings.notifications?.email ?? false,
+              marketing: dbSettings.notifications?.marketing ?? false,
+            }
+          }
         });
       }
     } catch (error) {
