@@ -49,6 +49,8 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [dateValidationMessage, setDateValidationMessage] = useState<string>("");
+  const [dayAvailability, setDayAvailability] = useState<Record<string, 'available' | 'partial' | 'full' | 'closed'>>({});
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   
   const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(barbershopId);
 
@@ -68,6 +70,13 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
       setSelectedTime("");
     }
   }, [date, selectedBarber, selectedService]);
+
+  // Fetch day availability for calendar visualization
+  useEffect(() => {
+    if (selectedBarber && selectedService && barbershopId) {
+      fetchMonthAvailability();
+    }
+  }, [selectedBarber, selectedService, calendarMonth, barbershopId]);
 
   // Real-time updates for appointments
   useEffect(() => {
@@ -274,6 +283,98 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
       console.error('❌ Erro ao carregar horários:', error);
       sonnerToast.error('Erro ao carregar horários disponíveis');
       setAvailableSlots([]);
+    }
+  };
+
+  const fetchMonthAvailability = async () => {
+    if (!selectedBarber || !selectedService || !barbershopId) {
+      setDayAvailability({});
+      return;
+    }
+
+    try {
+      const service = services.find(s => s.id === selectedService);
+      const serviceDuration = service?.duration || 30;
+
+      // Get the start and end of the visible month
+      const startOfMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+      const endOfMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
+      
+      // Fetch all appointments for the month
+      const { data: monthAppointments, error } = await supabase
+        .from('appointments')
+        .select('appointment_date, appointment_time, service_id')
+        .eq('barbershop_id', barbershopId)
+        .eq('staff_id', selectedBarber)
+        .gte('appointment_date', format(startOfMonth, 'yyyy-MM-dd'))
+        .lte('appointment_date', format(endOfMonth, 'yyyy-MM-dd'))
+        .in('status', ['pendente', 'confirmado', 'concluido']);
+
+      if (error) throw error;
+
+      const availability: Record<string, 'available' | 'partial' | 'full' | 'closed'> = {};
+      
+      // Check each day of the month
+      const currentDate = new Date(startOfMonth);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      while (currentDate <= endOfMonth) {
+        const dateStr = format(currentDate, 'yyyy-MM-dd');
+        
+        // Skip past dates
+        if (currentDate < today) {
+          currentDate.setDate(currentDate.getDate() + 1);
+          continue;
+        }
+        
+        // Check if date is valid (business hours)
+        const validation = validateDateTime(currentDate);
+        
+        if (!validation.isValid) {
+          availability[dateStr] = 'closed';
+        } else {
+          // Generate possible slots
+          const possibleSlots = generateTimeSlots(currentDate, serviceDuration);
+          
+          if (possibleSlots.length === 0) {
+            availability[dateStr] = 'closed';
+          } else {
+            // Get appointments for this day
+            const dayAppointments = (monthAppointments || [])
+              .filter(apt => apt.appointment_date === dateStr)
+              .map(apt => {
+                const bookedService = services.find(s => s.id === apt.service_id);
+                return {
+                  time: apt.appointment_time,
+                  duration: bookedService?.duration || 30
+                };
+              });
+            
+            // Calculate available slots
+            const availableCount = possibleSlots.filter(slot => 
+              !checkTimeOverlap(slot, serviceDuration, dayAppointments)
+            ).length;
+            
+            const totalSlots = possibleSlots.length;
+            const occupancyRate = (totalSlots - availableCount) / totalSlots;
+            
+            if (availableCount === 0) {
+              availability[dateStr] = 'full';
+            } else if (occupancyRate >= 0.7) {
+              availability[dateStr] = 'partial';
+            } else {
+              availability[dateStr] = 'available';
+            }
+          }
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      setDayAvailability(availability);
+    } catch (error) {
+      console.error('Erro ao calcular disponibilidade do mês:', error);
     }
   };
 
@@ -710,6 +811,8 @@ Nos vemos em breve! 💈`;
                     <Calendar
                       mode="single"
                       selected={date}
+                      month={calendarMonth}
+                      onMonthChange={setCalendarMonth}
                       onSelect={(newDate) => {
                         if (newDate) {
                           const validation = validateDateTime(newDate);
@@ -726,13 +829,66 @@ Nos vemos em breve! 💈`;
                         const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
                         if (isPast) return true;
                         
+                        const dateStr = format(date, 'yyyy-MM-dd');
+                        if (dayAvailability[dateStr] === 'full' || dayAvailability[dateStr] === 'closed') {
+                          return true;
+                        }
+                        
                         const validation = validateDateTime(date);
                         return !validation.isValid;
+                      }}
+                      modifiers={{
+                        available: (date) => {
+                          const dateStr = format(date, 'yyyy-MM-dd');
+                          return dayAvailability[dateStr] === 'available';
+                        },
+                        partial: (date) => {
+                          const dateStr = format(date, 'yyyy-MM-dd');
+                          return dayAvailability[dateStr] === 'partial';
+                        },
+                        full: (date) => {
+                          const dateStr = format(date, 'yyyy-MM-dd');
+                          return dayAvailability[dateStr] === 'full';
+                        },
+                      }}
+                      modifiersStyles={{
+                        available: {
+                          backgroundColor: 'hsl(var(--chart-2) / 0.15)',
+                          borderRadius: '9999px',
+                        },
+                        partial: {
+                          backgroundColor: 'hsl(var(--chart-4) / 0.2)',
+                          borderRadius: '9999px',
+                        },
+                        full: {
+                          backgroundColor: 'hsl(var(--destructive) / 0.15)',
+                          borderRadius: '9999px',
+                          color: 'hsl(var(--muted-foreground))',
+                        },
                       }}
                       locale={ptBR}
                       className="pointer-events-auto w-full mx-auto"
                     />
                   </div>
+                  
+                  {/* Legend */}
+                  {selectedBarber && selectedService && (
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-chart-2/30 border border-chart-2/50" />
+                        <span className="text-muted-foreground">Disponível</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-chart-4/40 border border-chart-4/60" />
+                        <span className="text-muted-foreground">Poucos horários</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-destructive/20 border border-destructive/40" />
+                        <span className="text-muted-foreground">Lotado</span>
+                      </div>
+                    </div>
+                  )}
+                  
                   {dateValidationMessage && (
                     <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
                       {dateValidationMessage}
