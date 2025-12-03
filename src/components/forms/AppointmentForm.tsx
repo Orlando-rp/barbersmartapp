@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,6 +17,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusinessHoursValidation } from "@/hooks/useBusinessHoursValidation";
 import { toast as sonnerToast } from "sonner";
+import { DayProps, DayContent } from "react-day-picker";
 
 interface AppointmentFormProps {
   appointment?: any;
@@ -50,6 +52,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [dateValidationMessage, setDateValidationMessage] = useState<string>("");
   const [dayAvailability, setDayAvailability] = useState<Record<string, 'available' | 'partial' | 'full' | 'closed'>>({});
+  const [daySlotCounts, setDaySlotCounts] = useState<Record<string, { available: number; total: number }>>({});
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   
   const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(barbershopId);
@@ -313,6 +316,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
       if (error) throw error;
 
       const availability: Record<string, 'available' | 'partial' | 'full' | 'closed'> = {};
+      const slotCounts: Record<string, { available: number; total: number }> = {};
       
       // Check each day of the month
       const currentDate = new Date(startOfMonth);
@@ -333,12 +337,14 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
         
         if (!validation.isValid) {
           availability[dateStr] = 'closed';
+          slotCounts[dateStr] = { available: 0, total: 0 };
         } else {
           // Generate possible slots
           const possibleSlots = generateTimeSlots(currentDate, serviceDuration);
           
           if (possibleSlots.length === 0) {
             availability[dateStr] = 'closed';
+            slotCounts[dateStr] = { available: 0, total: 0 };
           } else {
             // Get appointments for this day
             const dayAppointments = (monthAppointments || [])
@@ -359,6 +365,8 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
             const totalSlots = possibleSlots.length;
             const occupancyRate = (totalSlots - availableCount) / totalSlots;
             
+            slotCounts[dateStr] = { available: availableCount, total: totalSlots };
+            
             if (availableCount === 0) {
               availability[dateStr] = 'full';
             } else if (occupancyRate >= 0.7) {
@@ -373,6 +381,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
       }
       
       setDayAvailability(availability);
+      setDaySlotCounts(slotCounts);
     } catch (error) {
       console.error('Erro ao calcular disponibilidade do mês:', error);
     }
@@ -808,67 +817,100 @@ Nos vemos em breve! 💈`;
                 <div className="space-y-2">
                   <Label>Selecione a Data *</Label>
                   <div className="border rounded-lg p-4 bg-card">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      month={calendarMonth}
-                      onMonthChange={setCalendarMonth}
-                      onSelect={(newDate) => {
-                        if (newDate) {
-                          const validation = validateDateTime(newDate);
-                          if (!validation.isValid) {
-                            setDateValidationMessage(validation.reason || "Data indisponível");
-                            sonnerToast.error(validation.reason || "Data indisponível");
-                          } else {
-                            setDateValidationMessage("");
-                            setDate(newDate);
+                    <TooltipProvider delayDuration={200}>
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        month={calendarMonth}
+                        onMonthChange={setCalendarMonth}
+                        onSelect={(newDate) => {
+                          if (newDate) {
+                            const validation = validateDateTime(newDate);
+                            if (!validation.isValid) {
+                              setDateValidationMessage(validation.reason || "Data indisponível");
+                              sonnerToast.error(validation.reason || "Data indisponível");
+                            } else {
+                              setDateValidationMessage("");
+                              setDate(newDate);
+                            }
                           }
-                        }
-                      }}
-                      disabled={(date) => {
-                        const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
-                        if (isPast) return true;
-                        
-                        const dateStr = format(date, 'yyyy-MM-dd');
-                        if (dayAvailability[dateStr] === 'full' || dayAvailability[dateStr] === 'closed') {
-                          return true;
-                        }
-                        
-                        const validation = validateDateTime(date);
-                        return !validation.isValid;
-                      }}
-                      modifiers={{
-                        available: (date) => {
+                        }}
+                        disabled={(date) => {
+                          const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                          if (isPast) return true;
+                          
                           const dateStr = format(date, 'yyyy-MM-dd');
-                          return dayAvailability[dateStr] === 'available';
-                        },
-                        partial: (date) => {
-                          const dateStr = format(date, 'yyyy-MM-dd');
-                          return dayAvailability[dateStr] === 'partial';
-                        },
-                        full: (date) => {
-                          const dateStr = format(date, 'yyyy-MM-dd');
-                          return dayAvailability[dateStr] === 'full';
-                        },
-                      }}
-                      modifiersStyles={{
-                        available: {
-                          backgroundColor: 'hsl(var(--chart-2) / 0.15)',
-                          borderRadius: '9999px',
-                        },
-                        partial: {
-                          backgroundColor: 'hsl(var(--chart-4) / 0.2)',
-                          borderRadius: '9999px',
-                        },
-                        full: {
-                          backgroundColor: 'hsl(var(--destructive) / 0.15)',
-                          borderRadius: '9999px',
-                          color: 'hsl(var(--muted-foreground))',
-                        },
-                      }}
-                      locale={ptBR}
-                      className="pointer-events-auto w-full mx-auto"
-                    />
+                          if (dayAvailability[dateStr] === 'full' || dayAvailability[dateStr] === 'closed') {
+                            return true;
+                          }
+                          
+                          const validation = validateDateTime(date);
+                          return !validation.isValid;
+                        }}
+                        modifiers={{
+                          available: (date) => {
+                            const dateStr = format(date, 'yyyy-MM-dd');
+                            return dayAvailability[dateStr] === 'available';
+                          },
+                          partial: (date) => {
+                            const dateStr = format(date, 'yyyy-MM-dd');
+                            return dayAvailability[dateStr] === 'partial';
+                          },
+                          full: (date) => {
+                            const dateStr = format(date, 'yyyy-MM-dd');
+                            return dayAvailability[dateStr] === 'full';
+                          },
+                        }}
+                        modifiersStyles={{
+                          available: {
+                            backgroundColor: 'hsl(var(--chart-2) / 0.15)',
+                            borderRadius: '9999px',
+                          },
+                          partial: {
+                            backgroundColor: 'hsl(var(--chart-4) / 0.2)',
+                            borderRadius: '9999px',
+                          },
+                          full: {
+                            backgroundColor: 'hsl(var(--destructive) / 0.15)',
+                            borderRadius: '9999px',
+                            color: 'hsl(var(--muted-foreground))',
+                          },
+                        }}
+                        components={{
+                          DayContent: ({ date: dayDate, ...props }) => {
+                            const dateStr = format(dayDate, 'yyyy-MM-dd');
+                            const slotInfo = daySlotCounts[dateStr];
+                            const availability = dayAvailability[dateStr];
+                            const isPast = dayDate < new Date(new Date().setHours(0, 0, 0, 0));
+                            
+                            if (isPast || !slotInfo || !selectedBarber || !selectedService) {
+                              return <DayContent date={dayDate} {...props} />;
+                            }
+                            
+                            const tooltipText = availability === 'closed' 
+                              ? 'Fechado'
+                              : availability === 'full'
+                              ? 'Sem horários disponíveis'
+                              : `${slotInfo.available} de ${slotInfo.total} horários disponíveis`;
+                            
+                            return (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="w-full h-full flex items-center justify-center">
+                                    <DayContent date={dayDate} {...props} />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  <p>{tooltipText}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          }
+                        }}
+                        locale={ptBR}
+                        className="pointer-events-auto w-full mx-auto"
+                      />
+                    </TooltipProvider>
                   </div>
                   
                   {/* Legend */}
