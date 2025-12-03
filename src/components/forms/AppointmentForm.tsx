@@ -50,7 +50,7 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [dateValidationMessage, setDateValidationMessage] = useState<string>("");
   
-  const { validateDateTime, generateTimeSlots, loading: validationLoading } = useBusinessHoursValidation(barbershopId);
+  const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(barbershopId);
 
   useEffect(() => {
     if (barbershopId) {
@@ -61,13 +61,13 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   }, [barbershopId]);
 
   useEffect(() => {
-    if (date && selectedBarber) {
+    if (date && selectedBarber && selectedService) {
       fetchAvailableSlots();
     } else {
       setAvailableSlots([]);
       setSelectedTime("");
     }
-  }, [date, selectedBarber]);
+  }, [date, selectedBarber, selectedService]);
 
   // Real-time updates for appointments
   useEffect(() => {
@@ -187,18 +187,21 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   };
 
   const fetchAvailableSlots = async () => {
-    if (!date || !selectedBarber) {
+    if (!date || !selectedBarber || !selectedService) {
       setAvailableSlots([]);
       return;
     }
 
     try {
       const formattedDate = format(date, "yyyy-MM-dd");
+      const service = services.find(s => s.id === selectedService);
+      const serviceDuration = service?.duration || 30;
       
       console.log('🔍 Validando data/hora com business hours:', {
         date: formattedDate,
         barber: selectedBarber,
-        barbershop: barbershopId
+        barbershop: barbershopId,
+        serviceDuration
       });
 
       // Step 1: Validate if the date is allowed (check blocked dates, business hours, special hours)
@@ -214,20 +217,20 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
 
       console.log('✅ Data válida:', dateValidation.availableHours);
 
-      // Step 2: Generate all possible time slots based on business hours
-      const possibleSlots = generateTimeSlots(date);
-      console.log('⏰ Horários possíveis gerados:', possibleSlots);
+      // Step 2: Generate all possible time slots based on business hours AND service duration
+      const possibleSlots = generateTimeSlots(date, serviceDuration);
+      console.log('⏰ Horários possíveis gerados (considerando duração do serviço):', possibleSlots);
 
       if (possibleSlots.length === 0) {
-        sonnerToast.warning('Nenhum horário disponível para esta data');
+        sonnerToast.warning('Nenhum horário disponível para esta data com este serviço');
         setAvailableSlots([]);
         return;
       }
 
-      // Step 3: Check which slots are already booked
+      // Step 3: Check which slots are already booked (with duration info)
       const { data, error } = await supabase
         .from('appointments')
-        .select('appointment_time, id, status')
+        .select('appointment_time, id, status, service_id')
         .eq('barbershop_id', barbershopId)
         .eq('staff_id', selectedBarber)
         .eq('appointment_date', formattedDate)
@@ -237,18 +240,28 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
 
       console.log('📅 Agendamentos encontrados:', data);
 
-      const booked = (data || [])
+      // Get service durations for booked appointments
+      const bookedAppointments = (data || [])
         .filter(apt => !appointment || apt.id !== appointment.id)
-        .map(apt => apt.appointment_time);
+        .map(apt => {
+          const bookedService = services.find(s => s.id === apt.service_id);
+          return {
+            time: apt.appointment_time,
+            duration: bookedService?.duration || 30
+          };
+        });
       
-      console.log('🚫 Horários ocupados:', booked);
+      console.log('🚫 Agendamentos ocupados com duração:', bookedAppointments);
       
-      setBookedSlots(booked);
+      setBookedSlots(bookedAppointments.map(b => b.time));
       
-      // Step 4: Filter out booked slots from possible slots
-      const available = possibleSlots.filter(slot => !booked.includes(slot));
+      // Step 4: Filter out slots that would overlap with booked appointments
+      const available = possibleSlots.filter(slot => {
+        // Check if this slot (with service duration) overlaps with any booked appointment
+        return !checkTimeOverlap(slot, serviceDuration, bookedAppointments);
+      });
       
-      console.log('✅ Horários finais disponíveis:', available);
+      console.log('✅ Horários finais disponíveis (sem conflitos):', available);
       
       setAvailableSlots(available);
       

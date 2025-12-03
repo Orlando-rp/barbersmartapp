@@ -192,7 +192,7 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     return { isValid: true, availableHours };
   };
 
-  const generateTimeSlots = (date: Date): string[] => {
+  const generateTimeSlots = (date: Date, serviceDurationMinutes: number = 30): string[] => {
     const validation = validateDateTime(date);
     
     if (!validation.isValid || !validation.availableHours) {
@@ -209,16 +209,38 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     let currentHour = startHour;
     let currentMinute = startMinute;
 
+    // Calculate end time in minutes for comparison
+    const endTimeInMinutes = endHour * 60 + endMinute;
+
     // Generate slots in 30-minute intervals
     while (currentHour < endHour || (currentHour === endHour && currentMinute < endMinute)) {
       const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+      const slotStartMinutes = currentHour * 60 + currentMinute;
+      const slotEndMinutes = slotStartMinutes + serviceDurationMinutes;
       
-      // Skip if in break period
+      // Check if service would end after business hours
+      const serviceFitsInSchedule = slotEndMinutes <= endTimeInMinutes;
+      
+      // Check if slot is during break
+      let isInBreak = false;
       if (breakStart && breakEnd) {
-        if (!isTimeInRange(timeString, breakStart, breakEnd)) {
-          slots.push(timeString);
+        isInBreak = isTimeInRange(timeString, breakStart, breakEnd);
+        
+        // Also check if service would overlap with break
+        if (!isInBreak && serviceFitsInSchedule) {
+          const [breakStartHour, breakStartMinute] = breakStart.split(':').map(Number);
+          const [breakEndHour, breakEndMinute] = breakEnd.split(':').map(Number);
+          const breakStartMinutes = breakStartHour * 60 + breakStartMinute;
+          const breakEndMinutes = breakEndHour * 60 + breakEndMinute;
+          
+          // Service would overlap with break if it starts before break and ends during/after break start
+          if (slotStartMinutes < breakStartMinutes && slotEndMinutes > breakStartMinutes) {
+            isInBreak = true;
+          }
         }
-      } else {
+      }
+      
+      if (serviceFitsInSchedule && !isInBreak) {
         slots.push(timeString);
       }
 
@@ -237,9 +259,33 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     return time >= start && time < end;
   };
 
+  const checkTimeOverlap = (
+    startTime: string,
+    durationMinutes: number,
+    bookedAppointments: { time: string; duration: number }[]
+  ): boolean => {
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const slotStart = startHour * 60 + startMinute;
+    const slotEnd = slotStart + durationMinutes;
+
+    for (const booked of bookedAppointments) {
+      const [bookedHour, bookedMinute] = booked.time.split(':').map(Number);
+      const bookedStart = bookedHour * 60 + bookedMinute;
+      const bookedEnd = bookedStart + booked.duration;
+
+      // Check for any overlap
+      if (slotStart < bookedEnd && slotEnd > bookedStart) {
+        return true; // There is an overlap
+      }
+    }
+
+    return false; // No overlap
+  };
+
   return {
     validateDateTime,
     generateTimeSlots,
+    checkTimeOverlap,
     loading,
     refresh: loadValidationData
   };
