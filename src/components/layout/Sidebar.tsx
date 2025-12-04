@@ -15,6 +15,7 @@ import {
   Shield,
   Clock,
   StarIcon,
+  ListChecks,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Agendamentos", href: "/appointments", icon: Calendar },
+  { name: "Lista de Espera", href: "/waitlist", icon: ListChecks },
   { name: "Clientes", href: "/clients", icon: Users },
   { name: "Serviços", href: "/services", icon: Scissors },
   { name: "Equipe", href: "/staff", icon: UserCog },
