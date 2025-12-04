@@ -260,6 +260,27 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['special_hours']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['special_hours']['Insert']>;
       };
+      waitlist: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          client_id: string | null;
+          client_name: string;
+          client_phone: string;
+          preferred_date: string;
+          preferred_time_start: string | null;
+          preferred_time_end: string | null;
+          service_id: string | null;
+          staff_id: string | null;
+          status: 'waiting' | 'notified' | 'converted' | 'expired' | 'cancelled';
+          notified_at: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['waitlist']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['waitlist']['Insert']>;
+      };
     };
   };
 };
