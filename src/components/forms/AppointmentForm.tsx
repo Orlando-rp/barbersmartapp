@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search } from "lucide-react";
+import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,9 @@ export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) 
   const [dayAvailability, setDayAvailability] = useState<Record<string, 'available' | 'partial' | 'full' | 'closed'>>({});
   const [daySlotCounts, setDaySlotCounts] = useState<Record<string, { available: number; total: number }>>({});
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [showWaitlistForm, setShowWaitlistForm] = useState(false);
+  const [waitlistNotes, setWaitlistNotes] = useState("");
+  const [savingWaitlist, setSavingWaitlist] = useState(false);
   
   const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(barbershopId);
 
@@ -461,6 +464,57 @@ Nos vemos em breve! 💈`;
     if (currentStep === 'service') setCurrentStep('client');
     else if (currentStep === 'datetime') setCurrentStep('service');
     else if (currentStep === 'confirm') setCurrentStep('datetime');
+  };
+
+  const handleJoinWaitlist = async () => {
+    if (!date || !barbershopId) {
+      toast({
+        title: "Erro",
+        description: "Selecione uma data para entrar na lista de espera.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingWaitlist(true);
+
+    try {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      
+      const { error } = await supabase.from('waitlist').insert({
+        barbershop_id: barbershopId,
+        client_id: clientId || null,
+        client_name: clientName,
+        client_phone: clientPhone,
+        preferred_date: formattedDate,
+        preferred_time_start: null,
+        preferred_time_end: null,
+        service_id: selectedService || null,
+        staff_id: selectedBarber || null,
+        status: 'waiting',
+        notes: waitlistNotes || null,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso!",
+        description: "Você foi adicionado à lista de espera. Avisaremos quando houver disponibilidade.",
+      });
+
+      setShowWaitlistForm(false);
+      setWaitlistNotes("");
+      onClose?.();
+    } catch (error: any) {
+      console.error('Erro ao adicionar à lista de espera:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível adicionar à lista de espera.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingWaitlist(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -966,9 +1020,95 @@ Nos vemos em breve! 💈`;
                       {!selectedBarber ? 'Selecione um profissional primeiro' : 'Selecione uma data'}
                     </div>
                   ) : availableSlots.length === 0 ? (
-                    <div className="border rounded-lg p-8 text-center">
-                      <p className="text-muted-foreground mb-2">Nenhum horário disponível</p>
-                      <p className="text-sm text-muted-foreground">Tente outra data</p>
+                    <div className="border rounded-lg p-6 text-center space-y-4">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                        <Clock className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground mb-1">Dia lotado</p>
+                        <p className="text-sm text-muted-foreground">Todos os horários estão ocupados para esta data</p>
+                      </div>
+                      
+                      {!showWaitlistForm ? (
+                        <div className="pt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setShowWaitlistForm(true)}
+                            className="gap-2"
+                          >
+                            <ListPlus className="h-4 w-4" />
+                            Entrar na Lista de Espera
+                          </Button>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Avisaremos quando um horário ficar disponível
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-left space-y-4 border-t pt-4">
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            <Bell className="h-4 w-4 text-primary" />
+                            Lista de Espera
+                          </div>
+                          
+                          <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-muted-foreground">Cliente:</span>
+                              <span className="font-medium">{clientName}</span>
+                            </div>
+                            <div className="flex justify-between mb-1">
+                              <span className="text-muted-foreground">Telefone:</span>
+                              <span className="font-medium">{clientPhone}</span>
+                            </div>
+                            <div className="flex justify-between mb-1">
+                              <span className="text-muted-foreground">Data:</span>
+                              <span className="font-medium">{date && format(date, "dd/MM/yyyy")}</span>
+                            </div>
+                            {selectedServiceData && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Serviço:</span>
+                                <span className="font-medium">{selectedServiceData.name}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="waitlist-notes" className="text-xs">Observações (opcional)</Label>
+                            <Textarea
+                              id="waitlist-notes"
+                              value={waitlistNotes}
+                              onChange={(e) => setWaitlistNotes(e.target.value)}
+                              placeholder="Ex: Prefiro horário pela manhã..."
+                              rows={2}
+                              className="text-sm"
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setShowWaitlistForm(false);
+                                setWaitlistNotes("");
+                              }}
+                              disabled={savingWaitlist}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleJoinWaitlist}
+                              disabled={savingWaitlist}
+                              className="flex-1"
+                            >
+                              {savingWaitlist ? 'Salvando...' : 'Confirmar Inscrição'}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto bg-card">
