@@ -26,6 +26,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { WhatsAppLogs } from "./WhatsAppLogs";
 import { QRCodeModal } from "./QRCodeModal";
+import { MessageTemplates, MessageTemplate } from "./MessageTemplates";
 
 interface EvolutionConfig {
   apiUrl: string;
@@ -51,7 +52,14 @@ export const EvolutionApiConfig = () => {
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState("Olá! Esta é uma mensagem de teste do BarberSmart via Evolution API.");
   const [sending, setSending] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>();
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSelectTemplate = (template: MessageTemplate) => {
+    setTestMessage(template.message);
+    setSelectedTemplateId(template.id);
+    toast.success(`Template "${template.name}" selecionado`);
+  };
 
   useEffect(() => {
     if (barbershopId) {
@@ -497,6 +505,12 @@ export const EvolutionApiConfig = () => {
         </CardContent>
       </Card>
 
+      {/* Templates */}
+      <MessageTemplates 
+        onSelectTemplate={handleSelectTemplate}
+        selectedTemplateId={selectedTemplateId}
+      />
+
       {/* Test Message */}
       <Card>
         <CardHeader>
@@ -529,11 +543,17 @@ export const EvolutionApiConfig = () => {
             <Textarea
               id="evo-message"
               value={testMessage}
-              onChange={(e) => setTestMessage(e.target.value)}
+              onChange={(e) => {
+                setTestMessage(e.target.value);
+                setSelectedTemplateId(undefined);
+              }}
               placeholder="Digite sua mensagem de teste..."
-              rows={4}
+              rows={8}
               disabled={sending || connectionStatus !== 'connected'}
             />
+            <p className="text-xs text-muted-foreground">
+              Use variáveis como {'{nome}'}, {'{data}'}, {'{hora}'} para personalizar
+            </p>
           </div>
 
           <Button 

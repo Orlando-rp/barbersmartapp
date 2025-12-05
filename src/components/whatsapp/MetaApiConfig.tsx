@@ -10,6 +10,7 @@ import { Send, CheckCircle, XCircle, Clock, Activity, TrendingUp, AlertCircle, S
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { WhatsAppLogs } from "./WhatsAppLogs";
+import { MessageTemplates, MessageTemplate } from "./MessageTemplates";
 
 interface WhatsAppStats {
   total_sent: number;
@@ -24,6 +25,13 @@ export const MetaApiConfig = () => {
   const [testMessage, setTestMessage] = useState("Olá! Esta é uma mensagem de teste do BarberSmart.");
   const [sending, setSending] = useState(false);
   const [stats, setStats] = useState<WhatsAppStats | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>();
+
+  const handleSelectTemplate = (template: MessageTemplate) => {
+    setTestMessage(template.message);
+    setSelectedTemplateId(template.id);
+    toast.success(`Template "${template.name}" selecionado`);
+  };
 
   useEffect(() => {
     if (barbershopId) {
@@ -244,6 +252,12 @@ export const MetaApiConfig = () => {
         </CardContent>
       </Card>
 
+      {/* Templates */}
+      <MessageTemplates 
+        onSelectTemplate={handleSelectTemplate}
+        selectedTemplateId={selectedTemplateId}
+      />
+
       {/* Test Message */}
       <Card>
         <CardHeader>
@@ -276,11 +290,17 @@ export const MetaApiConfig = () => {
             <Textarea
               id="meta-message"
               value={testMessage}
-              onChange={(e) => setTestMessage(e.target.value)}
+              onChange={(e) => {
+                setTestMessage(e.target.value);
+                setSelectedTemplateId(undefined);
+              }}
               placeholder="Digite sua mensagem de teste..."
-              rows={4}
+              rows={8}
               disabled={sending}
             />
+            <p className="text-xs text-muted-foreground">
+              Use variáveis como {'{nome}'}, {'{data}'}, {'{hora}'} para personalizar
+            </p>
           </div>
 
           <Button 
