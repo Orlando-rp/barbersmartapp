@@ -36,12 +36,20 @@ interface EvolutionConfig {
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
+// Gera nome único da instância baseado no barbershopId
+const generateInstanceName = (barbershopId: string): string => {
+  const shortId = barbershopId.split('-')[0];
+  return `bs-${shortId}`;
+};
+
 export const EvolutionApiConfig = () => {
   const { user, barbershopId } = useAuth();
+  const generatedInstanceName = barbershopId ? generateInstanceName(barbershopId) : '';
+  
   const [config, setConfig] = useState<EvolutionConfig>({
     apiUrl: '',
     apiKey: '',
-    instanceName: ''
+    instanceName: generatedInstanceName
   });
   const [saving, setSaving] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
@@ -63,6 +71,10 @@ export const EvolutionApiConfig = () => {
 
   useEffect(() => {
     if (barbershopId) {
+      // Define instanceName automaticamente se não estiver definido
+      if (!config.instanceName) {
+        setConfig(prev => ({ ...prev, instanceName: generateInstanceName(barbershopId) }));
+      }
       loadConfig();
     }
     return () => {
@@ -91,11 +103,14 @@ export const EvolutionApiConfig = () => {
         setConfig({
           apiUrl: data.config.api_url || '',
           apiKey: data.config.api_key || '',
-          instanceName: data.config.instance_name || ''
+          instanceName: data.config.instance_name || generatedInstanceName
         });
         if (data.config.connection_status) {
           setConnectionStatus(data.config.connection_status);
         }
+      } else {
+        // Se não houver config salva, usa o instanceName gerado
+        setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
@@ -432,16 +447,19 @@ export const EvolutionApiConfig = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="instance-name">Nome da Instância</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="instance-name">Nome da Instância</Label>
+              <Badge variant="secondary" className="text-xs">Gerado automaticamente</Badge>
+            </div>
             <Input
               id="instance-name"
               type="text"
               value={config.instanceName}
-              onChange={(e) => setConfig({ ...config, instanceName: e.target.value })}
-              placeholder="barbersmart-001"
+              readOnly
+              className="bg-muted cursor-not-allowed"
             />
             <p className="text-xs text-muted-foreground">
-              Identificador único para esta conexão WhatsApp
+              Identificador único gerado com base no ID da sua barbearia
             </p>
           </div>
 

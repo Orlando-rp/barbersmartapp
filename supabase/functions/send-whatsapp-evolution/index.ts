@@ -26,19 +26,22 @@ serve(async (req) => {
       createdBy 
     } = await req.json();
 
-    console.log(`Evolution API action: ${action}, instance: ${instanceName}`);
+    console.log(`[Evolution API] Action: ${action}, Instance: ${instanceName}`);
 
     // Use provided credentials or fall back to env vars
     const evolutionApiUrl = apiUrl || Deno.env.get('EVOLUTION_API_URL');
     const evolutionApiKey = apiKey || Deno.env.get('EVOLUTION_API_KEY');
 
     if (!evolutionApiUrl) {
-      console.error('Evolution API URL not configured');
+      console.error('[Evolution API] URL not configured');
       return new Response(
         JSON.stringify({ success: false, error: 'Evolution API URL não configurada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Remove trailing slash from URL
+    const baseUrl = evolutionApiUrl.replace(/\/+$/, '');
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -50,7 +53,7 @@ serve(async (req) => {
 
     let endpoint = '';
     let method = 'GET';
-    let body: any = undefined;
+    let body: string | undefined = undefined;
 
     switch (action) {
       case 'checkApi':
@@ -71,7 +74,27 @@ serve(async (req) => {
         break;
 
       case 'connect':
-        // Get QR code for connection
+        // Get QR code for connection - first try to create instance, then get QR
+        console.log(`[Evolution API] Getting QR code for instance: ${instanceName}`);
+        
+        // Try to create instance first (will fail if exists, that's ok)
+        try {
+          const createRes = await fetch(`${baseUrl}/instance/create`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              instanceName,
+              qrcode: true,
+              integration: 'WHATSAPP-BAILEYS'
+            })
+          });
+          const createData = await createRes.text();
+          console.log(`[Evolution API] Create instance response: ${createData.substring(0, 200)}`);
+        } catch (e) {
+          console.log(`[Evolution API] Instance may already exist: ${e}`);
+        }
+
+        // Now get the QR code
         endpoint = `/instance/connect/${instanceName}`;
         method = 'GET';
         break;
@@ -82,10 +105,22 @@ serve(async (req) => {
         method = 'GET';
         break;
 
+      case 'fetchInstances':
+        // List all instances
+        endpoint = '/instance/fetchInstances';
+        method = 'GET';
+        break;
+
       case 'logout':
         // Disconnect instance
         endpoint = `/instance/logout/${instanceName}`;
         method = 'DELETE';
+        break;
+
+      case 'restart':
+        // Restart instance
+        endpoint = `/instance/restart/${instanceName}`;
+        method = 'PUT';
         break;
 
       case 'sendText':
@@ -93,7 +128,7 @@ serve(async (req) => {
         endpoint = `/message/sendText/${instanceName}`;
         method = 'POST';
         
-        // Format phone number
+        // Format phone number - ensure it has country code
         let formattedPhone = to.replace(/\D/g, '');
         if (!formattedPhone.startsWith('55') && formattedPhone.length <= 11) {
           formattedPhone = '55' + formattedPhone;
@@ -106,24 +141,27 @@ serve(async (req) => {
         break;
 
       default:
+        console.error(`[Evolution API] Unknown action: ${action}`);
         return new Response(
           JSON.stringify({ success: false, error: `Ação desconhecida: ${action}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
 
-    console.log(`Making request to: ${evolutionApiUrl}${endpoint}`);
+    const fullUrl = `${baseUrl}${endpoint}`;
+    console.log(`[Evolution API] Request: ${method} ${fullUrl}`);
 
-    const response = await fetch(`${evolutionApiUrl}${endpoint}`, {
+    const response = await fetch(fullUrl, {
       method,
       headers,
       body
     });
 
     const responseText = await response.text();
-    console.log(`Response status: ${response.status}, body: ${responseText.substring(0, 500)}`);
+    console.log(`[Evolution API] Response status: ${response.status}`);
+    console.log(`[Evolution API] Response body: ${responseText.substring(0, 500)}`);
 
-    let data;
+    let data: any;
     try {
       data = JSON.parse(responseText);
     } catch {
@@ -132,27 +170,31 @@ serve(async (req) => {
 
     // If sending message, log to database
     if (action === 'sendText' && barbershopId) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-      const logEntry = {
-        barbershop_id: barbershopId,
-        recipient_phone: to,
-        recipient_name: recipientName || null,
-        message_content: message,
-        status: response.ok ? 'sent' : 'failed',
-        error_message: response.ok ? null : (data?.error || data?.message || 'Erro desconhecido'),
-        provider: 'evolution',
-        created_by: createdBy || null
-      };
+        const logEntry = {
+          barbershop_id: barbershopId,
+          recipient_phone: to,
+          recipient_name: recipientName || null,
+          message_content: message,
+          status: response.ok ? 'sent' : 'failed',
+          error_message: response.ok ? null : (data?.error || data?.message || 'Erro desconhecido'),
+          provider: 'evolution',
+          created_by: createdBy || null
+        };
 
-      const { error: logError } = await supabase
-        .from('whatsapp_logs')
-        .insert(logEntry);
+        const { error: logError } = await supabase
+          .from('whatsapp_logs')
+          .insert(logEntry);
 
-      if (logError) {
-        console.error('Error logging message:', logError);
+        if (logError) {
+          console.error('[Evolution API] Error logging message:', logError);
+        }
+      } catch (logErr) {
+        console.error('[Evolution API] Failed to log message:', logErr);
       }
     }
 
@@ -160,7 +202,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: data?.error || data?.message || 'Erro na Evolution API',
+          error: data?.error || data?.message || `Erro na Evolution API (${response.status})`,
           details: data
         }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -173,7 +215,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in send-whatsapp-evolution function:', error);
+    console.error('[Evolution API] Error:', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
