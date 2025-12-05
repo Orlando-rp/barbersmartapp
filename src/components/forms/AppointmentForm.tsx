@@ -431,9 +431,35 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     }
   ) => {
     try {
-      const message = `Olá ${data.clientName}! 
+      // Buscar configuração do Evolution API
+      const { data: whatsappConfig, error: configError } = await supabase
+        .from('whatsapp_config')
+        .select('config, is_active')
+        .eq('barbershop_id', barbershopId)
+        .eq('provider', 'evolution')
+        .maybeSingle();
 
-Seu agendamento foi confirmado:
+      if (configError) {
+        console.log('Erro ao buscar config WhatsApp:', configError);
+        return;
+      }
+
+      if (!whatsappConfig?.is_active || !whatsappConfig?.config) {
+        console.log('WhatsApp Evolution não configurado ou inativo, pulando confirmação');
+        return;
+      }
+
+      const evolutionConfig = whatsappConfig.config as {
+        api_url: string;
+        api_key: string;
+        instance_name: string;
+      };
+
+      // Montar mensagem de confirmação
+      const message = `Olá ${data.clientName}! 👋
+
+✅ Seu agendamento foi confirmado:
+
 📅 Data: ${format(data.date, "dd/MM/yyyy", { locale: ptBR })}
 ⏰ Horário: ${data.time}
 ✂️ Serviço: ${data.serviceName}
@@ -441,11 +467,15 @@ Seu agendamento foi confirmado:
 
 Nos vemos em breve! 💈`;
 
-      const { error } = await supabase.functions.invoke('send-whatsapp', {
+      // Enviar via Evolution API
+      const { error } = await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
+          action: 'sendText',
+          apiUrl: evolutionConfig.api_url,
+          apiKey: evolutionConfig.api_key,
+          instanceName: evolutionConfig.instance_name,
           to: data.clientPhone,
           message: message,
-          type: 'text',
           barbershopId,
           recipientName: data.clientName,
           appointmentId,
@@ -456,7 +486,7 @@ Nos vemos em breve! 💈`;
       if (error) {
         console.error('Erro ao enviar WhatsApp:', error);
       } else {
-        console.log('✅ Confirmação enviada via WhatsApp');
+        console.log('✅ Confirmação enviada via WhatsApp Evolution');
       }
     } catch (error) {
       console.error('Erro ao enviar confirmação WhatsApp:', error);
