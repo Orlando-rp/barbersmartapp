@@ -236,7 +236,7 @@ const Appointments = () => {
     setFilteredAppointments(filtered);
   };
 
-  const sendCancellationNotification = async (appointment: Appointment) => {
+  const sendWhatsAppNotification = async (appointment: Appointment, type: 'confirmed' | 'cancelled') => {
     try {
       const { data: whatsappConfig, error: configError } = await supabase
         .from('whatsapp_config')
@@ -258,7 +258,18 @@ const Appointments = () => {
 
       const formattedDate = format(parseISO(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR });
 
-      const message = `Olá ${appointment.client_name}! 😔
+      const messages = {
+        confirmed: `Olá ${appointment.client_name}! ✅
+
+Ótima notícia! Seu agendamento foi confirmado:
+
+📅 Data: ${formattedDate}
+⏰ Horário: ${appointment.appointment_time}
+✂️ Serviço: ${appointment.service_name}
+👤 Profissional: ${appointment.staff?.name || 'Não especificado'}
+
+Aguardamos você! 💈`,
+        cancelled: `Olá ${appointment.client_name}! 😔
 
 Infelizmente seu agendamento foi cancelado:
 
@@ -266,7 +277,8 @@ Infelizmente seu agendamento foi cancelado:
 ⏰ Horário: ${appointment.appointment_time}
 ✂️ Serviço: ${appointment.service_name}
 
-Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo! 💈`;
+Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo! 💈`
+      };
 
       await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
@@ -275,22 +287,21 @@ Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo!
           apiKey: evolutionConfig.api_key,
           instanceName: evolutionConfig.instance_name,
           to: appointment.client_phone,
-          message: message,
+          message: messages[type],
           barbershopId,
           recipientName: appointment.client_name,
           appointmentId: appointment.id
         }
       });
 
-      console.log('✅ Notificação de cancelamento enviada');
+      console.log(`✅ Notificação de ${type === 'confirmed' ? 'confirmação' : 'cancelamento'} enviada`);
     } catch (error) {
-      console.error('Erro ao enviar notificação de cancelamento:', error);
+      console.error('Erro ao enviar notificação WhatsApp:', error);
     }
   };
 
   const updateStatus = async (appointmentId: string, newStatus: string) => {
     try {
-      // Get appointment data before updating for notification
       const appointmentToUpdate = appointments.find(apt => apt.id === appointmentId);
 
       const { error } = await supabase
@@ -305,9 +316,13 @@ Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo!
         description: 'O status do agendamento foi atualizado com sucesso.',
       });
 
-      // Send cancellation notification if status changed to "cancelado"
-      if (newStatus === 'cancelado' && appointmentToUpdate) {
-        sendCancellationNotification(appointmentToUpdate);
+      // Send notifications based on status change
+      if (appointmentToUpdate) {
+        if (newStatus === 'confirmado') {
+          sendWhatsAppNotification(appointmentToUpdate, 'confirmed');
+        } else if (newStatus === 'cancelado') {
+          sendWhatsAppNotification(appointmentToUpdate, 'cancelled');
+        }
       }
 
       fetchAppointments();
