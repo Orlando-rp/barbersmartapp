@@ -49,6 +49,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmptyState } from "@/components/ui/empty-state";
+import { WaitlistMetrics } from "@/components/waitlist/WaitlistMetrics";
 
 interface WaitlistEntry {
   id: string;
@@ -328,13 +329,6 @@ const Waitlist = () => {
     }
   };
 
-  const stats = {
-    waiting: entries.filter((e) => e.status === "waiting").length,
-    notified: entries.filter((e) => e.status === "notified").length,
-    converted: entries.filter((e) => e.status === "converted").length,
-    total: entries.length,
-  };
-
   return (
     <Layout>
       <div className="space-y-6">
@@ -358,61 +352,8 @@ const Waitlist = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-yellow-500/10">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.waiting}</p>
-                  <p className="text-xs text-muted-foreground">Aguardando</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <Bell className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.notified}</p>
-                  <p className="text-xs text-muted-foreground">Notificados</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <Check className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.converted}</p>
-                  <p className="text-xs text-muted-foreground">Convertidos</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Total</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Metrics Dashboard */}
+        <WaitlistMetrics entries={entries} />
 
         {/* Filters */}
         <Card>
