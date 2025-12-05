@@ -236,7 +236,7 @@ const Appointments = () => {
     setFilteredAppointments(filtered);
   };
 
-  const sendWhatsAppNotification = async (appointment: Appointment, type: 'confirmed' | 'cancelled') => {
+  const sendWhatsAppNotification = async (appointment: Appointment, type: 'confirmed' | 'cancelled' | 'completed') => {
     try {
       const { data: whatsappConfig, error: configError } = await supabase
         .from('whatsapp_config')
@@ -277,7 +277,18 @@ Infelizmente seu agendamento foi cancelado:
 ⏰ Horário: ${appointment.appointment_time}
 ✂️ Serviço: ${appointment.service_name}
 
-Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo! 💈`
+Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo! 💈`,
+        completed: `Olá ${appointment.client_name}! 🎉
+
+Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
+
+✂️ Serviço: ${appointment.service_name}
+👤 Profissional: ${appointment.staff?.name || 'Não especificado'}
+
+⭐ Sua opinião é muito importante para nós!
+Que tal deixar uma avaliação sobre o serviço?
+
+Agradecemos a preferência e esperamos vê-lo em breve! 💈`
       };
 
       await supabase.functions.invoke('send-whatsapp-evolution', {
@@ -294,7 +305,8 @@ Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo!
         }
       });
 
-      console.log(`✅ Notificação de ${type === 'confirmed' ? 'confirmação' : 'cancelamento'} enviada`);
+      const typeLabels = { confirmed: 'confirmação', cancelled: 'cancelamento', completed: 'solicitação de avaliação' };
+      console.log(`✅ Notificação de ${typeLabels[type]} enviada`);
     } catch (error) {
       console.error('Erro ao enviar notificação WhatsApp:', error);
     }
@@ -322,6 +334,8 @@ Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo!
           sendWhatsAppNotification(appointmentToUpdate, 'confirmed');
         } else if (newStatus === 'cancelado') {
           sendWhatsAppNotification(appointmentToUpdate, 'cancelled');
+        } else if (newStatus === 'concluido') {
+          sendWhatsAppNotification(appointmentToUpdate, 'completed');
         }
       }
 
