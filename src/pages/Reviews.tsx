@@ -53,7 +53,16 @@ const Reviews = () => {
         .eq("barbershop_id", barbershopId)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      // Handle table not existing gracefully
+      if (error) {
+        if (error.message?.includes("does not exist") || error.code === "PGRST205") {
+          console.warn("Tabela reviews não existe ainda. Execute o SQL de criação.");
+          setReviews([]);
+          setLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       // Get staff names separately
       if (data && data.length > 0) {
@@ -85,9 +94,11 @@ const Reviews = () => {
       } else {
         setReviews([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao carregar avaliações:", error);
-      toast.error("Erro ao carregar avaliações");
+      if (!error.message?.includes("does not exist")) {
+        toast.error("Erro ao carregar avaliações");
+      }
     } finally {
       setLoading(false);
     }
