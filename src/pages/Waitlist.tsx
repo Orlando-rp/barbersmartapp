@@ -13,11 +13,13 @@ import {
   Filter,
   RefreshCw,
   MessageSquare,
+  CalendarPlus,
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import {
   Select,
   SelectContent,
@@ -59,6 +61,8 @@ interface WaitlistEntry {
   notified_at: string | null;
   notes: string | null;
   created_at: string;
+  service_id: string | null;
+  staff_id: string | null;
   service?: { name: string } | null;
   staff?: { 
     profiles: { full_name: string } | null 
@@ -85,6 +89,10 @@ const Waitlist = () => {
     entry: WaitlistEntry | null;
     action: "notify" | "convert" | "cancel" | "expire" | null;
   }>({ open: false, entry: null, action: null });
+  const [appointmentDialog, setAppointmentDialog] = useState<{
+    open: boolean;
+    entry: WaitlistEntry | null;
+  }>({ open: false, entry: null });
 
   const fetchEntries = async () => {
     if (!barbershopId) return;
@@ -445,6 +453,21 @@ const Waitlist = () => {
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  title="Criar agendamento"
+                                  onClick={() =>
+                                    setAppointmentDialog({
+                                      open: true,
+                                      entry,
+                                    })
+                                  }
+                                >
+                                  <CalendarPlus className="h-4 w-4 text-primary" />
+                                </Button>
+                              )}
+                              {canConvert && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                   title="Marcar como convertido"
                                   onClick={() =>
                                     setActionDialog({
@@ -521,6 +544,32 @@ const Waitlist = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Appointment Dialog for Converting */}
+        <AppointmentDialog
+          open={appointmentDialog.open}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAppointmentDialog({ open: false, entry: null });
+            }
+          }}
+          onSuccess={() => {
+            // Mark the waitlist entry as converted
+            if (appointmentDialog.entry) {
+              updateStatus(appointmentDialog.entry, "converted");
+            }
+            setAppointmentDialog({ open: false, entry: null });
+            fetchEntries();
+          }}
+          waitlistPrefill={appointmentDialog.entry ? {
+            clientName: appointmentDialog.entry.client_name,
+            clientPhone: appointmentDialog.entry.client_phone,
+            serviceId: appointmentDialog.entry.service_id || undefined,
+            staffId: appointmentDialog.entry.staff_id || undefined,
+            preferredDate: appointmentDialog.entry.preferred_date,
+            preferredTimeStart: appointmentDialog.entry.preferred_time_start || undefined,
+          } : undefined}
+        />
       </div>
     </Layout>
   );

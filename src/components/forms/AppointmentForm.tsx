@@ -19,28 +19,42 @@ import { useBusinessHoursValidation } from "@/hooks/useBusinessHoursValidation";
 import { toast as sonnerToast } from "sonner";
 import { DayProps, DayContent } from "react-day-picker";
 
+interface WaitlistPrefill {
+  clientName?: string;
+  clientPhone?: string;
+  serviceId?: string;
+  staffId?: string;
+  preferredDate?: string;
+  preferredTimeStart?: string;
+}
+
 interface AppointmentFormProps {
   appointment?: any;
   onClose?: () => void;
+  waitlistPrefill?: WaitlistPrefill;
 }
 
 type WizardStep = 'client' | 'service' | 'datetime' | 'confirm';
 
-export const AppointmentForm = ({ appointment, onClose }: AppointmentFormProps) => {
+export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
   const { barbershopId, user } = useAuth();
   const { toast } = useToast();
   
   const [currentStep, setCurrentStep] = useState<WizardStep>('client');
   
   const [clientId, setClientId] = useState(appointment?.client_id || "");
-  const [clientName, setClientName] = useState(appointment?.client_name || "");
-  const [clientPhone, setClientPhone] = useState(appointment?.client_phone || "");
-  const [selectedService, setSelectedService] = useState(appointment?.service_id || "");
-  const [selectedBarber, setSelectedBarber] = useState(appointment?.staff_id || "");
+  const [clientName, setClientName] = useState(appointment?.client_name || waitlistPrefill?.clientName || "");
+  const [clientPhone, setClientPhone] = useState(appointment?.client_phone || waitlistPrefill?.clientPhone || "");
+  const [selectedService, setSelectedService] = useState(appointment?.service_id || waitlistPrefill?.serviceId || "");
+  const [selectedBarber, setSelectedBarber] = useState(appointment?.staff_id || waitlistPrefill?.staffId || "");
   const [date, setDate] = useState<Date | undefined>(
-    appointment?.appointment_date ? new Date(appointment.appointment_date) : undefined
+    appointment?.appointment_date 
+      ? new Date(appointment.appointment_date) 
+      : waitlistPrefill?.preferredDate 
+        ? new Date(waitlistPrefill.preferredDate) 
+        : undefined
   );
-  const [selectedTime, setSelectedTime] = useState(appointment?.appointment_time || "");
+  const [selectedTime, setSelectedTime] = useState(appointment?.appointment_time || waitlistPrefill?.preferredTimeStart?.slice(0, 5) || "");
   const [notes, setNotes] = useState(appointment?.notes || "");
   const [loading, setLoading] = useState(false);
   
