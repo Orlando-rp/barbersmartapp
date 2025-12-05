@@ -236,8 +236,63 @@ const Appointments = () => {
     setFilteredAppointments(filtered);
   };
 
+  const sendCancellationNotification = async (appointment: Appointment) => {
+    try {
+      const { data: whatsappConfig, error: configError } = await supabase
+        .from('whatsapp_config')
+        .select('config, is_active')
+        .eq('barbershop_id', barbershopId)
+        .eq('provider', 'evolution')
+        .maybeSingle();
+
+      if (configError || !whatsappConfig?.is_active || !whatsappConfig?.config) {
+        console.log('WhatsApp não configurado, pulando notificação');
+        return;
+      }
+
+      const evolutionConfig = whatsappConfig.config as {
+        api_url: string;
+        api_key: string;
+        instance_name: string;
+      };
+
+      const formattedDate = format(parseISO(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR });
+
+      const message = `Olá ${appointment.client_name}! 😔
+
+Infelizmente seu agendamento foi cancelado:
+
+📅 Data: ${formattedDate}
+⏰ Horário: ${appointment.appointment_time}
+✂️ Serviço: ${appointment.service_name}
+
+Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo! 💈`;
+
+      await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'sendText',
+          apiUrl: evolutionConfig.api_url,
+          apiKey: evolutionConfig.api_key,
+          instanceName: evolutionConfig.instance_name,
+          to: appointment.client_phone,
+          message: message,
+          barbershopId,
+          recipientName: appointment.client_name,
+          appointmentId: appointment.id
+        }
+      });
+
+      console.log('✅ Notificação de cancelamento enviada');
+    } catch (error) {
+      console.error('Erro ao enviar notificação de cancelamento:', error);
+    }
+  };
+
   const updateStatus = async (appointmentId: string, newStatus: string) => {
     try {
+      // Get appointment data before updating for notification
+      const appointmentToUpdate = appointments.find(apt => apt.id === appointmentId);
+
       const { error } = await supabase
         .from('appointments')
         .update({ status: newStatus })
@@ -249,6 +304,11 @@ const Appointments = () => {
         title: 'Status atualizado',
         description: 'O status do agendamento foi atualizado com sucesso.',
       });
+
+      // Send cancellation notification if status changed to "cancelado"
+      if (newStatus === 'cancelado' && appointmentToUpdate) {
+        sendCancellationNotification(appointmentToUpdate);
+      }
 
       fetchAppointments();
     } catch (error: any) {
