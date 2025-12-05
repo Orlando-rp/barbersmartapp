@@ -177,6 +177,13 @@ export const EvolutionApiConfig = () => {
         }
       });
 
+      // Handle instance not found (404) - treat as disconnected, not error
+      if (data?.success === false && data?.details?.status === 404) {
+        setConnectionStatus('disconnected');
+        toast.info("Instância não encontrada. Clique em 'Conectar WhatsApp' para criar.");
+        return;
+      }
+
       if (error) throw error;
 
       if (data?.state === 'open' || data?.instance?.state === 'open') {
