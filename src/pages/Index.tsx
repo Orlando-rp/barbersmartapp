@@ -142,8 +142,16 @@ const Index = () => {
         .eq('barbershop_id', barbershopId)
         .gte('created_at', firstDayOfMonth);
 
-      // Avaliação média (mock por enquanto - sistema de avaliações será implementado)
-      const averageRating = 4.8;
+      // Avaliação média real do banco de dados
+      let averageRating = 0;
+      try {
+        const { data: avgRating } = await supabase
+          .rpc('get_barbershop_average_rating', { barbershop_uuid: barbershopId });
+        averageRating = avgRating || 0;
+      } catch (e) {
+        // Tabela reviews ainda não existe ou função não disponível
+        console.log('Sistema de avaliações não configurado');
+      }
 
       setStats({
         todayAppointments: todayCount || 0,

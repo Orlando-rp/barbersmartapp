@@ -34,7 +34,7 @@ serve(async (req) => {
       .from('appointments')
       .select('*')
       .eq('appointment_date', tomorrowDate)
-      .eq('status', 'scheduled')
+      .eq('status', 'pendente')
       .is('reminder_sent', null);
 
     if (appointmentsError) {
