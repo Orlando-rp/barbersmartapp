@@ -232,11 +232,49 @@ const Waitlist = () => {
     }
   };
 
+  const notifyViaWhatsApp = async (entry: WaitlistEntry) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("notify-waitlist", {
+        body: {
+          barbershopId,
+          availableDate: entry.preferred_date,
+          availableTime: entry.preferred_time_start?.slice(0, 5),
+          staffId: entry.staff_id,
+          serviceId: entry.service_id,
+          waitlistEntryId: entry.id,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: data.whatsappConfigured ? "Notificação enviada" : "Status atualizado",
+        description: data.whatsappConfigured 
+          ? `Mensagem WhatsApp enviada para ${entry.client_name}.`
+          : `${entry.client_name} marcado como notificado. Configure o WhatsApp para enviar mensagens automáticas.`,
+      });
+
+      fetchEntries();
+    } catch (error) {
+      console.error("Error notifying client:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível notificar o cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAction = () => {
     if (!actionDialog.entry || !actionDialog.action) return;
 
+    if (actionDialog.action === "notify") {
+      notifyViaWhatsApp(actionDialog.entry);
+      setActionDialog({ open: false, entry: null, action: null });
+      return;
+    }
+
     const statusMap = {
-      notify: "notified" as const,
       convert: "converted" as const,
       cancel: "cancelled" as const,
       expire: "expired" as const,
@@ -267,8 +305,8 @@ const Waitlist = () => {
     switch (action) {
       case "notify":
         return {
-          title: "Notificar Cliente",
-          description: `Deseja marcar ${entry.client_name} como notificado? Isso indica que você entrou em contato sobre uma vaga disponível.`,
+          title: "Notificar Cliente via WhatsApp",
+          description: `Enviar mensagem WhatsApp para ${entry.client_name} informando sobre vaga disponível? O status será atualizado para "Notificado".`,
         };
       case "convert":
         return {
