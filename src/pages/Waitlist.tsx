@@ -160,6 +160,45 @@ const Waitlist = () => {
     };
   }, [barbershopId]);
 
+  const expireOldEntries = async () => {
+    if (!barbershopId) return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from("waitlist")
+        .update({ status: "expired" })
+        .eq("barbershop_id", barbershopId)
+        .lt("preferred_date", today)
+        .in("status", ["waiting", "notified"])
+        .select();
+      
+      if (error) throw error;
+      
+      const count = data?.length || 0;
+      if (count > 0) {
+        toast({
+          title: "Entradas expiradas",
+          description: `${count} entrada(s) marcada(s) como expirada(s).`,
+        });
+        fetchEntries();
+      } else {
+        toast({
+          title: "Nenhuma entrada expirada",
+          description: "Não há entradas antigas para expirar.",
+        });
+      }
+    } catch (error) {
+      console.error("Error expiring entries:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível expirar as entradas.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const updateStatus = async (
     entry: WaitlistEntry,
     newStatus: WaitlistEntry["status"]
@@ -269,10 +308,16 @@ const Waitlist = () => {
               Gerencie clientes aguardando vagas em dias lotados
             </p>
           </div>
-          <Button variant="outline" onClick={fetchEntries} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={expireOldEntries}>
+              <Clock className="h-4 w-4 mr-2" />
+              Expirar Antigos
+            </Button>
+            <Button variant="outline" onClick={fetchEntries} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
