@@ -76,6 +76,91 @@ const BusinessHours = () => {
     }
   }, [barbershopId]);
 
+  const importFromLegacySettings = async () => {
+    if (!barbershopId) return;
+
+    try {
+      // Fetch legacy opening_hours from barbershops.settings
+      const { data: barbershopData, error: barbershopError } = await supabase
+        .from('barbershops')
+        .select('settings')
+        .eq('id', barbershopId)
+        .maybeSingle();
+
+      if (barbershopError) throw barbershopError;
+
+      const legacyHours = barbershopData?.settings?.opening_hours;
+      
+      if (legacyHours && Object.keys(legacyHours).length > 0) {
+        // Map legacy format to business_hours format
+        const dayMapping: Record<string, string> = {
+          'monday': 'monday',
+          'tuesday': 'tuesday', 
+          'wednesday': 'wednesday',
+          'thursday': 'thursday',
+          'friday': 'friday',
+          'saturday': 'saturday',
+          'sunday': 'sunday'
+        };
+
+        const importedSchedule = defaultSchedule.map(day => {
+          const legacy = legacyHours[day.day];
+          if (legacy) {
+            return {
+              ...day,
+              enabled: true,
+              openTime: legacy.open || day.openTime,
+              closeTime: legacy.close || day.closeTime,
+            };
+          }
+          return day;
+        });
+
+        // Save imported schedule to business_hours table
+        const scheduleData = importedSchedule.map(day => ({
+          barbershop_id: barbershopId,
+          day_of_week: day.day,
+          is_open: day.enabled,
+          open_time: day.openTime,
+          close_time: day.closeTime,
+          break_start: day.breakStart || null,
+          break_end: day.breakEnd || null,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('business_hours')
+          .insert(scheduleData);
+
+        if (insertError) throw insertError;
+
+        setSchedule(importedSchedule);
+        toast.success('Horários importados das configurações anteriores!');
+      } else {
+        // No legacy data, save default schedule
+        const scheduleData = defaultSchedule.map(day => ({
+          barbershop_id: barbershopId,
+          day_of_week: day.day,
+          is_open: day.enabled,
+          open_time: day.openTime,
+          close_time: day.closeTime,
+          break_start: null,
+          break_end: null,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('business_hours')
+          .insert(scheduleData);
+
+        if (insertError) throw insertError;
+
+        toast.info('Horários padrão configurados. Ajuste conforme necessário.');
+      }
+    } catch (error) {
+      console.error('Erro ao importar configurações:', error);
+      toast.error('Erro ao importar configurações de horário');
+    }
+  };
+
   const loadBusinessHours = async () => {
     try {
       setLoading(true);
@@ -105,6 +190,9 @@ const BusinessHours = () => {
           return day;
         });
         setSchedule(loadedSchedule);
+      } else {
+        // Auto-import from settings.opening_hours if business_hours is empty
+        await importFromLegacySettings();
       }
 
       // Load blocked dates
