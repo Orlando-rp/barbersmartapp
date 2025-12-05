@@ -55,31 +55,52 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
       setLoading(true);
 
       // Load business hours
-      const { data: hoursData, error: hoursError } = await supabase
-        .from('business_hours')
-        .select('*')
-        .eq('barbershop_id', barbershopId);
+      try {
+        const { data: hoursData, error: hoursError } = await supabase
+          .from('business_hours')
+          .select('*')
+          .eq('barbershop_id', barbershopId);
 
-      if (hoursError && hoursError.code !== 'PGRST116') throw hoursError;
-      setBusinessHours(hoursData || []);
+        if (hoursError && !hoursError.message?.includes('does not exist')) {
+          console.warn('Erro ao carregar business_hours:', hoursError);
+        }
+        setBusinessHours(hoursData || []);
+      } catch (err) {
+        console.warn('Tabela business_hours não disponível');
+        setBusinessHours([]);
+      }
 
-      // Load special hours
-      const { data: specialData, error: specialError } = await supabase
-        .from('special_hours')
-        .select('*')
-        .eq('barbershop_id', barbershopId);
+      // Load special hours (table may not exist)
+      try {
+        const { data: specialData, error: specialError } = await supabase
+          .from('special_hours')
+          .select('*')
+          .eq('barbershop_id', barbershopId);
 
-      if (specialError && specialError.code !== 'PGRST116') throw specialError;
-      setSpecialHours(specialData || []);
+        if (specialError && !specialError.message?.includes('does not exist')) {
+          console.warn('Erro ao carregar special_hours:', specialError);
+        }
+        setSpecialHours(specialData || []);
+      } catch (err) {
+        console.warn('Tabela special_hours não disponível');
+        setSpecialHours([]);
+      }
 
-      // Load blocked dates
-      const { data: blockedData, error: blockedError } = await supabase
-        .from('blocked_dates')
-        .select('blocked_date')
-        .eq('barbershop_id', barbershopId);
+      // Load blocked dates (table may not exist)
+      try {
+        const { data: blockedData, error: blockedError } = await supabase
+          .from('blocked_dates')
+          .select('blocked_date')
+          .eq('barbershop_id', barbershopId);
 
-      if (blockedError && blockedError.code !== 'PGRST116') throw blockedError;
-      setBlockedDates((blockedData || []).map(b => b.blocked_date));
+        if (blockedError && !blockedError.message?.includes('does not exist')) {
+          console.warn('Erro ao carregar blocked_dates:', blockedError);
+        }
+        setBlockedDates((blockedData || []).map(b => b.blocked_date));
+      } catch (err) {
+        console.warn('Tabela blocked_dates não disponível');
+        setBlockedDates([]);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados de validação:', error);
     } finally {

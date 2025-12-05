@@ -195,49 +195,59 @@ const BusinessHours = () => {
         await importFromLegacySettings();
       }
 
-      // Load blocked dates
-      const { data: blockedData, error: blockedError } = await supabase
-        .from('blocked_dates')
-        .select('*')
-        .eq('barbershop_id', barbershopId)
-        .gte('blocked_date', new Date().toISOString().split('T')[0]);
+      // Load blocked dates (handle table not existing)
+      try {
+        const { data: blockedData, error: blockedError } = await supabase
+          .from('blocked_dates')
+          .select('*')
+          .eq('barbershop_id', barbershopId)
+          .gte('blocked_date', new Date().toISOString().split('T')[0]);
 
-      if (blockedError) throw blockedError;
+        if (blockedError && !blockedError.message?.includes('does not exist')) {
+          console.warn('Erro ao carregar datas bloqueadas:', blockedError);
+        }
 
-      if (blockedData) {
-        setBlockedDates(
-          blockedData.map(b => ({
-            id: b.id,
-            date: new Date(b.blocked_date),
-            reason: b.reason,
-          }))
-        );
+        if (blockedData) {
+          setBlockedDates(
+            blockedData.map(b => ({
+              id: b.id,
+              date: new Date(b.blocked_date),
+              reason: b.reason,
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn('Tabela blocked_dates não disponível:', err);
       }
 
-      // Load special hours
-      const { data: specialData, error: specialError } = await supabase
-        .from('special_hours')
-        .select('*')
-        .eq('barbershop_id', barbershopId)
-        .gte('special_date', new Date().toISOString().split('T')[0]);
+      // Load special hours (handle table not existing)
+      try {
+        const { data: specialData, error: specialError } = await supabase
+          .from('special_hours')
+          .select('*')
+          .eq('barbershop_id', barbershopId)
+          .gte('special_date', new Date().toISOString().split('T')[0]);
 
-      if (specialError && specialError.code !== 'PGRST116') {
-        throw specialError;
-      }
+        if (specialError && !specialError.message?.includes('does not exist')) {
+          console.warn('Erro ao carregar horários especiais:', specialError);
+        }
 
-      if (specialData) {
-        setSpecialHours(
-          specialData.map(s => ({
-            id: s.id,
-            date: new Date(s.special_date),
-            reason: s.reason,
-            isOpen: s.is_open,
-            openTime: s.open_time || undefined,
-            closeTime: s.close_time || undefined,
-            breakStart: s.break_start || undefined,
-            breakEnd: s.break_end || undefined,
-          }))
-        );
+        if (specialData) {
+          setSpecialHours(
+            specialData.map(s => ({
+              id: s.id,
+              date: new Date(s.special_date),
+              reason: s.reason,
+              isOpen: s.is_open,
+              openTime: s.open_time || undefined,
+              closeTime: s.close_time || undefined,
+              breakStart: s.break_start || undefined,
+              breakEnd: s.break_end || undefined,
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn('Tabela special_hours não disponível:', err);
       }
     } catch (error) {
       console.error('Erro ao carregar horários:', error);
