@@ -494,6 +494,72 @@ Nos vemos em breve! 💈`;
     }
   };
 
+  const sendWhatsAppUpdateNotification = async (
+    appointmentId: string,
+    data: {
+      clientName: string;
+      clientPhone: string;
+      date: Date;
+      time: string;
+      serviceName: string;
+      barberName: string;
+    }
+  ) => {
+    try {
+      const { data: whatsappConfig, error: configError } = await supabase
+        .from('whatsapp_config')
+        .select('config, is_active')
+        .eq('barbershop_id', barbershopId)
+        .eq('provider', 'evolution')
+        .maybeSingle();
+
+      if (configError || !whatsappConfig?.is_active || !whatsappConfig?.config) {
+        console.log('WhatsApp Evolution não configurado ou inativo');
+        return;
+      }
+
+      const evolutionConfig = whatsappConfig.config as {
+        api_url: string;
+        api_key: string;
+        instance_name: string;
+      };
+
+      const message = `Olá ${data.clientName}! 📝
+
+Seu agendamento foi alterado:
+
+📅 Nova Data: ${format(data.date, "dd/MM/yyyy", { locale: ptBR })}
+⏰ Novo Horário: ${data.time}
+✂️ Serviço: ${data.serviceName}
+👤 Profissional: ${data.barberName}
+
+Se tiver alguma dúvida, entre em contato conosco. 💈`;
+
+      const { error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'sendText',
+          apiUrl: evolutionConfig.api_url,
+          apiKey: evolutionConfig.api_key,
+          instanceName: evolutionConfig.instance_name,
+          to: data.clientPhone,
+          message: message,
+          barbershopId,
+          recipientName: data.clientName,
+          appointmentId,
+          createdBy: user?.id
+        }
+      });
+
+      if (error) {
+        console.error('Erro ao enviar WhatsApp de alteração:', error);
+      } else {
+        console.log('✅ Notificação de alteração enviada via WhatsApp');
+      }
+    } catch (error) {
+      console.error('Erro ao enviar notificação WhatsApp:', error);
+    }
+  };
+
   const handleNext = () => {
     if (currentStep === 'client' && canProceedFromClient) {
       setCurrentStep('service');
@@ -682,6 +748,16 @@ Nos vemos em breve! 💈`;
         toast({
           title: "Agendamento Atualizado!",
           description: `Agendamento para ${clientName} atualizado com sucesso.`,
+        });
+
+        // Enviar notificação de alteração via WhatsApp
+        sendWhatsAppUpdateNotification(appointment.id, {
+          clientName,
+          clientPhone,
+          date,
+          time: selectedTime,
+          serviceName: service?.name || 'Serviço',
+          barberName: selectedBarberData?.name || 'Profissional'
         });
       } else {
         const { data: insertedData, error: appointmentError } = await supabase
