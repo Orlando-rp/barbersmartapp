@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Settings, Save, User, Bell, Shield } from "lucide-react";
+import { Save, User, Bell, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface BarbershopSettings {
   name: string;
@@ -17,7 +18,6 @@ interface BarbershopSettings {
   phone: string;
   email: string;
   settings: {
-    opening_hours: Record<string, { open: string; close: string }>;
     notifications: {
       whatsapp: boolean;
       email: boolean;
@@ -26,17 +26,9 @@ interface BarbershopSettings {
   };
 }
 
-const daysOfWeek = [
-  { key: 'monday', label: 'Segunda' },
-  { key: 'tuesday', label: 'Terça' },
-  { key: 'wednesday', label: 'Quarta' },
-  { key: 'thursday', label: 'Quinta' },
-  { key: 'friday', label: 'Sexta' },
-  { key: 'saturday', label: 'Sábado' },
-];
-
 const SettingsPage = () => {
   const { barbershopId } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<BarbershopSettings>({
@@ -45,14 +37,6 @@ const SettingsPage = () => {
     phone: '',
     email: '',
     settings: {
-      opening_hours: {
-        monday: { open: '09:00', close: '18:00' },
-        tuesday: { open: '09:00', close: '18:00' },
-        wednesday: { open: '09:00', close: '18:00' },
-        thursday: { open: '09:00', close: '18:00' },
-        friday: { open: '09:00', close: '18:00' },
-        saturday: { open: '09:00', close: '18:00' },
-      },
       notifications: {
         whatsapp: false,
         email: false,
@@ -86,7 +70,6 @@ const SettingsPage = () => {
           phone: data.phone || '',
           email: data.email || '',
           settings: {
-            opening_hours: dbSettings.opening_hours || settings.settings.opening_hours,
             notifications: {
               whatsapp: dbSettings.notifications?.whatsapp ?? false,
               email: dbSettings.notifications?.email ?? false,
@@ -287,67 +270,26 @@ const SettingsPage = () => {
             </CardContent>
           </Card>
 
-          {/* Business Hours */}
+          {/* Business Hours Link */}
           <Card className="barbershop-card lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5 text-primary" />
+                <Clock className="h-5 w-5 text-primary" />
                 Horário de Funcionamento
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <Label className="text-sm font-medium">Dia</Label>
-                <Label className="text-sm font-medium">Abertura</Label>
-                <Label className="text-sm font-medium">Fechamento</Label>
-              </div>
-              {daysOfWeek.map(({ key, label }) => (
-                <div key={key} className="grid grid-cols-3 gap-4 items-center">
-                  <Label className="text-sm">{label}</Label>
-                  <Input 
-                    type="time" 
-                    value={settings.settings.opening_hours[key]?.open || '09:00'}
-                    onChange={(e) => 
-                      setSettings({
-                        ...settings,
-                        settings: {
-                          ...settings.settings,
-                          opening_hours: {
-                            ...settings.settings.opening_hours,
-                            [key]: {
-                              ...settings.settings.opening_hours[key],
-                              open: e.target.value
-                            }
-                          }
-                        }
-                      })
-                    }
-                  />
-                  <Input 
-                    type="time" 
-                    value={settings.settings.opening_hours[key]?.close || '18:00'}
-                    onChange={(e) => 
-                      setSettings({
-                        ...settings,
-                        settings: {
-                          ...settings.settings,
-                          opening_hours: {
-                            ...settings.settings.opening_hours,
-                            [key]: {
-                              ...settings.settings.opening_hours[key],
-                              close: e.target.value
-                            }
-                          }
-                        }
-                      })
-                    }
-                  />
-                </div>
-              ))}
-              <div className="grid grid-cols-3 gap-4 items-center pt-2 border-t">
-                <Label className="text-sm">Domingo</Label>
-                <span className="text-sm text-muted-foreground col-span-2">Fechado</span>
-              </div>
+              <p className="text-muted-foreground">
+                Configure os horários de abertura, fechamento, intervalos e datas bloqueadas da barbearia.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/business-hours')}
+                className="w-full sm:w-auto"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                Gerenciar Horários
+              </Button>
             </CardContent>
           </Card>
         </div>
