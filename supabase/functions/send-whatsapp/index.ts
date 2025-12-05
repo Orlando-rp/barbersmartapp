@@ -1,12 +1,17 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+console.log('WhatsApp Edge Function loaded');
+
 serve(async (req) => {
+  console.log('Request received:', req.method, req.url);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -109,22 +114,32 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in send-whatsapp function:', error);
 
-    // Save failed log to database
-    if (barbershopId) {
-      const logData = {
-        barbershop_id: barbershopId,
-        recipient_phone: to?.replace(/\D/g, '') || 'unknown',
-        recipient_name: recipientName || null,
-        message_type: type,
-        message_content: message || '',
-        status: 'failed',
-        error_message: error instanceof Error ? error.message : 'Unknown error',
-        appointment_id: appointmentId || null,
-        campaign_id: campaignId || null,
-        created_by: createdBy || null,
-      };
+    // Obter variáveis do contexto para o log de erro
+    let errorLogData = {};
+    
+    try {
+      const requestBody = await req.clone().json().catch(() => ({}));
+      const { to, message, type, barbershopId, recipientName, appointmentId, campaignId, createdBy } = requestBody;
+      
+      // Save failed log to database
+      if (barbershopId) {
+        errorLogData = {
+          barbershop_id: barbershopId,
+          recipient_phone: to?.replace(/\D/g, '') || 'unknown',
+          recipient_name: recipientName || null,
+          message_type: type || 'text',
+          message_content: message || '',
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+          appointment_id: appointmentId || null,
+          campaign_id: campaignId || null,
+          created_by: createdBy || null,
+        };
 
-      await supabase.from('whatsapp_logs').insert(logData).catch(console.error);
+        await supabase.from('whatsapp_logs').insert(errorLogData).catch(console.error);
+      }
+    } catch (logError) {
+      console.error('Error saving failure log:', logError);
     }
 
     return new Response(
