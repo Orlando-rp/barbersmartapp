@@ -23,6 +23,7 @@ import ClientHistory from "./pages/ClientHistory";
 import Reviews from "./pages/Reviews";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import Waitlist from "./pages/Waitlist";
+import PublicBooking from "./pages/PublicBooking";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,7 +36,13 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Public Routes */}
+            <Route path="/agendar/:barbershopId" element={<PublicBooking />} />
+            
+            {/* Auth Routes */}
             <Route path="/auth" element={<Auth />} />
+            
+            {/* Protected Routes */}
             <Route path="/debug" element={<ProtectedRoute><Debug /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
