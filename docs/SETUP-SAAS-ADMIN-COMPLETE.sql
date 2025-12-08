@@ -27,11 +27,7 @@ ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 
 -- PARTE 2: Funções SECURITY DEFINER
 -- ============================================
-
--- Dropar apenas funções que não têm dependências
-DROP FUNCTION IF EXISTS public.is_super_admin(UUID);
-DROP FUNCTION IF EXISTS public.get_user_barbershop_id(UUID);
-DROP FUNCTION IF EXISTS public.user_belongs_to_barbershop(UUID, UUID);
+-- Usando CREATE OR REPLACE para não quebrar dependências existentes
 
 -- Atualizar função has_role existente (TEXT) para suportar super_admin
 CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role TEXT)
