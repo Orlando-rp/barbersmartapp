@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import BarbershopSelector from "./BarbershopSelector";
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
@@ -33,14 +34,15 @@ const Header = () => {
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex items-center justify-between h-full px-6">
-        {/* Logo */}
-        <div className="flex items-center space-x-4">
+        {/* Logo and Barbershop Selector */}
+        <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">BS</span>
             </div>
             <h1 className="text-xl font-bold text-foreground">BarberSmart</h1>
           </div>
+          <BarbershopSelector />
         </div>
 
         {/* Actions */}
