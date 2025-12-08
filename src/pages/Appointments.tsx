@@ -23,6 +23,8 @@ interface Appointment {
   client_phone: string;
   service_name: string;
   service_price: number;
+  staff_id: string | null;
+  staff_name: string | null;
   staff: {
     name: string;
   } | null;
@@ -159,7 +161,7 @@ const Appointments = () => {
       const staffIds = [...new Set(appointmentsData.map(a => a.staff_id).filter(Boolean))];
 
       if (staffIds.length === 0) {
-        setAppointments(appointmentsData.map(apt => ({ ...apt, staff: null })));
+        setAppointments(appointmentsData.map(apt => ({ ...apt, staff: null, staff_name: null })));
         return;
       }
 
@@ -190,10 +192,14 @@ const Appointments = () => {
       });
 
       // Transform appointments with staff names
-      const transformedData = appointmentsData.map(apt => ({
-        ...apt,
-        staff: apt.staff_id ? { name: staffNameMap.get(apt.staff_id) || 'Nome não disponível' } : null
-      }));
+      const transformedData = appointmentsData.map(apt => {
+        const staffName = apt.staff_id ? staffNameMap.get(apt.staff_id) || 'Nome não disponível' : null;
+        return {
+          ...apt,
+          staff_name: staffName,
+          staff: apt.staff_id ? { name: staffName || 'Nome não disponível' } : null
+        };
+      });
       
       setAppointments(transformedData);
     } catch (error: any) {
@@ -316,22 +322,40 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      // Buscar taxa de comissão do profissional
+      let commissionRate = 0;
+      if (appointment.staff_id) {
+        const { data: staffData } = await supabase
+          .from('staff')
+          .select('commission_rate')
+          .eq('id', appointment.staff_id)
+          .single();
+        
+        if (staffData?.commission_rate) {
+          commissionRate = parseFloat(staffData.commission_rate);
+        }
+      }
+
+      const commissionAmount = (appointment.service_price * commissionRate) / 100;
+
       const { error } = await supabase
         .from('transactions')
         .insert({
           barbershop_id: barbershopId,
+          appointment_id: appointment.id,
           type: 'receita',
           amount: appointment.service_price,
           description: `${appointment.service_name} - ${appointment.client_name}`,
           category: 'servico',
           payment_method: 'dinheiro',
-          date: appointment.appointment_date,
+          transaction_date: appointment.appointment_date,
+          notes: appointment.staff_id ? `Profissional: ${appointment.staff_name || 'N/A'} | Comissão: R$ ${commissionAmount.toFixed(2)} (${commissionRate}%)` : null,
           created_by: user?.id
         });
 
       if (error) throw error;
 
-      console.log('✅ Transação de receita criada automaticamente');
+      console.log(`✅ Transação criada - Valor: R$ ${appointment.service_price} | Comissão: R$ ${commissionAmount.toFixed(2)}`);
     } catch (error) {
       console.error('Erro ao criar transação:', error);
     }
