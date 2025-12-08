@@ -5,15 +5,24 @@ import { useToast } from '@/hooks/use-toast';
 
 type UserRole = 'super_admin' | 'admin' | 'barbeiro' | 'recepcionista';
 
+interface Barbershop {
+  id: string;
+  name: string;
+  is_primary: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   userRole: UserRole | null;
   barbershopId: string | null;
+  barbershops: Barbershop[];
+  selectedBarbershopId: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  setSelectedBarbershop: (barbershopId: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,6 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [barbershopId, setBarbershopId] = useState<string | null>(null);
+  const [barbershops, setBarbershops] = useState<Barbershop[]>([]);
+  const [selectedBarbershopId, setSelectedBarbershopId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -41,6 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setUserRole(null);
           setBarbershopId(null);
+          setBarbershops([]);
+          setSelectedBarbershopId(null);
         }
       }
     );
@@ -76,22 +89,100 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserRole(roleData.role as UserRole);
       }
 
-      // Fetch barbershop_id from profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('barbershop_id')
-        .eq('id', userId)
-        .maybeSingle();
+      // Fetch all barbershops the user has access to
+      const { data: userBarbershopsData, error: userBarbershopsError } = await supabase
+        .from('user_barbershops')
+        .select(`
+          barbershop_id,
+          is_primary,
+          barbershops:barbershop_id (
+            id,
+            name
+          )
+        `)
+        .eq('user_id', userId);
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-      } else if (profileData) {
-        setBarbershopId(profileData.barbershop_id);
+      if (userBarbershopsError) {
+        console.error('Error fetching user barbershops:', userBarbershopsError);
+        // Fallback: try to get from profiles
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('barbershop_id')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (profileData?.barbershop_id) {
+          const { data: barbershopData } = await supabase
+            .from('barbershops')
+            .select('id, name')
+            .eq('id', profileData.barbershop_id)
+            .maybeSingle();
+
+          if (barbershopData) {
+            const fallbackBarbershop = {
+              id: barbershopData.id,
+              name: barbershopData.name,
+              is_primary: true
+            };
+            setBarbershops([fallbackBarbershop]);
+            setBarbershopId(profileData.barbershop_id);
+            setSelectedBarbershopId(profileData.barbershop_id);
+          }
+        }
+      } else if (userBarbershopsData && userBarbershopsData.length > 0) {
+        const mappedBarbershops: Barbershop[] = userBarbershopsData.map((ub: any) => ({
+          id: ub.barbershops?.id || ub.barbershop_id,
+          name: ub.barbershops?.name || 'Barbearia',
+          is_primary: ub.is_primary
+        }));
+
+        setBarbershops(mappedBarbershops);
+
+        // Set primary barbershop as default
+        const primaryBarbershop = mappedBarbershops.find(b => b.is_primary);
+        const defaultBarbershop = primaryBarbershop || mappedBarbershops[0];
+        
+        setBarbershopId(defaultBarbershop.id);
+        setSelectedBarbershopId(defaultBarbershop.id);
+      } else {
+        // No user_barbershops found, try profiles fallback
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('barbershop_id')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (profileData?.barbershop_id) {
+          const { data: barbershopData } = await supabase
+            .from('barbershops')
+            .select('id, name')
+            .eq('id', profileData.barbershop_id)
+            .maybeSingle();
+
+          if (barbershopData) {
+            const fallbackBarbershop = {
+              id: barbershopData.id,
+              name: barbershopData.name,
+              is_primary: true
+            };
+            setBarbershops([fallbackBarbershop]);
+            setBarbershopId(profileData.barbershop_id);
+            setSelectedBarbershopId(profileData.barbershop_id);
+          }
+        }
       }
     } catch (error) {
       console.error('Error in fetchUserData:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const setSelectedBarbershop = (barbershopId: string | null) => {
+    setSelectedBarbershopId(barbershopId);
+    // Also update the legacy barbershopId for backward compatibility
+    if (barbershopId) {
+      setBarbershopId(barbershopId);
     }
   };
 
@@ -153,6 +244,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setUserRole(null);
       setBarbershopId(null);
+      setBarbershops([]);
+      setSelectedBarbershopId(null);
       toast({
         title: 'Logout realizado',
         description: 'Você saiu da sua conta com sucesso.',
@@ -173,10 +266,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         userRole,
         barbershopId,
+        barbershops,
+        selectedBarbershopId,
         loading,
         signIn,
         signUp,
         signOut,
+        setSelectedBarbershop,
       }}
     >
       {children}
