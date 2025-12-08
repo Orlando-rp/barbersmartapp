@@ -24,6 +24,7 @@ import Reviews from "./pages/Reviews";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import Waitlist from "./pages/Waitlist";
 import PublicBooking from "./pages/PublicBooking";
+import MyEarnings from "./pages/MyEarnings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
             <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppSettings /></ProtectedRoute>} />
             <Route path="/waitlist" element={<ProtectedRoute><Waitlist /></ProtectedRoute>} />
+            <Route path="/meus-ganhos" element={<ProtectedRoute><MyEarnings /></ProtectedRoute>} />
             <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -16,6 +16,7 @@ import {
   Clock,
   StarIcon,
   ListChecks,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ const navigation = [
   { name: "Serviços", href: "/services", icon: Scissors },
   { name: "Equipe", href: "/staff", icon: UserCog },
   { name: "Financeiro", href: "/finance", icon: DollarSign },
+  { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet },
   { name: "Relatórios", href: "/reports", icon: BarChart3 },
   { name: "Marketing", href: "/marketing", icon: MessageSquare },
   { name: "Avaliações", href: "/reviews", icon: StarIcon },
