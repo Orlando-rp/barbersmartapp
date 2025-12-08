@@ -312,6 +312,31 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
     }
   };
 
+  const createRevenueTransaction = async (appointment: Appointment) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('transactions')
+        .insert({
+          barbershop_id: barbershopId,
+          type: 'receita',
+          amount: appointment.service_price,
+          description: `${appointment.service_name} - ${appointment.client_name}`,
+          category: 'servico',
+          payment_method: 'dinheiro',
+          date: appointment.appointment_date,
+          created_by: user?.id
+        });
+
+      if (error) throw error;
+
+      console.log('✅ Transação de receita criada automaticamente');
+    } catch (error) {
+      console.error('Erro ao criar transação:', error);
+    }
+  };
+
   const updateStatus = async (appointmentId: string, newStatus: string) => {
     try {
       const appointmentToUpdate = appointments.find(apt => apt.id === appointmentId);
@@ -328,7 +353,7 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
         description: 'O status do agendamento foi atualizado com sucesso.',
       });
 
-      // Send notifications based on status change
+      // Send notifications and create transaction based on status change
       if (appointmentToUpdate) {
         if (newStatus === 'confirmado') {
           sendWhatsAppNotification(appointmentToUpdate, 'confirmed');
@@ -336,6 +361,8 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
           sendWhatsAppNotification(appointmentToUpdate, 'cancelled');
         } else if (newStatus === 'concluido') {
           sendWhatsAppNotification(appointmentToUpdate, 'completed');
+          // Criar lançamento de receita automaticamente
+          await createRevenueTransaction(appointmentToUpdate);
         }
       }
 
