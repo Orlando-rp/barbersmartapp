@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import Layout from "@/components/layout/Layout";
+import SaasAdminLayout from "@/components/layout/SaasAdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Badge } from "@/components/ui/badge";
@@ -466,43 +466,43 @@ const SaasAdminPortal = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <SaasAdminLayout>
         <div className="flex items-center justify-center h-96">
           <LoadingSpinner size="lg" />
         </div>
-      </Layout>
+      </SaasAdminLayout>
     );
   }
 
   if (userRole !== 'super_admin') {
     return (
-      <Layout>
+      <SaasAdminLayout>
         <div className="flex flex-col items-center justify-center h-96 text-center">
-          <Shield className="h-16 w-16 text-muted-foreground mb-4" />
-          <h2 className="text-2xl font-bold text-foreground mb-2">Acesso Restrito</h2>
-          <p className="text-muted-foreground max-w-md">
+          <Shield className="h-16 w-16 text-slate-600 mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Acesso Restrito</h2>
+          <p className="text-slate-400 max-w-md">
             Este portal é exclusivo para administradores do sistema (Super Admin).
           </p>
         </div>
-      </Layout>
+      </SaasAdminLayout>
     );
   }
 
   return (
-    <Layout>
-      <div className="p-6 space-y-6">
+    <SaasAdminLayout>
+      <div className="p-6 space-y-6 bg-slate-950 min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-              <Shield className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <Shield className="h-8 w-8 text-amber-500" />
               Portal de Administração SaaS
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-slate-400">
               Gerencie tenants, planos e monitore o uso do sistema
             </p>
           </div>
-          <Button variant="outline" onClick={fetchAllData}>
+          <Button variant="outline" onClick={fetchAllData} className="border-slate-700 text-slate-300 hover:bg-slate-800">
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </Button>
@@ -510,59 +510,59 @@ const SaasAdminPortal = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="barbershop-card">
+          <Card className="bg-slate-900 border-slate-800">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total de Tenants</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.totalTenants}</p>
+                  <p className="text-sm text-slate-400">Total de Tenants</p>
+                  <p className="text-2xl font-bold text-white">{stats.totalTenants}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-primary" />
+                <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-amber-500" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="barbershop-card">
+          <Card className="bg-slate-900 border-slate-800">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Tenants Ativos</p>
-                  <p className="text-2xl font-bold text-success">{stats.activeTenants}</p>
+                  <p className="text-sm text-slate-400">Tenants Ativos</p>
+                  <p className="text-2xl font-bold text-emerald-500">{stats.activeTenants}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-success" />
+                <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-emerald-500" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="barbershop-card">
+          <Card className="bg-slate-900 border-slate-800">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Em Trial</p>
-                  <p className="text-2xl font-bold text-warning">{stats.trialTenants}</p>
+                  <p className="text-sm text-slate-400">Em Trial</p>
+                  <p className="text-2xl font-bold text-amber-500">{stats.trialTenants}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-warning/10 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-warning" />
+                <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-amber-500" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="barbershop-card">
+          <Card className="bg-slate-900 border-slate-800">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Receita Total (Mês)</p>
-                  <p className="text-2xl font-bold text-success">
+                  <p className="text-sm text-slate-400">Receita Total (Mês)</p>
+                  <p className="text-2xl font-bold text-emerald-500">
                     R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-success" />
+                <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-emerald-500" />
                 </div>
               </div>
             </CardContent>
@@ -571,20 +571,20 @@ const SaasAdminPortal = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="tenants" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="tenants">
+          <TabsList className="bg-slate-900 border border-slate-800">
+            <TabsTrigger value="tenants" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <Building2 className="h-4 w-4 mr-2" />
               Tenants
             </TabsTrigger>
-            <TabsTrigger value="plans">
+            <TabsTrigger value="plans" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <Package className="h-4 w-4 mr-2" />
               Planos
             </TabsTrigger>
-            <TabsTrigger value="usage">
+            <TabsTrigger value="usage" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <BarChart3 className="h-4 w-4 mr-2" />
               Uso
             </TabsTrigger>
-            <TabsTrigger value="messages">
+            <TabsTrigger value="messages" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <MessageSquare className="h-4 w-4 mr-2" />
               Mensagens
             </TabsTrigger>
@@ -592,52 +592,52 @@ const SaasAdminPortal = () => {
 
           {/* Tenants Tab */}
           <TabsContent value="tenants">
-            <Card className="barbershop-card">
+            <Card className="bg-slate-900 border-slate-800">
               <CardHeader>
-                <CardTitle>Barbearias Cadastradas</CardTitle>
-                <CardDescription>{tenants.length} tenants no sistema</CardDescription>
+                <CardTitle className="text-white">Barbearias Cadastradas</CardTitle>
+                <CardDescription className="text-slate-400">{tenants.length} tenants no sistema</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border overflow-x-auto">
+                <div className="rounded-md border border-slate-800 overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Barbearia</TableHead>
-                        <TableHead>Plano</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Agendamentos</TableHead>
-                        <TableHead>Clientes</TableHead>
-                        <TableHead>Receita</TableHead>
-                        <TableHead>Criado em</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                      <TableRow className="border-slate-800 hover:bg-slate-800/50">
+                        <TableHead className="text-slate-300">Barbearia</TableHead>
+                        <TableHead className="text-slate-300">Plano</TableHead>
+                        <TableHead className="text-slate-300">Status</TableHead>
+                        <TableHead className="text-slate-300">Agendamentos</TableHead>
+                        <TableHead className="text-slate-300">Clientes</TableHead>
+                        <TableHead className="text-slate-300">Receita</TableHead>
+                        <TableHead className="text-slate-300">Criado em</TableHead>
+                        <TableHead className="text-right text-slate-300">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {tenants.map((tenant) => (
-                        <TableRow key={tenant.id}>
-                          <TableCell>
+                        <TableRow key={tenant.id} className="border-slate-800 hover:bg-slate-800/50">
+                          <TableCell className="text-white">
                             <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-primary" />
+                              <Building2 className="h-4 w-4 text-amber-500" />
                               <span className="font-medium">{tenant.name}</span>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="secondary">
+                            <Badge className="bg-slate-700 text-slate-200">
                               {tenant.subscription?.plan_name || 'Free'}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             {tenant.subscription 
                               ? getStatusBadge(tenant.subscription.status)
-                              : <Badge variant="outline">Sem assinatura</Badge>
+                              : <Badge variant="outline" className="border-slate-600 text-slate-400">Sem assinatura</Badge>
                             }
                           </TableCell>
-                          <TableCell>{tenant.usage?.appointments_count || 0}</TableCell>
-                          <TableCell>{tenant.usage?.clients_count || 0}</TableCell>
-                          <TableCell>
+                          <TableCell className="text-slate-300">{tenant.usage?.appointments_count || 0}</TableCell>
+                          <TableCell className="text-slate-300">{tenant.usage?.clients_count || 0}</TableCell>
+                          <TableCell className="text-emerald-500">
                             R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-slate-300">
                             {format(new Date(tenant.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
                           <TableCell className="text-right">
@@ -645,6 +645,7 @@ const SaasAdminPortal = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="text-slate-400 hover:text-white hover:bg-slate-800"
                                 onClick={() => {
                                   setSelectedTenant(tenant);
                                   setTenantDetailOpen(true);
@@ -655,6 +656,7 @@ const SaasAdminPortal = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="hover:bg-slate-800"
                                 onClick={() => handleToggleTenantStatus(tenant)}
                               >
                                 {tenant.active ? (
@@ -676,13 +678,13 @@ const SaasAdminPortal = () => {
 
           {/* Plans Tab */}
           <TabsContent value="plans">
-            <Card className="barbershop-card">
+            <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Planos de Assinatura</CardTitle>
-                  <CardDescription>Gerencie os planos disponíveis</CardDescription>
+                  <CardTitle className="text-white">Planos de Assinatura</CardTitle>
+                  <CardDescription className="text-slate-400">Gerencie os planos disponíveis</CardDescription>
                 </div>
-                <Button onClick={() => openPlanDialog()}>
+                <Button onClick={() => openPlanDialog()} className="bg-amber-500 hover:bg-amber-600 text-white">
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Plano
                 </Button>
@@ -690,24 +692,24 @@ const SaasAdminPortal = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {plans.map((plan) => (
-                    <Card key={plan.id} className={`relative ${!plan.active ? 'opacity-60' : ''}`}>
+                    <Card key={plan.id} className={`relative bg-slate-800 border-slate-700 ${!plan.active ? 'opacity-60' : ''}`}>
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{plan.name}</CardTitle>
+                          <CardTitle className="text-lg text-white">{plan.name}</CardTitle>
                           {!plan.active && (
-                            <Badge variant="secondary">Inativo</Badge>
+                            <Badge className="bg-slate-600 text-slate-300">Inativo</Badge>
                           )}
                         </div>
-                        <CardDescription>{plan.description}</CardDescription>
+                        <CardDescription className="text-slate-400">{plan.description}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-3xl font-bold text-primary mb-4">
+                        <p className="text-3xl font-bold text-amber-500 mb-4">
                           R$ {plan.price.toFixed(2)}
-                          <span className="text-sm text-muted-foreground font-normal">
+                          <span className="text-sm text-slate-400 font-normal">
                             /{plan.billing_period === 'monthly' ? 'mês' : 'ano'}
                           </span>
                         </p>
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-2 text-sm text-slate-300">
                           <p>👥 {plan.max_staff} profissionais</p>
                           <p>📋 {plan.max_clients} clientes</p>
                           <p>📅 {plan.max_appointments_month} agend./mês</p>
@@ -716,7 +718,7 @@ const SaasAdminPortal = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1"
+                            className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700"
                             onClick={() => openPlanDialog(plan)}
                           >
                             <Edit className="h-4 w-4 mr-1" />
@@ -725,12 +727,13 @@ const SaasAdminPortal = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            className="border-slate-600 hover:bg-red-500/20"
                             onClick={() => {
                               setItemToDelete({ type: 'plan', id: plan.id });
                               setDeleteDialogOpen(true);
                             }}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </div>
                       </CardContent>
@@ -745,9 +748,9 @@ const SaasAdminPortal = () => {
           <TabsContent value="usage" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Plan Distribution */}
-              <Card className="barbershop-card">
+              <Card className="bg-slate-900 border-slate-800">
                 <CardHeader>
-                  <CardTitle>Distribuição por Plano</CardTitle>
+                  <CardTitle className="text-white">Distribuição por Plano</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
@@ -768,12 +771,12 @@ const SaasAdminPortal = () => {
                               <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip />
-                          <Legend />
+                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
+                          <Legend wrapperStyle={{ color: '#94a3b8' }} />
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                      <div className="flex items-center justify-center h-full text-slate-500">
                         Nenhum dado disponível
                       </div>
                     )}
@@ -782,9 +785,9 @@ const SaasAdminPortal = () => {
               </Card>
 
               {/* Top Tenants by Revenue */}
-              <Card className="barbershop-card">
+              <Card className="bg-slate-900 border-slate-800">
                 <CardHeader>
-                  <CardTitle>Top Tenants por Receita</CardTitle>
+                  <CardTitle className="text-white">Top Tenants por Receita</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
@@ -795,14 +798,14 @@ const SaasAdminPortal = () => {
                         .slice(0, 10)
                         .map(t => ({ name: t.name, receita: t.usage?.revenue || 0 }))
                       }>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" className="text-xs" angle={-45} textAnchor="end" height={80} />
-                        <YAxis className="text-xs" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="name" tick={{ fill: '#94a3b8' }} angle={-45} textAnchor="end" height={80} />
+                        <YAxis tick={{ fill: '#94a3b8' }} />
                         <Tooltip
                           formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Receita']}
-                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+                          contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }}
                         />
-                        <Bar dataKey="receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="receita" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -813,52 +816,52 @@ const SaasAdminPortal = () => {
 
           {/* Messages Tab */}
           <TabsContent value="messages">
-            <Card className="barbershop-card">
+            <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Mensagens do Sistema</CardTitle>
-                  <CardDescription>Envie comunicados para os tenants</CardDescription>
+                  <CardTitle className="text-white">Mensagens do Sistema</CardTitle>
+                  <CardDescription className="text-slate-400">Envie comunicados para os tenants</CardDescription>
                 </div>
-                <Button onClick={() => openMessageDialog()}>
+                <Button onClick={() => openMessageDialog()} className="bg-amber-500 hover:bg-amber-600 text-white">
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Mensagem
                 </Button>
               </CardHeader>
               <CardContent>
                 {messages.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-center py-12 text-slate-500">
                     Nenhuma mensagem cadastrada
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {messages.map((msg) => (
-                      <div key={msg.id} className="p-4 rounded-lg border border-border bg-background/50">
+                      <div key={msg.id} className="p-4 rounded-lg border border-slate-700 bg-slate-800/50">
                         <div className="flex items-start justify-between">
                           <div>
                             <div className="flex items-center gap-2 mb-2">
-                              <Badge variant={
-                                msg.type === 'warning' ? 'destructive' :
-                                msg.type === 'alert' ? 'destructive' :
-                                msg.type === 'update' ? 'secondary' : 'outline'
+                              <Badge className={
+                                msg.type === 'warning' ? 'bg-orange-500' :
+                                msg.type === 'alert' ? 'bg-red-500' :
+                                msg.type === 'update' ? 'bg-blue-500' : 'bg-slate-600'
                               }>
                                 {msg.type}
                               </Badge>
-                              <span className="font-semibold">{msg.title}</span>
+                              <span className="font-semibold text-white">{msg.title}</span>
                             </div>
-                            <p className="text-sm text-muted-foreground">{msg.message}</p>
-                            <p className="text-xs text-muted-foreground mt-2">
+                            <p className="text-sm text-slate-400">{msg.message}</p>
+                            <p className="text-xs text-slate-500 mt-2">
                               Publicado: {msg.published_at ? format(new Date(msg.published_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : 'Não publicado'}
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => openMessageDialog(msg)}>
+                            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white hover:bg-slate-700" onClick={() => openMessageDialog(msg)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => {
+                            <Button variant="ghost" size="icon" className="hover:bg-red-500/20" onClick={() => {
                               setItemToDelete({ type: 'message', id: msg.id });
                               setDeleteDialogOpen(true);
                             }}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
                           </div>
                         </div>
@@ -1033,7 +1036,7 @@ const SaasAdminPortal = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </Layout>
+    </SaasAdminLayout>
   );
 };
 
