@@ -349,7 +349,9 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
           category: 'servico',
           payment_method: 'dinheiro',
           transaction_date: appointment.appointment_date,
-          notes: appointment.staff_id ? `Profissional: ${appointment.staff_name || 'N/A'} | Comissão: R$ ${commissionAmount.toFixed(2)} (${commissionRate}%)` : null,
+          staff_id: appointment.staff_id,
+          commission_rate: commissionRate,
+          commission_amount: commissionAmount,
           created_by: user?.id
         });
 
