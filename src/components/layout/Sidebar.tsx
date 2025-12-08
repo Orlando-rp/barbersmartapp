@@ -28,10 +28,12 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   multiUnitOnly?: boolean;
+  superAdminOnly?: boolean;
 }
 
 const navigation: NavItem[] = [
   { name: "Dashboard", href: "/", icon: Home },
+  { name: "Admin SaaS", href: "/saas-admin", icon: Shield, superAdminOnly: true },
   { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true },
   { name: "Staff Multi-Unidade", href: "/staff-multi-unit", icon: UserCog, multiUnitOnly: true },
   { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true },
@@ -57,6 +59,9 @@ const Sidebar = () => {
 
   // Filtrar itens de navegação baseado nas permissões
   const filteredNavigation = navigation.filter(item => {
+    if (item.superAdminOnly) {
+      return userRole === 'super_admin';
+    }
     if (item.multiUnitOnly) {
       return barbershops.length > 1 || userRole === 'super_admin';
     }
