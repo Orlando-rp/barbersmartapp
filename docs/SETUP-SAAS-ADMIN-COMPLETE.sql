@@ -28,6 +28,13 @@ ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 -- PARTE 2: Funções SECURITY DEFINER
 -- ============================================
 
+-- Dropar funções existentes para evitar conflito de assinatura
+DROP FUNCTION IF EXISTS public.has_role(UUID, TEXT);
+DROP FUNCTION IF EXISTS public.has_role(UUID, app_role);
+DROP FUNCTION IF EXISTS public.is_super_admin(UUID);
+DROP FUNCTION IF EXISTS public.get_user_barbershop_id(UUID);
+DROP FUNCTION IF EXISTS public.user_belongs_to_barbershop(UUID, UUID);
+
 -- Função para verificar role
 CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
 RETURNS BOOLEAN
@@ -72,6 +79,22 @@ AS $$
     FROM public.profiles
     WHERE id = _user_id
     LIMIT 1
+$$;
+
+-- Função para verificar se usuário pertence à barbearia
+CREATE OR REPLACE FUNCTION public.user_belongs_to_barbershop(_user_id UUID, _barbershop_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT public.is_super_admin(_user_id) OR EXISTS (
+        SELECT 1
+        FROM public.profiles
+        WHERE id = _user_id
+          AND barbershop_id = _barbershop_id
+    )
 $$;
 
 -- Função para verificar se usuário pertence à barbearia
