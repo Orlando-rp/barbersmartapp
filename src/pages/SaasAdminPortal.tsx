@@ -133,6 +133,7 @@ const CHART_COLORS = [
 const SaasAdminPortal = () => {
   const { userRole } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [messages, setMessages] = useState<SystemMessage[]>([]);
@@ -489,7 +490,7 @@ const SaasAdminPortal = () => {
   }
 
   return (
-    <SaasAdminLayout>
+    <SaasAdminLayout activeTab={activeTab} onTabChange={setActiveTab}>
       <div className="p-6 space-y-6 bg-slate-950 min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -570,25 +571,87 @@ const SaasAdminPortal = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="tenants" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-slate-900 border border-slate-800">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Visão Geral
+            </TabsTrigger>
             <TabsTrigger value="tenants" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <Building2 className="h-4 w-4 mr-2" />
-              Tenants
+              Barbearias
             </TabsTrigger>
             <TabsTrigger value="plans" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <Package className="h-4 w-4 mr-2" />
               Planos
-            </TabsTrigger>
-            <TabsTrigger value="usage" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Uso
             </TabsTrigger>
             <TabsTrigger value="messages" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
               <MessageSquare className="h-4 w-4 mr-2" />
               Mensagens
             </TabsTrigger>
           </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Plan Distribution Chart */}
+              {planDistribution.length > 0 && (
+                <Card className="bg-slate-900 border-slate-800">
+                  <CardHeader>
+                    <CardTitle className="text-white">Distribuição por Plano</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={planDistribution}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {planDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Recent Tenants */}
+              <Card className="bg-slate-900 border-slate-800">
+                <CardHeader>
+                  <CardTitle className="text-white">Barbearias Recentes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {tenants.slice(0, 5).map((tenant) => (
+                      <div key={tenant.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                        <div>
+                          <p className="text-white font-medium">{tenant.name}</p>
+                          <p className="text-sm text-slate-400">
+                            {format(new Date(tenant.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                          </p>
+                        </div>
+                        <Badge className={tenant.active ? "bg-emerald-500" : "bg-slate-600"}>
+                          {tenant.active ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+                    ))}
+                    {tenants.length === 0 && (
+                      <p className="text-slate-400 text-center py-4">Nenhuma barbearia cadastrada</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           {/* Tenants Tab */}
           <TabsContent value="tenants">
@@ -743,77 +806,6 @@ const SaasAdminPortal = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* Usage Tab */}
-          <TabsContent value="usage" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Plan Distribution */}
-              <Card className="bg-slate-900 border-slate-800">
-                <CardHeader>
-                  <CardTitle className="text-white">Distribuição por Plano</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    {planDistribution.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={planDistribution}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={100}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {planDistribution.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
-                          <Legend wrapperStyle={{ color: '#94a3b8' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-slate-500">
-                        Nenhum dado disponível
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Top Tenants by Revenue */}
-              <Card className="bg-slate-900 border-slate-800">
-                <CardHeader>
-                  <CardTitle className="text-white">Top Tenants por Receita</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={tenants
-                        .filter(t => t.usage?.revenue)
-                        .sort((a, b) => (b.usage?.revenue || 0) - (a.usage?.revenue || 0))
-                        .slice(0, 10)
-                        .map(t => ({ name: t.name, receita: t.usage?.revenue || 0 }))
-                      }>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                        <XAxis dataKey="name" tick={{ fill: '#94a3b8' }} angle={-45} textAnchor="end" height={80} />
-                        <YAxis tick={{ fill: '#94a3b8' }} />
-                        <Tooltip
-                          formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Receita']}
-                          contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fff' }}
-                        />
-                        <Bar dataKey="receita" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
           {/* Messages Tab */}
           <TabsContent value="messages">
             <Card className="bg-slate-900 border-slate-800">

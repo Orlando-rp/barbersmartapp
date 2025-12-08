@@ -5,9 +5,11 @@ import { Shield } from "lucide-react";
 
 interface SaasAdminLayoutProps {
   children: ReactNode;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-const SaasAdminLayout = ({ children }: SaasAdminLayoutProps) => {
+const SaasAdminLayout = ({ children, activeTab = "overview", onTabChange }: SaasAdminLayoutProps) => {
   const { userRole } = useAuth();
 
   // Verificação de acesso
@@ -27,7 +29,7 @@ const SaasAdminLayout = ({ children }: SaasAdminLayoutProps) => {
 
   return (
     <div className="flex h-screen bg-slate-950">
-      <SaasAdminSidebar />
+      <SaasAdminSidebar activeTab={activeTab} onTabChange={onTabChange} />
       <main className="flex-1 overflow-auto">
         {children}
       </main>

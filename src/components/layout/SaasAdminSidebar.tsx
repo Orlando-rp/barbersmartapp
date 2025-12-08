@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Building2,
-  Users,
   CreditCard,
   BarChart3,
   MessageSquare,
@@ -13,8 +12,7 @@ import {
   LogOut,
   Home,
   Package,
-  Bell,
-  Activity,
+  LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,29 +20,33 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   name: string;
-  href: string;
+  tab: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 const saasNavigation: NavItem[] = [
-  { name: "Dashboard", href: "/saas-admin", icon: Home },
-  { name: "Barbearias", href: "/saas-admin/tenants", icon: Building2 },
-  { name: "Planos", href: "/saas-admin/plans", icon: Package },
-  { name: "Assinaturas", href: "/saas-admin/subscriptions", icon: CreditCard },
-  { name: "Uso & Métricas", href: "/saas-admin/usage", icon: BarChart3 },
-  { name: "Mensagens", href: "/saas-admin/messages", icon: MessageSquare },
-  { name: "Notificações", href: "/saas-admin/notifications", icon: Bell },
-  { name: "Monitoramento", href: "/saas-admin/monitoring", icon: Activity },
-  { name: "Configurações", href: "/saas-admin/settings", icon: Settings },
+  { name: "Visão Geral", tab: "overview", icon: LayoutDashboard },
+  { name: "Barbearias", tab: "tenants", icon: Building2 },
+  { name: "Planos", tab: "plans", icon: Package },
+  { name: "Mensagens", tab: "messages", icon: MessageSquare },
 ];
 
-const SaasAdminSidebar = () => {
+interface SaasAdminSidebarProps {
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+}
+
+const SaasAdminSidebar = ({ activeTab = "overview", onTabChange }: SaasAdminSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleBackToApp = () => {
     navigate('/');
+  };
+
+  const handleNavClick = (tab: string) => {
+    onTabChange?.(tab);
   };
 
   return (
@@ -79,23 +81,20 @@ const SaasAdminSidebar = () => {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {saasNavigation.map((item) => (
-          <NavLink
+          <button
             key={item.name}
-            to={item.href}
-            end={item.href === '/saas-admin'}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors",
-                isActive
-                  ? "bg-amber-500/20 text-amber-500"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800",
-                collapsed && "justify-center px-2"
-              )
-            }
+            onClick={() => handleNavClick(item.tab)}
+            className={cn(
+              "w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors",
+              activeTab === item.tab
+                ? "bg-amber-500/20 text-amber-500"
+                : "text-slate-400 hover:text-white hover:bg-slate-800",
+              collapsed && "justify-center px-2"
+            )}
           >
             <item.icon className={cn("h-5 w-5", !collapsed && "mr-3")} />
             {!collapsed && <span>{item.name}</span>}
-          </NavLink>
+          </button>
         ))}
       </nav>
 
