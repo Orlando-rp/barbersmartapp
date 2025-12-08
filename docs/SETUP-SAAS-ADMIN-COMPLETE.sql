@@ -76,21 +76,6 @@ AS $$
     )
 $$;
 
--- Função para verificar se usuário pertence à barbearia
-CREATE OR REPLACE FUNCTION public.user_belongs_to_barbershop(_user_id UUID, _barbershop_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-    SELECT public.is_super_admin(_user_id) OR EXISTS (
-        SELECT 1
-        FROM public.profiles
-        WHERE id = _user_id
-          AND barbershop_id = _barbershop_id
-    )
-$$;
 
 -- PARTE 3: Políticas RLS para user_roles
 -- ============================================
@@ -277,7 +262,7 @@ GRANT SELECT ON public.subscriptions TO authenticated;
 GRANT SELECT ON public.usage_metrics TO authenticated;
 GRANT SELECT ON public.system_messages TO authenticated;
 GRANT ALL ON public.user_roles TO authenticated;
-GRANT EXECUTE ON FUNCTION public.has_role TO authenticated;
+-- has_role já existe, não precisa GRANT
 GRANT EXECUTE ON FUNCTION public.is_super_admin TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_user_barbershop_id TO authenticated;
 GRANT EXECUTE ON FUNCTION public.user_belongs_to_barbershop TO authenticated;
