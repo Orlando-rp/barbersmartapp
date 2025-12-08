@@ -62,30 +62,6 @@ INSERT INTO services (id, barbershop_id, name, description, price, duration, cat
 ('0b222222-2222-2222-2222-333333333333', 'b2222222-2222-2222-2222-222222222222', 'Combo Econômico', 'Corte e barba básicos', 55.00, 40, 'combo', true);
 
 -- =====================================================
--- STAFF (Profissionais) - SEM user_id para teste
--- =====================================================
-
--- Staff Alpha Centro
-INSERT INTO staff (id, barbershop_id, specialties, commission_rate, schedule, active) VALUES
-('00fa1111-1111-1111-1111-111111111111', 'a1111111-1111-1111-1111-111111111111', ARRAY['corte', 'barba'], 40, '{"monday": true, "tuesday": true, "wednesday": true, "thursday": true, "friday": true, "saturday": true}', true),
-('00fa1111-1111-1111-1111-222222222222', 'a1111111-1111-1111-1111-111111111111', ARRAY['corte', 'barba', 'tratamento'], 45, '{"monday": true, "tuesday": true, "wednesday": true, "thursday": true, "friday": true}', true);
-
--- Staff Alpha Shopping
-INSERT INTO staff (id, barbershop_id, specialties, commission_rate, schedule, active) VALUES
-('00fa2222-2222-2222-2222-111111111111', 'a2222222-2222-2222-2222-222222222222', ARRAY['corte', 'design'], 50, '{"monday": true, "tuesday": true, "wednesday": true, "thursday": true, "friday": true, "saturday": true, "sunday": true}', true),
-('00fa2222-2222-2222-2222-222222222222', 'a2222222-2222-2222-2222-222222222222', ARRAY['barba', 'tratamento'], 45, '{"tuesday": true, "wednesday": true, "thursday": true, "friday": true, "saturday": true}', true);
-
--- Staff Beta Jardins
-INSERT INTO staff (id, barbershop_id, specialties, commission_rate, schedule, active) VALUES
-('00fb1111-1111-1111-1111-111111111111', 'b1111111-1111-1111-1111-111111111111', ARRAY['corte', 'barba', 'tratamento'], 55, '{"monday": true, "tuesday": true, "wednesday": true, "thursday": true, "friday": true, "saturday": true}', true),
-('00fb1111-1111-1111-1111-222222222222', 'b1111111-1111-1111-1111-111111111111', ARRAY['corte'], 40, '{"monday": true, "tuesday": true, "wednesday": true, "thursday": true, "friday": true}', true);
-
--- Staff Beta Moema
-INSERT INTO staff (id, barbershop_id, specialties, commission_rate, schedule, active) VALUES
-('00fb2222-2222-2222-2222-111111111111', 'b2222222-2222-2222-2222-222222222222', ARRAY['corte', 'barba'], 45, '{"monday": true, "tuesday": true, "wednesday": true, "thursday": true, "friday": true, "saturday": true}', true),
-('00fb2222-2222-2222-2222-222222222222', 'b2222222-2222-2222-2222-222222222222', ARRAY['barba', 'design'], 50, '{"wednesday": true, "thursday": true, "friday": true, "saturday": true}', true);
-
--- =====================================================
 -- CLIENTES - Alpha Centro
 -- =====================================================
 INSERT INTO clients (id, barbershop_id, name, email, phone, notes, tags, active, loyalty_points) VALUES
@@ -112,44 +88,27 @@ INSERT INTO clients (id, barbershop_id, name, email, phone, notes, tags, active,
 ('cb222222-0001-0001-0001-000000000003', 'b2222222-2222-2222-2222-222222222222', 'Thiago Martins', 'thiago.m@email.com', '11988200003', 'Recomendação de amigo', ARRAY['novo'], true, 15);
 
 -- =====================================================
--- AGENDAMENTOS - Próximos 7 dias
--- =====================================================
-
--- Alpha Centro - Agendamentos
-INSERT INTO appointments (id, barbershop_id, client_id, staff_id, service_id, appointment_time, status, client_name, client_phone, service_name, service_price) VALUES
-('a00a0001-0001-0001-0001-000000000001', 'a1111111-1111-1111-1111-111111111111', 'ca111111-0001-0001-0001-000000000001', '00fa1111-1111-1111-1111-111111111111', '0a111111-1111-1111-1111-111111111111', NOW() + INTERVAL '1 day' + INTERVAL '10 hours', 'confirmado', 'João Silva', '11999100001', 'Corte Tradicional', 45.00),
-('a00a0001-0001-0001-0001-000000000002', 'a1111111-1111-1111-1111-111111111111', 'ca111111-0001-0001-0001-000000000002', '00fa1111-1111-1111-1111-222222222222', '0a111111-1111-1111-1111-333333333333', NOW() + INTERVAL '1 day' + INTERVAL '14 hours', 'pendente', 'Carlos Oliveira', '11999100002', 'Combo Corte + Barba', 70.00),
-('a00a0001-0001-0001-0001-000000000003', 'a1111111-1111-1111-1111-111111111111', 'ca111111-0001-0001-0001-000000000003', '00fa1111-1111-1111-1111-111111111111', '0a111111-1111-1111-1111-222222222222', NOW() + INTERVAL '2 days' + INTERVAL '11 hours', 'pendente', 'Pedro Santos', '11999100003', 'Barba Completa', 35.00),
-('a00a0001-0001-0001-0001-000000000004', 'a1111111-1111-1111-1111-111111111111', 'ca111111-0001-0001-0001-000000000001', '00fa1111-1111-1111-1111-111111111111', '0a111111-1111-1111-1111-111111111111', NOW() - INTERVAL '2 days' + INTERVAL '10 hours', 'concluido', 'João Silva', '11999100001', 'Corte Tradicional', 45.00);
-
--- Alpha Shopping - Agendamentos
-INSERT INTO appointments (id, barbershop_id, client_id, staff_id, service_id, appointment_time, status, client_name, client_phone, service_name, service_price) VALUES
-('a00a0002-0001-0001-0001-000000000001', 'a2222222-2222-2222-2222-222222222222', 'ca222222-0001-0001-0001-000000000001', '00fa2222-2222-2222-2222-111111111111', '0a222222-2222-2222-2222-333333333333', NOW() + INTERVAL '1 day' + INTERVAL '15 hours', 'confirmado', 'Roberto Almeida', '11999200001', 'Combo VIP', 95.00),
-('a00a0002-0001-0001-0001-000000000002', 'a2222222-2222-2222-2222-222222222222', 'ca222222-0001-0001-0001-000000000002', '00fa2222-2222-2222-2222-222222222222', '0a222222-2222-2222-2222-222222222222', NOW() + INTERVAL '2 days' + INTERVAL '16 hours', 'pendente', 'Fernando Costa', '11999200002', 'Barba Premium', 45.00),
-('a00a0002-0001-0001-0001-000000000003', 'a2222222-2222-2222-2222-222222222222', 'ca222222-0001-0001-0001-000000000003', '00fa2222-2222-2222-2222-111111111111', '0a222222-2222-2222-2222-111111111111', NOW() + INTERVAL '3 days' + INTERVAL '11 hours', 'pendente', 'Marcos Lima', '11999200003', 'Corte Moderno', 55.00),
-('a00a0002-0001-0001-0001-000000000004', 'a2222222-2222-2222-2222-222222222222', 'ca222222-0001-0001-0001-000000000001', '00fa2222-2222-2222-2222-111111111111', '0a222222-2222-2222-2222-333333333333', NOW() - INTERVAL '1 day' + INTERVAL '14 hours', 'concluido', 'Roberto Almeida', '11999200001', 'Combo VIP', 95.00);
-
--- Beta Jardins - Agendamentos
-INSERT INTO appointments (id, barbershop_id, client_id, staff_id, service_id, appointment_time, status, client_name, client_phone, service_name, service_price) VALUES
-('b00b0001-0001-0001-0001-000000000001', 'b1111111-1111-1111-1111-111111111111', 'cb111111-0001-0001-0001-000000000001', '00fb1111-1111-1111-1111-111111111111', '0b111111-1111-1111-1111-111111111111', NOW() + INTERVAL '1 day' + INTERVAL '12 hours', 'confirmado', 'André Ferreira', '11988100001', 'Corte Executive', 65.00),
-('b00b0001-0001-0001-0001-000000000002', 'b1111111-1111-1111-1111-111111111111', 'cb111111-0001-0001-0001-000000000002', '00fb1111-1111-1111-1111-222222222222', '0b111111-1111-1111-1111-111111111111', NOW() + INTERVAL '1 day' + INTERVAL '15 hours', 'pendente', 'Lucas Mendes', '11988100002', 'Corte Executive', 65.00),
-('b00b0001-0001-0001-0001-000000000003', 'b1111111-1111-1111-1111-111111111111', 'cb111111-0001-0001-0001-000000000003', '00fb1111-1111-1111-1111-111111111111', '0b111111-1111-1111-1111-333333333333', NOW() + INTERVAL '2 days' + INTERVAL '9 hours', 'pendente', 'Gabriel Rocha', '11988100003', 'Tratamento Capilar', 80.00),
-('b00b0001-0001-0001-0001-000000000004', 'b1111111-1111-1111-1111-111111111111', 'cb111111-0001-0001-0001-000000000001', '00fb1111-1111-1111-1111-111111111111', '0b111111-1111-1111-1111-222222222222', NOW() - INTERVAL '3 days' + INTERVAL '12 hours', 'concluido', 'André Ferreira', '11988100001', 'Barba Designer', 50.00),
-('b00b0001-0001-0001-0001-000000000005', 'b1111111-1111-1111-1111-111111111111', 'cb111111-0001-0001-0001-000000000002', '00fb1111-1111-1111-1111-111111111111', '0b111111-1111-1111-1111-111111111111', NOW() - INTERVAL '1 day' + INTERVAL '10 hours', 'concluido', 'Lucas Mendes', '11988100002', 'Corte Executive', 65.00);
-
--- Beta Moema - Agendamentos
-INSERT INTO appointments (id, barbershop_id, client_id, staff_id, service_id, appointment_time, status, client_name, client_phone, service_name, service_price) VALUES
-('b00b0002-0001-0001-0001-000000000001', 'b2222222-2222-2222-2222-222222222222', 'cb222222-0001-0001-0001-000000000001', '00fb2222-2222-2222-2222-111111111111', '0b222222-2222-2222-2222-333333333333', NOW() + INTERVAL '1 day' + INTERVAL '10 hours', 'confirmado', 'Ricardo Dias', '11988200001', 'Combo Econômico', 55.00),
-('b00b0002-0001-0001-0001-000000000002', 'b2222222-2222-2222-2222-222222222222', 'cb222222-0001-0001-0001-000000000002', '00fb2222-2222-2222-2222-222222222222', '0b222222-2222-2222-2222-222222222222', NOW() + INTERVAL '2 days' + INTERVAL '14 hours', 'pendente', 'Bruno Souza', '11988200002', 'Barba Express', 25.00),
-('b00b0002-0001-0001-0001-000000000003', 'b2222222-2222-2222-2222-222222222222', 'cb222222-0001-0001-0001-000000000003', '00fb2222-2222-2222-2222-111111111111', '0b222222-2222-2222-2222-111111111111', NOW() + INTERVAL '3 days' + INTERVAL '11 hours', 'pendente', 'Thiago Martins', '11988200003', 'Corte Clássico', 40.00),
-('b00b0002-0001-0001-0001-000000000004', 'b2222222-2222-2222-2222-222222222222', 'cb222222-0001-0001-0001-000000000001', '00fb2222-2222-2222-2222-111111111111', '0b222222-2222-2222-2222-333333333333', NOW() - INTERVAL '2 days' + INTERVAL '15 hours', 'concluido', 'Ricardo Dias', '11988200001', 'Combo Econômico', 55.00);
-
--- =====================================================
--- TRANSAÇÕES (Receitas dos concluídos)
+-- TRANSAÇÕES (Receitas dos serviços)
 -- =====================================================
 INSERT INTO transactions (id, barbershop_id, type, amount, description, category, payment_method, created_at) VALUES
 ('1a000001-0001-0001-0001-000000000001', 'a1111111-1111-1111-1111-111111111111', 'receita', 45.00, 'Corte Tradicional - João Silva', 'servico', 'pix', NOW() - INTERVAL '2 days'),
-('1a000001-0001-0001-0001-000000000002', 'a2222222-2222-2222-2222-222222222222', 'receita', 95.00, 'Combo VIP - Roberto Almeida', 'servico', 'cartao_credito', NOW() - INTERVAL '1 day'),
-('1b000001-0001-0001-0001-000000000001', 'b1111111-1111-1111-1111-111111111111', 'receita', 50.00, 'Barba Designer - André Ferreira', 'servico', 'pix', NOW() - INTERVAL '3 days'),
-('1b000001-0001-0001-0001-000000000002', 'b1111111-1111-1111-1111-111111111111', 'receita', 65.00, 'Corte Executive - Lucas Mendes', 'servico', 'dinheiro', NOW() - INTERVAL '1 day'),
-('1b000001-0001-0001-0001-000000000003', 'b2222222-2222-2222-2222-222222222222', 'receita', 55.00, 'Combo Econômico - Ricardo Dias', 'servico', 'pix', NOW() - INTERVAL '2 days');
+('1a000001-0001-0001-0001-000000000002', 'a1111111-1111-1111-1111-111111111111', 'receita', 70.00, 'Combo Corte + Barba - Carlos Oliveira', 'servico', 'cartao_credito', NOW() - INTERVAL '1 day'),
+('1a000001-0001-0001-0001-000000000003', 'a2222222-2222-2222-2222-222222222222', 'receita', 95.00, 'Combo VIP - Roberto Almeida', 'servico', 'cartao_credito', NOW() - INTERVAL '1 day'),
+('1a000001-0001-0001-0001-000000000004', 'a2222222-2222-2222-2222-222222222222', 'receita', 55.00, 'Corte Moderno - Marcos Lima', 'servico', 'pix', NOW() - INTERVAL '3 days'),
+('1b000001-0001-0001-0001-000000000001', 'b1111111-1111-1111-1111-111111111111', 'receita', 65.00, 'Corte Executive - André Ferreira', 'servico', 'pix', NOW() - INTERVAL '3 days'),
+('1b000001-0001-0001-0001-000000000002', 'b1111111-1111-1111-1111-111111111111', 'receita', 50.00, 'Barba Designer - Lucas Mendes', 'servico', 'dinheiro', NOW() - INTERVAL '2 days'),
+('1b000001-0001-0001-0001-000000000003', 'b1111111-1111-1111-1111-111111111111', 'receita', 80.00, 'Tratamento Capilar - Gabriel Rocha', 'servico', 'cartao_debito', NOW() - INTERVAL '1 day'),
+('1b000001-0001-0001-0001-000000000004', 'b2222222-2222-2222-2222-222222222222', 'receita', 55.00, 'Combo Econômico - Ricardo Dias', 'servico', 'pix', NOW() - INTERVAL '2 days'),
+('1b000001-0001-0001-0001-000000000005', 'b2222222-2222-2222-2222-222222222222', 'receita', 40.00, 'Corte Clássico - Thiago Martins', 'servico', 'dinheiro', NOW() - INTERVAL '1 day');
+
+-- =====================================================
+-- NOTA: Staff e Agendamentos requerem usuários reais
+-- =====================================================
+-- Para criar staff e agendamentos, é necessário:
+-- 1. Criar usuários no Supabase Auth (Authentication > Users)
+-- 2. Os profiles são criados automaticamente via trigger
+-- 3. Depois vincular os profiles ao staff
+-- 
+-- Exemplo de criação de staff após ter o user_id:
+-- INSERT INTO staff (id, barbershop_id, user_id, specialties, commission_rate, schedule, active) VALUES
+-- ('uuid-do-staff', 'a1111111-1111-1111-1111-111111111111', 'uuid-do-user', ARRAY['corte', 'barba'], 40, '{}', true);
