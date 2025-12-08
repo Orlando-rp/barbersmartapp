@@ -33,6 +33,7 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true },
+  { name: "Staff Multi-Unidade", href: "/staff-multi-unit", icon: UserCog, multiUnitOnly: true },
   { name: "Agendamentos", href: "/appointments", icon: Calendar },
   { name: "Lista de Espera", href: "/waitlist", icon: ListChecks },
   { name: "Clientes", href: "/clients", icon: Users },
