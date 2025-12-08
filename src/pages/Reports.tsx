@@ -19,7 +19,9 @@ import { SalesChart } from "@/components/reports/SalesChart";
 import { ClientsMetrics } from "@/components/reports/ClientsMetrics";
 import { ServicesChart } from "@/components/reports/ServicesChart";
 import { TeamPerformance } from "@/components/reports/TeamPerformance";
-import { Download, Calendar as CalendarIcon, FileText, FileSpreadsheet } from "lucide-react";
+import { CommissionReport } from "@/components/reports/CommissionReport";
+import { Download, Calendar as CalendarIcon, FileText, FileSpreadsheet, Wallet } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { exportReportToPDF, exportReportToExcel } from "@/lib/reportExport";
@@ -349,20 +351,34 @@ const Reports = () => {
           </CardContent>
         </Card>
 
-        {/* Reports Grid */}
-        <div className="space-y-6">
-          {/* Sales Chart - Full Width */}
-          <SalesChart period={period} />
+        {/* Reports Tabs */}
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList className="bg-muted/50">
+            <TabsTrigger value="general">Visão Geral</TabsTrigger>
+            <TabsTrigger value="commissions" className="gap-2">
+              <Wallet className="h-4 w-4" />
+              Comissões
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ClientsMetrics period={period} />
-            <ServicesChart period={period} />
-          </div>
+          <TabsContent value="general" className="space-y-6">
+            {/* Sales Chart - Full Width */}
+            <SalesChart period={period} />
 
-          {/* Team Performance - Full Width */}
-          <TeamPerformance period={period} />
-        </div>
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ClientsMetrics period={period} />
+              <ServicesChart period={period} />
+            </div>
+
+            {/* Team Performance - Full Width */}
+            <TeamPerformance period={period} />
+          </TabsContent>
+
+          <TabsContent value="commissions">
+            <CommissionReport period={period} />
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );
