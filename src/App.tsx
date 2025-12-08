@@ -27,6 +27,7 @@ import PublicBooking from "./pages/PublicBooking";
 import MyEarnings from "./pages/MyEarnings";
 import MultiUnitDashboard from "./pages/MultiUnitDashboard";
 import StaffMultiUnit from "./pages/StaffMultiUnit";
+import MultiUnitReports from "./pages/MultiUnitReports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             <Route path="/multi-unit" element={<ProtectedRoute><MultiUnitDashboard /></ProtectedRoute>} />
             <Route path="/staff-multi-unit" element={<ProtectedRoute><StaffMultiUnit /></ProtectedRoute>} />
+            <Route path="/multi-unit-reports" element={<ProtectedRoute><MultiUnitReports /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
