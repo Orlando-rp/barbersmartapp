@@ -27,23 +27,8 @@ ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 
 -- PARTE 2: Funções SECURITY DEFINER
 -- ============================================
--- Usando CREATE OR REPLACE para não quebrar dependências existentes
+-- NOTA: has_role já existe no banco, não precisa recriar
 
--- Atualizar função has_role existente (TEXT) para suportar super_admin
-CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role TEXT)
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-    SELECT EXISTS (
-        SELECT 1
-        FROM public.user_roles
-        WHERE user_id = _user_id
-          AND role::TEXT = _role
-    )
-$$;
 
 -- Função para verificar super_admin
 CREATE OR REPLACE FUNCTION public.is_super_admin(_user_id UUID)
