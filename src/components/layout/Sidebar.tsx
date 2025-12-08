@@ -33,7 +33,6 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "Admin SaaS", href: "/saas-admin", icon: Shield, superAdminOnly: true },
   { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true },
   { name: "Staff Multi-Unidade", href: "/staff-multi-unit", icon: UserCog, multiUnitOnly: true },
   { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true },
@@ -51,6 +50,7 @@ const navigation: NavItem[] = [
   { name: "Horários", href: "/business-hours", icon: Clock },
   { name: "Auditoria", href: "/audit", icon: Shield },
   { name: "Configurações", href: "/settings", icon: Settings },
+  { name: "Admin SaaS", href: "/saas-admin", icon: Shield, superAdminOnly: true },
 ];
 
 const Sidebar = () => {
