@@ -28,6 +28,7 @@ import MyEarnings from "./pages/MyEarnings";
 import MultiUnitDashboard from "./pages/MultiUnitDashboard";
 import StaffMultiUnit from "./pages/StaffMultiUnit";
 import MultiUnitReports from "./pages/MultiUnitReports";
+import SaasAdminPortal from "./pages/SaasAdminPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="/multi-unit" element={<ProtectedRoute><MultiUnitDashboard /></ProtectedRoute>} />
             <Route path="/staff-multi-unit" element={<ProtectedRoute><StaffMultiUnit /></ProtectedRoute>} />
             <Route path="/multi-unit-reports" element={<ProtectedRoute><MultiUnitReports /></ProtectedRoute>} />
+            <Route path="/saas-admin" element={<ProtectedRoute><SaasAdminPortal /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
