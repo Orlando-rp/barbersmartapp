@@ -17,12 +17,22 @@ import {
   StarIcon,
   ListChecks,
   Wallet,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
-const navigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  multiUnitOnly?: boolean;
+}
+
+const navigation: NavItem[] = [
   { name: "Dashboard", href: "/", icon: Home },
+  { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true },
   { name: "Agendamentos", href: "/appointments", icon: Calendar },
   { name: "Lista de Espera", href: "/waitlist", icon: ListChecks },
   { name: "Clientes", href: "/clients", icon: Users },
@@ -41,6 +51,15 @@ const navigation = [
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const { barbershops, userRole } = useAuth();
+
+  // Filtrar itens de navegação baseado nas permissões
+  const filteredNavigation = navigation.filter(item => {
+    if (item.multiUnitOnly) {
+      return barbershops.length > 1 || userRole === 'super_admin';
+    }
+    return true;
+  });
 
   return (
     <div className={cn(
@@ -64,8 +83,8 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-2">
-        {navigation.map((item) => (
+      <nav className="flex-1 px-3 space-y-2 overflow-y-auto">
+        {filteredNavigation.map((item) => (
           <NavLink
             key={item.name}
             to={item.href}
