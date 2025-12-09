@@ -57,6 +57,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'checkApi':
+      case 'checkServer':
         // Check if API is online
         endpoint = '/';
         method = 'GET';
