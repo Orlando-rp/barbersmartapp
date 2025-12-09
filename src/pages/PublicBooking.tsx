@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -33,7 +34,7 @@ interface Staff {
   id: string;
   user_id: string;
   schedule: any;
-  profiles: { full_name: string }[] | { full_name: string } | null;
+  profiles: { full_name: string; avatar_url: string | null }[] | { full_name: string; avatar_url: string | null } | null;
 }
 
 interface StaffService {
@@ -61,6 +62,19 @@ const getStaffName = (staff: Staff | null): string => {
     return staff.profiles[0]?.full_name || 'Profissional';
   }
   return staff.profiles.full_name || 'Profissional';
+};
+
+const getStaffAvatar = (staff: Staff | null): string | null => {
+  if (!staff?.profiles) return null;
+  if (Array.isArray(staff.profiles)) {
+    return staff.profiles[0]?.avatar_url || null;
+  }
+  return staff.profiles.avatar_url || null;
+};
+
+const getStaffInitials = (staff: Staff | null): string => {
+  const name = getStaffName(staff);
+  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 };
 
 export default function PublicBooking() {
@@ -142,10 +156,10 @@ export default function PublicBooking() {
         .order('name');
       setServices(servicesData || []);
 
-      // Load active staff with schedule
+      // Load active staff with schedule and avatar
       const { data: staffData } = await supabase
         .from('staff')
-        .select('id, user_id, schedule, profiles(full_name)')
+        .select('id, user_id, schedule, profiles(full_name, avatar_url)')
         .eq('barbershop_id', barbershopId)
         .eq('active', true);
       setStaffList(staffData || []);
@@ -903,9 +917,12 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="h-6 w-6 text-primary" />
-                        </div>
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={getStaffAvatar(staff) || undefined} alt={getStaffName(staff)} />
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                            {getStaffInitials(staff)}
+                          </AvatarFallback>
+                        </Avatar>
                         <h3 className="font-semibold">{getStaffName(staff)}</h3>
                       </div>
                     </div>
