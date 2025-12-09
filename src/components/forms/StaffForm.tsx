@@ -6,9 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X } from "lucide-react";
 import { z } from "zod";
 import { StaffScheduleSection, StaffSchedule } from "./StaffScheduleSection";
 import { StaffServicesSection } from "./StaffServicesSection";
@@ -40,8 +38,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<string>(staff?.user_roles?.[0]?.role || "barbeiro");
   const [commissionRate, setCommissionRate] = useState(staff?.commission_rate || 0);
-  const [specialties, setSpecialties] = useState<string[]>(staff?.specialties || []);
-  const [newSpecialty, setNewSpecialty] = useState("");
+  const [specialties] = useState<string[]>(staff?.specialties || []);
   const [isAlsoBarber, setIsAlsoBarber] = useState(staff?.is_also_barber || false);
 
   // Individual schedule (for single unit)
@@ -121,16 +118,6 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
     }
   };
 
-  const handleAddSpecialty = () => {
-    if (newSpecialty.trim() && !specialties.includes(newSpecialty.trim())) {
-      setSpecialties([...specialties, newSpecialty.trim()]);
-      setNewSpecialty("");
-    }
-  };
-
-  const handleRemoveSpecialty = (specialty: string) => {
-    setSpecialties(specialties.filter(s => s !== specialty));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -507,42 +494,6 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor="specialties">Especialidades</Label>
-        <div className="flex gap-2">
-          <Input
-            id="specialties"
-            value={newSpecialty}
-            onChange={(e) => setNewSpecialty(e.target.value)}
-            placeholder="Ex: Corte masculino, Barba"
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAddSpecialty();
-              }
-            }}
-          />
-          <Button type="button" onClick={handleAddSpecialty} variant="outline">
-            Adicionar
-          </Button>
-        </div>
-        {specialties.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {specialties.map((specialty, idx) => (
-              <Badge key={idx} variant="secondary" className="px-3 py-1">
-                {specialty}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveSpecialty(specialty)}
-                  className="ml-2 hover:text-destructive"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Multi-Unit Schedule Section (shows when user has multiple units) */}
       {(role === 'barbeiro' || isAlsoBarber) && hasMultipleUnits && (
