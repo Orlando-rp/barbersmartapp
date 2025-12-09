@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Calendar, UserPlus, Star, MessageSquare, Check, Trash2 } from "lucide-react";
+import { Bell, Calendar, UserPlus, Star, MessageSquare, Check, Trash2, BellRing, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,11 +8,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { usePushNotifications, sendLocalNotification } from "@/hooks/usePushNotifications";
 
 interface Notification {
   id: string;
@@ -28,6 +30,7 @@ export const NotificationsDropdown = () => {
   const { barbershopId, user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isSupported, permission, isSubscribed, requestPermission, loading: pushLoading } = usePushNotifications();
 
   useEffect(() => {
     if (barbershopId) {
@@ -158,14 +161,24 @@ export const NotificationsDropdown = () => {
         },
         (payload) => {
           const apt = payload.new as any;
-          setNotifications(prev => [{
+          const newNotif = {
             id: `apt-${apt.id}`,
-            type: 'appointment',
+            type: 'appointment' as const,
             title: 'Novo Agendamento',
             message: `${apt.client_name} agendou ${apt.service_name}`,
             read: false,
             created_at: new Date().toISOString(),
-          }, ...prev]);
+          };
+          setNotifications(prev => [newNotif, ...prev]);
+          
+          // Enviar push notification
+          if (permission === 'granted') {
+            sendLocalNotification({
+              title: 'Novo Agendamento',
+              body: `${apt.client_name} agendou ${apt.service_name}`,
+              url: '/appointments',
+            });
+          }
         }
       )
       .on(
@@ -178,14 +191,24 @@ export const NotificationsDropdown = () => {
         },
         (payload) => {
           const review = payload.new as any;
-          setNotifications(prev => [{
+          const newNotif = {
             id: `review-${review.id}`,
-            type: 'review',
+            type: 'review' as const,
             title: 'Nova Avaliação',
             message: `Nova avaliação de ${review.rating} estrelas`,
             read: false,
             created_at: new Date().toISOString(),
-          }, ...prev]);
+          };
+          setNotifications(prev => [newNotif, ...prev]);
+          
+          // Enviar push notification
+          if (permission === 'granted') {
+            sendLocalNotification({
+              title: 'Nova Avaliação',
+              body: `Nova avaliação de ${review.rating} estrelas`,
+              url: '/reviews',
+            });
+          }
         }
       )
       .subscribe();
@@ -327,6 +350,38 @@ export const NotificationsDropdown = () => {
             </div>
           )}
         </ScrollArea>
+
+        {/* Push Notifications Toggle */}
+        <div className="border-t px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {permission === 'granted' ? (
+                <BellRing className="h-4 w-4 text-green-500" />
+              ) : (
+                <BellOff className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="text-xs">Push Notifications</span>
+            </div>
+            {isSupported ? (
+              <Switch
+                checked={permission === 'granted'}
+                onCheckedChange={() => {
+                  if (permission !== 'granted') {
+                    requestPermission();
+                  }
+                }}
+                disabled={pushLoading || permission === 'denied'}
+              />
+            ) : (
+              <span className="text-xs text-muted-foreground">Não suportado</span>
+            )}
+          </div>
+          {permission === 'denied' && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Bloqueado - ative nas configurações do navegador
+            </p>
+          )}
+        </div>
 
         {notifications.length > 0 && (
           <div className="border-t px-4 py-2">
