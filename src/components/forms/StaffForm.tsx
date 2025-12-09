@@ -67,6 +67,14 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
     setSelectedServices(services);
   }, []);
 
+  const handleScheduleChange = useCallback((newSchedule: StaffSchedule | null) => {
+    setSchedule(newSchedule);
+  }, []);
+
+  const handleUseCustomScheduleChange = useCallback((value: boolean) => {
+    setUseCustomSchedule(value);
+  }, []);
+
   // Load staff services if editing
   useEffect(() => {
     if (staff?.id) {
@@ -517,9 +525,9 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       {(role === 'barbeiro' || isAlsoBarber) && !hasMultipleUnits && (
         <StaffScheduleSection
           schedule={schedule}
-          onScheduleChange={setSchedule}
+          onScheduleChange={handleScheduleChange}
           useCustomSchedule={useCustomSchedule}
-          onUseCustomScheduleChange={setUseCustomSchedule}
+          onUseCustomScheduleChange={handleUseCustomScheduleChange}
         />
       )}
 
