@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -79,6 +79,7 @@ export const StaffUnitsScheduleSection = ({
 }: StaffUnitsScheduleSectionProps) => {
   const [barbershops, setBarbershops] = useState<Barbershop[]>([]);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     if (barbershopIds.length > 0) {
@@ -86,12 +87,13 @@ export const StaffUnitsScheduleSection = ({
     }
   }, [barbershopIds]);
 
-  // Initialize schedule when barbershops are loaded
+  // Initialize schedule when barbershops are loaded (only once)
   useEffect(() => {
-    if (barbershops.length > 0 && !schedule) {
+    if (barbershops.length > 0 && !schedule && !initializedRef.current) {
+      initializedRef.current = true;
       onScheduleChange(createDefaultSchedule(barbershops[0]?.id || null));
     }
-  }, [barbershops, schedule]);
+  }, [barbershops]);
 
   const fetchBarbershops = async () => {
     try {
