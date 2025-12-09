@@ -68,6 +68,7 @@ import { ptBR } from "date-fns/locale";
 import { GlobalEvolutionConfig } from "@/components/saas/GlobalEvolutionConfig";
 import { GlobalChatbotConfig } from "@/components/saas/GlobalChatbotConfig";
 import { WhatsAppStatusPanel } from "@/components/saas/WhatsAppStatusPanel";
+import { SocialAuthConfig } from "@/components/saas/SocialAuthConfig";
 import {
   BarChart,
   Bar,
@@ -888,6 +889,13 @@ const SaasAdminPortal = () => {
                   🤖 Chatbot IA (OpenAI)
                 </h2>
                 <GlobalChatbotConfig />
+              </div>
+
+              <div className="border-t border-slate-800 pt-8">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+                  🔐 Login Social (OAuth)
+                </h2>
+                <SocialAuthConfig />
               </div>
             </div>
           </TabsContent>
