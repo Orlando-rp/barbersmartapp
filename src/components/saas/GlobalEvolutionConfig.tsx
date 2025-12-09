@@ -54,22 +54,21 @@ export const GlobalEvolutionConfig = () => {
     try {
       setLoading(true);
       
-      // Buscar configuração global (barbershop_id = null)
+      // Buscar configuração global da tabela system_config
       const { data, error } = await supabase
-        .from('whatsapp_config')
+        .from('system_config')
         .select('*')
-        .is('barbershop_id', null)
-        .eq('provider', 'evolution')
+        .eq('key', 'evolution_api')
         .maybeSingle();
 
-      if (error && !error.message?.includes('whatsapp_config')) {
+      if (error && !error.message?.includes('system_config')) {
         console.error('Erro ao carregar config global:', error);
       }
 
-      if (data?.config) {
+      if (data?.value) {
         setConfig({
-          apiUrl: data.config.api_url || '',
-          apiKey: data.config.api_key || ''
+          apiUrl: data.value.api_url || '',
+          apiKey: data.value.api_key || ''
         });
       }
     } catch (error) {
@@ -88,19 +87,18 @@ export const GlobalEvolutionConfig = () => {
     try {
       setSaving(true);
 
+      // Usar upsert com a tabela system_config
       const { error } = await supabase
-        .from('whatsapp_config')
+        .from('system_config')
         .upsert({
-          barbershop_id: null,
-          provider: 'evolution',
-          config: {
+          key: 'evolution_api',
+          value: {
             api_url: config.apiUrl,
             api_key: config.apiKey
           },
-          is_active: true,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'barbershop_id,provider'
+          onConflict: 'key'
         });
 
       if (error) throw error;

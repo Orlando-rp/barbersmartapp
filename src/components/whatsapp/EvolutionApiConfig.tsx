@@ -112,19 +112,18 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         }
         setIsUsingGlobalConfig(false);
       } else {
-        // Se não houver config da barbearia, buscar config global
+        // Se não houver config da barbearia, buscar config global da tabela system_config
         const { data: globalConfig } = await supabase
-          .from('whatsapp_config')
+          .from('system_config')
           .select('*')
-          .is('barbershop_id', null)
-          .eq('provider', 'evolution')
+          .eq('key', 'evolution_api')
           .maybeSingle();
 
-        if (globalConfig?.config) {
+        if (globalConfig?.value) {
           // Usar config global mas com instanceName local
           setConfig({
-            apiUrl: globalConfig.config.api_url || '',
-            apiKey: globalConfig.config.api_key || '',
+            apiUrl: globalConfig.value.api_url || '',
+            apiKey: globalConfig.value.api_key || '',
             instanceName: generatedInstanceName
           });
           setIsUsingGlobalConfig(true);
