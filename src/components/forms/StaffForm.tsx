@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +55,9 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
 
+  // Memoize barbershop IDs to prevent unnecessary re-renders
+  const barbershopIds = useMemo(() => barbershops.map(b => b.id), [barbershops]);
+  
   // Check if user has multiple units
   const hasMultipleUnits = barbershops.length > 1;
 
@@ -533,7 +536,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       {/* Multi-Unit Schedule Section (shows when user has multiple units) */}
       {(role === 'barbeiro' || isAlsoBarber) && hasMultipleUnits && (
         <StaffUnitsScheduleSection
-          barbershopIds={barbershops.map(b => b.id)}
+          barbershopIds={barbershopIds}
           schedule={unitSchedule}
           onScheduleChange={setUnitSchedule}
         />

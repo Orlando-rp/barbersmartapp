@@ -80,20 +80,29 @@ export const StaffUnitsScheduleSection = ({
   const [barbershops, setBarbershops] = useState<Barbershop[]>([]);
   const [loading, setLoading] = useState(true);
   const initializedRef = useRef(false);
+  const lastIdsRef = useRef<string>('');
+
+  // Memoize IDs string for comparison
+  const idsString = barbershopIds.sort().join(',');
 
   useEffect(() => {
-    if (barbershopIds.length > 0) {
+    // Only fetch if IDs actually changed
+    if (idsString !== lastIdsRef.current && barbershopIds.length > 0) {
+      lastIdsRef.current = idsString;
       fetchBarbershops();
     }
-  }, [barbershopIds]);
+  }, [idsString]);
 
   // Initialize schedule when barbershops are loaded (only once)
   useEffect(() => {
     if (barbershops.length > 0 && !schedule && !initializedRef.current) {
       initializedRef.current = true;
-      onScheduleChange(createDefaultSchedule(barbershops[0]?.id || null));
+      // Use setTimeout to avoid state update during render
+      setTimeout(() => {
+        onScheduleChange(createDefaultSchedule(barbershops[0]?.id || null));
+      }, 0);
     }
-  }, [barbershops]);
+  }, [barbershops.length, schedule]);
 
   const fetchBarbershops = async () => {
     try {
