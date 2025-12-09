@@ -34,6 +34,10 @@ interface EvolutionConfig {
   instanceName: string;
 }
 
+interface EvolutionApiConfigProps {
+  isSaasAdmin?: boolean;
+}
+
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 // Gera nome único da instância baseado no barbershopId
@@ -42,7 +46,7 @@ const generateInstanceName = (barbershopId: string): string => {
   return `bs-${shortId}`;
 };
 
-export const EvolutionApiConfig = () => {
+export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigProps) => {
   const { user, barbershopId } = useAuth();
   const generatedInstanceName = barbershopId ? generateInstanceName(barbershopId) : '';
   
@@ -413,69 +417,83 @@ export const EvolutionApiConfig = () => {
         </AlertDescription>
       </Alert>
 
-      {/* Server Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-primary" />
-            Configuração do Servidor
-          </CardTitle>
-          <CardDescription>
-            Configure a conexão com seu servidor Evolution API
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="api-url">URL do Servidor</Label>
-            <Input
-              id="api-url"
-              type="url"
-              value={config.apiUrl}
-              onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
-              placeholder="https://api.evolution.seudominio.com"
-            />
-            <p className="text-xs text-muted-foreground">
-              URL base do seu servidor Evolution API
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="api-key">API Key (Global)</Label>
-            <Input
-              id="api-key"
-              type="password"
-              value={config.apiKey}
-              onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-              placeholder="sua-api-key-global"
-            />
-            <p className="text-xs text-muted-foreground">
-              Chave de API configurada no servidor Evolution
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="instance-name">Nome da Instância</Label>
-              <Badge variant="secondary" className="text-xs">Gerado automaticamente</Badge>
+      {/* Server Configuration - Only for SaaS Admin */}
+      {isSaasAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-primary" />
+              Configuração do Servidor
+            </CardTitle>
+            <CardDescription>
+              Configure a conexão com seu servidor Evolution API
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="api-url">URL do Servidor</Label>
+              <Input
+                id="api-url"
+                type="url"
+                value={config.apiUrl}
+                onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
+                placeholder="https://api.evolution.seudominio.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                URL base do seu servidor Evolution API
+              </p>
             </div>
-            <Input
-              id="instance-name"
-              type="text"
-              value={config.instanceName}
-              readOnly
-              className="bg-muted cursor-not-allowed"
-            />
-            <p className="text-xs text-muted-foreground">
-              Identificador único gerado com base no ID da sua barbearia
-            </p>
-          </div>
 
-          <Button onClick={saveConfig} disabled={saving} className="w-full">
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Salvando..." : "Salvar Configuração"}
-          </Button>
-        </CardContent>
-      </Card>
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API Key (Global)</Label>
+              <Input
+                id="api-key"
+                type="password"
+                value={config.apiKey}
+                onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+                placeholder="sua-api-key-global"
+              />
+              <p className="text-xs text-muted-foreground">
+                Chave de API configurada no servidor Evolution
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="instance-name">Nome da Instância</Label>
+                <Badge variant="secondary" className="text-xs">Gerado automaticamente</Badge>
+              </div>
+              <Input
+                id="instance-name"
+                type="text"
+                value={config.instanceName}
+                readOnly
+                className="bg-muted cursor-not-allowed"
+              />
+              <p className="text-xs text-muted-foreground">
+                Identificador único gerado com base no ID da sua barbearia
+              </p>
+            </div>
+
+            <Button onClick={saveConfig} disabled={saving} className="w-full">
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? "Salvando..." : "Salvar Configuração"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Info for barbershop users when not configured */}
+      {!isSaasAdmin && !config.apiUrl && (
+        <Alert className="border-amber-500/50 bg-amber-500/5">
+          <Info className="h-4 w-4 text-amber-500" />
+          <AlertTitle className="text-amber-600">Configuração Pendente</AlertTitle>
+          <AlertDescription className="text-amber-600/90">
+            O servidor Evolution API ainda não foi configurado pelo administrador do sistema. 
+            Entre em contato com o suporte para habilitar o WhatsApp.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Connection Status */}
       <Card>
