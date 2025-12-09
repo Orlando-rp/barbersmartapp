@@ -20,7 +20,7 @@ interface AuthContextType {
   selectedBarbershopId: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, phone: string, isAlsoBarber?: boolean) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   setSelectedBarbershop: (barbershopId: string | null) => void;
   refreshBarbershops: () => Promise<void>;
@@ -214,11 +214,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, phone: string) => {
+  const signUp = async (email: string, password: string, fullName: string, phone: string, isAlsoBarber: boolean = false) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -226,6 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             full_name: fullName,
             phone: phone,
+            is_also_barber: isAlsoBarber,
           },
         },
       });
@@ -236,6 +237,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: error.message,
           variant: 'destructive',
         });
+      } else if (data.user && isAlsoBarber) {
+        // Store the isAlsoBarber preference in localStorage to be used when barbershop is created
+        localStorage.setItem('pendingBarberRegistration', JSON.stringify({
+          userId: data.user.id,
+          fullName,
+          phone,
+          isAlsoBarber: true
+        }));
       }
       
       return { error };

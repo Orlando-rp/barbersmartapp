@@ -170,12 +170,46 @@ const Barbershops = () => {
             .insert({
               user_id: user.id,
               barbershop_id: newBarbershop.id,
+              is_primary: barbershops.length === 0, // Primeira barbearia é a principal
             });
           
           if (linkError) {
             console.error('Erro ao associar usuário à barbearia:', linkError);
             toast.error('Barbearia criada, mas houve erro ao associá-la ao usuário.');
           } else {
+            // Verificar se há registro pendente de barbeiro (do cadastro inicial)
+            const pendingBarberData = localStorage.getItem('pendingBarberRegistration');
+            if (pendingBarberData) {
+              try {
+                const barberData = JSON.parse(pendingBarberData);
+                if (barberData.isAlsoBarber && barberData.userId === user.id) {
+                  // Criar registro de staff para o admin que também atende
+                  const { error: staffError } = await supabase
+                    .from('staff')
+                    .insert({
+                      user_id: user.id,
+                      barbershop_id: newBarbershop.id,
+                      role: 'admin',
+                      is_also_barber: true,
+                      specialties: [],
+                      commission_rate: 0,
+                      active: true,
+                    });
+                  
+                  if (staffError) {
+                    console.error('Erro ao criar registro de barbeiro:', staffError);
+                  } else {
+                    toast.success('Você foi registrado como barbeiro nesta unidade!');
+                  }
+                  
+                  // Limpar o registro pendente
+                  localStorage.removeItem('pendingBarberRegistration');
+                }
+              } catch (e) {
+                console.error('Erro ao processar registro de barbeiro:', e);
+              }
+            }
+            
             // Atualizar automaticamente o seletor de barbearias
             await refreshBarbershops();
           }

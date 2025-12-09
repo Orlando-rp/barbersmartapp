@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Scissors } from 'lucide-react';
 import { z } from 'zod';
 
@@ -20,6 +21,7 @@ const signupSchema = z.object({
   phone: z.string().min(10, { message: 'Telefone inválido' }),
   password: z.string().min(6, { message: 'Senha deve ter no mínimo 6 caracteres' }),
   confirmPassword: z.string(),
+  isAlsoBarber: z.boolean(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem',
   path: ['confirmPassword'],
@@ -41,6 +43,7 @@ const Auth = () => {
   const [signupPhone, setSignupPhone] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [signupIsAlsoBarber, setSignupIsAlsoBarber] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -252,6 +255,22 @@ const Auth = () => {
                   {errors.confirmPassword && (
                     <p className="text-sm text-destructive">{errors.confirmPassword}</p>
                   )}
+                </div>
+
+                <div className="flex items-start space-x-3 p-4 bg-muted rounded-lg">
+                  <Checkbox
+                    id="signup-is-barber"
+                    checked={signupIsAlsoBarber}
+                    onCheckedChange={(checked) => setSignupIsAlsoBarber(checked === true)}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label htmlFor="signup-is-barber" className="cursor-pointer font-medium">
+                      Também atendo clientes como barbeiro
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Marque se você realiza atendimentos e deseja aparecer na agenda de agendamentos
+                    </p>
+                  </div>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
