@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Scissors, Building2, Loader2, Plus, Trash2, Star, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Scissors, Building2, Loader2, Plus, Trash2, Star, ArrowRight, ArrowLeft, Link2 } from 'lucide-react';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const phoneSchema = z.string().min(10, { message: 'Telefone inválido' });
 
@@ -23,10 +24,19 @@ interface BarbershopUnit {
   isPrimary: boolean;
 }
 
+interface ExistingAccount {
+  hasProfile: boolean;
+  hasBarbershops: boolean;
+  barbershops: { id: string; name: string }[];
+  profile: { full_name: string; phone: string } | null;
+}
+
 const CompleteProfile = () => {
   const navigate = useNavigate();
   const { user, refreshBarbershops } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [checkingAccount, setCheckingAccount] = useState(true);
+  const [existingAccount, setExistingAccount] = useState<ExistingAccount | null>(null);
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState<any>({});
 
@@ -40,6 +50,92 @@ const CompleteProfile = () => {
     { id: '1', name: '', address: '', phone: '', email: '', isPrimary: true }
   ]);
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
+
+  // Check for existing account on mount
+  useEffect(() => {
+    if (user?.email) {
+      checkExistingAccount();
+    } else {
+      setCheckingAccount(false);
+    }
+  }, [user?.email]);
+
+  const checkExistingAccount = async () => {
+    if (!user) return;
+    
+    setCheckingAccount(true);
+    try {
+      // Check if there's an existing profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone, barbershop_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      // Check for existing barbershops via user_barbershops
+      const { data: userBarbershops } = await supabase
+        .from('user_barbershops')
+        .select(`
+          barbershop_id,
+          barbershops:barbershop_id (
+            id,
+            name
+          )
+        `)
+        .eq('user_id', user.id);
+
+      const hasBarbershops = userBarbershops && userBarbershops.length > 0;
+      const hasProfile = !!profileData;
+
+      if (hasBarbershops || hasProfile) {
+        const barbershops = userBarbershops?.map((ub: any) => ({
+          id: ub.barbershops?.id || ub.barbershop_id,
+          name: ub.barbershops?.name || 'Barbearia'
+        })) || [];
+
+        setExistingAccount({
+          hasProfile,
+          hasBarbershops: !!hasBarbershops,
+          barbershops,
+          profile: profileData ? {
+            full_name: profileData.full_name || '',
+            phone: profileData.phone || ''
+          } : null
+        });
+
+        // Pre-fill form with existing data
+        if (profileData?.full_name) setFullName(profileData.full_name);
+        if (profileData?.phone) setPhone(profileData.phone);
+      }
+    } catch (error) {
+      console.error('Error checking existing account:', error);
+    } finally {
+      setCheckingAccount(false);
+    }
+  };
+
+  const handleLinkExistingAccount = async () => {
+    if (!user || !existingAccount) return;
+    
+    setLoading(true);
+    try {
+      // Just refresh barbershops - account is already linked
+      await refreshBarbershops();
+      
+      toast.success('Conta vinculada com sucesso!', {
+        description: 'Você agora pode acessar sua(s) barbearia(s) com o login social.'
+      });
+      
+      navigate('/');
+    } catch (error: any) {
+      console.error('Erro ao vincular conta:', error);
+      toast.error('Erro ao vincular conta', {
+        description: error.message
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleStep1Next = () => {
     setErrors({});
@@ -235,6 +331,84 @@ const CompleteProfile = () => {
   if (!user) {
     navigate('/auth');
     return null;
+  }
+
+  // Show loading while checking for existing account
+  if (checkingAccount) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
+        <Card className="w-full max-w-lg">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Verificando sua conta...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show link account option if existing account found
+  if (existingAccount && existingAccount.hasBarbershops) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="text-center space-y-2">
+            <div className="flex justify-center mb-2">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Link2 className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl">Conta Existente Encontrada</CardTitle>
+            <CardDescription>
+              Identificamos que você já tem uma conta cadastrada com este email
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <Building2 className="h-4 w-4" />
+              <AlertTitle>Barbearias vinculadas</AlertTitle>
+              <AlertDescription>
+                <ul className="mt-2 space-y-1">
+                  {existingAccount.barbershops.map((b) => (
+                    <li key={b.id} className="flex items-center gap-2">
+                      <Scissors className="h-3 w-3" />
+                      {b.name}
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+
+            <p className="text-sm text-muted-foreground text-center">
+              Deseja vincular seu login social a esta conta existente?
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleLinkExistingAccount} disabled={loading} className="w-full">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Vinculando...
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Vincular Conta
+                  </>
+                )}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setExistingAccount(null)}
+                disabled={loading}
+              >
+                Criar Nova Conta
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

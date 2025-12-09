@@ -121,7 +121,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const hasBarbershops = userBarbershopsData && userBarbershopsData.length > 0;
       const hasProfileWithBarbershop = profileData?.barbershop_id;
       
-      if (!hasBarbershops && !hasProfileWithBarbershop && !roleData) {
+      // Check if this is a social login (provider is not email)
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const isSocialLogin = currentUser?.app_metadata?.provider && 
+                           currentUser.app_metadata.provider !== 'email';
+      
+      // Only require profile completion for social logins without existing data
+      if (!hasBarbershops && !hasProfileWithBarbershop && !roleData && isSocialLogin) {
         // User logged in via social auth but has no barbershop - needs profile completion
         setNeedsProfileCompletion(true);
         setLoading(false);
