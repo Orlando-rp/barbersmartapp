@@ -111,14 +111,16 @@ export const StaffUnitsScheduleSection = ({
     }
   };
 
-  // Create default schedule based on loaded barbershops
+  // Create stable default schedule - only recreate when barbershops change
   const defaultScheduleForUnit = useMemo(() => 
     createDefaultSchedule(barbershops[0]?.id || null), 
-    [barbershops]
+    [barbershops.length > 0 ? barbershops[0]?.id : null]
   );
 
-  // Use schedule from props or default
-  const currentSchedule = schedule || defaultScheduleForUnit;
+  // Memoize current schedule to prevent new object reference on each render
+  const currentSchedule = useMemo(() => {
+    return schedule || defaultScheduleForUnit;
+  }, [schedule, defaultScheduleForUnit]);
 
   const updateDaySchedule = (day: keyof StaffUnitSchedule, field: keyof DayUnitSchedule, value: any) => {
     const daySchedule = currentSchedule[day] || defaultDaySchedule;
