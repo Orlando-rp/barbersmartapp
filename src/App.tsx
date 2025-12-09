@@ -31,6 +31,7 @@ import MultiUnitReports from "./pages/MultiUnitReports";
 import SaasAdminPortal from "./pages/SaasAdminPortal";
 import Barbershops from "./pages/Barbershops";
 import ChatbotSettings from "./pages/ChatbotSettings";
+import CompleteProfile from "./pages/CompleteProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
             
             {/* Auth Routes */}
             <Route path="/auth" element={<Auth />} />
+            <Route path="/complete-profile" element={<ProtectedRoute><CompleteProfile /></ProtectedRoute>} />
             
             {/* Protected Routes */}
             <Route path="/debug" element={<ProtectedRoute><Debug /></ProtectedRoute>} />

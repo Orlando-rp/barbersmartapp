@@ -19,6 +19,7 @@ interface AuthContextType {
   barbershops: Barbershop[];
   selectedBarbershopId: string | null;
   loading: boolean;
+  needsProfileCompletion: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string, phone: string, isAlsoBarber?: boolean) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -36,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [barbershops, setBarbershops] = useState<Barbershop[]>([]);
   const [selectedBarbershopId, setSelectedBarbershopId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setBarbershopId(null);
           setBarbershops([]);
           setSelectedBarbershopId(null);
+          setNeedsProfileCompletion(false);
         }
       }
     );
@@ -90,6 +93,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserRole(roleData.role as UserRole);
       }
 
+      // Check if user has a profile with barbershop
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, barbershop_id')
+        .eq('id', userId)
+        .maybeSingle();
+
       // Fetch all barbershops the user has access to
       const { data: userBarbershopsData, error: userBarbershopsError } = await supabase
         .from('user_barbershops')
@@ -105,13 +115,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (userBarbershopsError) {
         console.error('Error fetching user barbershops:', userBarbershopsError);
-        // Fallback: try to get from profiles
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('barbershop_id')
-          .eq('id', userId)
-          .maybeSingle();
+      }
 
+      // Check if user needs to complete profile (no barbershop association)
+      const hasBarbershops = userBarbershopsData && userBarbershopsData.length > 0;
+      const hasProfileWithBarbershop = profileData?.barbershop_id;
+      
+      if (!hasBarbershops && !hasProfileWithBarbershop && !roleData) {
+        // User logged in via social auth but has no barbershop - needs profile completion
+        setNeedsProfileCompletion(true);
+        setLoading(false);
+        return;
+      }
+
+      setNeedsProfileCompletion(false);
+
+      if (userBarbershopsError || !hasBarbershops) {
+        // Fallback: try to get from profiles
         if (profileData?.barbershop_id) {
           const { data: barbershopData } = await supabase
             .from('barbershops')
@@ -130,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSelectedBarbershopId(profileData.barbershop_id);
           }
         }
-      } else if (userBarbershopsData && userBarbershopsData.length > 0) {
+      } else if (hasBarbershops) {
         const mappedBarbershops: Barbershop[] = userBarbershopsData.map((ub: any) => ({
           id: ub.barbershops?.id || ub.barbershop_id,
           name: ub.barbershops?.name || 'Barbearia',
@@ -145,32 +165,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setBarbershopId(defaultBarbershop.id);
         setSelectedBarbershopId(defaultBarbershop.id);
-      } else {
-        // No user_barbershops found, try profiles fallback
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('barbershop_id')
-          .eq('id', userId)
-          .maybeSingle();
-
-        if (profileData?.barbershop_id) {
-          const { data: barbershopData } = await supabase
-            .from('barbershops')
-            .select('id, name')
-            .eq('id', profileData.barbershop_id)
-            .maybeSingle();
-
-          if (barbershopData) {
-            const fallbackBarbershop = {
-              id: barbershopData.id,
-              name: barbershopData.name,
-              is_primary: true
-            };
-            setBarbershops([fallbackBarbershop]);
-            setBarbershopId(profileData.barbershop_id);
-            setSelectedBarbershopId(profileData.barbershop_id);
-          }
-        }
       }
     } catch (error) {
       console.error('Error in fetchUserData:', error);
@@ -262,6 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBarbershopId(null);
       setBarbershops([]);
       setSelectedBarbershopId(null);
+      setNeedsProfileCompletion(false);
       toast({
         title: 'Logout realizado',
         description: 'Você saiu da sua conta com sucesso.',
@@ -285,6 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         barbershops,
         selectedBarbershopId,
         loading,
+        needsProfileCompletion,
         signIn,
         signUp,
         signOut,
