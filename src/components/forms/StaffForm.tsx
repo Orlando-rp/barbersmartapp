@@ -11,6 +11,7 @@ import { z } from "zod";
 import { StaffScheduleSection, StaffSchedule } from "./StaffScheduleSection";
 import { StaffServicesSection } from "./StaffServicesSection";
 import { StaffUnitsScheduleSection, StaffUnitSchedule } from "./StaffUnitsScheduleSection";
+import { StaffAvatarUpload } from "@/components/profile/StaffAvatarUpload";
 
 interface StaffFormProps {
   staff?: any;
@@ -51,6 +52,9 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   // Services selection
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
+
+  // Avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(staff?.profiles?.avatar_url || null);
 
   // Memoize barbershop IDs to prevent unnecessary re-renders
   const barbershopIds = useMemo(() => barbershops.map(b => b.id), [barbershops]);
@@ -409,6 +413,19 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Avatar Upload - Only show when editing existing staff */}
+      {staff && (
+        <div className="flex justify-center pb-4 border-b">
+          <StaffAvatarUpload
+            userId={staff.user_id}
+            currentAvatarUrl={avatarUrl}
+            fullName={fullName}
+            onAvatarUpdate={setAvatarUrl}
+            size="md"
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="fullName">Nome Completo *</Label>
