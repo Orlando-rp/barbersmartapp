@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Scissors, Building2, User, Check, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Scissors, Building2, Check, ArrowRight, ArrowLeft, Plus, Trash2, Star } from 'lucide-react';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -28,12 +29,14 @@ const step1Schema = z.object({
   path: ['confirmPassword'],
 });
 
-const step2Schema = z.object({
-  barbershopName: z.string().min(3, { message: 'Nome da barbearia deve ter no mínimo 3 caracteres' }),
-  barbershopAddress: z.string().optional(),
-  barbershopPhone: z.string().optional(),
-  barbershopEmail: z.string().email({ message: 'Email inválido' }).optional().or(z.literal('')),
-});
+interface BarbershopUnit {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  isPrimary: boolean;
+}
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -56,11 +59,13 @@ const Auth = () => {
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [signupIsAlsoBarber, setSignupIsAlsoBarber] = useState(false);
 
-  // Step 2: Barbershop data
-  const [barbershopName, setBarbershopName] = useState('');
-  const [barbershopAddress, setBarbershopAddress] = useState('');
-  const [barbershopPhone, setBarbershopPhone] = useState('');
-  const [barbershopEmail, setBarbershopEmail] = useState('');
+  // Step 2: Multiple barbershops
+  const [barbershopUnits, setBarbershopUnits] = useState<BarbershopUnit[]>([
+    { id: '1', name: '', address: '', phone: '', email: '', isPrimary: true }
+  ]);
+
+  // Current unit being edited
+  const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -125,20 +130,70 @@ const Auth = () => {
     }
   };
 
+  const updateCurrentUnit = (field: keyof BarbershopUnit, value: string | boolean) => {
+    setBarbershopUnits(prev => prev.map((unit, idx) => 
+      idx === currentUnitIndex ? { ...unit, [field]: value } : unit
+    ));
+  };
+
+  const addNewUnit = () => {
+    const newUnit: BarbershopUnit = {
+      id: Date.now().toString(),
+      name: '',
+      address: '',
+      phone: '',
+      email: '',
+      isPrimary: false,
+    };
+    setBarbershopUnits(prev => [...prev, newUnit]);
+    setCurrentUnitIndex(barbershopUnits.length);
+  };
+
+  const removeUnit = (index: number) => {
+    if (barbershopUnits.length === 1) {
+      toast.error('Você precisa ter pelo menos uma unidade');
+      return;
+    }
+    
+    const unitToRemove = barbershopUnits[index];
+    const newUnits = barbershopUnits.filter((_, idx) => idx !== index);
+    
+    // If removing the primary unit, set the first one as primary
+    if (unitToRemove.isPrimary && newUnits.length > 0) {
+      newUnits[0].isPrimary = true;
+    }
+    
+    setBarbershopUnits(newUnits);
+    setCurrentUnitIndex(Math.min(currentUnitIndex, newUnits.length - 1));
+  };
+
+  const setPrimaryUnit = (index: number) => {
+    setBarbershopUnits(prev => prev.map((unit, idx) => ({
+      ...unit,
+      isPrimary: idx === index
+    })));
+  };
+
+  const validateUnits = (): boolean => {
+    for (let i = 0; i < barbershopUnits.length; i++) {
+      if (!barbershopUnits[i].name || barbershopUnits[i].name.length < 3) {
+        setCurrentUnitIndex(i);
+        setErrors({ barbershopName: 'Nome da barbearia deve ter no mínimo 3 caracteres' });
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleSignupComplete = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    
+    if (!validateUnits()) return;
+    
     setLoading(true);
 
     try {
-      // Validate step 2
-      step2Schema.parse({
-        barbershopName,
-        barbershopAddress,
-        barbershopPhone,
-        barbershopEmail,
-      });
-
       const redirectUrl = `${window.location.origin}/`;
 
       // 1. Create user in Supabase Auth
@@ -159,68 +214,77 @@ const Auth = () => {
       if (!authData.user) throw new Error('Falha ao criar usuário');
 
       const userId = authData.user.id;
+      let primaryBarbershopId: string | null = null;
 
-      // 2. Create barbershop
-      const { data: barbershopData, error: barbershopError } = await supabase
-        .from('barbershops')
-        .insert({
-          name: barbershopName,
-          address: barbershopAddress || null,
-          phone: barbershopPhone || signupPhone,
-          email: barbershopEmail || signupEmail,
-          active: true,
-        })
-        .select()
-        .single();
+      // 2. Create all barbershops
+      for (const unit of barbershopUnits) {
+        const { data: barbershopData, error: barbershopError } = await supabase
+          .from('barbershops')
+          .insert({
+            name: unit.name,
+            address: unit.address || null,
+            phone: unit.phone || signupPhone,
+            email: unit.email || signupEmail,
+            active: true,
+          })
+          .select()
+          .single();
 
-      if (barbershopError) throw barbershopError;
+        if (barbershopError) throw barbershopError;
 
-      const barbershopId = barbershopData.id;
+        const barbershopId = barbershopData.id;
 
-      // 3. Update profile with barbershop_id
-      await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          barbershop_id: barbershopId,
-          full_name: signupFullName,
-          phone: signupPhone,
-        });
+        if (unit.isPrimary) {
+          primaryBarbershopId = barbershopId;
+        }
 
-      // 4. Create user_barbershops entry
-      await supabase
-        .from('user_barbershops')
-        .insert({
-          user_id: userId,
-          barbershop_id: barbershopId,
-          is_primary: true,
-        });
-
-      // 5. Create admin role
-      await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'admin',
-          barbershop_id: barbershopId,
-        });
-
-      // 6. If also barber, create staff entry
-      if (signupIsAlsoBarber) {
+        // 3. Create user_barbershops entry
         await supabase
-          .from('staff')
+          .from('user_barbershops')
           .insert({
             user_id: userId,
             barbershop_id: barbershopId,
-            is_also_barber: true,
-            specialties: ['Corte', 'Barba'],
-            commission_rate: 50,
-            active: true,
+            is_primary: unit.isPrimary,
+          });
+
+        // 4. Create admin role for each barbershop
+        await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: 'admin',
+            barbershop_id: barbershopId,
+          });
+
+        // 5. If also barber, create staff entry for each barbershop
+        if (signupIsAlsoBarber) {
+          await supabase
+            .from('staff')
+            .insert({
+              user_id: userId,
+              barbershop_id: barbershopId,
+              is_also_barber: true,
+              specialties: ['Corte', 'Barba'],
+              commission_rate: 50,
+              active: true,
+            });
+        }
+      }
+
+      // 6. Update profile with primary barbershop_id
+      if (primaryBarbershopId) {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: userId,
+            barbershop_id: primaryBarbershopId,
+            full_name: signupFullName,
+            phone: signupPhone,
           });
       }
 
       toast.success('Conta criada com sucesso!', {
-        description: 'Bem-vindo ao Barber Smart!',
+        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Bem-vindo ao Barber Smart!`,
       });
 
       // Refresh barbershops in context
@@ -229,24 +293,15 @@ const Auth = () => {
       navigate('/');
     } catch (error: any) {
       console.error('Erro no cadastro:', error);
-      
-      if (error instanceof z.ZodError) {
-        const formattedErrors: any = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            formattedErrors[err.path[0]] = err.message;
-          }
-        });
-        setErrors(formattedErrors);
-      } else {
-        toast.error('Erro ao criar conta', {
-          description: error.message,
-        });
-      }
+      toast.error('Erro ao criar conta', {
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  const currentUnit = barbershopUnits[currentUnitIndex];
 
   const renderSignupStep1 = () => (
     <div className="space-y-4">
@@ -259,7 +314,7 @@ const Auth = () => {
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-sm font-medium">
           2
         </div>
-        <span className="text-muted-foreground">Barbearia</span>
+        <span className="text-muted-foreground">Barbearias</span>
       </div>
 
       <div className="space-y-2">
@@ -372,70 +427,134 @@ const Auth = () => {
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-medium">
           2
         </div>
-        <span className="font-medium">Barbearia</span>
+        <span className="font-medium">Barbearias</span>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="barbershop-name">Nome da Barbearia *</Label>
-        <Input
-          id="barbershop-name"
-          type="text"
-          placeholder="Ex: Barbearia do João"
-          value={barbershopName}
-          onChange={(e) => setBarbershopName(e.target.value)}
-          required
-        />
-        {errors.barbershopName && (
-          <p className="text-sm text-destructive">{errors.barbershopName}</p>
-        )}
+      {/* Unit tabs */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {barbershopUnits.map((unit, idx) => (
+          <Button
+            key={unit.id}
+            type="button"
+            variant={idx === currentUnitIndex ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCurrentUnitIndex(idx)}
+            className="relative"
+          >
+            {unit.isPrimary && <Star className="h-3 w-3 mr-1 fill-current" />}
+            {unit.name || `Unidade ${idx + 1}`}
+            {barbershopUnits.length > 1 && (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeUnit(idx);
+                }}
+                className="ml-2 hover:text-destructive cursor-pointer"
+              >
+                <Trash2 className="h-3 w-3" />
+              </span>
+            )}
+          </Button>
+        ))}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={addNewUnit}
+          className="text-primary"
+        >
+          <Plus className="h-4 w-4 mr-1" /> Adicionar Unidade
+        </Button>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="barbershop-address">Endereço</Label>
-        <Input
-          id="barbershop-address"
-          type="text"
-          placeholder="Rua, número, bairro"
-          value={barbershopAddress}
-          onChange={(e) => setBarbershopAddress(e.target.value)}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="barbershop-phone">Telefone</Label>
-          <Input
-            id="barbershop-phone"
-            type="tel"
-            placeholder="(00) 0000-0000"
-            value={barbershopPhone}
-            onChange={(e) => setBarbershopPhone(e.target.value)}
-          />
+      {/* Current unit form */}
+      <div className="p-4 border rounded-lg space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-medium flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            {currentUnit?.name || `Unidade ${currentUnitIndex + 1}`}
+          </h4>
+          {!currentUnit?.isPrimary && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setPrimaryUnit(currentUnitIndex)}
+            >
+              <Star className="h-4 w-4 mr-1" /> Definir como Principal
+            </Button>
+          )}
+          {currentUnit?.isPrimary && (
+            <Badge variant="secondary">
+              <Star className="h-3 w-3 mr-1 fill-current" /> Principal
+            </Badge>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="barbershop-email">Email</Label>
+          <Label>Nome da Barbearia *</Label>
           <Input
-            id="barbershop-email"
-            type="email"
-            placeholder="contato@barbearia.com"
-            value={barbershopEmail}
-            onChange={(e) => setBarbershopEmail(e.target.value)}
+            type="text"
+            placeholder="Ex: Barbearia do João - Centro"
+            value={currentUnit?.name || ''}
+            onChange={(e) => updateCurrentUnit('name', e.target.value)}
+            required
           />
+          {errors.barbershopName && (
+            <p className="text-sm text-destructive">{errors.barbershopName}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Endereço</Label>
+          <Input
+            type="text"
+            placeholder="Rua, número, bairro"
+            value={currentUnit?.address || ''}
+            onChange={(e) => updateCurrentUnit('address', e.target.value)}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Telefone</Label>
+            <Input
+              type="tel"
+              placeholder="(00) 0000-0000"
+              value={currentUnit?.phone || ''}
+              onChange={(e) => updateCurrentUnit('phone', e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input
+              type="email"
+              placeholder="contato@barbearia.com"
+              value={currentUnit?.email || ''}
+              onChange={(e) => updateCurrentUnit('email', e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
+      {/* Summary */}
       <div className="p-4 bg-muted/50 rounded-lg border">
-        <h4 className="font-medium mb-2 flex items-center gap-2">
-          <Building2 className="h-4 w-4" />
-          Resumo do Cadastro
-        </h4>
+        <h4 className="font-medium mb-2">Resumo do Cadastro</h4>
         <div className="text-sm text-muted-foreground space-y-1">
           <p><strong>Administrador:</strong> {signupFullName}</p>
           <p><strong>Email:</strong> {signupEmail}</p>
-          <p><strong>Barbearia:</strong> {barbershopName || '(preencha acima)'}</p>
+          <p><strong>Unidades:</strong> {barbershopUnits.length}</p>
+          <div className="flex flex-wrap gap-1 mt-2">
+            {barbershopUnits.map((unit, idx) => (
+              <Badge key={unit.id} variant={unit.isPrimary ? "default" : "secondary"}>
+                {unit.isPrimary && <Star className="h-3 w-3 mr-1 fill-current" />}
+                {unit.name || `Unidade ${idx + 1}`}
+              </Badge>
+            ))}
+          </div>
           {signupIsAlsoBarber && (
-            <p className="text-primary">✓ Você será cadastrado como barbeiro</p>
+            <p className="text-primary mt-2">✓ Você será cadastrado como barbeiro em todas as unidades</p>
           )}
         </div>
       </div>
@@ -450,7 +569,7 @@ const Auth = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
         </Button>
         <Button type="submit" className="flex-1" disabled={loading}>
-          {loading ? 'Criando conta...' : 'Criar Conta e Barbearia'}
+          {loading ? 'Criando conta...' : `Criar Conta (${barbershopUnits.length} unidade${barbershopUnits.length > 1 ? 's' : ''})`}
         </Button>
       </div>
     </form>
@@ -458,7 +577,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <Card className="w-full max-w-md barbershop-card">
+      <Card className="w-full max-w-lg barbershop-card">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
