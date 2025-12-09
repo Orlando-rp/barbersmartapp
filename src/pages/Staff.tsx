@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle, XCircle, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +46,7 @@ interface StaffMember {
 }
 
 const Staff = () => {
-  const { barbershopId } = useAuth();
+  const { barbershopId, user } = useAuth();
   const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +54,8 @@ const Staff = () => {
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState<string | null>(null);
+  const [isCurrentUserInStaff, setIsCurrentUserInStaff] = useState(true);
+  const [addingSelf, setAddingSelf] = useState(false);
 
   useEffect(() => {
     if (barbershopId) {
@@ -132,6 +134,12 @@ const Staff = () => {
       }));
 
       setStaff(staffWithRoles);
+      
+      // Check if current user is in staff list
+      if (user) {
+        const currentUserInStaff = staffWithRoles.some(s => s.user_id === user.id);
+        setIsCurrentUserInStaff(currentUserInStaff);
+      }
     } catch (error: any) {
       console.error('Erro ao carregar equipe:', error);
       toast({
@@ -141,6 +149,42 @@ const Staff = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddSelfAsStaff = async () => {
+    if (!user || !barbershopId) return;
+    
+    setAddingSelf(true);
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .insert({
+          user_id: user.id,
+          barbershop_id: barbershopId,
+          is_also_barber: true,
+          specialties: ['Corte', 'Barba'],
+          commission_rate: 50,
+          active: true,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Você foi adicionado como profissional da equipe.',
+      });
+
+      fetchStaff();
+    } catch (error: any) {
+      console.error('Erro ao adicionar como staff:', error);
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setAddingSelf(false);
     }
   };
 
@@ -253,6 +297,28 @@ const Staff = () => {
             Adicionar Membro
           </Button>
         </div>
+
+        {/* Alert for admin not in staff list */}
+        {!isCurrentUserInStaff && !loading && (
+          <Card className="border-amber-500/50 bg-amber-500/10">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <UserPlus className="h-5 w-5 text-amber-500" />
+                  <div>
+                    <p className="font-medium text-foreground">Você não está na lista de profissionais</p>
+                    <p className="text-sm text-muted-foreground">
+                      Clique para se adicionar como profissional e poder receber agendamentos
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={handleAddSelfAsStaff} disabled={addingSelf} variant="outline">
+                  {addingSelf ? 'Adicionando...' : 'Adicionar-me como Profissional'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="barbershop-card">
           <CardHeader>
