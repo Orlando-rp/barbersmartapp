@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import BarbershopSelector from "./BarbershopSelector";
 import { NotificationsDropdown } from "./NotificationsDropdown";
+import { MobileSidebar } from "./Sidebar";
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
@@ -59,36 +60,43 @@ const Header = () => {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="flex items-center justify-between h-full px-6">
-        {/* Logo and Barbershop Selector */}
-        <div className="flex items-center space-x-6">
+    <header className="h-14 lg:h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+      <div className="flex items-center justify-between h-full px-3 lg:px-6">
+        {/* Mobile Menu + Logo */}
+        <div className="flex items-center gap-2 lg:gap-6">
+          <MobileSidebar />
+          
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">BS</span>
+            <div className="w-7 h-7 lg:w-8 lg:h-8 gradient-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-xs lg:text-sm">BS</span>
             </div>
-            <h1 className="text-xl font-bold text-foreground">BarberSmart</h1>
+            <h1 className="text-base lg:text-xl font-bold text-foreground hidden sm:block">BarberSmart</h1>
           </div>
-          <BarbershopSelector />
+          
+          {/* Barbershop Selector - hidden on very small screens */}
+          <div className="hidden md:block">
+            <BarbershopSelector />
+          </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-1 lg:gap-4">
           {/* Notifications */}
           <NotificationsDropdown />
 
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 gap-2">
-                <Avatar className="h-8 w-8">
+              <Button variant="ghost" className="relative h-9 lg:h-10 gap-1 lg:gap-2 px-1 lg:px-2">
+                <Avatar className="h-7 w-7 lg:h-8 lg:w-8">
                   <AvatarImage src={profileAvatarUrl || user?.user_metadata?.avatar_url} alt={profileFullName || user?.email || ''} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs lg:text-sm">
                     {getInitials(profileFullName, user?.email || null)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col items-start text-sm">
-                  <span className="font-medium">{profileFullName || user?.user_metadata?.full_name || user?.email}</span>
+                {/* Hide user info on mobile */}
+                <div className="hidden lg:flex flex-col items-start text-sm">
+                  <span className="font-medium max-w-32 truncate">{profileFullName || user?.user_metadata?.full_name || user?.email}</span>
                   {userRole && (
                     <span className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</span>
                   )}
