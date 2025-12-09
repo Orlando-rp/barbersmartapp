@@ -20,7 +20,8 @@ import { ClientsMetrics } from "@/components/reports/ClientsMetrics";
 import { ServicesChart } from "@/components/reports/ServicesChart";
 import { TeamPerformance } from "@/components/reports/TeamPerformance";
 import { CommissionReport } from "@/components/reports/CommissionReport";
-import { Download, Calendar as CalendarIcon, FileText, FileSpreadsheet, Wallet } from "lucide-react";
+import { PredictiveAnalytics } from "@/components/reports/PredictiveAnalytics";
+import { Download, Calendar as CalendarIcon, FileText, FileSpreadsheet, Wallet, BrainCircuit } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -359,6 +360,10 @@ const Reports = () => {
               <Wallet className="h-4 w-4" />
               Comissões
             </TabsTrigger>
+            <TabsTrigger value="predictive" className="gap-2">
+              <BrainCircuit className="h-4 w-4" />
+              Análises Preditivas
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-6">
@@ -377,6 +382,10 @@ const Reports = () => {
 
           <TabsContent value="commissions">
             <CommissionReport period={period} />
+          </TabsContent>
+
+          <TabsContent value="predictive">
+            <PredictiveAnalytics />
           </TabsContent>
         </Tabs>
       </div>
