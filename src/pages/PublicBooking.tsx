@@ -30,7 +30,13 @@ interface Service {
 interface Staff {
   id: string;
   user_id: string;
+  schedule: any;
   profiles: { full_name: string }[] | { full_name: string } | null;
+}
+
+interface StaffService {
+  staff_id: string;
+  service_id: string;
 }
 
 interface BusinessHours {
@@ -68,6 +74,7 @@ export default function PublicBooking() {
   const [barbershop, setBarbershop] = useState<Barbershop | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [staffServices, setStaffServices] = useState<StaffService[]>([]);
   const [businessHours, setBusinessHours] = useState<BusinessHours[]>([]);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
 
@@ -116,13 +123,19 @@ export default function PublicBooking() {
         .order('name');
       setServices(servicesData || []);
 
-      // Load active staff
+      // Load active staff with schedule
       const { data: staffData } = await supabase
         .from('staff')
-        .select('id, user_id, profiles(full_name)')
+        .select('id, user_id, schedule, profiles(full_name)')
         .eq('barbershop_id', barbershopId)
         .eq('active', true);
       setStaffList(staffData || []);
+
+      // Load staff services relationships
+      const { data: staffServicesData } = await supabase
+        .from('staff_services')
+        .select('staff_id, service_id');
+      setStaffServices(staffServicesData || []);
 
       // Load business hours
       const { data: hoursData } = await supabase
@@ -139,11 +152,80 @@ export default function PublicBooking() {
     }
   };
 
+  // Filter staff that can perform the selected service
+  const filteredStaffList = selectedService 
+    ? staffList.filter(staff => {
+        // If no staff_services entries exist for this staff, they can do all services
+        const staffHasServiceEntries = staffServices.some(ss => ss.staff_id === staff.id);
+        if (!staffHasServiceEntries) return true;
+        
+        // Otherwise, check if service is in their list
+        return staffServices.some(ss => ss.staff_id === staff.id && ss.service_id === selectedService.id);
+      })
+    : staffList;
+
+  // Check if staff works on a specific date based on their schedule
+  const staffWorksOnDate = (staff: Staff, date: Date): boolean => {
+    if (!staff.schedule) return true; // If no individual schedule, use barbershop hours
+    
+    const dayOfWeek = dayOfWeekMap[date.getDay()];
+    
+    // Check if schedule is multi-unit format
+    if (staff.schedule.units) {
+      // Multi-unit: check if any unit has this day
+      for (const unitSchedule of Object.values(staff.schedule.units) as any[]) {
+        if (unitSchedule[dayOfWeek]?.enabled) {
+          return true;
+        }
+      }
+      return false;
+    }
+    
+    // Single unit schedule format
+    const daySchedule = staff.schedule[dayOfWeek];
+    return daySchedule?.enabled === true;
+  };
+
+  // Get staff schedule for a specific day
+  const getStaffScheduleForDay = (staff: Staff, date: Date): { start: string; end: string } | null => {
+    if (!staff.schedule) return null;
+    
+    const dayOfWeek = dayOfWeekMap[date.getDay()];
+    
+    // Check if schedule is multi-unit format
+    if (staff.schedule.units) {
+      // Check current barbershop first
+      if (staff.schedule.units[barbershopId]) {
+        const daySchedule = staff.schedule.units[barbershopId][dayOfWeek];
+        if (daySchedule?.enabled) {
+          return { start: daySchedule.start, end: daySchedule.end };
+        }
+      }
+      return null;
+    }
+    
+    // Single unit schedule format
+    const daySchedule = staff.schedule[dayOfWeek];
+    if (daySchedule?.enabled) {
+      return { start: daySchedule.start, end: daySchedule.end };
+    }
+    return null;
+  };
+
   const loadAvailableSlots = async () => {
     if (!selectedDate || !selectedStaff || !selectedService) return;
 
     const formattedDate = format(selectedDate, 'yyyy-MM-dd');
     const dayOfWeek = dayOfWeekMap[selectedDate.getDay()];
+
+    // First check if staff works on this day
+    if (!staffWorksOnDate(selectedStaff, selectedDate)) {
+      setAvailableSlots([]);
+      return;
+    }
+
+    // Get staff-specific schedule for the day
+    const staffDaySchedule = getStaffScheduleForDay(selectedStaff, selectedDate);
 
     // Get business hours for this day
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
@@ -152,10 +234,14 @@ export default function PublicBooking() {
       return;
     }
 
-    // Generate all possible slots
+    // Use staff schedule if available, otherwise use barbershop hours
+    const openTime = staffDaySchedule?.start || dayHours.open_time;
+    const closeTime = staffDaySchedule?.end || dayHours.close_time;
+
+    // Generate all possible slots based on staff or barbershop schedule
     const slots: string[] = [];
-    const [startHour, startMinute] = dayHours.open_time.split(':').map(Number);
-    const [endHour, endMinute] = dayHours.close_time.split(':').map(Number);
+    const [startHour, startMinute] = openTime.split(':').map(Number);
+    const [endHour, endMinute] = closeTime.split(':').map(Number);
     const endTimeMinutes = endHour * 60 + endMinute;
 
     let currentHour = startHour;
@@ -164,9 +250,9 @@ export default function PublicBooking() {
     while (currentHour * 60 + currentMinute + selectedService.duration <= endTimeMinutes) {
       const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
       
-      // Check if slot is during break
+      // Check if slot is during break (only if not using staff schedule)
       let isInBreak = false;
-      if (dayHours.break_start && dayHours.break_end) {
+      if (!staffDaySchedule && dayHours.break_start && dayHours.break_end) {
         const slotMinutes = currentHour * 60 + currentMinute;
         const slotEndMinutes = slotMinutes + selectedService.duration;
         const [breakStartHour, breakStartMin] = dayHours.break_start.split(':').map(Number);
@@ -235,6 +321,23 @@ export default function PublicBooking() {
     } else {
       setAvailableSlots(availableFilteredSlots);
     }
+  };
+
+  const isDateDisabledForStaff = (date: Date) => {
+    if (isBefore(date, startOfDay(new Date()))) return true;
+    
+    const dayOfWeek = dayOfWeekMap[date.getDay()];
+    const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
+    
+    // Check if barbershop is open
+    if (!dayHours || !dayHours.is_open) return true;
+    
+    // If staff is selected, also check their schedule
+    if (selectedStaff) {
+      return !staffWorksOnDate(selectedStaff, date);
+    }
+    
+    return false;
   };
 
   const isDateDisabled = (date: Date) => {
@@ -454,13 +557,29 @@ Aguardamos você! 💈`;
             {/* Step 2: Staff Selection */}
             {step === 2 && (
               <div className="grid gap-3">
-                {staffList.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">Nenhum profissional disponível</p>
+                {filteredStaffList.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Nenhum profissional disponível para o serviço selecionado
+                    </p>
+                    <Button 
+                      variant="link" 
+                      onClick={() => setStep(1)}
+                      className="mt-2"
+                    >
+                      Escolher outro serviço
+                    </Button>
+                  </div>
                 ) : (
-                  staffList.map((staff) => (
+                  filteredStaffList.map((staff) => (
                     <div
                       key={staff.id}
-                      onClick={() => setSelectedStaff(staff)}
+                      onClick={() => {
+                        setSelectedStaff(staff);
+                        // Reset date and time when changing staff
+                        setSelectedDate(undefined);
+                        setSelectedTime('');
+                      }}
                       className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         selectedStaff?.id === staff.id
                           ? 'border-primary bg-primary/5'
@@ -492,7 +611,7 @@ Aguardamos você! 💈`;
                         setSelectedDate(date);
                         setSelectedTime('');
                       }}
-                      disabled={isDateDisabled}
+                      disabled={isDateDisabledForStaff}
                       fromDate={new Date()}
                       toDate={addDays(new Date(), 60)}
                       locale={ptBR}
