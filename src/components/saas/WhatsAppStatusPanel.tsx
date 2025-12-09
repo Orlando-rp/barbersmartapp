@@ -61,18 +61,17 @@ export const WhatsAppStatusPanel = () => {
     try {
       setLoading(true);
       
-      // Buscar config global
+      // Buscar config global da tabela system_config
       const { data: globalConfigData } = await supabase
-        .from('whatsapp_config')
+        .from('system_config')
         .select('*')
-        .is('barbershop_id', null)
-        .eq('provider', 'evolution')
+        .eq('key', 'evolution_api')
         .maybeSingle();
 
-      if (globalConfigData?.config) {
+      if (globalConfigData?.value) {
         setGlobalConfig({
-          api_url: globalConfigData.config.api_url,
-          api_key: globalConfigData.config.api_key,
+          api_url: globalConfigData.value.api_url,
+          api_key: globalConfigData.value.api_key,
         });
       }
 
@@ -149,8 +148,9 @@ export const WhatsAppStatusPanel = () => {
         }
       });
 
-      if (data?.success === false && data?.details?.status === 404) {
-        toast.info(`${shop.name}: Instância não encontrada`);
+      // Handle 404 - instance doesn't exist
+      if (data?.state === 'close' && data?.message === 'Instância não existe') {
+        toast.info(`${shop.name}: Instância não criada ainda`);
         return;
       }
 
