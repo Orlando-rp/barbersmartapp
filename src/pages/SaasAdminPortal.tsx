@@ -60,10 +60,12 @@ import {
   Calendar,
   Shield,
   RefreshCw,
+  Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { GlobalEvolutionConfig } from "@/components/saas/GlobalEvolutionConfig";
 import {
   BarChart,
   Bar,
@@ -589,6 +591,10 @@ const SaasAdminPortal = () => {
               <MessageSquare className="h-4 w-4 mr-2" />
               Mensagens
             </TabsTrigger>
+            <TabsTrigger value="integrations" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+              <Smartphone className="h-4 w-4 mr-2" />
+              Integrações
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -863,6 +869,11 @@ const SaasAdminPortal = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Integrations Tab */}
+          <TabsContent value="integrations">
+            <GlobalEvolutionConfig />
           </TabsContent>
         </Tabs>
 

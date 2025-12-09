@@ -92,6 +92,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     if (!barbershopId) return;
 
     try {
+      // Primeiro buscar configuração específica da barbearia
       const { data, error } = await supabase
         .from('whatsapp_config')
         .select('*')
@@ -113,8 +114,25 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           setConnectionStatus(data.config.connection_status);
         }
       } else {
-        // Se não houver config salva, usa o instanceName gerado
-        setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
+        // Se não houver config da barbearia, buscar config global
+        const { data: globalConfig } = await supabase
+          .from('whatsapp_config')
+          .select('*')
+          .is('barbershop_id', null)
+          .eq('provider', 'evolution')
+          .maybeSingle();
+
+        if (globalConfig?.config) {
+          // Usar config global mas com instanceName local
+          setConfig({
+            apiUrl: globalConfig.config.api_url || '',
+            apiKey: globalConfig.config.api_key || '',
+            instanceName: generatedInstanceName
+          });
+        } else {
+          // Sem nenhuma config, apenas usar instanceName gerado
+          setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
