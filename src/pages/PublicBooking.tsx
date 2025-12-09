@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays, isBefore, startOfDay } from 'date-fns';
+import { format, addDays, isBefore, startOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface Barbershop {
@@ -77,6 +78,7 @@ export default function PublicBooking() {
   const [staffServices, setStaffServices] = useState<StaffService[]>([]);
   const [businessHours, setBusinessHours] = useState<BusinessHours[]>([]);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [dayAvailability, setDayAvailability] = useState<Map<string, { available: number; total: number }>>(new Map());
 
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
@@ -96,6 +98,13 @@ export default function PublicBooking() {
       loadAvailableSlots();
     }
   }, [selectedDate, selectedStaff, selectedService]);
+
+  // Calculate availability for calendar visualization
+  useEffect(() => {
+    if (selectedStaff && selectedService && businessHours.length > 0) {
+      calculateMonthAvailability();
+    }
+  }, [selectedStaff, selectedService, businessHours]);
 
   const loadBarbershopData = async () => {
     try {
@@ -347,6 +356,206 @@ export default function PublicBooking() {
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
     
     return !dayHours || !dayHours.is_open;
+  };
+
+  // Calculate availability for the next 60 days
+  const calculateMonthAvailability = async () => {
+    if (!selectedStaff || !selectedService || !barbershopId) return;
+
+    const today = startOfDay(new Date());
+    const endDate = addDays(today, 60);
+    const days = eachDayOfInterval({ start: today, end: endDate });
+    
+    const availabilityMap = new Map<string, { available: number; total: number }>();
+
+    // Get all appointments for this staff in the date range
+    const { data: existingAppointments } = await supabase
+      .from('appointments')
+      .select('appointment_date, appointment_time, duration')
+      .eq('barbershop_id', barbershopId)
+      .eq('staff_id', selectedStaff.id)
+      .gte('appointment_date', format(today, 'yyyy-MM-dd'))
+      .lte('appointment_date', format(endDate, 'yyyy-MM-dd'))
+      .neq('status', 'cancelado');
+
+    const appointmentsByDate = new Map<string, { time: string; duration: number }[]>();
+    (existingAppointments || []).forEach(apt => {
+      const dateKey = apt.appointment_date;
+      if (!appointmentsByDate.has(dateKey)) {
+        appointmentsByDate.set(dateKey, []);
+      }
+      appointmentsByDate.get(dateKey)!.push({
+        time: apt.appointment_time,
+        duration: apt.duration || 30
+      });
+    });
+
+    for (const day of days) {
+      const dateKey = format(day, 'yyyy-MM-dd');
+      const dayOfWeek = dayOfWeekMap[day.getDay()];
+      const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
+
+      // Skip closed days or days staff doesn't work
+      if (!dayHours?.is_open || !staffWorksOnDate(selectedStaff, day)) {
+        availabilityMap.set(dateKey, { available: 0, total: 0 });
+        continue;
+      }
+
+      // Get staff-specific schedule for the day
+      const staffDaySchedule = getStaffScheduleForDay(selectedStaff, day);
+      const openTime = staffDaySchedule?.start || dayHours.open_time;
+      const closeTime = staffDaySchedule?.end || dayHours.close_time;
+
+      // Generate all possible slots
+      const [startHour, startMinute] = openTime.split(':').map(Number);
+      const [endHour, endMinute] = closeTime.split(':').map(Number);
+      const endTimeMinutes = endHour * 60 + endMinute;
+
+      let totalSlots = 0;
+      let availableCount = 0;
+      let currentHour = startHour;
+      let currentMinute = startMinute;
+
+      const bookedSlots = appointmentsByDate.get(dateKey) || [];
+
+      while (currentHour * 60 + currentMinute + selectedService.duration <= endTimeMinutes) {
+        const slotMinutes = currentHour * 60 + currentMinute;
+        const slotEndMinutes = slotMinutes + selectedService.duration;
+
+        // Check break time (only if not using staff schedule)
+        let isInBreak = false;
+        if (!staffDaySchedule && dayHours.break_start && dayHours.break_end) {
+          const [breakStartHour, breakStartMin] = dayHours.break_start.split(':').map(Number);
+          const [breakEndHour, breakEndMin] = dayHours.break_end.split(':').map(Number);
+          const breakStartMinutes = breakStartHour * 60 + breakStartMin;
+          const breakEndMinutes = breakEndHour * 60 + breakEndMin;
+
+          if (slotMinutes < breakEndMinutes && slotEndMinutes > breakStartMinutes) {
+            isInBreak = true;
+          }
+        }
+
+        if (!isInBreak) {
+          totalSlots++;
+
+          // Check if slot is available (not booked)
+          const isBooked = bookedSlots.some(booked => {
+            const [bookedHour, bookedMin] = booked.time.split(':').map(Number);
+            const bookedStart = bookedHour * 60 + bookedMin;
+            const bookedEnd = bookedStart + booked.duration;
+            return slotMinutes < bookedEnd && slotEndMinutes > bookedStart;
+          });
+
+          if (!isBooked) {
+            availableCount++;
+          }
+        }
+
+        currentMinute += 30;
+        if (currentMinute >= 60) {
+          currentHour += 1;
+          currentMinute = 0;
+        }
+      }
+
+      // Filter past slots if today
+      if (isSameDay(day, new Date())) {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        
+        // Recalculate for today considering current time
+        availableCount = 0;
+        currentHour = startHour;
+        currentMinute = startMinute;
+        
+        while (currentHour * 60 + currentMinute + selectedService.duration <= endTimeMinutes) {
+          const slotMinutes = currentHour * 60 + currentMinute;
+          const slotEndMinutes = slotMinutes + selectedService.duration;
+
+          if (slotMinutes > currentMinutes) {
+            let isInBreak = false;
+            if (!staffDaySchedule && dayHours.break_start && dayHours.break_end) {
+              const [breakStartHour, breakStartMin] = dayHours.break_start.split(':').map(Number);
+              const [breakEndHour, breakEndMin] = dayHours.break_end.split(':').map(Number);
+              const breakStartMinutes = breakStartHour * 60 + breakStartMin;
+              const breakEndMinutes = breakEndHour * 60 + breakEndMin;
+
+              if (slotMinutes < breakEndMinutes && slotEndMinutes > breakStartMinutes) {
+                isInBreak = true;
+              }
+            }
+
+            if (!isInBreak) {
+              const isBooked = bookedSlots.some(booked => {
+                const [bookedHour, bookedMin] = booked.time.split(':').map(Number);
+                const bookedStart = bookedHour * 60 + bookedMin;
+                const bookedEnd = bookedStart + booked.duration;
+                return slotMinutes < bookedEnd && slotEndMinutes > bookedStart;
+              });
+
+              if (!isBooked) {
+                availableCount++;
+              }
+            }
+          }
+
+          currentMinute += 30;
+          if (currentMinute >= 60) {
+            currentHour += 1;
+            currentMinute = 0;
+          }
+        }
+      }
+
+      availabilityMap.set(dateKey, { available: availableCount, total: totalSlots });
+    }
+
+    setDayAvailability(availabilityMap);
+  };
+
+  // Get availability status for a date
+  const getDateAvailabilityStatus = (date: Date): 'available' | 'partial' | 'full' | 'closed' => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const availability = dayAvailability.get(dateKey);
+
+    if (!availability || availability.total === 0) return 'closed';
+    if (availability.available === 0) return 'full';
+    if (availability.available < availability.total * 0.3) return 'partial';
+    return 'available';
+  };
+
+  // Custom day content with availability indicator
+  const renderDayContent = (day: Date) => {
+    const status = getDateAvailabilityStatus(day);
+    const dateKey = format(day, 'yyyy-MM-dd');
+    const availability = dayAvailability.get(dateKey);
+
+    let indicatorClass = '';
+    let tooltipText = '';
+
+    switch (status) {
+      case 'available':
+        indicatorClass = 'bg-green-500';
+        tooltipText = `${availability?.available} horários disponíveis`;
+        break;
+      case 'partial':
+        indicatorClass = 'bg-amber-500';
+        tooltipText = `${availability?.available} horários restantes`;
+        break;
+      case 'full':
+        indicatorClass = 'bg-red-500';
+        tooltipText = 'Sem horários disponíveis';
+        break;
+      case 'closed':
+        tooltipText = 'Fechado ou profissional não trabalha';
+        break;
+    }
+
+    return {
+      indicatorClass,
+      tooltipText,
+      available: availability?.available || 0
+    };
   };
 
   const handleSubmit = async () => {
@@ -603,20 +812,83 @@ Aguardamos você! 💈`;
               <div className="space-y-6">
                 <div>
                   <Label className="text-base mb-3 block">Selecione a Data</Label>
+                  
+                  {/* Legend */}
+                  <div className="flex items-center justify-center gap-4 mb-4 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <span>Disponível</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-amber-500" />
+                      <span>Poucos horários</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <span>Lotado</span>
+                    </div>
+                  </div>
+
                   <div className="flex justify-center">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => {
-                        setSelectedDate(date);
-                        setSelectedTime('');
-                      }}
-                      disabled={isDateDisabledForStaff}
-                      fromDate={new Date()}
-                      toDate={addDays(new Date(), 60)}
-                      locale={ptBR}
-                      className="rounded-md border"
-                    />
+                    <TooltipProvider>
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => {
+                          setSelectedDate(date);
+                          setSelectedTime('');
+                        }}
+                        disabled={isDateDisabledForStaff}
+                        fromDate={new Date()}
+                        toDate={addDays(new Date(), 60)}
+                        locale={ptBR}
+                        className="rounded-md border pointer-events-auto"
+                        modifiers={{
+                          available: (date) => getDateAvailabilityStatus(date) === 'available',
+                          partial: (date) => getDateAvailabilityStatus(date) === 'partial',
+                          full: (date) => getDateAvailabilityStatus(date) === 'full',
+                        }}
+                        modifiersStyles={{
+                          available: { 
+                            position: 'relative',
+                          },
+                          partial: { 
+                            position: 'relative',
+                          },
+                          full: { 
+                            position: 'relative',
+                          },
+                        }}
+                        components={{
+                          DayContent: ({ date }) => {
+                            const dayInfo = renderDayContent(date);
+                            const isDisabled = isDateDisabledForStaff(date);
+                            
+                            if (isDisabled) {
+                              return <span>{date.getDate()}</span>;
+                            }
+                            
+                            return (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="relative w-full h-full flex items-center justify-center">
+                                    <span>{date.getDate()}</span>
+                                    {dayInfo.indicatorClass && (
+                                      <div 
+                                        className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${dayInfo.indicatorClass}`}
+                                      />
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  {dayInfo.tooltipText}
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          }
+                        }}
+                      />
+                    </TooltipProvider>
                   </div>
                 </div>
 
