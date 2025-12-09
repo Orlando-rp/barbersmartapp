@@ -5,22 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { 
   Send, 
   CheckCircle, 
   XCircle, 
   Settings, 
-  ExternalLink, 
   Wifi, 
   WifiOff, 
   QrCode,
   RefreshCw,
   Loader2,
   Save,
-  Trash2,
-  Info
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -419,26 +415,6 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
   return (
     <div className="space-y-6">
-      {/* Info Alert */}
-      <Alert className="border-primary/50 bg-primary/5">
-        <Info className="h-4 w-4 text-primary" />
-        <AlertTitle className="text-primary">Evolution API 2.0</AlertTitle>
-        <AlertDescription className="text-primary/90">
-          <p className="mb-2">
-            A Evolution API é uma solução open-source que permite conectar seu WhatsApp sem precisar de uma conta Business API oficial.
-          </p>
-          <a
-            href="https://doc.evolution-api.com/v2/pt/get-started/introduction"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center text-sm font-medium hover:underline"
-          >
-            <ExternalLink className="h-3 w-3 mr-1" />
-            Documentação Oficial
-          </a>
-        </AlertDescription>
-      </Alert>
-
       {/* Server Configuration - Only for SaaS Admin */}
       {isSaasAdmin && (
         <Card>
@@ -503,30 +479,6 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
             </Button>
           </CardContent>
         </Card>
-      )}
-
-      {/* Global config indicator for barbershop users */}
-      {!isSaasAdmin && isUsingGlobalConfig && config.apiUrl && (
-        <Alert className="border-success/50 bg-success/5">
-          <CheckCircle className="h-4 w-4 text-success" />
-          <AlertTitle className="text-success">Servidor Configurado</AlertTitle>
-          <AlertDescription className="text-success/90">
-            O servidor Evolution API foi configurado pelo administrador do sistema. 
-            Você pode conectar seu WhatsApp escaneando o QR Code abaixo.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Info for barbershop users when not configured */}
-      {!isSaasAdmin && !config.apiUrl && (
-        <Alert className="border-amber-500/50 bg-amber-500/5">
-          <Info className="h-4 w-4 text-amber-500" />
-          <AlertTitle className="text-amber-600">Configuração Pendente</AlertTitle>
-          <AlertDescription className="text-amber-600/90">
-            O servidor Evolution API ainda não foi configurado pelo administrador do sistema. 
-            Entre em contato com o suporte para habilitar o WhatsApp.
-          </AlertDescription>
-        </Alert>
       )}
 
       {/* Connection Status */}
@@ -650,7 +602,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         </CardContent>
       </Card>
 
-      {/* Logs */}
+      {/* Logs with Stats Dashboard */}
       <WhatsAppLogs provider="evolution" />
 
       {/* QR Code Modal */}
