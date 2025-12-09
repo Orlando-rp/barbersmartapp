@@ -35,11 +35,17 @@ interface StaffMember {
   commission_rate: number;
   schedule: any;
   active: boolean;
+  is_also_barber?: boolean;
+  user_roles?: {
+    id: string;
+    role: string;
+  }[];
   profiles: {
     full_name: string;
     phone: string;
     avatar_url: string;
-    user_roles: {
+    user_roles?: {
+      id: string;
       role: string;
     }[];
   };
@@ -116,16 +122,17 @@ const Staff = () => {
 
       if (staffError) throw staffError;
 
-      // Buscar roles separadamente para cada membro
+      // Buscar roles separadamente para cada membro (incluindo ID para updates)
       const staffWithRoles = await Promise.all((staffData || []).map(async (member) => {
         const { data: rolesData } = await supabase
           .from('user_roles')
-          .select('role')
+          .select('id, role')
           .eq('user_id', member.user_id)
           .eq('barbershop_id', barbershopId);
         
         return {
           ...member,
+          user_roles: rolesData || [],
           profiles: {
             ...member.profiles,
             user_roles: rolesData || []
