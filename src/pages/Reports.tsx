@@ -299,16 +299,16 @@ const Reports = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Relatórios</h1>
-            <p className="text-muted-foreground">Análises e insights do seu negócio</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Relatórios</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Análises e insights do seu negócio</p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="premium" size="lg" disabled={isExporting}>
-                <Download className="mr-2 h-5 w-5" />
-                {isExporting ? "Exportando..." : "Exportar Relatório"}
+              <Button variant="premium" size="default" disabled={isExporting} className="w-full sm:w-auto">
+                <Download className="mr-2 h-4 w-4" />
+                <span className="truncate">{isExporting ? "Exportando..." : "Exportar"}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -353,16 +353,18 @@ const Reports = () => {
         </Card>
 
         {/* Reports Tabs */}
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="bg-muted/50">
-            <TabsTrigger value="general">Visão Geral</TabsTrigger>
-            <TabsTrigger value="commissions" className="gap-2">
-              <Wallet className="h-4 w-4" />
-              Comissões
+        <Tabs defaultValue="general" className="space-y-4 sm:space-y-6">
+          <TabsList className="bg-muted/50 h-auto flex-wrap">
+            <TabsTrigger value="general" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+            <TabsTrigger value="commissions" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Comissões</span>
+              <span className="sm:hidden">Com.</span>
             </TabsTrigger>
-            <TabsTrigger value="predictive" className="gap-2">
-              <BrainCircuit className="h-4 w-4" />
-              Análises Preditivas
+            <TabsTrigger value="predictive" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <BrainCircuit className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Análises Preditivas</span>
+              <span className="sm:hidden">Análises</span>
             </TabsTrigger>
           </TabsList>
 

@@ -300,17 +300,17 @@ const MyEarnings = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Meus Ganhos</h1>
-            <p className="text-muted-foreground">
-              Olá, {staffInfo?.name}! Acompanhe suas comissões e ganhos.
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Meus Ganhos</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Olá, {staffInfo?.name}! Acompanhe suas comissões.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -322,10 +322,10 @@ const MyEarnings = () => {
 
             <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  {format(dateRange.from, 'dd/MM', { locale: ptBR })} - {format(dateRange.to, 'dd/MM', { locale: ptBR })}
-                  <ChevronDown className="h-4 w-4" />
+                <Button variant="outline" className="gap-2 w-full sm:w-auto justify-between sm:justify-start">
+                  <CalendarIcon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{format(dateRange.from, 'dd/MM', { locale: ptBR })} - {format(dateRange.to, 'dd/MM', { locale: ptBR })}</span>
+                  <ChevronDown className="h-4 w-4 shrink-0" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
@@ -340,7 +340,7 @@ const MyEarnings = () => {
                       setShowDatePicker(false);
                     }
                   }}
-                  numberOfMonths={2}
+                  numberOfMonths={1}
                   locale={ptBR}
                 />
               </PopoverContent>
@@ -349,17 +349,17 @@ const MyEarnings = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-success/10">
-                  <DollarSign className="h-5 w-5 text-success" />
+            <CardContent className="pt-4 sm:pt-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-success/10">
+                  <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Receita Gerada</p>
-                  <p className="text-2xl font-bold text-success">
-                    R$ {totals.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita</p>
+                  <p className="text-lg sm:text-2xl font-bold text-success truncate">
+                    R$ {totals.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </p>
                 </div>
               </div>
@@ -367,15 +367,15 @@ const MyEarnings = () => {
           </Card>
 
           <Card className="barbershop-card border-warning/30 bg-warning/5">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-warning/10">
-                  <Wallet className="h-5 w-5 text-warning" />
+            <CardContent className="pt-4 sm:pt-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-warning/10">
+                  <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Minha Comissão</p>
-                  <p className="text-2xl font-bold text-warning">
-                    R$ {totals.totalCommission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Comissão</p>
+                  <p className="text-lg sm:text-2xl font-bold text-warning truncate">
+                    R$ {totals.totalCommission.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </p>
                 </div>
               </div>

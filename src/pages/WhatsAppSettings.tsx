@@ -14,22 +14,24 @@ const WhatsAppSettings = () => {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Configurações WhatsApp</h1>
-          <p className="text-muted-foreground">
-            Configure a integração com WhatsApp para envio de mensagens automáticas
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Configurações WhatsApp</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Configure a integração com WhatsApp para mensagens automáticas
           </p>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="evolution" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="evolution" className="flex items-center gap-2">
-              <Smartphone className="h-4 w-4" />
-              Evolution API
+        <Tabs defaultValue="evolution" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-2 max-w-md h-auto">
+            <TabsTrigger value="evolution" className="flex items-center gap-1 sm:gap-2 py-2 text-xs sm:text-sm">
+              <Smartphone className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Evolution API</span>
+              <span className="sm:hidden">Evolution</span>
             </TabsTrigger>
-            <TabsTrigger value="official" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              API Oficial
+            <TabsTrigger value="official" className="flex items-center gap-1 sm:gap-2 py-2 text-xs sm:text-sm">
+              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">API Oficial</span>
+              <span className="sm:hidden">Oficial</span>
             </TabsTrigger>
           </TabsList>
 

@@ -257,24 +257,24 @@ const ClientHistory = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">{client.name}</h1>
-              <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">{client.name}</h1>
+              <div className="flex flex-wrap gap-2 sm:gap-4 mt-1 sm:mt-2 text-xs sm:text-sm text-muted-foreground">
                 {client.phone && (
                   <div className="flex items-center gap-1">
-                    <Phone className="h-4 w-4" />
-                    {client.phone}
+                    <Phone className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                    <span className="truncate">{client.phone}</span>
                   </div>
                 )}
                 {client.email && (
-                  <div className="flex items-center gap-1">
-                    <Mail className="h-4 w-4" />
-                    {client.email}
+                  <div className="hidden sm:flex items-center gap-1">
+                    <Mail className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{client.email}</span>
                   </div>
                 )}
               </div>
@@ -283,7 +283,7 @@ const ClientHistory = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">

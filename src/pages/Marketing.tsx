@@ -186,15 +186,15 @@ const Marketing = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Marketing</h1>
-            <p className="text-muted-foreground">Ferramentas para fidelizar e atrair clientes</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Marketing</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Ferramentas para fidelizar e atrair clientes</p>
           </div>
         </div>
 
         {/* Loyalty Program Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="flex items-center space-x-2">
@@ -245,19 +245,19 @@ const Marketing = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="campaigns" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
-            <TabsTrigger value="coupons">Cupons</TabsTrigger>
-            <TabsTrigger value="loyalty">Fidelidade</TabsTrigger>
+        <Tabs defaultValue="campaigns" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsTrigger value="campaigns" className="text-xs sm:text-sm py-2">Campanhas</TabsTrigger>
+            <TabsTrigger value="coupons" className="text-xs sm:text-sm py-2">Cupons</TabsTrigger>
+            <TabsTrigger value="loyalty" className="text-xs sm:text-sm py-2">Fidelidade</TabsTrigger>
           </TabsList>
 
           {/* Campaigns Tab */}
           <TabsContent value="campaigns" className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
               <h2 className="text-xl font-semibold">Campanhas de Marketing</h2>
               <CampaignDialog onSuccess={fetchMarketingData}>
-                <Button variant="premium">
+                <Button variant="premium" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
                   Nova Campanha
                 </Button>
