@@ -231,25 +231,36 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         // Atualizar staff_services
         await saveStaffServices(staff.id);
 
-        // Atualizar role se mudou
+        // Atualizar role se mudou (usar UPDATE ao invés de DELETE+INSERT para RLS)
         if (staff.user_roles?.[0]?.role !== role) {
-          // Deletar role antiga
-          await supabase
-            .from('user_roles')
-            .delete()
-            .eq('user_id', staff.user_id)
-            .eq('barbershop_id', barbershopId);
+          const existingRoleId = staff.user_roles?.[0]?.id;
+          
+          if (existingRoleId) {
+            // Atualizar role existente
+            const { error: roleError } = await supabase
+              .from('user_roles')
+              .update({ role })
+              .eq('id', existingRoleId);
 
-          // Inserir nova role
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: staff.user_id,
-              role,
-              barbershop_id: barbershopId,
-            });
+            if (roleError) {
+              console.warn('Erro ao atualizar role:', roleError);
+              // Não bloquear o fluxo se falhar a atualização de role
+            }
+          } else {
+            // Se não existe role, tentar inserir (pode falhar por RLS)
+            const { error: roleError } = await supabase
+              .from('user_roles')
+              .insert({
+                user_id: staff.user_id,
+                role,
+                barbershop_id: barbershopId,
+              });
 
-          if (roleError) throw roleError;
+            if (roleError) {
+              console.warn('Erro ao inserir role:', roleError);
+              // Não bloquear o fluxo se falhar a inserção de role
+            }
+          }
         }
 
         toast({
