@@ -356,7 +356,7 @@ const ChatbotSettings = () => {
                       <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">2</div>
                       <div>
                         <p className="font-medium">Processa com IA</p>
-                        <p className="text-sm text-muted-foreground">GPT-4 analisa e entende a intenção</p>
+                        <p className="text-sm text-muted-foreground">A IA analisa e entende a intenção</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -372,6 +372,22 @@ const ChatbotSettings = () => {
                         <p className="font-medium">Cria Agendamento</p>
                         <p className="text-sm text-muted-foreground">Registra automaticamente no sistema</p>
                       </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Info Card */}
+              <Card className="barbershop-card md:col-span-2">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                    <Settings2 className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-medium">Configurações Avançadas</p>
+                      <p className="text-sm text-muted-foreground">
+                        As configurações do modelo de IA (OpenAI), prompt do sistema e parâmetros avançados 
+                        são gerenciadas pelo administrador do sistema no Portal SaaS Admin.
+                      </p>
                     </div>
                   </div>
                 </CardContent>

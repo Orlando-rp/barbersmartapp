@@ -66,6 +66,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { GlobalEvolutionConfig } from "@/components/saas/GlobalEvolutionConfig";
+import { GlobalChatbotConfig } from "@/components/saas/GlobalChatbotConfig";
 import { WhatsAppStatusPanel } from "@/components/saas/WhatsAppStatusPanel";
 import {
   BarChart,
@@ -875,8 +876,19 @@ const SaasAdminPortal = () => {
           {/* Integrations Tab */}
           <TabsContent value="integrations">
             <div className="space-y-8">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+                <Smartphone className="h-5 w-5 text-amber-500" />
+                WhatsApp Evolution API
+              </h2>
               <GlobalEvolutionConfig />
               <WhatsAppStatusPanel />
+              
+              <div className="border-t border-slate-800 pt-8">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+                  🤖 Chatbot IA (OpenAI)
+                </h2>
+                <GlobalChatbotConfig />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
