@@ -66,6 +66,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
   const [sending, setSending] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>();
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const [isUsingGlobalConfig, setIsUsingGlobalConfig] = useState(false);
 
   const handleSelectTemplate = (template: MessageTemplate) => {
     setTestMessage(template.message);
@@ -113,6 +114,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         if (data.config.connection_status) {
           setConnectionStatus(data.config.connection_status);
         }
+        setIsUsingGlobalConfig(false);
       } else {
         // Se não houver config da barbearia, buscar config global
         const { data: globalConfig } = await supabase
@@ -129,9 +131,11 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
             apiKey: globalConfig.config.api_key || '',
             instanceName: generatedInstanceName
           });
+          setIsUsingGlobalConfig(true);
         } else {
           // Sem nenhuma config, apenas usar instanceName gerado
           setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
+          setIsUsingGlobalConfig(false);
         }
       }
     } catch (error) {
@@ -499,6 +503,18 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Global config indicator for barbershop users */}
+      {!isSaasAdmin && isUsingGlobalConfig && config.apiUrl && (
+        <Alert className="border-success/50 bg-success/5">
+          <CheckCircle className="h-4 w-4 text-success" />
+          <AlertTitle className="text-success">Servidor Configurado</AlertTitle>
+          <AlertDescription className="text-success/90">
+            O servidor Evolution API foi configurado pelo administrador do sistema. 
+            Você pode conectar seu WhatsApp escaneando o QR Code abaixo.
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Info for barbershop users when not configured */}
