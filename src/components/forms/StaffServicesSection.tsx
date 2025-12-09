@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Scissors, Loader2 } from "lucide-react";
+import { Scissors, Loader2, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface Service {
@@ -54,21 +53,22 @@ export const StaffServicesSection = ({
     }
   };
 
-  const handleToggleService = (serviceId: string) => {
-    if (selectedServices.includes(serviceId)) {
+  const handleToggleService = useCallback((serviceId: string) => {
+    const isSelected = selectedServices.includes(serviceId);
+    if (isSelected) {
       onServicesChange(selectedServices.filter((id) => id !== serviceId));
     } else {
       onServicesChange([...selectedServices, serviceId]);
     }
-  };
+  }, [selectedServices, onServicesChange]);
 
-  const selectAll = () => {
+  const selectAll = useCallback(() => {
     onServicesChange(services.map((s) => s.id));
-  };
+  }, [services, onServicesChange]);
 
-  const deselectAll = () => {
+  const deselectAll = useCallback(() => {
     onServicesChange([]);
-  };
+  }, [onServicesChange]);
 
   // Group services by category
   const servicesByCategory = services.reduce((acc, service) => {
@@ -136,28 +136,35 @@ export const StaffServicesSection = ({
             <div key={category} className="space-y-2">
               <h4 className="text-sm font-medium text-muted-foreground">{category}</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {categoryServices.map((service) => (
-                  <div
-                    key={service.id}
-                    className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedServices.includes(service.id)
-                        ? "bg-primary/5 border-primary"
-                        : "bg-background hover:bg-muted/50"
-                    }`}
-                    onClick={() => handleToggleService(service.id)}
-                  >
-                    <Checkbox
-                      checked={selectedServices.includes(service.id)}
-                      onCheckedChange={() => handleToggleService(service.id)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{service.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {service.duration} min • R$ {service.price.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                {categoryServices.map((service) => {
+                  const isSelected = selectedServices.includes(service.id);
+                  return (
+                    <button
+                      key={service.id}
+                      type="button"
+                      onClick={() => handleToggleService(service.id)}
+                      className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors text-left ${
+                        isSelected
+                          ? "bg-primary/10 border-primary"
+                          : "bg-background hover:bg-muted/50 border-border"
+                      }`}
+                    >
+                      <div className={`flex items-center justify-center w-5 h-5 rounded border ${
+                        isSelected 
+                          ? "bg-primary border-primary text-primary-foreground" 
+                          : "border-muted-foreground/30"
+                      }`}>
+                        {isSelected && <Check className="h-3 w-3" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{service.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {service.duration} min • R$ {service.price.toFixed(2)}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))
