@@ -121,15 +121,16 @@ const ChatbotSettings = () => {
 
   const checkWhatsAppStatus = async () => {
     try {
+      // Verificar se existe configuração Evolution API (não precisa estar ativa para habilitar chatbot)
       const { data: config } = await supabase
         .from('whatsapp_config')
         .select('*')
         .eq('barbershop_id', barbershopId)
         .eq('provider', 'evolution')
-        .eq('active', true)
         .maybeSingle();
 
-      setWhatsappConnected(!!config);
+      // Considera conectado se existir uma configuração com instance_name
+      setWhatsappConnected(!!config?.config?.instance_name);
     } catch (error) {
       console.error('Error checking WhatsApp status:', error);
     }
