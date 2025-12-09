@@ -8,6 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -1016,9 +1017,12 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-5 w-5 text-primary" />
-                      </div>
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={member.avatar_url} alt={member.name} />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {member.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-5 w-5" />}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="font-medium">{member.name}</div>
                     </div>
                   </button>
