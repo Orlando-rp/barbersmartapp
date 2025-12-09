@@ -12,6 +12,7 @@ import { X } from "lucide-react";
 import { z } from "zod";
 import { StaffScheduleSection, StaffSchedule } from "./StaffScheduleSection";
 import { StaffServicesSection } from "./StaffServicesSection";
+import { StaffUnitsScheduleSection, StaffUnitSchedule } from "./StaffUnitsScheduleSection";
 
 interface StaffFormProps {
   staff?: any;
@@ -29,7 +30,7 @@ const staffSchema = z.object({
 });
 
 export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
-  const { barbershopId } = useAuth();
+  const { barbershopId, barbershops } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
@@ -43,13 +44,19 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [newSpecialty, setNewSpecialty] = useState("");
   const [isAlsoBarber, setIsAlsoBarber] = useState(staff?.is_also_barber || false);
 
-  // New: Individual schedule
+  // Individual schedule (for single unit)
   const [useCustomSchedule, setUseCustomSchedule] = useState(!!staff?.schedule);
   const [schedule, setSchedule] = useState<StaffSchedule | null>(staff?.schedule || null);
 
-  // New: Services selection
+  // Multi-unit schedule
+  const [unitSchedule, setUnitSchedule] = useState<StaffUnitSchedule | null>(staff?.schedule || null);
+
+  // Services selection
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
+
+  // Check if user has multiple units
+  const hasMultipleUnits = barbershops.length > 1;
 
   // Load staff services if editing
   useEffect(() => {
@@ -203,14 +210,16 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         if (profileError) throw profileError;
 
-        // Atualizar staff com schedule
+        // Atualizar staff com schedule (usa unitSchedule se multi-unidade)
+        const scheduleToSave = hasMultipleUnits ? unitSchedule : (useCustomSchedule ? schedule : null);
+        
         const { error: staffError } = await supabase
           .from('staff')
           .update({
             specialties,
             commission_rate: commissionRate,
             is_also_barber: role === 'admin' ? isAlsoBarber : null,
-            schedule: useCustomSchedule ? schedule : null,
+            schedule: scheduleToSave,
           })
           .eq('id', staff.id);
 
@@ -310,7 +319,9 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           // Continuar mesmo com erro no profile, pois o trigger pode ter criado
         }
 
-        // 3. Criar registro na tabela staff
+        // 3. Criar registro na tabela staff (usa unitSchedule se multi-unidade)
+        const scheduleToSave = hasMultipleUnits ? unitSchedule : (useCustomSchedule ? schedule : null);
+        
         const { data: staffInsertData, error: staffError } = await supabase
           .from('staff')
           .insert({
@@ -320,7 +331,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
             commission_rate: commissionRate,
             active: true,
             is_also_barber: role === 'admin' ? isAlsoBarber : null,
-            schedule: useCustomSchedule ? schedule : null,
+            schedule: scheduleToSave,
           })
           .select('id')
           .single();
@@ -519,8 +530,17 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         )}
       </div>
 
-      {/* Individual Schedule Section */}
-      {(role === 'barbeiro' || isAlsoBarber) && (
+      {/* Multi-Unit Schedule Section (shows when user has multiple units) */}
+      {(role === 'barbeiro' || isAlsoBarber) && hasMultipleUnits && (
+        <StaffUnitsScheduleSection
+          barbershopIds={barbershops.map(b => b.id)}
+          schedule={unitSchedule}
+          onScheduleChange={setUnitSchedule}
+        />
+      )}
+
+      {/* Individual Schedule Section (shows when user has single unit) */}
+      {(role === 'barbeiro' || isAlsoBarber) && !hasMultipleUnits && (
         <StaffScheduleSection
           schedule={schedule}
           onScheduleChange={setSchedule}
