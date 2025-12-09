@@ -110,7 +110,7 @@ export default {
     		},
     		fontFamily: {
     			sans: [
-    				'DM Sans',
+    				'Montserrat',
     				'ui-sans-serif',
     				'system-ui',
     				'sans-serif',
