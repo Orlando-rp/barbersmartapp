@@ -34,7 +34,7 @@ interface AppointmentFormProps {
   waitlistPrefill?: WaitlistPrefill;
 }
 
-type WizardStep = 'unit' | 'professional' | 'datetime' | 'client' | 'confirm';
+type WizardStep = 'unit' | 'professional' | 'service' | 'datetime' | 'client' | 'confirm';
 
 export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
   const { barbershopId, barbershops, user } = useAuth();
@@ -421,7 +421,8 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     client.phone.includes(searchTerm)
   );
 
-  const canProceedFromProfessional = selectedService && selectedBarber;
+  const canProceedFromProfessional = selectedBarber !== "";
+  const canProceedFromService = selectedService !== "";
   const canProceedFromDateTime = date && selectedTime;
   const canProceedFromClient = clientName && clientPhone;
 
@@ -572,6 +573,8 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
     if (currentStep === 'unit' && canProceedFromUnit) {
       setCurrentStep('professional');
     } else if (currentStep === 'professional' && canProceedFromProfessional) {
+      setCurrentStep('service');
+    } else if (currentStep === 'service' && canProceedFromService) {
       setCurrentStep('datetime');
     } else if (currentStep === 'datetime' && canProceedFromDateTime) {
       setCurrentStep('client');
@@ -582,7 +585,8 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
 
   const handleBack = () => {
     if (currentStep === 'professional' && hasMultipleUnits) setCurrentStep('unit');
-    else if (currentStep === 'datetime') setCurrentStep('professional');
+    else if (currentStep === 'service') setCurrentStep('professional');
+    else if (currentStep === 'datetime') setCurrentStep('service');
     else if (currentStep === 'client') setCurrentStep('datetime');
     else if (currentStep === 'confirm') setCurrentStep('client');
   };
@@ -811,15 +815,15 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
 
   const getStepNumber = (step: WizardStep): number => {
     const steps: WizardStep[] = hasMultipleUnits 
-      ? ['unit', 'professional', 'datetime', 'client', 'confirm']
-      : ['professional', 'datetime', 'client', 'confirm'];
+      ? ['unit', 'professional', 'service', 'datetime', 'client', 'confirm']
+      : ['professional', 'service', 'datetime', 'client', 'confirm'];
     return steps.indexOf(step) + 1;
   };
   
-  const totalSteps = hasMultipleUnits ? 5 : 4;
+  const totalSteps = hasMultipleUnits ? 6 : 5;
   const wizardSteps: WizardStep[] = hasMultipleUnits 
-    ? ['unit', 'professional', 'datetime', 'client', 'confirm']
-    : ['professional', 'datetime', 'client', 'confirm'];
+    ? ['unit', 'professional', 'service', 'datetime', 'client', 'confirm']
+    : ['professional', 'service', 'datetime', 'client', 'confirm'];
   
   const selectedUnitData = barbershops?.find(b => b.id === selectedUnitId);
 
@@ -838,7 +842,8 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
               </CardTitle>
               <CardDescription className="mt-2">
                 {currentStep === 'unit' && 'Selecione a unidade para o agendamento'}
-                {currentStep === 'professional' && 'Escolha o serviço e o profissional'}
+                {currentStep === 'professional' && 'Escolha o profissional'}
+                {currentStep === 'service' && 'Escolha o serviço desejado'}
                 {currentStep === 'datetime' && 'Selecione data e horário disponível'}
                 {currentStep === 'client' && 'Selecione ou cadastre um cliente'}
                 {currentStep === 'confirm' && 'Revise e confirme o agendamento'}
@@ -989,54 +994,82 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
 
-          {/* Step 1: Professional & Service Selection */}
+          {/* Step: Professional Selection */}
           {currentStep === 'professional' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">
+                <User className="h-5 w-5 text-primary" />
+                Selecione o Profissional
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {staff.map((member) => (
+                  <button
+                    key={member.id}
+                    type="button"
+                    onClick={() => setSelectedBarber(member.id)}
+                    className={cn(
+                      "p-4 rounded-lg border-2 text-left transition-all",
+                      selectedBarber === member.id
+                        ? "border-primary bg-primary/5"
+                        : "border-muted hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="font-medium">{member.name}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              
+              {staff.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhum profissional disponível para esta unidade.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step: Service Selection */}
+          {currentStep === 'service' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-lg font-semibold">
                 <Scissors className="h-5 w-5 text-primary" />
-                Serviço e Profissional
+                Selecione o Serviço
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Serviço *</Label>
-                  <Select value={selectedService} onValueChange={setSelectedService}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o serviço" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {services.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="font-medium">{service.name}</span>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{service.duration}min</span>
-                              <span>•</span>
-                              <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Profissional *</Label>
-                  <Select value={selectedBarber} onValueChange={setSelectedBarber}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o profissional" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staff.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {services.map((service) => (
+                  <button
+                    key={service.id}
+                    type="button"
+                    onClick={() => setSelectedService(service.id)}
+                    className={cn(
+                      "p-4 rounded-lg border-2 text-left transition-all",
+                      selectedService === service.id
+                        ? "border-primary bg-primary/5"
+                        : "border-muted hover:border-primary/50"
+                    )}
+                  >
+                    <div className="font-medium">{service.name}</div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{service.duration}min</span>
+                      <span>•</span>
+                      <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
+                    </div>
+                  </button>
+                ))}
               </div>
+              
+              {services.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhum serviço disponível para esta unidade.
+                </div>
+              )}
             </div>
           )}
 
@@ -1451,6 +1484,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 disabled={
                   (currentStep === 'unit' && !canProceedFromUnit) ||
                   (currentStep === 'professional' && !canProceedFromProfessional) ||
+                  (currentStep === 'service' && !canProceedFromService) ||
                   (currentStep === 'datetime' && !canProceedFromDateTime) ||
                   (currentStep === 'client' && !canProceedFromClient)
                 }
