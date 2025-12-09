@@ -30,6 +30,7 @@ import StaffMultiUnit from "./pages/StaffMultiUnit";
 import MultiUnitReports from "./pages/MultiUnitReports";
 import SaasAdminPortal from "./pages/SaasAdminPortal";
 import Barbershops from "./pages/Barbershops";
+import ChatbotSettings from "./pages/ChatbotSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/client-history/:clientId" element={<ProtectedRoute><ClientHistory /></ProtectedRoute>} />
             <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
             <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppSettings /></ProtectedRoute>} />
+            <Route path="/chatbot" element={<ProtectedRoute><ChatbotSettings /></ProtectedRoute>} />
             <Route path="/waitlist" element={<ProtectedRoute><Waitlist /></ProtectedRoute>} />
             <Route path="/meus-ganhos" element={<ProtectedRoute><MyEarnings /></ProtectedRoute>} />
             <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />

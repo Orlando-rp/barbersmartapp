@@ -18,6 +18,7 @@ import {
   ListChecks,
   Wallet,
   Building2,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ const navigation: NavItem[] = [
   { name: "Marketing", href: "/marketing", icon: MessageSquare },
   { name: "Avaliações", href: "/reviews", icon: StarIcon },
   { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare },
+  { name: "Chatbot IA", href: "/chatbot", icon: Bot },
   { name: "Horários", href: "/business-hours", icon: Clock },
   { name: "Auditoria", href: "/audit", icon: Shield },
   { name: "Configurações", href: "/settings", icon: Settings },
