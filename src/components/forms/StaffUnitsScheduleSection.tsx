@@ -112,13 +112,30 @@ export const StaffUnitsScheduleSection = ({
     }
   };
 
-  const currentSchedule = schedule || createDefaultSchedule(barbershops[0]?.id || null);
+  // Ensure all days are present in schedule with safe fallback
+  const ensureCompleteSchedule = (partialSchedule: StaffUnitSchedule | null): StaffUnitSchedule => {
+    const defaultSchedule = createDefaultSchedule(barbershops[0]?.id || null);
+    if (!partialSchedule) return defaultSchedule;
+    
+    return {
+      monday: partialSchedule.monday || defaultSchedule.monday,
+      tuesday: partialSchedule.tuesday || defaultSchedule.tuesday,
+      wednesday: partialSchedule.wednesday || defaultSchedule.wednesday,
+      thursday: partialSchedule.thursday || defaultSchedule.thursday,
+      friday: partialSchedule.friday || defaultSchedule.friday,
+      saturday: partialSchedule.saturday || defaultSchedule.saturday,
+      sunday: partialSchedule.sunday || defaultSchedule.sunday,
+    };
+  };
+
+  const currentSchedule = ensureCompleteSchedule(schedule);
 
   const updateDaySchedule = (day: keyof StaffUnitSchedule, field: keyof DayUnitSchedule, value: any) => {
+    const daySchedule = currentSchedule[day] || defaultDaySchedule;
     const newSchedule = {
       ...currentSchedule,
       [day]: {
-        ...currentSchedule[day],
+        ...daySchedule,
         [field]: value,
       },
     };
