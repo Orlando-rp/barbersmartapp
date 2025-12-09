@@ -126,19 +126,20 @@ const SettingsPage = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Configurações</h1>
-            <p className="text-muted-foreground">Personalize sua experiência no BarberSmart</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Configurações</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Personalize sua experiência no BarberSmart</p>
           </div>
           <Button 
             variant="premium" 
-            size="lg"
+            size="default"
             onClick={handleSave}
             disabled={saving}
+            className="w-full sm:w-auto"
           >
-            {saving ? <LoadingSpinner size="sm" /> : <Save className="mr-2 h-5 w-5" />}
-            Salvar Alterações
+            {saving ? <LoadingSpinner size="sm" /> : <Save className="mr-2 h-4 w-4" />}
+            Salvar
           </Button>
         </div>
 

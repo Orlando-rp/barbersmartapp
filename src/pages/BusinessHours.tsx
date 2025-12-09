@@ -441,25 +441,28 @@ const BusinessHours = () => {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Horários de Funcionamento</h1>
-          <p className="text-muted-foreground">
-            Configure os horários de funcionamento, intervalos e bloqueios da barbearia
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Horários de Funcionamento</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Configure os horários, intervalos e bloqueios
           </p>
         </div>
 
-        <Tabs defaultValue="schedule" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="schedule" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Horários da Semana
+        <Tabs defaultValue="schedule" className="space-y-4 sm:space-y-6">
+          <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value="schedule" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Horários da Semana</span>
+              <span className="sm:hidden">Semana</span>
             </TabsTrigger>
-            <TabsTrigger value="special" className="gap-2">
-              <CalendarIcon className="h-4 w-4" />
-              Horários Especiais
+            <TabsTrigger value="special" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <CalendarIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Horários Especiais</span>
+              <span className="sm:hidden">Especiais</span>
             </TabsTrigger>
-            <TabsTrigger value="blocked" className="gap-2">
-              <XCircle className="h-4 w-4" />
-              Datas Bloqueadas
+            <TabsTrigger value="blocked" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <XCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Datas Bloqueadas</span>
+              <span className="sm:hidden">Bloqueios</span>
             </TabsTrigger>
           </TabsList>
 
@@ -473,17 +476,17 @@ const BusinessHours = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {schedule.map((day, index) => (
-                  <div key={day.day} className="flex items-center gap-4 p-4 border border-border rounded-lg">
-                    <div className="flex items-center gap-3 w-40">
+                  <div key={day.day} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 border border-border rounded-lg">
+                    <div className="flex items-center gap-3 sm:w-40">
                       <Switch
                         checked={day.enabled}
                         onCheckedChange={(checked) => updateSchedule(index, 'enabled', checked)}
                       />
-                      <Label className="font-medium">{day.label}</Label>
+                      <Label className="font-medium text-sm sm:text-base">{day.label}</Label>
                     </div>
 
                     {day.enabled ? (
-                      <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
                         <div>
                           <Label className="text-xs text-muted-foreground">Abertura</Label>
                           <Input

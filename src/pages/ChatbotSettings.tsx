@@ -200,24 +200,24 @@ const ChatbotSettings = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-              <Bot className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3">
+              <Bot className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
               Chatbot IA
             </h1>
-            <p className="text-muted-foreground">
-              Configure o assistente virtual para agendamentos via WhatsApp
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Configure o assistente virtual para WhatsApp
             </p>
           </div>
-          <Button variant="outline" onClick={fetchData}>
+          <Button variant="outline" onClick={fetchData} className="w-full sm:w-auto">
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </Button>
         </div>
 
         {/* Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -281,18 +281,20 @@ const ChatbotSettings = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="config" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="config" className="gap-2">
-              <Settings2 className="h-4 w-4" />
-              Configuração
+          <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value="config" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Settings2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Configuração</span>
+              <span className="sm:hidden">Config</span>
             </TabsTrigger>
-            <TabsTrigger value="conversations" className="gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Conversas
+            <TabsTrigger value="conversations" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Conversas</span>
+              <span className="sm:hidden">Chat</span>
             </TabsTrigger>
-            <TabsTrigger value="activity" className="gap-2">
-              <Activity className="h-4 w-4" />
-              Atividade
+            <TabsTrigger value="activity" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Atividade</span>
             </TabsTrigger>
           </TabsList>
 

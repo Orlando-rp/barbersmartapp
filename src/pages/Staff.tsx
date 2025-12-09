@@ -292,15 +292,15 @@ const Staff = () => {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Equipe</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Equipe</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Gerencie os membros da sua equipe
             </p>
           </div>
-          <Button onClick={handleAdd} variant="premium">
+          <Button onClick={handleAdd} variant="premium" className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Adicionar Membro
           </Button>
@@ -351,15 +351,15 @@ const Staff = () => {
                 </Button>
               </div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Telefone</TableHead>
-                      <TableHead>Função</TableHead>
-                      <TableHead>Especialidades</TableHead>
-                      <TableHead>Comissão</TableHead>
+                      <TableHead className="min-w-[150px]">Nome</TableHead>
+                      <TableHead className="hidden sm:table-cell">Telefone</TableHead>
+                      <TableHead className="hidden md:table-cell">Função</TableHead>
+                      <TableHead className="hidden lg:table-cell">Especialidades</TableHead>
+                      <TableHead className="hidden sm:table-cell">Comissão</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -378,8 +378,8 @@ const Staff = () => {
                             <span>{member.profiles?.full_name || 'Nome não disponível'}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{member.profiles?.phone || '-'}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell">{member.profiles?.phone || '-'}</TableCell>
+                        <TableCell className="hidden md:table-cell">
                           {member.profiles?.user_roles && member.profiles.user_roles.length > 0 ? (
                             <div className="flex gap-1">
                               {member.profiles.user_roles.map((ur, idx) => (
@@ -392,7 +392,7 @@ const Staff = () => {
                             <Badge variant="outline">Sem função</Badge>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {member.specialties && member.specialties.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {member.specialties.slice(0, 2).map((spec, idx) => (
@@ -410,7 +410,7 @@ const Staff = () => {
                             <span className="text-muted-foreground text-sm">Nenhuma</span>
                           )}
                         </TableCell>
-                        <TableCell>{member.commission_rate}%</TableCell>
+                        <TableCell className="hidden sm:table-cell">{member.commission_rate}%</TableCell>
                         <TableCell>
                           {member.active ? (
                             <Badge variant="default" className="bg-green-500">

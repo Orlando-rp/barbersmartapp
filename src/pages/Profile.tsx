@@ -94,18 +94,20 @@ const Profile = () => {
         </Card>
 
         <Tabs defaultValue="personal" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="personal">
-              <User className="mr-2 h-4 w-4" />
-              Informações Pessoais
+          <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsTrigger value="personal" className="flex flex-col sm:flex-row gap-1 py-2 text-xs sm:text-sm">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Informações Pessoais</span>
+              <span className="sm:hidden">Perfil</span>
             </TabsTrigger>
-            <TabsTrigger value="security">
-              <Lock className="mr-2 h-4 w-4" />
-              Segurança
+            <TabsTrigger value="security" className="flex flex-col sm:flex-row gap-1 py-2 text-xs sm:text-sm">
+              <Lock className="h-4 w-4" />
+              <span>Segurança</span>
             </TabsTrigger>
-            <TabsTrigger value="preferences">
-              <SettingsIcon className="mr-2 h-4 w-4" />
-              Preferências
+            <TabsTrigger value="preferences" className="flex flex-col sm:flex-row gap-1 py-2 text-xs sm:text-sm">
+              <SettingsIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Preferências</span>
+              <span className="sm:hidden">Pref.</span>
             </TabsTrigger>
           </TabsList>
 

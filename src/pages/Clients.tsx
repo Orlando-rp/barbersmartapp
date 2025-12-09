@@ -125,21 +125,21 @@ const Clients = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Clientes</h1>
-            <p className="text-muted-foreground">Gerencie a base de clientes da sua barbearia</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clientes</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Gerencie a base de clientes da sua barbearia</p>
           </div>
           <ClientDialog editingClient={null} onSuccess={fetchClients}>
-            <Button variant="premium" size="lg">
-              <Plus className="mr-2 h-5 w-5" />
+            <Button variant="premium" size="default" className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
               Novo Cliente
             </Button>
           </ClientDialog>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-foreground">{clients.length}</div>
@@ -207,10 +207,10 @@ const Clients = () => {
                 filteredClients.map((client) => (
                 <div
                   key={client.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors gap-3"
                 >
-                  <div className="flex items-center space-x-4 flex-1">
-                    <Avatar className="h-12 w-12">
+                  <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
                       <AvatarImage 
                         src={client.avatar_url ? (
                           client.avatar_url.startsWith('http') 
@@ -219,35 +219,31 @@ const Clients = () => {
                         ) : undefined} 
                         alt={client.name} 
                       />
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
                         {client.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
                     
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
-                        {client.name}
+                        <span className="truncate">{client.name}</span>
                         {client.tags && client.tags.length > 0 && (
-                          client.tags.map((tag: string) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                        {client.email && (
-                          <div className="flex items-center">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {client.email}
+                          <div className="hidden sm:flex gap-1">
+                            {client.tags.slice(0, 2).map((tag: string) => (
+                              <Badge key={tag} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
                           </div>
                         )}
+                      </div>
+                      <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
                         <div className="flex items-center">
-                          <Phone className="h-3 w-3 mr-1" />
-                          {client.phone}
+                          <Phone className="h-3 w-3 mr-1 shrink-0" />
+                          <span className="truncate">{client.phone}</span>
                         </div>
-                        <div className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
+                        <div className="hidden sm:flex items-center">
+                          <Calendar className="h-3 w-3 mr-1 shrink-0" />
                           {new Date(client.created_at).toLocaleDateString('pt-BR')}
                         </div>
                       </div>

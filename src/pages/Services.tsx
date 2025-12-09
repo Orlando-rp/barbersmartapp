@@ -64,21 +64,21 @@ const Services = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Serviços</h1>
-            <p className="text-muted-foreground">Gerencie o catálogo de serviços da sua barbearia</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Serviços</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Gerencie o catálogo de serviços da sua barbearia</p>
           </div>
           <ServiceDialog>
-            <Button variant="premium" size="lg">
-              <Plus className="mr-2 h-5 w-5" />
+            <Button variant="premium" size="default" className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
               Novo Serviço
             </Button>
           </ServiceDialog>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card className="barbershop-card">
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-foreground">{services.length}</div>
@@ -139,7 +139,7 @@ const Services = () => {
         </Card>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredServices.length === 0 ? (
             <div className="col-span-full text-center py-8">
               <p className="text-muted-foreground">
