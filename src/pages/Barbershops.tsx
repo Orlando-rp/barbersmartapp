@@ -156,15 +156,20 @@ const Barbershops = () => {
         // Associar o usuário à nova barbearia
         const { data: { user } } = await supabase.auth.getUser();
         if (user && newBarbershop) {
-          await supabase
+          const { error: linkError } = await supabase
             .from('user_barbershops')
             .insert({
               user_id: user.id,
               barbershop_id: newBarbershop.id,
             });
+          
+          if (linkError) {
+            console.error('Erro ao associar usuário à barbearia:', linkError);
+            toast.error('Barbearia criada, mas houve erro ao associá-la ao usuário. Recarregue a página.');
+          }
         }
 
-        toast.success('Barbearia criada com sucesso!');
+        toast.success('Barbearia criada com sucesso! Faça logout e login para ver a nova unidade.');
       }
 
       setDialogOpen(false);
