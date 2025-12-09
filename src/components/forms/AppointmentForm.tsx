@@ -881,7 +881,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
         </CardHeader>
 
         <CardContent className="space-y-6 px-6 pb-6">
-          {/* Step 0: Unit Selection (only for multi-unit users) */}
+          {/* Step 1: Unit Selection (only for multi-unit users) */}
           {currentStep === 'unit' && hasMultipleUnits && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">
@@ -921,7 +921,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
           
-          {/* Step 1: Client Selection */}
+          {/* Step 5: Client Selection */}
           {currentStep === 'client' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">
@@ -994,7 +994,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
 
-          {/* Step: Professional Selection */}
+          {/* Step 2: Professional Selection */}
           {currentStep === 'professional' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">
@@ -1033,7 +1033,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
 
-          {/* Step: Service Selection */}
+          {/* Step 3: Service Selection */}
           {currentStep === 'service' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">
@@ -1073,7 +1073,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
 
-          {/* Step 2: Date & Time Selection */}
+          {/* Step 4: Date & Time Selection */}
           {currentStep === 'datetime' && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 text-lg font-semibold">
@@ -1377,7 +1377,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
 
-          {/* Step 4: Confirmation */}
+          {/* Step 6: Confirmation */}
           {currentStep === 'confirm' && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 text-lg font-semibold">
