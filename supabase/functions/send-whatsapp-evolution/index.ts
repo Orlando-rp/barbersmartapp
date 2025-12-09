@@ -26,7 +26,7 @@ serve(async (req) => {
       createdBy 
     } = await req.json();
 
-    console.log(`[Evolution API] Action: ${action}, Instance: ${instanceName}`);
+    console.log(`[Evolution API] Action: ${action}, Instance: ${instanceName || 'N/A'}`);
 
     // Use provided credentials or fall back to env vars
     const evolutionApiUrl = apiUrl || Deno.env.get('EVOLUTION_API_URL');
