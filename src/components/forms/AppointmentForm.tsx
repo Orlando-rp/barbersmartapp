@@ -34,13 +34,13 @@ interface AppointmentFormProps {
   waitlistPrefill?: WaitlistPrefill;
 }
 
-type WizardStep = 'client' | 'service' | 'datetime' | 'confirm';
+type WizardStep = 'professional' | 'datetime' | 'client' | 'confirm';
 
 export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
   const { barbershopId, user } = useAuth();
   const { toast } = useToast();
   
-  const [currentStep, setCurrentStep] = useState<WizardStep>('client');
+  const [currentStep, setCurrentStep] = useState<WizardStep>('professional');
   
   const [clientId, setClientId] = useState(appointment?.client_id || "");
   const [clientName, setClientName] = useState(appointment?.client_name || waitlistPrefill?.clientName || "");
@@ -415,9 +415,9 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     client.phone.includes(searchTerm)
   );
 
-  const canProceedFromClient = clientName && clientPhone;
-  const canProceedFromService = selectedService && selectedBarber;
+  const canProceedFromProfessional = selectedService && selectedBarber;
   const canProceedFromDateTime = date && selectedTime;
+  const canProceedFromClient = clientName && clientPhone;
 
   const sendWhatsAppConfirmation = async (
     appointmentId: string,
@@ -561,19 +561,19 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
   };
 
   const handleNext = () => {
-    if (currentStep === 'client' && canProceedFromClient) {
-      setCurrentStep('service');
-    } else if (currentStep === 'service' && canProceedFromService) {
+    if (currentStep === 'professional' && canProceedFromProfessional) {
       setCurrentStep('datetime');
     } else if (currentStep === 'datetime' && canProceedFromDateTime) {
+      setCurrentStep('client');
+    } else if (currentStep === 'client' && canProceedFromClient) {
       setCurrentStep('confirm');
     }
   };
 
   const handleBack = () => {
-    if (currentStep === 'service') setCurrentStep('client');
-    else if (currentStep === 'datetime') setCurrentStep('service');
-    else if (currentStep === 'confirm') setCurrentStep('datetime');
+    if (currentStep === 'datetime') setCurrentStep('professional');
+    else if (currentStep === 'client') setCurrentStep('datetime');
+    else if (currentStep === 'confirm') setCurrentStep('client');
   };
 
   const handleJoinWaitlist = async () => {
@@ -799,7 +799,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
   };
 
   const getStepNumber = (step: WizardStep): number => {
-    const steps: WizardStep[] = ['client', 'service', 'datetime', 'confirm'];
+    const steps: WizardStep[] = ['professional', 'datetime', 'client', 'confirm'];
     return steps.indexOf(step) + 1;
   };
 
@@ -817,9 +817,9 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
               </CardTitle>
               <CardDescription className="mt-2">
-                {currentStep === 'client' && 'Selecione ou cadastre um cliente'}
-                {currentStep === 'service' && 'Escolha o serviço e o profissional'}
+                {currentStep === 'professional' && 'Escolha o serviço e o profissional'}
                 {currentStep === 'datetime' && 'Selecione data e horário disponível'}
+                {currentStep === 'client' && 'Selecione ou cadastre um cliente'}
                 {currentStep === 'confirm' && 'Revise e confirme o agendamento'}
               </CardDescription>
             </div>
@@ -829,7 +829,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
           </div>
 
           <div className="flex items-center gap-2">
-            {(['client', 'service', 'datetime', 'confirm'] as WizardStep[]).map((step, index) => (
+            {(['professional', 'datetime', 'client', 'confirm'] as WizardStep[]).map((step, index) => (
               <div key={step} className="flex items-center flex-1">
                 <div className={cn(
                   "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all",
@@ -855,7 +855,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
         </CardHeader>
 
         <CardContent className="space-y-6 px-6 pb-6">
-          {/* Step 1: Client Selection */}
+          {/* Step 3: Client Selection */}
           {currentStep === 'client' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">
@@ -928,8 +928,8 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
 
-          {/* Step 2: Service Selection */}
-          {currentStep === 'service' && (
+          {/* Step 1: Professional & Service Selection */}
+          {currentStep === 'professional' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">
                 <Scissors className="h-5 w-5 text-primary" />
@@ -979,7 +979,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
 
-          {/* Step 3: Date & Time Selection */}
+          {/* Step 2: Date & Time Selection */}
           {currentStep === 'datetime' && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 text-lg font-semibold">
@@ -1377,9 +1377,9 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 variant="premium"
                 onClick={handleNext}
                 disabled={
-                  (currentStep === 'client' && !canProceedFromClient) ||
-                  (currentStep === 'service' && !canProceedFromService) ||
-                  (currentStep === 'datetime' && !canProceedFromDateTime)
+                  (currentStep === 'professional' && !canProceedFromProfessional) ||
+                  (currentStep === 'datetime' && !canProceedFromDateTime) ||
+                  (currentStep === 'client' && !canProceedFromClient)
                 }
               >
                 Próximo
