@@ -20,6 +20,16 @@ interface SpecialHours {
   break_end: string | null;
 }
 
+interface StaffSchedule {
+  [day: string]: {
+    is_open: boolean;
+    open_time: string;
+    close_time: string;
+    break_start: string | null;
+    break_end: string | null;
+  };
+}
+
 interface ValidationResult {
   isValid: boolean;
   reason?: string;
@@ -40,6 +50,7 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
   const [businessHours, setBusinessHours] = useState<BusinessHours[]>([]);
   const [specialHours, setSpecialHours] = useState<SpecialHours[]>([]);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [staffSchedules, setStaffSchedules] = useState<Record<string, StaffSchedule | null>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -101,6 +112,28 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
         console.warn('Tabela blocked_dates não disponível');
         setBlockedDates([]);
       }
+
+      // Load staff schedules
+      try {
+        const { data: staffData, error: staffError } = await supabase
+          .from('staff')
+          .select('id, schedule')
+          .eq('barbershop_id', barbershopId)
+          .eq('active', true);
+
+        if (staffError && !staffError.message?.includes('does not exist')) {
+          console.warn('Erro ao carregar staff schedules:', staffError);
+        }
+        
+        const schedules: Record<string, StaffSchedule | null> = {};
+        (staffData || []).forEach(staff => {
+          schedules[staff.id] = staff.schedule as StaffSchedule | null;
+        });
+        setStaffSchedules(schedules);
+      } catch (err) {
+        console.warn('Erro ao carregar horários do staff');
+        setStaffSchedules({});
+      }
     } catch (error) {
       console.error('Erro ao carregar dados de validação:', error);
     } finally {
@@ -108,7 +141,25 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     }
   };
 
-  const validateDateTime = (date: Date, time?: string): ValidationResult => {
+  // Get staff schedule for a specific day
+  const getStaffScheduleForDay = (staffId: string | undefined, dayOfWeek: string): BusinessHours | null => {
+    if (!staffId || !staffSchedules[staffId]) return null;
+    
+    const schedule = staffSchedules[staffId];
+    if (!schedule || !schedule[dayOfWeek]) return null;
+    
+    const daySchedule = schedule[dayOfWeek];
+    return {
+      day_of_week: dayOfWeek,
+      is_open: daySchedule.is_open,
+      open_time: daySchedule.open_time,
+      close_time: daySchedule.close_time,
+      break_start: daySchedule.break_start,
+      break_end: daySchedule.break_end,
+    };
+  };
+
+  const validateDateTime = (date: Date, time?: string, staffId?: string): ValidationResult => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     const dayOfWeek = dayOfWeekMap[date.getDay()];
 
@@ -163,28 +214,33 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
       return { isValid: true, availableHours };
     }
 
-    // Check regular business hours
-    const businessHour = businessHours.find(bh => bh.day_of_week === dayOfWeek);
+    // Check for individual staff schedule first (if staffId provided)
+    const staffSchedule = getStaffScheduleForDay(staffId, dayOfWeek);
     
-    if (!businessHour) {
+    // Use staff schedule if available, otherwise fall back to barbershop hours
+    const effectiveHours = staffSchedule || businessHours.find(bh => bh.day_of_week === dayOfWeek);
+    
+    if (!effectiveHours) {
       return {
         isValid: false,
         reason: 'Horário de funcionamento não configurado para este dia'
       };
     }
 
-    if (!businessHour.is_open) {
+    if (!effectiveHours.is_open) {
       return {
         isValid: false,
-        reason: 'Barbearia fechada neste dia da semana'
+        reason: staffSchedule 
+          ? 'Este profissional não trabalha neste dia' 
+          : 'Barbearia fechada neste dia da semana'
       };
     }
 
     const availableHours = {
-      start: businessHour.open_time,
-      end: businessHour.close_time,
-      breakStart: businessHour.break_start || undefined,
-      breakEnd: businessHour.break_end || undefined
+      start: effectiveHours.open_time,
+      end: effectiveHours.close_time,
+      breakStart: effectiveHours.break_start || undefined,
+      breakEnd: effectiveHours.break_end || undefined
     };
 
     // If no specific time provided, just return the hours
@@ -213,8 +269,8 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     return { isValid: true, availableHours };
   };
 
-  const generateTimeSlots = (date: Date, serviceDurationMinutes: number = 30): string[] => {
-    const validation = validateDateTime(date);
+  const generateTimeSlots = (date: Date, serviceDurationMinutes: number = 30, staffId?: string): string[] => {
+    const validation = validateDateTime(date, undefined, staffId);
     
     if (!validation.isValid || !validation.availableHours) {
       return [];
