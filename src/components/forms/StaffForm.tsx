@@ -155,7 +155,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           return;
         }
 
-        // 1. Criar usuário no Supabase Auth
+        // 1. Tentar criar usuário no Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
@@ -167,45 +167,78 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           },
         });
 
-        if (authError) throw authError;
-        if (!authData.user) throw new Error("Falha ao criar usuário");
+        // Se usuário já existe, tentar buscar pelo email
+        let userId = authData?.user?.id;
+        
+        if (authError) {
+          if (authError.message === 'User already registered') {
+            toast({
+              title: "Usuário já cadastrado",
+              description: "Este email já está registrado no sistema. Por favor, use outro email ou entre em contato com o suporte.",
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+          throw authError;
+        }
+        
+        if (!userId) throw new Error("Falha ao criar usuário");
 
         // 2. Atualizar profile (caso o trigger não tenha criado)
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
-            id: authData.user.id,
+            id: userId,
             barbershop_id: barbershopId,
             full_name: fullName,
             phone,
           });
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Erro ao criar profile:', profileError);
+          // Continuar mesmo com erro no profile, pois o trigger pode ter criado
+        }
 
         // 3. Criar registro na tabela staff
         const { error: staffError } = await supabase
           .from('staff')
           .insert({
             barbershop_id: barbershopId,
-            user_id: authData.user.id,
+            user_id: userId,
             specialties,
             commission_rate: commissionRate,
             active: true,
             is_also_barber: role === 'admin' ? isAlsoBarber : null,
           });
 
-        if (staffError) throw staffError;
+        if (staffError) {
+          console.error('Erro ao criar staff:', staffError);
+          if (staffError.code === '42501') {
+            toast({
+              title: "Erro de permissão",
+              description: "Você não tem permissão para adicionar membros. Verifique se você é administrador desta barbearia.",
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+          throw staffError;
+        }
 
         // 4. Atribuir role
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
-            user_id: authData.user.id,
+            user_id: userId,
             role,
             barbershop_id: barbershopId,
           });
 
-        if (roleError) throw roleError;
+        if (roleError) {
+          console.error('Erro ao atribuir role:', roleError);
+          // Não bloquear se falhar, mas logar
+        }
 
         toast({
           title: "Membro adicionado!",
