@@ -79,12 +79,15 @@ export const StaffUnitsScheduleSection = ({
 }: StaffUnitsScheduleSectionProps) => {
   const [barbershops, setBarbershops] = useState<Barbershop[]>([]);
   const [loading, setLoading] = useState(true);
-  const initializedRef = useRef(false);
+  const [localSchedule, setLocalSchedule] = useState<StaffUnitSchedule | null>(schedule);
   const lastIdsRef = useRef<string>('');
-  const onScheduleChangeRef = useRef(onScheduleChange);
 
-  // Keep callback ref updated
-  onScheduleChangeRef.current = onScheduleChange;
+  // Sync local schedule with prop only on mount
+  useEffect(() => {
+    if (schedule) {
+      setLocalSchedule(schedule);
+    }
+  }, []); // Only on mount
 
   // Memoize IDs string for comparison
   const idsString = useMemo(() => [...barbershopIds].sort().join(','), [barbershopIds]);
@@ -96,18 +99,6 @@ export const StaffUnitsScheduleSection = ({
       fetchBarbershops();
     }
   }, [idsString, barbershopIds.length]);
-
-  // Initialize schedule when barbershops are loaded (only once)
-  useEffect(() => {
-    if (barbershops.length > 0 && !schedule && !initializedRef.current) {
-      initializedRef.current = true;
-      const defaultSchedule = createDefaultSchedule(barbershops[0]?.id || null);
-      // Use setTimeout to avoid state update during render
-      setTimeout(() => {
-        onScheduleChangeRef.current(defaultSchedule);
-      }, 0);
-    }
-  }, [barbershops.length, schedule]);
 
   const fetchBarbershops = async () => {
     try {
@@ -134,20 +125,29 @@ export const StaffUnitsScheduleSection = ({
     [barbershops]
   );
 
+  // Initialize local schedule when barbershops are loaded (if not already set)
+  useEffect(() => {
+    if (barbershops.length > 0 && !localSchedule) {
+      const defaultSchedule = createDefaultSchedule(barbershops[0]?.id || null);
+      setLocalSchedule(defaultSchedule);
+      onScheduleChange(defaultSchedule);
+    }
+  }, [barbershops.length]); // Only when barbershops load
+
   // Memoized current schedule to ensure stability
   const currentSchedule = useMemo(() => {
-    if (!schedule) return defaultScheduleForUnit;
+    if (!localSchedule) return defaultScheduleForUnit;
     
     return {
-      monday: schedule.monday || defaultScheduleForUnit.monday,
-      tuesday: schedule.tuesday || defaultScheduleForUnit.tuesday,
-      wednesday: schedule.wednesday || defaultScheduleForUnit.wednesday,
-      thursday: schedule.thursday || defaultScheduleForUnit.thursday,
-      friday: schedule.friday || defaultScheduleForUnit.friday,
-      saturday: schedule.saturday || defaultScheduleForUnit.saturday,
-      sunday: schedule.sunday || defaultScheduleForUnit.sunday,
+      monday: localSchedule.monday || defaultScheduleForUnit.monday,
+      tuesday: localSchedule.tuesday || defaultScheduleForUnit.tuesday,
+      wednesday: localSchedule.wednesday || defaultScheduleForUnit.wednesday,
+      thursday: localSchedule.thursday || defaultScheduleForUnit.thursday,
+      friday: localSchedule.friday || defaultScheduleForUnit.friday,
+      saturday: localSchedule.saturday || defaultScheduleForUnit.saturday,
+      sunday: localSchedule.sunday || defaultScheduleForUnit.sunday,
     };
-  }, [schedule, defaultScheduleForUnit]);
+  }, [localSchedule, defaultScheduleForUnit]);
 
   const updateDaySchedule = (day: keyof StaffUnitSchedule, field: keyof DayUnitSchedule, value: any) => {
     const daySchedule = currentSchedule[day] || defaultDaySchedule;
@@ -158,6 +158,7 @@ export const StaffUnitsScheduleSection = ({
         [field]: value,
       },
     };
+    setLocalSchedule(newSchedule);
     onScheduleChange(newSchedule);
   };
 

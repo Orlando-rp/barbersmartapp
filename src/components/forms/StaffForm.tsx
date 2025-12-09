@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,15 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   
   // Check if user has multiple units
   const hasMultipleUnits = barbershops.length > 1;
+
+  // Stable callbacks for child components
+  const handleUnitScheduleChange = useCallback((newSchedule: StaffUnitSchedule) => {
+    setUnitSchedule(newSchedule);
+  }, []);
+
+  const handleServicesChange = useCallback((services: string[]) => {
+    setSelectedServices(services);
+  }, []);
 
   // Load staff services if editing
   useEffect(() => {
@@ -500,7 +509,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         <StaffUnitsScheduleSection
           barbershopIds={barbershopIds}
           schedule={unitSchedule}
-          onScheduleChange={setUnitSchedule}
+          onScheduleChange={handleUnitScheduleChange}
         />
       )}
 
@@ -519,7 +528,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         <StaffServicesSection
           barbershopId={barbershopId}
           selectedServices={selectedServices}
-          onServicesChange={setSelectedServices}
+          onServicesChange={handleServicesChange}
         />
       )}
 
