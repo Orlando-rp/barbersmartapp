@@ -413,12 +413,12 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Agendamentos</h1>
-            <p className="text-muted-foreground">Gerencie todos os agendamentos da sua barbearia</p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Agendamentos</h1>
+            <p className="text-muted-foreground text-sm lg:text-base">Gerencie todos os agendamentos</p>
           </div>
           <AppointmentDialog 
             appointment={editingAppointment} 
@@ -437,54 +437,56 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
           >
             <Button 
               variant="premium" 
-              size="lg"
+              size="default"
               onClick={() => {
                 setEditingAppointment(null);
                 setIsDialogOpen(true);
               }}
             >
-              <Plus className="mr-2 h-5 w-5" />
-              Novo Agendamento
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Novo Agendamento</span>
             </Button>
           </AppointmentDialog>
         </div>
 
         {/* Filters */}
         <Card className="barbershop-card">
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-[200px] relative">
+          <CardContent className="pt-4 lg:pt-6">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 lg:gap-4">
+              <div className="flex-1 min-w-0 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Buscar por cliente ou telefone..." 
+                  placeholder="Buscar..." 
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Select value={selectedBarber} onValueChange={setSelectedBarber}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Todos os barbeiros" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os barbeiros</SelectItem>
-                  {staff.map((member) => (
-                    <SelectItem key={member.id} value={member.name}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedDate} onValueChange={setSelectedDate}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Todas as datas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as datas</SelectItem>
-                  <SelectItem value="today">Hoje</SelectItem>
-                  <SelectItem value="upcoming">Próximos</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={selectedBarber} onValueChange={setSelectedBarber}>
+                  <SelectTrigger className="w-[140px] sm:w-[180px]">
+                    <SelectValue placeholder="Barbeiro" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.name}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedDate} onValueChange={setSelectedDate}>
+                  <SelectTrigger className="w-[120px] sm:w-[150px]">
+                    <SelectValue placeholder="Data" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="today">Hoje</SelectItem>
+                    <SelectItem value="upcoming">Próximos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>

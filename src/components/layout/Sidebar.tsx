@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   Calendar,
   Users,
@@ -19,10 +19,13 @@ import {
   Wallet,
   Building2,
   Bot,
+  Menu,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
 interface NavItem {
   name: string;
@@ -55,11 +58,90 @@ const navigation: NavItem[] = [
   { name: "Admin SaaS", href: "/saas-admin", icon: Shield, superAdminOnly: true },
 ];
 
+// Mobile Sidebar using Sheet
+export const MobileSidebar = () => {
+  const [open, setOpen] = useState(false);
+  const { barbershops, userRole } = useAuth();
+  const location = useLocation();
+
+  // Fechar sidebar ao mudar de rota
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+
+  const filteredNavigation = navigation.filter(item => {
+    if (item.superAdminOnly) {
+      return userRole === 'super_admin';
+    }
+    if (item.multiUnitOnly) {
+      return barbershops.length > 1 || userRole === 'super_admin';
+    }
+    return true;
+  });
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="lg:hidden">
+          <Menu className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-72 p-0">
+        <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
+        <div className="flex flex-col h-full bg-card">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">BS</span>
+              </div>
+              <span className="font-bold text-lg">BarberSmart</span>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            {filteredNavigation.map((item) => (
+              <NavLink
+                key={item.name}
+                to={item.href}
+                onClick={() => setOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-soft"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  )
+                }
+              >
+                <item.icon className="h-5 w-5 mr-3" />
+                <span>{item.name}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* Bottom Info */}
+          <div className="p-4 border-t border-border">
+            <div className="barbershop-card p-3">
+              <div className="text-xs text-muted-foreground">Plano Atual</div>
+              <div className="text-sm font-semibold text-brand">Premium</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Válido até 15/08/2025
+              </div>
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};
+
+// Desktop Sidebar
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { barbershops, userRole } = useAuth();
 
-  // Filtrar itens de navegação baseado nas permissões
   const filteredNavigation = navigation.filter(item => {
     if (item.superAdminOnly) {
       return userRole === 'super_admin';
@@ -72,7 +154,7 @@ const Sidebar = () => {
 
   return (
     <div className={cn(
-      "h-screen bg-card border-r border-border transition-all duration-300 flex flex-col",
+      "h-screen bg-card border-r border-border transition-all duration-300 flex-col hidden lg:flex",
       collapsed ? "w-16" : "w-64"
     )}>
       {/* Toggle Button */}

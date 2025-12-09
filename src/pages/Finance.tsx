@@ -175,85 +175,85 @@ const Finance = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Financeiro</h1>
-            <p className="text-muted-foreground">Controle completo das finanças da barbearia</p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Financeiro</h1>
+            <p className="text-muted-foreground text-sm lg:text-base">Controle das finanças</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              <CalendarIcon className="h-4 w-4 text-muted-foreground hidden sm:block" />
               <input
                 type="month"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="px-3 py-2 rounded-md border border-border bg-background text-foreground"
+                className="px-2 sm:px-3 py-2 rounded-md border border-border bg-background text-foreground text-sm"
               />
             </div>
             <TransactionDialog onSuccess={fetchFinancialData}>
-              <Button variant="premium" size="lg">
-                <Plus className="mr-2 h-5 w-5" />
-                Nova Transação
+              <Button variant="premium" size="default">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Nova Transação</span>
               </Button>
             </TransactionDialog>
           </div>
         </div>
 
         {/* Financial Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 lg:pt-6">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5 text-success" />
+                <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 text-success" />
                 <div>
-                  <div className="text-2xl font-bold text-foreground">
-                    R$ {summary.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div className="text-base lg:text-2xl font-bold text-foreground">
+                    R$ {summary.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </div>
-                  <p className="text-sm text-muted-foreground">Receita do Mês</p>
+                  <p className="text-xs lg:text-sm text-muted-foreground">Receita</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 lg:pt-6">
               <div className="flex items-center space-x-2">
-                <TrendingDown className="h-5 w-5 text-destructive" />
+                <TrendingDown className="h-4 w-4 lg:h-5 lg:w-5 text-destructive" />
                 <div>
-                  <div className="text-2xl font-bold text-foreground">
-                    R$ {summary.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div className="text-base lg:text-2xl font-bold text-foreground">
+                    R$ {summary.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </div>
-                  <p className="text-sm text-muted-foreground">Despesas do Mês</p>
+                  <p className="text-xs lg:text-sm text-muted-foreground">Despesas</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 lg:pt-6">
               <div className="flex items-center space-x-2">
-                <PiggyBank className="h-5 w-5 text-primary" />
+                <PiggyBank className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
                 <div>
-                  <div className="text-2xl font-bold text-foreground">
-                    R$ {summary.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div className="text-base lg:text-2xl font-bold text-foreground">
+                    R$ {summary.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </div>
-                  <p className="text-sm text-muted-foreground">Lucro Líquido</p>
+                  <p className="text-xs lg:text-sm text-muted-foreground">Lucro</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 lg:pt-6">
               <div className="flex items-center space-x-2">
-                <Receipt className="h-5 w-5 text-warning" />
+                <Receipt className="h-4 w-4 lg:h-5 lg:w-5 text-warning" />
                 <div>
-                  <div className="text-2xl font-bold text-foreground">
-                    R$ {summary.commissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div className="text-base lg:text-2xl font-bold text-foreground">
+                    R$ {summary.commissions.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </div>
-                  <p className="text-sm text-muted-foreground">Comissões</p>
+                  <p className="text-xs lg:text-sm text-muted-foreground">Comissões</p>
                 </div>
               </div>
             </CardContent>
@@ -261,11 +261,11 @@ const Finance = () => {
         </div>
 
         {/* Transactions Table */}
-        <Card className="barbershop-card">
-          <CardHeader>
-            <CardTitle>Histórico de Transações</CardTitle>
+        <Card className="barbershop-card overflow-hidden">
+          <CardHeader className="p-4 lg:p-6">
+            <CardTitle className="text-base lg:text-xl">Histórico de Transações</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 lg:p-6 lg:pt-0 overflow-x-auto">
             {transactions.length === 0 ? (
               <div className="text-center py-12">
                 <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />

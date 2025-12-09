@@ -200,26 +200,26 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-6">
         {/* Welcome Section */}
-        <div className="gradient-subtle p-6 rounded-xl border border-border">
-          <div className="flex items-center justify-between">
+        <div className="gradient-subtle p-4 lg:p-6 rounded-xl border border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
                 Bem-vindo ao BarberSmart! 👋
               </h1>
-              <p className="text-muted-foreground text-lg">
-                Gerencie sua barbearia de forma inteligente e eficiente
+              <p className="text-muted-foreground text-sm lg:text-lg">
+                Gerencie sua barbearia de forma inteligente
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={customizeMode ? "default" : "outline"}
                 size="sm"
                 onClick={() => setCustomizeMode(!customizeMode)}
               >
-                <Settings className="h-4 w-4 mr-2" />
-                {customizeMode ? 'Salvar' : 'Personalizar'}
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{customizeMode ? 'Salvar' : 'Personalizar'}</span>
               </Button>
               {customizeMode && (
                 <WidgetSelector
@@ -228,9 +228,9 @@ const Index = () => {
                 />
               )}
               <AppointmentDialog>
-                <Button variant="premium" size="lg" className="shadow-gold">
-                  <UserPlus className="mr-2 h-5 w-5" />
-                  Novo Agendamento
+                <Button variant="premium" size="sm" className="shadow-gold">
+                  <UserPlus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Novo Agendamento</span>
                 </Button>
               </AppointmentDialog>
             </div>
@@ -238,7 +238,7 @@ const Index = () => {
         </div>
 
         {/* Real-time Widgets */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           {widgets.find(w => w.id === 'revenue')?.enabled && (
             <RevenueWidget onRemove={customizeMode ? () => handleRemoveWidget('revenue') : undefined} />
           )}
@@ -255,7 +255,7 @@ const Index = () => {
 
         {/* Legacy Quick Stats - Only show if no widgets are enabled */}
         {!widgets.some(w => w.enabled) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             <StatsCard
               title="Agendamentos Hoje"
               value={stats?.todayAppointments || 0}
@@ -284,17 +284,17 @@ const Index = () => {
         )}
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          <div>
             <AppointmentList />
           </div>
-          <div className="lg:col-span-1">
+          <div>
             <RevenueChart />
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
           <Card className="barbershop-card hover:shadow-medium cursor-pointer">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
