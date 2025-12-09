@@ -216,7 +216,12 @@ const Auth = () => {
       const userId = authData.user.id;
       let primaryBarbershopId: string | null = null;
 
-      // 2. Create all barbershops
+      // 2. First determine the primary barbershop
+      const primaryUnit = barbershopUnits.find(u => u.isPrimary) || barbershopUnits[0];
+
+      // 3. Create all barbershops and collect their IDs
+      const createdBarbershops: { id: string; isPrimary: boolean }[] = [];
+      
       for (const unit of barbershopUnits) {
         const { data: barbershopData, error: barbershopError } = await supabase
           .from('barbershops')
@@ -233,47 +238,16 @@ const Auth = () => {
         if (barbershopError) throw barbershopError;
 
         const barbershopId = barbershopData.id;
+        createdBarbershops.push({ id: barbershopId, isPrimary: unit.isPrimary });
 
         if (unit.isPrimary) {
           primaryBarbershopId = barbershopId;
         }
-
-        // 3. Create user_barbershops entry
-        await supabase
-          .from('user_barbershops')
-          .insert({
-            user_id: userId,
-            barbershop_id: barbershopId,
-            is_primary: unit.isPrimary,
-          });
-
-        // 4. Create admin role for each barbershop
-        await supabase
-          .from('user_roles')
-          .insert({
-            user_id: userId,
-            role: 'admin',
-            barbershop_id: barbershopId,
-          });
-
-        // 5. If also barber, create staff entry for each barbershop
-        if (signupIsAlsoBarber) {
-          await supabase
-            .from('staff')
-            .insert({
-              user_id: userId,
-              barbershop_id: barbershopId,
-              is_also_barber: true,
-              specialties: ['Corte', 'Barba'],
-              commission_rate: 50,
-              active: true,
-            });
-        }
       }
 
-      // 6. Update profile with primary barbershop_id
+      // 4. Create profile FIRST (required for staff foreign key)
       if (primaryBarbershopId) {
-        await supabase
+        const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
             id: userId,
@@ -281,6 +255,55 @@ const Auth = () => {
             full_name: signupFullName,
             phone: signupPhone,
           });
+
+        if (profileError) {
+          console.error('Erro ao criar profile:', profileError);
+          throw profileError;
+        }
+      }
+
+      // 5. Now create user_barbershops, roles, and staff for each barbershop
+      for (const barbershop of createdBarbershops) {
+        // Create user_barbershops entry
+        const { error: ubError } = await supabase
+          .from('user_barbershops')
+          .insert({
+            user_id: userId,
+            barbershop_id: barbershop.id,
+            is_primary: barbershop.isPrimary,
+          });
+
+        if (ubError) console.error('Erro ao criar user_barbershops:', ubError);
+
+        // Create admin role for each barbershop
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: 'admin',
+            barbershop_id: barbershop.id,
+          });
+
+        if (roleError) console.error('Erro ao criar user_role:', roleError);
+
+        // If also barber, create staff entry for each barbershop
+        if (signupIsAlsoBarber) {
+          const { error: staffError } = await supabase
+            .from('staff')
+            .insert({
+              user_id: userId,
+              barbershop_id: barbershop.id,
+              is_also_barber: true,
+              specialties: ['Corte', 'Barba'],
+              commission_rate: 50,
+              active: true,
+            });
+
+          if (staffError) {
+            console.error('Erro ao criar staff:', staffError);
+            // Continue anyway - we can add staff later
+          }
+        }
       }
 
       toast.success('Conta criada com sucesso!', {
