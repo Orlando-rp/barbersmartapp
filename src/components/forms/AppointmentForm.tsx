@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus } from "lucide-react";
+import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -34,13 +34,16 @@ interface AppointmentFormProps {
   waitlistPrefill?: WaitlistPrefill;
 }
 
-type WizardStep = 'professional' | 'datetime' | 'client' | 'confirm';
+type WizardStep = 'unit' | 'professional' | 'datetime' | 'client' | 'confirm';
 
 export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
-  const { barbershopId, user } = useAuth();
+  const { barbershopId, barbershops, user } = useAuth();
   const { toast } = useToast();
   
-  const [currentStep, setCurrentStep] = useState<WizardStep>('professional');
+  // Se o usuário tem múltiplas barbearias, começa na seleção de unidade
+  const hasMultipleUnits = barbershops && barbershops.length > 1;
+  const [currentStep, setCurrentStep] = useState<WizardStep>(hasMultipleUnits ? 'unit' : 'professional');
+  const [selectedUnitId, setSelectedUnitId] = useState<string>(barbershopId || "");
   
   const [clientId, setClientId] = useState(appointment?.client_id || "");
   const [clientName, setClientName] = useState(appointment?.client_name || waitlistPrefill?.clientName || "");
@@ -72,15 +75,18 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   const [waitlistNotes, setWaitlistNotes] = useState("");
   const [savingWaitlist, setSavingWaitlist] = useState(false);
   
-  const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(barbershopId);
+  // Usa a unidade selecionada no wizard ou o barbershopId do contexto
+  const effectiveBarbershopId = selectedUnitId || barbershopId;
+  
+  const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(effectiveBarbershopId);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (effectiveBarbershopId) {
       fetchServices();
       fetchStaff();
       fetchClients();
     }
-  }, [barbershopId]);
+  }, [effectiveBarbershopId]);
 
   useEffect(() => {
     if (date && selectedBarber && selectedService) {
@@ -93,14 +99,14 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
 
   // Fetch day availability for calendar visualization
   useEffect(() => {
-    if (selectedBarber && selectedService && barbershopId) {
+    if (selectedBarber && selectedService && effectiveBarbershopId) {
       fetchMonthAvailability();
     }
-  }, [selectedBarber, selectedService, calendarMonth, barbershopId]);
+  }, [selectedBarber, selectedService, calendarMonth, effectiveBarbershopId]);
 
   // Real-time updates for appointments
   useEffect(() => {
-    if (!barbershopId || !date || !selectedBarber) return;
+    if (!effectiveBarbershopId || !date || !selectedBarber) return;
 
     const formattedDate = format(date, "yyyy-MM-dd");
     
@@ -112,7 +118,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
           event: '*',
           schema: 'public',
           table: 'appointments',
-          filter: `barbershop_id=eq.${barbershopId}`
+          filter: `barbershop_id=eq.${effectiveBarbershopId}`
         },
         (payload: any) => {
           console.log('Appointment changed:', payload);
@@ -137,14 +143,14 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [barbershopId, date, selectedBarber]);
+  }, [effectiveBarbershopId, date, selectedBarber]);
 
   const fetchClients = async () => {
     try {
       const { data, error } = await supabase
         .from('clients')
         .select('id, name, phone, email')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', effectiveBarbershopId)
         .eq('active', true)
         .order('name');
 
@@ -160,7 +166,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       const { data, error } = await supabase
         .from('services')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', effectiveBarbershopId)
         .eq('active', true);
 
       if (error) throw error;
@@ -179,7 +185,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select('id, user_id')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', effectiveBarbershopId)
         .eq('active', true);
 
       if (staffError) throw staffError;
@@ -229,7 +235,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       console.log('🔍 Validando data/hora com business hours:', {
         date: formattedDate,
         barber: selectedBarber,
-        barbershop: barbershopId,
+        barbershop: effectiveBarbershopId,
         serviceDuration
       });
 
@@ -260,7 +266,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       const { data, error } = await supabase
         .from('appointments')
         .select('appointment_time, id, status, service_id')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', effectiveBarbershopId)
         .eq('staff_id', selectedBarber)
         .eq('appointment_date', formattedDate)
         .in('status', ['pendente', 'confirmado', 'concluido']);
@@ -307,7 +313,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   };
 
   const fetchMonthAvailability = async () => {
-    if (!selectedBarber || !selectedService || !barbershopId) {
+    if (!selectedBarber || !selectedService || !effectiveBarbershopId) {
       setDayAvailability({});
       return;
     }
@@ -324,7 +330,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       const { data: monthAppointments, error } = await supabase
         .from('appointments')
         .select('appointment_date, appointment_time, service_id')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', effectiveBarbershopId)
         .eq('staff_id', selectedBarber)
         .gte('appointment_date', format(startOfMonth, 'yyyy-MM-dd'))
         .lte('appointment_date', format(endOfMonth, 'yyyy-MM-dd'))
@@ -435,7 +441,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       const { data: whatsappConfig, error: configError } = await supabase
         .from('whatsapp_config')
         .select('config, is_active')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', effectiveBarbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
 
@@ -476,7 +482,7 @@ Nos vemos em breve! 💈`;
           instanceName: evolutionConfig.instance_name,
           to: data.clientPhone,
           message: message,
-          barbershopId,
+          barbershopId: effectiveBarbershopId,
           recipientName: data.clientName,
           appointmentId,
           createdBy: user?.id
@@ -509,7 +515,7 @@ Nos vemos em breve! 💈`;
       const { data: whatsappConfig, error: configError } = await supabase
         .from('whatsapp_config')
         .select('config, is_active')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', effectiveBarbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
 
@@ -543,7 +549,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
           instanceName: evolutionConfig.instance_name,
           to: data.clientPhone,
           message: message,
-          barbershopId,
+          barbershopId: effectiveBarbershopId,
           recipientName: data.clientName,
           appointmentId,
           createdBy: user?.id
@@ -560,8 +566,12 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
     }
   };
 
+  const canProceedFromUnit = selectedUnitId !== "";
+
   const handleNext = () => {
-    if (currentStep === 'professional' && canProceedFromProfessional) {
+    if (currentStep === 'unit' && canProceedFromUnit) {
+      setCurrentStep('professional');
+    } else if (currentStep === 'professional' && canProceedFromProfessional) {
       setCurrentStep('datetime');
     } else if (currentStep === 'datetime' && canProceedFromDateTime) {
       setCurrentStep('client');
@@ -571,13 +581,14 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
   };
 
   const handleBack = () => {
-    if (currentStep === 'datetime') setCurrentStep('professional');
+    if (currentStep === 'professional' && hasMultipleUnits) setCurrentStep('unit');
+    else if (currentStep === 'datetime') setCurrentStep('professional');
     else if (currentStep === 'client') setCurrentStep('datetime');
     else if (currentStep === 'confirm') setCurrentStep('client');
   };
 
   const handleJoinWaitlist = async () => {
-    if (!date || !barbershopId) {
+    if (!date || !effectiveBarbershopId) {
       toast({
         title: "Erro",
         description: "Selecione uma data para entrar na lista de espera.",
@@ -592,7 +603,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
       const formattedDate = format(date, "yyyy-MM-dd");
       
       const { error } = await supabase.from('waitlist').insert({
-        barbershop_id: barbershopId,
+        barbershop_id: effectiveBarbershopId,
         client_id: clientId || null,
         client_name: clientName,
         client_phone: clientPhone,
@@ -664,7 +675,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
       const { data: conflictingAppointments, error: conflictError } = await supabase
         .from('appointments')
         .select('id, status')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', effectiveBarbershopId)
         .eq('staff_id', selectedBarber)
         .eq('appointment_date', formattedDate)
         .eq('appointment_time', selectedTime)
@@ -697,7 +708,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
         const { data: existingClient } = await supabase
           .from('clients')
           .select('id')
-          .eq('barbershop_id', barbershopId)
+          .eq('barbershop_id', effectiveBarbershopId)
           .eq('phone', clientPhone)
           .maybeSingle();
 
@@ -707,7 +718,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
           const { data: newClient, error: clientError } = await supabase
             .from('clients')
             .insert({
-              barbershop_id: barbershopId,
+              barbershop_id: effectiveBarbershopId,
               name: clientName,
               phone: clientPhone,
               active: true,
@@ -723,7 +734,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
       const service = services.find(s => s.id === selectedService);
 
       const appointmentData = {
-        barbershop_id: barbershopId,
+        barbershop_id: effectiveBarbershopId,
         client_id: finalClientId,
         staff_id: selectedBarber,
         service_id: selectedService,
@@ -799,9 +810,18 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
   };
 
   const getStepNumber = (step: WizardStep): number => {
-    const steps: WizardStep[] = ['professional', 'datetime', 'client', 'confirm'];
+    const steps: WizardStep[] = hasMultipleUnits 
+      ? ['unit', 'professional', 'datetime', 'client', 'confirm']
+      : ['professional', 'datetime', 'client', 'confirm'];
     return steps.indexOf(step) + 1;
   };
+  
+  const totalSteps = hasMultipleUnits ? 5 : 4;
+  const wizardSteps: WizardStep[] = hasMultipleUnits 
+    ? ['unit', 'professional', 'datetime', 'client', 'confirm']
+    : ['professional', 'datetime', 'client', 'confirm'];
+  
+  const selectedUnitData = barbershops?.find(b => b.id === selectedUnitId);
 
   const selectedServiceData = services.find(s => s.id === selectedService);
   const selectedBarberData = staff.find(s => s.id === selectedBarber);
@@ -817,6 +837,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
               </CardTitle>
               <CardDescription className="mt-2">
+                {currentStep === 'unit' && 'Selecione a unidade para o agendamento'}
                 {currentStep === 'professional' && 'Escolha o serviço e o profissional'}
                 {currentStep === 'datetime' && 'Selecione data e horário disponível'}
                 {currentStep === 'client' && 'Selecione ou cadastre um cliente'}
@@ -824,12 +845,12 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-sm">
-              Passo {getStepNumber(currentStep)} de 4
+              Passo {getStepNumber(currentStep)} de {totalSteps}
             </Badge>
           </div>
 
           <div className="flex items-center gap-2">
-            {(['professional', 'datetime', 'client', 'confirm'] as WizardStep[]).map((step, index) => (
+            {wizardSteps.map((step, index) => (
               <div key={step} className="flex items-center flex-1">
                 <div className={cn(
                   "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all",
@@ -843,7 +864,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                     <span className="text-xs font-semibold">{index + 1}</span>
                   )}
                 </div>
-                {index < 3 && (
+                {index < wizardSteps.length - 1 && (
                   <div className={cn(
                     "flex-1 h-0.5 mx-2 transition-all",
                     getStepNumber(currentStep) > getStepNumber(step) ? "bg-primary" : "bg-muted-foreground/30"
@@ -855,7 +876,47 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
         </CardHeader>
 
         <CardContent className="space-y-6 px-6 pb-6">
-          {/* Step 3: Client Selection */}
+          {/* Step 0: Unit Selection (only for multi-unit users) */}
+          {currentStep === 'unit' && hasMultipleUnits && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-lg font-semibold">
+                <Building2 className="h-5 w-5 text-primary" />
+                Selecione a Unidade
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {barbershops?.map((unit) => (
+                  <button
+                    key={unit.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedUnitId(unit.id);
+                      // Limpa dados anteriores ao trocar de unidade
+                      setSelectedService("");
+                      setSelectedBarber("");
+                      setDate(undefined);
+                      setSelectedTime("");
+                    }}
+                    className={cn(
+                      "p-4 rounded-lg border-2 text-left transition-all",
+                      selectedUnitId === unit.id
+                        ? "border-primary bg-primary/5"
+                        : "border-muted hover:border-primary/50"
+                    )}
+                  >
+                    <div className="font-medium">{unit.name}</div>
+                    {unit.is_primary && (
+                      <Badge variant="secondary" className="mt-1 text-xs">
+                        Unidade Principal
+                      </Badge>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Step 1: Client Selection */}
           {currentStep === 'client' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">
@@ -1294,6 +1355,17 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
               <div className="space-y-4">
                 <Card className="barbershop-card">
                   <CardContent className="pt-6 space-y-4">
+                    {/* Mostrar unidade selecionada se multi-unidade */}
+                    {hasMultipleUnits && selectedUnitData && (
+                      <div className="flex items-start gap-3">
+                        <Scissors className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Unidade</p>
+                          <p className="font-semibold">{selectedUnitData.name}</p>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="flex items-start gap-3">
                       <User className="h-5 w-5 text-primary mt-0.5" />
                       <div>
@@ -1354,11 +1426,11 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             <Button
               type="button"
               variant="outline"
-              onClick={currentStep === 'client' ? onClose : handleBack}
+              onClick={currentStep === 'unit' || (currentStep === 'professional' && !hasMultipleUnits) ? onClose : handleBack}
               disabled={loading}
             >
               <ChevronLeft className="mr-2 h-4 w-4" />
-              {currentStep === 'client' ? 'Cancelar' : 'Voltar'}
+              {currentStep === 'unit' || (currentStep === 'professional' && !hasMultipleUnits) ? 'Cancelar' : 'Voltar'}
             </Button>
 
             {currentStep === 'confirm' ? (
@@ -1377,6 +1449,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 variant="premium"
                 onClick={handleNext}
                 disabled={
+                  (currentStep === 'unit' && !canProceedFromUnit) ||
                   (currentStep === 'professional' && !canProceedFromProfessional) ||
                   (currentStep === 'datetime' && !canProceedFromDateTime) ||
                   (currentStep === 'client' && !canProceedFromClient)
