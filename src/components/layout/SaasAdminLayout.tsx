@@ -18,11 +18,11 @@ const SaasAdminLayout = ({ children, activeTab = "overview", onTabChange }: Saas
   // Verificação de acesso
   if (userRole !== 'super_admin') {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
-          <Shield className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Acesso Restrito</h2>
-          <p className="text-slate-400 max-w-md">
+          <Shield className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-foreground mb-2">Acesso Restrito</h2>
+          <p className="text-muted-foreground max-w-md">
             Este portal é exclusivo para administradores do sistema (Super Admin).
           </p>
         </div>
@@ -36,24 +36,24 @@ const SaasAdminLayout = ({ children, activeTab = "overview", onTabChange }: Saas
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-slate-950">
+    <div className="flex min-h-screen w-full bg-background">
       {/* Desktop Sidebar */}
       <SaasAdminSidebar activeTab={activeTab} onTabChange={onTabChange} />
       
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-slate-900 border-b border-slate-800 px-4 py-3">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-amber-500" />
-            <span className="font-bold text-white">Admin SaaS</span>
+            <Shield className="h-6 w-6 text-warning" />
+            <span className="font-bold text-foreground">Admin SaaS</span>
           </div>
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0 bg-slate-900 border-slate-800">
+            <SheetContent side="left" className="w-72 p-0 bg-card border-border">
               <SaasAdminSidebar 
                 activeTab={activeTab} 
                 onTabChange={handleTabChange} 
