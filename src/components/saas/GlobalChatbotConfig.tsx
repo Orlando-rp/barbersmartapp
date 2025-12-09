@@ -55,8 +55,10 @@ export const GlobalChatbotConfig = () => {
   const [barbershopStatuses, setBarbershopStatuses] = useState<BarbershopChatbotStatus[]>([]);
   const [loadingStatuses, setLoadingStatuses] = useState(false);
   const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [savingApiKey, setSavingApiKey] = useState(false);
 
-  const defaultSystemPrompt = `Você é um assistente virtual da barbearia "{barbershop_name}". 
+  const defaultSystemPrompt = `Você é um assistente virtual da barbearia "{barbershop_name}".
 Seu objetivo é ajudar clientes a agendar, reagendar ou cancelar compromissos de forma amigável e eficiente.
 
 REGRAS:
@@ -79,9 +81,55 @@ FLUXO DE AGENDAMENTO:
   }, []);
 
   const checkApiKey = async () => {
-    // Check if OPENAI_API_KEY is configured in secrets
-    // Since we can't directly check secrets, we'll assume it's configured if the config exists
-    setApiKeyConfigured(true);
+    try {
+      const { data } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'openai_api_key')
+        .maybeSingle();
+      
+      if (data?.value?.api_key) {
+        setApiKeyConfigured(true);
+        // Show masked key
+        const key = data.value.api_key;
+        setApiKey(key.substring(0, 7) + '...' + key.substring(key.length - 4));
+      }
+    } catch (error) {
+      console.error('Erro ao verificar API key:', error);
+    }
+  };
+
+  const saveApiKey = async () => {
+    if (!apiKey || apiKey.includes('...')) {
+      toast.error("Digite a API Key completa");
+      return;
+    }
+    
+    try {
+      setSavingApiKey(true);
+      
+      const { error } = await supabase
+        .from('system_config')
+        .upsert({
+          key: 'openai_api_key',
+          value: { api_key: apiKey },
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'key'
+        });
+
+      if (error) throw error;
+      
+      setApiKeyConfigured(true);
+      // Mask the key after saving
+      setApiKey(apiKey.substring(0, 7) + '...' + apiKey.substring(apiKey.length - 4));
+      toast.success("API Key salva com sucesso!");
+    } catch (error) {
+      console.error('Erro ao salvar API key:', error);
+      toast.error("Erro ao salvar API Key");
+    } finally {
+      setSavingApiKey(false);
+    }
   };
 
   const loadGlobalConfig = async () => {
@@ -229,16 +277,69 @@ FLUXO DE AGENDAMENTO:
         </AlertDescription>
       </Alert>
 
-      {/* API Status */}
-      {!apiKeyConfigured && (
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertTitle>API Key não configurada</AlertTitle>
-          <AlertDescription>
-            Configure a chave OPENAI_API_KEY nos secrets do Supabase para ativar o chatbot.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* API Key Configuration */}
+      <Card className="bg-slate-900 border-slate-800">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-white">
+            <Settings className="h-5 w-5 text-amber-500" />
+            Configuração da API OpenAI
+          </CardTitle>
+          <CardDescription className="text-slate-400">
+            Configure sua chave de API da OpenAI para habilitar o chatbot IA
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            {apiKeyConfigured ? (
+              <Badge className="bg-emerald-500">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                API Key Configurada
+              </Badge>
+            ) : (
+              <Badge className="bg-red-500">
+                <XCircle className="h-3 w-3 mr-1" />
+                API Key Não Configurada
+              </Badge>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label className="text-slate-300">OpenAI API Key</Label>
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk-..."
+                className="bg-slate-800 border-slate-700 text-white flex-1"
+              />
+              <Button 
+                onClick={saveApiKey}
+                disabled={savingApiKey || !apiKey}
+                className="bg-amber-500 hover:bg-amber-600 text-black"
+              >
+                {savingApiKey ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-slate-500">
+              Obtenha sua API Key em{" "}
+              <a 
+                href="https://platform.openai.com/api-keys" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-amber-400 hover:underline inline-flex items-center gap-1"
+              >
+                platform.openai.com
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="config" className="space-y-4">
         <TabsList className="bg-slate-900 border border-slate-800">
