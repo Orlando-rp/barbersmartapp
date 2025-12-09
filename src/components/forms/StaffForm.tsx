@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { X } from "lucide-react";
 import { z } from "zod";
 
@@ -38,6 +39,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [commissionRate, setCommissionRate] = useState(staff?.commission_rate || 0);
   const [specialties, setSpecialties] = useState<string[]>(staff?.specialties || []);
   const [newSpecialty, setNewSpecialty] = useState("");
+  const [isAlsoBarber, setIsAlsoBarber] = useState(staff?.is_also_barber || false);
 
   const handleAddSpecialty = () => {
     if (newSpecialty.trim() && !specialties.includes(newSpecialty.trim())) {
@@ -101,6 +103,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           .update({
             specialties,
             commission_rate: commissionRate,
+            is_also_barber: role === 'admin' ? isAlsoBarber : null,
           })
           .eq('id', staff.id);
 
@@ -188,6 +191,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
             specialties,
             commission_rate: commissionRate,
             active: true,
+            is_also_barber: role === 'admin' ? isAlsoBarber : null,
           });
 
         if (staffError) throw staffError;
@@ -278,7 +282,10 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         <div className="space-y-2">
           <Label htmlFor="role">Função *</Label>
-          <Select value={role} onValueChange={setRole}>
+          <Select value={role} onValueChange={(value) => {
+            setRole(value);
+            if (value !== 'admin') setIsAlsoBarber(false);
+          }}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione a função" />
             </SelectTrigger>
@@ -305,6 +312,24 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           />
         </div>
       </div>
+
+      {role === 'admin' && (
+        <div className="flex items-center space-x-2 p-4 bg-muted rounded-lg">
+          <Checkbox
+            id="isAlsoBarber"
+            checked={isAlsoBarber}
+            onCheckedChange={(checked) => setIsAlsoBarber(checked === true)}
+          />
+          <div className="grid gap-1.5 leading-none">
+            <Label htmlFor="isAlsoBarber" className="cursor-pointer">
+              Também atende como barbeiro
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Marque esta opção se o administrador também realiza atendimentos e deve aparecer nos agendamentos
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="specialties">Especialidades</Label>
