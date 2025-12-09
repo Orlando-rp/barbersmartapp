@@ -511,7 +511,7 @@ const MultiUnitDashboard = () => {
                     <div>
                       <p className="text-xs text-muted-foreground">Avaliação</p>
                       <p className="text-sm font-medium">
-                        {unit.averageRating > 0 ? `${unit.averageRating.toFixed(1)} ⭐` : 'N/A'}
+                        {unit.averageRating > 0 ? `${unit.averageRating.toFixed(1)} ⭐` : 'Sem avaliações'}
                       </p>
                     </div>
                   </div>

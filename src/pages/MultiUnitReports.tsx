@@ -301,7 +301,7 @@ const MultiUnitReports = () => {
       { key: 'newClients', label: 'Novos Clientes', format: (v: number) => v.toString() },
       { key: 'averageTicket', label: 'Ticket Médio', format: (v: number) => `R$ ${v.toFixed(2)}` },
       { key: 'occupancyRate', label: 'Taxa de Ocupação', format: (v: number) => `${v}%` },
-      { key: 'rating', label: 'Avaliação', format: (v: number) => v > 0 ? `${v.toFixed(1)} ⭐` : 'N/A' },
+      { key: 'rating', label: 'Avaliação', format: (v: number) => v > 0 ? `${v.toFixed(1)} ⭐` : 'Sem avaliações' },
     ];
 
     return metrics.map(({ key, label, format }) => {

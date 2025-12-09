@@ -51,7 +51,7 @@ export const WaitlistMetrics = ({ entries }: WaitlistMetricsProps) => {
     }
 
     // Format wait time
-    let avgWaitTimeFormatted = "N/A";
+    let avgWaitTimeFormatted = "Sem dados";
     if (avgWaitTimeHours > 0) {
       if (avgWaitTimeHours < 24) {
         avgWaitTimeFormatted = `${avgWaitTimeHours}h`;

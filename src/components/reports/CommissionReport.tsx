@@ -183,7 +183,7 @@ export const CommissionReport = ({ period }: Props) => {
       const processedTransactions: CommissionTransaction[] = (transactionsData || []).map(t => {
         const staffInfo = staffData?.find(s => s.id === t.staff_id);
         const profile = staffInfo ? profilesMap.get(staffInfo.user_id) : null;
-        const staffName = profile?.full_name || 'N/A';
+        const staffName = profile?.full_name || 'Profissional não identificado';
         
         // Use stored commission values or calculate from staff rate
         const commissionRate = t.commission_rate || staffInfo?.commission_rate || 0;
