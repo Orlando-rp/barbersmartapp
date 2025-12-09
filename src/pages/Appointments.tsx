@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
@@ -25,8 +26,10 @@ interface Appointment {
   service_price: number;
   staff_id: string | null;
   staff_name: string | null;
+  staff_avatar_url: string | null;
   staff: {
     name: string;
+    avatar_url: string | null;
   } | null;
 }
 
@@ -161,7 +164,7 @@ const Appointments = () => {
       const staffIds = [...new Set(appointmentsData.map(a => a.staff_id).filter(Boolean))];
 
       if (staffIds.length === 0) {
-        setAppointments(appointmentsData.map(apt => ({ ...apt, staff: null, staff_name: null })));
+        setAppointments(appointmentsData.map(apt => ({ ...apt, staff: null, staff_name: null, staff_avatar_url: null })));
         return;
       }
 
@@ -177,27 +180,33 @@ const Appointments = () => {
       const userIds = staffData?.map(s => s.user_id) || [];
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, avatar_url')
         .in('id', userIds);
 
       if (profilesError) throw profilesError;
 
-      // Create staff name lookup
-      const staffNameMap = new Map();
+      // Create staff lookup with name and avatar
+      const staffLookupMap = new Map<string, { name: string; avatar_url: string | null }>();
       staffData?.forEach(staff => {
         const profile = profilesData?.find(p => p.id === staff.user_id);
         if (profile) {
-          staffNameMap.set(staff.id, profile.full_name);
+          staffLookupMap.set(staff.id, { 
+            name: profile.full_name, 
+            avatar_url: profile.avatar_url 
+          });
         }
       });
 
-      // Transform appointments with staff names
+      // Transform appointments with staff names and avatars
       const transformedData = appointmentsData.map(apt => {
-        const staffName = apt.staff_id ? staffNameMap.get(apt.staff_id) || 'Nome não disponível' : null;
+        const staffInfo = apt.staff_id ? staffLookupMap.get(apt.staff_id) : null;
+        const staffName = staffInfo?.name || 'Nome não disponível';
+        const staffAvatarUrl = staffInfo?.avatar_url || null;
         return {
           ...apt,
-          staff_name: staffName,
-          staff: apt.staff_id ? { name: staffName || 'Nome não disponível' } : null
+          staff_name: apt.staff_id ? staffName : null,
+          staff_avatar_url: staffAvatarUrl,
+          staff: apt.staff_id ? { name: staffName, avatar_url: staffAvatarUrl } : null
         };
       });
       
@@ -538,9 +547,14 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-sm">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span>Barbeiro: <span className="font-medium">{appointment.staff?.name}</span></span>
+                      <div className="flex items-center gap-3 text-sm">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={appointment.staff?.avatar_url || undefined} alt={appointment.staff?.name || ''} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {appointment.staff?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-4 w-4" />}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>Barbeiro: <span className="font-medium">{appointment.staff?.name || 'Não especificado'}</span></span>
                       </div>
 
                       {appointment.notes && (
