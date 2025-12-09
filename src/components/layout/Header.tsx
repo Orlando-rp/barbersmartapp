@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Bell, User, LogOut, Settings as SettingsIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,39 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import BarbershopSelector from "./BarbershopSelector";
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
   const navigate = useNavigate();
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [profileFullName, setProfileFullName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfileData();
+    }
+  }, [user?.id]);
+
+  const fetchProfileData = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name, avatar_url')
+      .eq('id', user?.id)
+      .maybeSingle();
+    
+    if (data) {
+      setProfileAvatarUrl(data.avatar_url);
+      setProfileFullName(data.full_name);
+    }
+  };
   
-  const getInitials = (email: string) => {
-    return email.substring(0, 2).toUpperCase();
+  const getInitials = (name: string | null, email: string | null) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    }
+    return email ? email.substring(0, 2).toUpperCase() : '??';
   };
 
   const getRoleLabel = (role: string | null) => {
@@ -60,13 +86,13 @@ const Header = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || ''} />
+                  <AvatarImage src={profileAvatarUrl || user?.user_metadata?.avatar_url} alt={profileFullName || user?.email || ''} />
                   <AvatarFallback className="bg-primary/10 text-primary">
-                    {user?.email ? getInitials(user.email) : <User className="h-4 w-4" />}
+                    {getInitials(profileFullName, user?.email || null)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start text-sm">
-                  <span className="font-medium">{user?.user_metadata?.full_name || user?.email}</span>
+                  <span className="font-medium">{profileFullName || user?.user_metadata?.full_name || user?.email}</span>
                   {userRole && (
                     <span className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</span>
                   )}
@@ -77,7 +103,7 @@ const Header = () => {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    {user?.user_metadata?.full_name || 'Usuário'}
+                    {profileFullName || user?.user_metadata?.full_name || 'Usuário'}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email}
