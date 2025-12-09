@@ -58,6 +58,8 @@ const Staff = () => {
   useEffect(() => {
     if (barbershopId) {
       fetchStaff();
+    } else {
+      setLoading(false);
     }
   }, [barbershopId]);
 
@@ -87,7 +89,15 @@ const Staff = () => {
   }, [barbershopId]);
 
   const fetchStaff = async () => {
+    if (!barbershopId) {
+      setLoading(false);
+      return;
+    }
+    
     try {
+      setLoading(true);
+      
+      // Buscar staff da barbearia
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select(`
@@ -95,8 +105,7 @@ const Staff = () => {
           profiles!staff_user_id_fkey(
             full_name, 
             phone, 
-            avatar_url,
-            user_roles(role)
+            avatar_url
           )
         `)
         .eq('barbershop_id', barbershopId)
@@ -105,7 +114,24 @@ const Staff = () => {
 
       if (staffError) throw staffError;
 
-      setStaff(staffData || []);
+      // Buscar roles separadamente para cada membro
+      const staffWithRoles = await Promise.all((staffData || []).map(async (member) => {
+        const { data: rolesData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', member.user_id)
+          .eq('barbershop_id', barbershopId);
+        
+        return {
+          ...member,
+          profiles: {
+            ...member.profiles,
+            user_roles: rolesData || []
+          }
+        };
+      }));
+
+      setStaff(staffWithRoles);
     } catch (error: any) {
       console.error('Erro ao carregar equipe:', error);
       toast({
