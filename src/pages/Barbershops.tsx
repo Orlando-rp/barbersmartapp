@@ -25,8 +25,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, Plus, Pencil, MapPin, Phone, Mail } from "lucide-react";
+import { Building2, Plus, Pencil, MapPin, Phone, Mail, Star } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Barbershop {
   id: string;
@@ -36,6 +37,7 @@ interface Barbershop {
   email: string | null;
   active: boolean;
   created_at: string;
+  is_primary?: boolean;
 }
 
 interface BarbershopFormData {
@@ -86,7 +88,14 @@ const Barbershops = () => {
         .order('name');
 
       if (error) throw error;
-      setBarbershops(data || []);
+      
+      // Adicionar is_primary do contexto do usuário
+      const barbershopsWithPrimary = (data || []).map(b => ({
+        ...b,
+        is_primary: userBarbershops.find(ub => ub.id === b.id)?.is_primary || false
+      }));
+      
+      setBarbershops(barbershopsWithPrimary);
     } catch (error) {
       console.error('Erro ao carregar barbearias:', error);
       toast.error('Erro ao carregar barbearias');
@@ -211,6 +220,46 @@ const Barbershops = () => {
     }
   };
 
+  const setPrimary = async (barbershop: Barbershop) => {
+    if (barbershop.is_primary) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Remover is_primary de todas as barbearias do usuário
+      await supabase
+        .from('user_barbershops')
+        .update({ is_primary: false })
+        .eq('user_id', user.id);
+
+      // Definir a nova barbearia como principal
+      const { error } = await supabase
+        .from('user_barbershops')
+        .update({ is_primary: true })
+        .eq('user_id', user.id)
+        .eq('barbershop_id', barbershop.id);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setBarbershops(prev =>
+        prev.map(b => ({
+          ...b,
+          is_primary: b.id === barbershop.id
+        }))
+      );
+
+      // Atualizar o contexto global
+      await refreshBarbershops();
+
+      toast.success(`${barbershop.name} definida como unidade principal`);
+    } catch (error) {
+      console.error('Erro ao definir unidade principal:', error);
+      toast.error('Erro ao definir unidade principal');
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -277,8 +326,37 @@ const Barbershops = () => {
                     <TableRow key={barbershop.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-0 h-auto"
+                                  onClick={() => setPrimary(barbershop)}
+                                  disabled={barbershop.is_primary}
+                                >
+                                  <Star
+                                    className={`h-4 w-4 ${
+                                      barbershop.is_primary
+                                        ? 'fill-yellow-400 text-yellow-400'
+                                        : 'text-muted-foreground hover:text-yellow-400'
+                                    }`}
+                                  />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {barbershop.is_primary ? 'Unidade principal' : 'Definir como principal'}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <Building2 className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{barbershop.name}</span>
+                          {barbershop.is_primary && (
+                            <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-600">
+                              Principal
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
