@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.send-monthly-earnings-report]
 verify_jwt = false
+
+[functions.whatsapp-chatbot]
+verify_jwt = false
