@@ -23,6 +23,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   setSelectedBarbershop: (barbershopId: string | null) => void;
+  refreshBarbershops: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -186,6 +187,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshBarbershops = async () => {
+    if (user) {
+      await fetchUserData(user.id);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -273,6 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signOut,
         setSelectedBarbershop,
+        refreshBarbershops,
       }}
     >
       {children}

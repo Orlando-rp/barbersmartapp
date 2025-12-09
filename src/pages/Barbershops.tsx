@@ -55,7 +55,7 @@ const defaultFormData: BarbershopFormData = {
 };
 
 const Barbershops = () => {
-  const { barbershops: userBarbershops, userRole } = useAuth();
+  const { barbershops: userBarbershops, userRole, refreshBarbershops } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [barbershops, setBarbershops] = useState<Barbershop[]>([]);
@@ -165,11 +165,14 @@ const Barbershops = () => {
           
           if (linkError) {
             console.error('Erro ao associar usuário à barbearia:', linkError);
-            toast.error('Barbearia criada, mas houve erro ao associá-la ao usuário. Recarregue a página.');
+            toast.error('Barbearia criada, mas houve erro ao associá-la ao usuário.');
+          } else {
+            // Atualizar automaticamente o seletor de barbearias
+            await refreshBarbershops();
           }
         }
 
-        toast.success('Barbearia criada com sucesso! Faça logout e login para ver a nova unidade.');
+        toast.success('Barbearia criada com sucesso!');
       }
 
       setDialogOpen(false);
