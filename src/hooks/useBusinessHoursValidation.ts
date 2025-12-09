@@ -218,13 +218,19 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     const staffSchedule = getStaffScheduleForDay(staffId, dayOfWeek);
     
     // Use staff schedule if available, otherwise fall back to barbershop hours
-    const effectiveHours = staffSchedule || businessHours.find(bh => bh.day_of_week === dayOfWeek);
+    let effectiveHours = staffSchedule || businessHours.find(bh => bh.day_of_week === dayOfWeek);
     
+    // If no hours configured, use default business hours (9:00-18:00, closed on Sunday)
     if (!effectiveHours) {
-      return {
-        isValid: false,
-        reason: 'Horário de funcionamento não configurado para este dia'
+      const defaultHours: BusinessHours = {
+        day_of_week: dayOfWeek,
+        is_open: dayOfWeek !== 'sunday',
+        open_time: '09:00',
+        close_time: '18:00',
+        break_start: null,
+        break_end: null,
       };
+      effectiveHours = defaultHours;
     }
 
     if (!effectiveHours.is_open) {
