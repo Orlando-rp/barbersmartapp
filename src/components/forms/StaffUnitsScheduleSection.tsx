@@ -81,9 +81,13 @@ export const StaffUnitsScheduleSection = ({
   const [loading, setLoading] = useState(true);
   const initializedRef = useRef(false);
   const lastIdsRef = useRef<string>('');
+  const onScheduleChangeRef = useRef(onScheduleChange);
+
+  // Keep callback ref updated
+  onScheduleChangeRef.current = onScheduleChange;
 
   // Memoize IDs string for comparison
-  const idsString = barbershopIds.sort().join(',');
+  const idsString = useMemo(() => [...barbershopIds].sort().join(','), [barbershopIds]);
 
   useEffect(() => {
     // Only fetch if IDs actually changed
@@ -91,15 +95,16 @@ export const StaffUnitsScheduleSection = ({
       lastIdsRef.current = idsString;
       fetchBarbershops();
     }
-  }, [idsString]);
+  }, [idsString, barbershopIds.length]);
 
   // Initialize schedule when barbershops are loaded (only once)
   useEffect(() => {
     if (barbershops.length > 0 && !schedule && !initializedRef.current) {
       initializedRef.current = true;
+      const defaultSchedule = createDefaultSchedule(barbershops[0]?.id || null);
       // Use setTimeout to avoid state update during render
       setTimeout(() => {
-        onScheduleChange(createDefaultSchedule(barbershops[0]?.id || null));
+        onScheduleChangeRef.current(defaultSchedule);
       }, 0);
     }
   }, [barbershops.length, schedule]);
