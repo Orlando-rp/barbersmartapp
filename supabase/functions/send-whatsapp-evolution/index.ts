@@ -199,6 +199,19 @@ serve(async (req) => {
     }
 
     if (!response.ok) {
+      // Handle 404 for connectionState - instance doesn't exist yet
+      if (response.status === 404 && action === 'connectionState') {
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            state: 'close',
+            instance: { state: 'close' },
+            message: 'Instância não existe'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ 
           success: false, 
