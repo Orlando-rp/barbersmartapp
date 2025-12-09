@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Barbershop {
   id: string;
@@ -86,6 +87,14 @@ export default function PublicBooking() {
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
+  
+  // Waitlist state
+  const [showWaitlistForm, setShowWaitlistForm] = useState(false);
+  const [waitlistNotes, setWaitlistNotes] = useState('');
+  const [waitlistPreferredTimeStart, setWaitlistPreferredTimeStart] = useState('');
+  const [waitlistPreferredTimeEnd, setWaitlistPreferredTimeEnd] = useState('');
+  const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
+  const [waitlistSuccess, setWaitlistSuccess] = useState(false);
 
   useEffect(() => {
     if (barbershopId) {
@@ -647,6 +656,89 @@ Aguardamos você! 💈`;
     return value;
   };
 
+  const handleWaitlistSubmit = async () => {
+    if (!selectedService || !selectedStaff || !selectedDate || !clientName || !clientPhone) {
+      toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      setSubmittingWaitlist(true);
+
+      const waitlistData = {
+        barbershop_id: barbershopId,
+        client_name: clientName.trim(),
+        client_phone: clientPhone.replace(/\D/g, ''),
+        preferred_date: format(selectedDate, 'yyyy-MM-dd'),
+        preferred_time_start: waitlistPreferredTimeStart || null,
+        preferred_time_end: waitlistPreferredTimeEnd || null,
+        service_id: selectedService.id,
+        staff_id: selectedStaff.id,
+        notes: waitlistNotes || null,
+        status: 'waiting'
+      };
+
+      const { error } = await supabase
+        .from('waitlist')
+        .insert(waitlistData);
+
+      if (error) throw error;
+
+      // Try to send WhatsApp notification about waitlist
+      try {
+        const { data: whatsappConfig } = await supabase
+          .from('whatsapp_config')
+          .select('config, is_active')
+          .eq('barbershop_id', barbershopId)
+          .eq('provider', 'evolution')
+          .maybeSingle();
+
+        if (whatsappConfig?.is_active && whatsappConfig?.config) {
+          const config = whatsappConfig.config as any;
+          const formattedDate = format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+          
+          const message = `Olá ${clientName}! 👋
+
+📋 Você foi adicionado à lista de espera!
+
+📅 Data desejada: ${formattedDate}
+✂️ Serviço: ${selectedService.name}
+💈 Profissional: ${getStaffName(selectedStaff)}
+
+Entraremos em contato assim que um horário ficar disponível! 📲`;
+
+          await supabase.functions.invoke('send-whatsapp-evolution', {
+            body: {
+              action: 'sendText',
+              apiUrl: config.api_url,
+              apiKey: config.api_key,
+              instanceName: config.instance_name,
+              to: clientPhone,
+              message,
+              barbershopId,
+              recipientName: clientName
+            }
+          });
+        }
+      } catch (whatsappError) {
+        console.log('WhatsApp notification not sent:', whatsappError);
+      }
+
+      setWaitlistSuccess(true);
+    } catch (error) {
+      console.error('Erro ao entrar na lista de espera:', error);
+      toast({ title: 'Erro ao entrar na lista de espera', variant: 'destructive' });
+    } finally {
+      setSubmittingWaitlist(false);
+    }
+  };
+
+  // Reset waitlist form when changing date
+  useEffect(() => {
+    setShowWaitlistForm(false);
+    setWaitlistSuccess(false);
+  }, [selectedDate]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center">
@@ -896,9 +988,115 @@ Aguardamos você! 💈`;
                   <div>
                     <Label className="text-base mb-3 block">Horários Disponíveis</Label>
                     {availableSlots.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-4">
-                        Nenhum horário disponível nesta data
-                      </p>
+                      <div className="space-y-4">
+                        {!showWaitlistForm && !waitlistSuccess ? (
+                          <div className="text-center py-6 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                            <AlertCircle className="h-10 w-10 text-amber-500 mx-auto mb-3" />
+                            <p className="text-foreground font-medium mb-2">
+                              Nenhum horário disponível nesta data
+                            </p>
+                            <p className="text-muted-foreground text-sm mb-4">
+                              Mas não desista! Entre na lista de espera e seremos notificados quando um horário abrir.
+                            </p>
+                            <Button onClick={() => setShowWaitlistForm(true)} variant="outline" className="gap-2">
+                              <Bell className="h-4 w-4" />
+                              Entrar na Lista de Espera
+                            </Button>
+                          </div>
+                        ) : waitlistSuccess ? (
+                          <div className="text-center py-6 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                            <Check className="h-10 w-10 text-green-500 mx-auto mb-3" />
+                            <p className="text-foreground font-medium mb-2">
+                              Você está na lista de espera!
+                            </p>
+                            <p className="text-muted-foreground text-sm">
+                              Entraremos em contato pelo WhatsApp quando um horário ficar disponível.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="p-4 bg-muted/50 rounded-lg border space-y-4">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Bell className="h-4 w-4" />
+                              <span>Lista de Espera para {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}</span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="waitlistName">Seu Nome *</Label>
+                              <Input
+                                id="waitlistName"
+                                value={clientName}
+                                onChange={(e) => setClientName(e.target.value)}
+                                placeholder="Digite seu nome completo"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="waitlistPhone">Seu WhatsApp *</Label>
+                              <Input
+                                id="waitlistPhone"
+                                value={clientPhone}
+                                onChange={(e) => setClientPhone(formatPhone(e.target.value))}
+                                placeholder="(00) 00000-0000"
+                                maxLength={15}
+                              />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label htmlFor="timeStart">Horário preferido (início)</Label>
+                                <Input
+                                  id="timeStart"
+                                  type="time"
+                                  value={waitlistPreferredTimeStart}
+                                  onChange={(e) => setWaitlistPreferredTimeStart(e.target.value)}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="timeEnd">Horário preferido (fim)</Label>
+                                <Input
+                                  id="timeEnd"
+                                  type="time"
+                                  value={waitlistPreferredTimeEnd}
+                                  onChange={(e) => setWaitlistPreferredTimeEnd(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="waitlistNotes">Observações (opcional)</Label>
+                              <Textarea
+                                id="waitlistNotes"
+                                value={waitlistNotes}
+                                onChange={(e) => setWaitlistNotes(e.target.value)}
+                                placeholder="Ex: Prefiro horários pela manhã, tenho flexibilidade..."
+                                rows={2}
+                              />
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => setShowWaitlistForm(false)}
+                                className="flex-1"
+                              >
+                                Cancelar
+                              </Button>
+                              <Button
+                                onClick={handleWaitlistSubmit}
+                                disabled={submittingWaitlist || !clientName || !clientPhone}
+                                className="flex-1"
+                              >
+                                {submittingWaitlist ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Bell className="h-4 w-4 mr-2" />
+                                )}
+                                Confirmar
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                         {availableSlots.map((slot) => (
