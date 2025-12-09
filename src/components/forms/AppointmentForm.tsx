@@ -1057,22 +1057,42 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                             const availability = dayAvailability[dateStr];
                             const isPast = dayDate < new Date(new Date().setHours(0, 0, 0, 0));
                             
-                            if (isPast || !slotInfo || !selectedBarber || !selectedService) {
-                              return <DayContent date={dayDate} {...props} />;
+                            if (isPast || !selectedBarber || !selectedService) {
+                              return <span>{dayDate.getDate()}</span>;
                             }
                             
                             const tooltipText = availability === 'closed' 
                               ? 'Fechado'
                               : availability === 'full'
                               ? 'Sem horários disponíveis'
-                              : `${slotInfo.available} de ${slotInfo.total} horários disponíveis`;
+                              : slotInfo
+                              ? `${slotInfo.available} de ${slotInfo.total} horários disponíveis`
+                              : 'Carregando...';
+                            
+                            // Determine indicator color
+                            let indicatorClass = '';
+                            if (availability === 'available') {
+                              indicatorClass = 'bg-green-500';
+                            } else if (availability === 'partial') {
+                              indicatorClass = 'bg-amber-500';
+                            } else if (availability === 'full') {
+                              indicatorClass = 'bg-red-500';
+                            }
                             
                             return (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="w-full h-full flex items-center justify-center">
-                                    <DayContent date={dayDate} {...props} />
-                                  </span>
+                                  <div className="relative w-full h-full flex flex-col items-center justify-center">
+                                    <span>{dayDate.getDate()}</span>
+                                    {indicatorClass && (
+                                      <div 
+                                        className={cn(
+                                          "absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full",
+                                          indicatorClass
+                                        )}
+                                      />
+                                    )}
+                                  </div>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="text-xs">
                                   <p>{tooltipText}</p>
