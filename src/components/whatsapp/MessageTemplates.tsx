@@ -39,7 +39,9 @@ import {
   Edit,
   Trash2,
   MessageSquare,
-  Loader2
+  Loader2,
+  Eye,
+  Smartphone
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -170,6 +172,20 @@ Responda SIM para confirmar ou entre em contato para agendar.
   }
 ];
 
+// Sample data for preview
+const sampleData: Record<string, string> = {
+  nome: 'João Silva',
+  data: '15/01/2025',
+  hora: '14:30',
+  servico: 'Corte + Barba',
+  profissional: 'Carlos',
+  barbearia: 'Barbearia Premium',
+  endereco: 'Rua das Flores, 123',
+  desconto: '20',
+  validade: '31/01/2025',
+  descricao_promocao: 'Combo especial de verão com corte e barba!',
+};
+
 // Extract variables from message text
 const extractVariables = (message: string): string[] => {
   const regex = /\{([^}]+)\}/g;
@@ -179,6 +195,15 @@ const extractVariables = (message: string): string[] => {
     variables.add(match[1]);
   }
   return Array.from(variables);
+};
+
+// Replace variables with sample data
+const replaceVariablesWithSample = (message: string): string => {
+  let result = message;
+  Object.entries(sampleData).forEach(([key, value]) => {
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+  });
+  return result;
 };
 
 interface MessageTemplatesProps {
@@ -192,6 +217,8 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<MessageTemplate | null>(null);
   const [selectedForEdit, setSelectedForEdit] = useState<MessageTemplate | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<MessageTemplate | null>(null);
   const [saving, setSaving] = useState(false);
@@ -201,6 +228,11 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
     category: 'general' as MessageTemplate['category'],
     message: '',
   });
+
+  const openPreview = (template: MessageTemplate) => {
+    setPreviewTemplate(template);
+    setPreviewDialogOpen(true);
+  };
 
   useEffect(() => {
     if (barbershopId) {
@@ -425,34 +457,48 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
                       </div>
                     </button>
                     
-                    {/* Edit/Delete buttons */}
-                    {!template.is_default && (
-                      <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditDialog(template);
-                          }}
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setTemplateToDelete(template);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
+                    {/* Preview/Edit/Delete buttons */}
+                    <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openPreview(template);
+                        }}
+                        title="Visualizar preview"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      {!template.is_default && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(template);
+                            }}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTemplateToDelete(template);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -517,17 +563,35 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
             </div>
 
             {formData.message && (
-              <div className="p-3 rounded-lg bg-muted/50 border">
-                <p className="text-xs text-muted-foreground mb-1">Variáveis detectadas:</p>
-                <div className="flex flex-wrap gap-1">
-                  {extractVariables(formData.message).map((v) => (
-                    <Badge key={v} variant="secondary" className="text-xs font-mono">
-                      {`{${v}}`}
-                    </Badge>
-                  ))}
-                  {extractVariables(formData.message).length === 0 && (
-                    <span className="text-xs text-muted-foreground">Nenhuma variável</span>
-                  )}
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  <p className="text-xs text-muted-foreground mb-1">Variáveis detectadas:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {extractVariables(formData.message).map((v) => (
+                      <Badge key={v} variant="secondary" className="text-xs font-mono">
+                        {`{${v}}`}
+                      </Badge>
+                    ))}
+                    {extractVariables(formData.message).length === 0 && (
+                      <span className="text-xs text-muted-foreground">Nenhuma variável</span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Live Preview */}
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-primary/10 px-3 py-2 flex items-center gap-2 border-b">
+                    <Smartphone className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-medium">Preview da Mensagem</span>
+                  </div>
+                  <div className="bg-[#e5ddd5] p-4">
+                    <div className="max-w-[280px] ml-auto bg-[#dcf8c6] rounded-lg p-3 shadow-sm">
+                      <p className="text-sm whitespace-pre-wrap text-gray-800">
+                        {replaceVariablesWithSample(formData.message)}
+                      </p>
+                      <p className="text-[10px] text-gray-500 text-right mt-1">14:30 ✓✓</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -544,13 +608,86 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
         </DialogContent>
       </Dialog>
 
+      {/* Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-primary" />
+              Preview: {previewTemplate?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Visualização de como a mensagem aparecerá para o cliente
+            </DialogDescription>
+          </DialogHeader>
+          
+          {previewTemplate && (
+            <div className="space-y-4">
+              {/* WhatsApp style preview */}
+              <div className="border rounded-xl overflow-hidden shadow-lg">
+                {/* Phone header */}
+                <div className="bg-[#075e54] px-4 py-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                    <span className="text-gray-600 text-lg font-semibold">B</span>
+                  </div>
+                  <div className="text-white">
+                    <p className="font-semibold text-sm">Barbearia Premium</p>
+                    <p className="text-xs text-green-200">online</p>
+                  </div>
+                </div>
+                
+                {/* Chat area */}
+                <div className="bg-[#e5ddd5] p-4 min-h-[200px]" style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4cfc4' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                }}>
+                  <div className="max-w-[85%] ml-auto bg-[#dcf8c6] rounded-lg p-3 shadow-sm">
+                    <p className="text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">
+                      {replaceVariablesWithSample(previewTemplate.message)}
+                    </p>
+                    <p className="text-[10px] text-gray-500 text-right mt-1">14:30 ✓✓</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Variables used */}
+              <div className="bg-muted/50 rounded-lg p-3 border">
+                <p className="text-xs font-medium mb-2">Variáveis utilizadas (dados de exemplo):</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {previewTemplate.variables.map((v) => (
+                    <div key={v} className="flex items-center gap-2">
+                      <code className="bg-background px-1.5 py-0.5 rounded text-[10px]">{`{${v}}`}</code>
+                      <span className="text-muted-foreground">→</span>
+                      <span className="font-medium">{sampleData[v] || '...'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
+              Fechar
+            </Button>
+            <Button onClick={() => {
+              if (previewTemplate) {
+                onSelectTemplate(previewTemplate);
+                setPreviewDialogOpen(false);
+              }
+            }}>
+              Usar Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Template</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o template "{templateToDelete?.name}"? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir o template &quot;{templateToDelete?.name}&quot;? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
