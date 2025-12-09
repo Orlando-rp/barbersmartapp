@@ -798,11 +798,19 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
               <Check className="h-8 w-8 text-green-600" />
             </div>
             <CardTitle className="text-2xl text-green-600">Agendamento Confirmado!</CardTitle>
-            <CardDescription className="mt-4 space-y-2">
+            <CardDescription className="mt-4 space-y-3">
               <p><strong>Data:</strong> {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
               <p><strong>Horário:</strong> {selectedTime}</p>
               <p><strong>Serviço:</strong> {selectedService?.name}</p>
-              <p><strong>Profissional:</strong> {getStaffName(selectedStaff)}</p>
+              <div className="flex items-center justify-center gap-3 py-2">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={getStaffAvatar(selectedStaff) || undefined} alt={getStaffName(selectedStaff)} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                    {getStaffInitials(selectedStaff)}
+                  </AvatarFallback>
+                </Avatar>
+                <span><strong>Profissional:</strong> {getStaffName(selectedStaff)}</span>
+              </div>
               <p className="text-primary font-semibold mt-4">Você receberá uma confirmação por WhatsApp!</p>
             </CardDescription>
           </CardHeader>
