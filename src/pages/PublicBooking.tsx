@@ -95,6 +95,7 @@ export default function PublicBooking() {
   const [waitlistPreferredTimeEnd, setWaitlistPreferredTimeEnd] = useState('');
   const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
   const [waitlistSuccess, setWaitlistSuccess] = useState(false);
+  const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
 
   useEffect(() => {
     if (barbershopId) {
@@ -678,11 +679,24 @@ Aguardamos você! 💈`;
         status: 'waiting'
       };
 
-      const { error } = await supabase
+      const { data: insertedEntry, error } = await supabase
         .from('waitlist')
-        .insert(waitlistData);
+        .insert(waitlistData)
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      // Calculate position in queue for this date and staff
+      const { count } = await supabase
+        .from('waitlist')
+        .select('*', { count: 'exact', head: true })
+        .eq('barbershop_id', barbershopId)
+        .eq('preferred_date', format(selectedDate, 'yyyy-MM-dd'))
+        .eq('staff_id', selectedStaff.id)
+        .eq('status', 'waiting');
+
+      setWaitlistPosition(count || 1);
 
       // Try to send WhatsApp notification about waitlist
       try {
@@ -737,6 +751,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
   useEffect(() => {
     setShowWaitlistForm(false);
     setWaitlistSuccess(false);
+    setWaitlistPosition(null);
   }, [selectedDate]);
 
   if (loading) {
@@ -1009,6 +1024,11 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                             <p className="text-foreground font-medium mb-2">
                               Você está na lista de espera!
                             </p>
+                            {waitlistPosition && (
+                              <div className="bg-primary/10 text-primary font-semibold py-2 px-4 rounded-full inline-block mb-3">
+                                Sua posição na fila: #{waitlistPosition}
+                              </div>
+                            )}
                             <p className="text-muted-foreground text-sm">
                               Entraremos em contato pelo WhatsApp quando um horário ficar disponível.
                             </p>
