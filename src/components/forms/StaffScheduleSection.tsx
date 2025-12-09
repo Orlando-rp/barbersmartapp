@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -70,22 +70,20 @@ export const StaffScheduleSection = ({
   useCustomSchedule,
   onUseCustomScheduleChange,
 }: StaffScheduleSectionProps) => {
-  // Ensure all days are present in schedule with safe fallback
-  const ensureCompleteSchedule = (partialSchedule: StaffSchedule | null): StaffSchedule => {
-    if (!partialSchedule) return defaultSchedule;
+  // Memoized current schedule to ensure stability
+  const currentSchedule = useMemo(() => {
+    if (!schedule) return defaultSchedule;
     
     return {
-      monday: partialSchedule.monday || defaultSchedule.monday,
-      tuesday: partialSchedule.tuesday || defaultSchedule.tuesday,
-      wednesday: partialSchedule.wednesday || defaultSchedule.wednesday,
-      thursday: partialSchedule.thursday || defaultSchedule.thursday,
-      friday: partialSchedule.friday || defaultSchedule.friday,
-      saturday: partialSchedule.saturday || defaultSchedule.saturday,
-      sunday: partialSchedule.sunday || defaultSchedule.sunday,
+      monday: schedule.monday || defaultSchedule.monday,
+      tuesday: schedule.tuesday || defaultSchedule.tuesday,
+      wednesday: schedule.wednesday || defaultSchedule.wednesday,
+      thursday: schedule.thursday || defaultSchedule.thursday,
+      friday: schedule.friday || defaultSchedule.friday,
+      saturday: schedule.saturday || defaultSchedule.saturday,
+      sunday: schedule.sunday || defaultSchedule.sunday,
     };
-  };
-
-  const currentSchedule = ensureCompleteSchedule(schedule);
+  }, [schedule]);
 
   const handleToggleCustom = (checked: boolean) => {
     onUseCustomScheduleChange(checked);

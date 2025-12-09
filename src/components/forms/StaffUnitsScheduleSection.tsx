@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -114,23 +114,26 @@ export const StaffUnitsScheduleSection = ({
     }
   };
 
-  // Ensure all days are present in schedule with safe fallback
-  const ensureCompleteSchedule = (partialSchedule: StaffUnitSchedule | null): StaffUnitSchedule => {
-    const defaultSchedule = createDefaultSchedule(barbershops[0]?.id || null);
-    if (!partialSchedule) return defaultSchedule;
+  // Memoize default schedule to avoid recreating on every render
+  const defaultScheduleForUnit = useMemo(() => 
+    createDefaultSchedule(barbershops[0]?.id || null), 
+    [barbershops]
+  );
+
+  // Memoized current schedule to ensure stability
+  const currentSchedule = useMemo(() => {
+    if (!schedule) return defaultScheduleForUnit;
     
     return {
-      monday: partialSchedule.monday || defaultSchedule.monday,
-      tuesday: partialSchedule.tuesday || defaultSchedule.tuesday,
-      wednesday: partialSchedule.wednesday || defaultSchedule.wednesday,
-      thursday: partialSchedule.thursday || defaultSchedule.thursday,
-      friday: partialSchedule.friday || defaultSchedule.friday,
-      saturday: partialSchedule.saturday || defaultSchedule.saturday,
-      sunday: partialSchedule.sunday || defaultSchedule.sunday,
+      monday: schedule.monday || defaultScheduleForUnit.monday,
+      tuesday: schedule.tuesday || defaultScheduleForUnit.tuesday,
+      wednesday: schedule.wednesday || defaultScheduleForUnit.wednesday,
+      thursday: schedule.thursday || defaultScheduleForUnit.thursday,
+      friday: schedule.friday || defaultScheduleForUnit.friday,
+      saturday: schedule.saturday || defaultScheduleForUnit.saturday,
+      sunday: schedule.sunday || defaultScheduleForUnit.sunday,
     };
-  };
-
-  const currentSchedule = ensureCompleteSchedule(schedule);
+  }, [schedule, defaultScheduleForUnit]);
 
   const updateDaySchedule = (day: keyof StaffUnitSchedule, field: keyof DayUnitSchedule, value: any) => {
     const daySchedule = currentSchedule[day] || defaultDaySchedule;
