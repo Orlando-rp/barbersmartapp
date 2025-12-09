@@ -64,6 +64,42 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       return;
     }
 
+    // Debug: verificar role do usuário atual
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) {
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', currentUser.id);
+      
+      console.log('Current user ID:', currentUser.id);
+      console.log('Current barbershop ID:', barbershopId);
+      console.log('User roles found:', userRoles);
+      
+      if (!userRoles || userRoles.length === 0) {
+        toast({
+          title: "Erro de permissão",
+          description: "Sua conta não possui uma função atribuída. Por favor, contate o suporte.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const hasAdminRole = userRoles.some(r => 
+        (r.role === 'admin' || r.role === 'super_admin') && 
+        (r.barbershop_id === barbershopId || r.role === 'super_admin')
+      );
+
+      if (!hasAdminRole) {
+        toast({
+          title: "Erro de permissão",
+          description: "Você precisa ser administrador desta barbearia para adicionar membros.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
