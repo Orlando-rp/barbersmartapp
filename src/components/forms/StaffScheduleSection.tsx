@@ -70,7 +70,22 @@ export const StaffScheduleSection = ({
   useCustomSchedule,
   onUseCustomScheduleChange,
 }: StaffScheduleSectionProps) => {
-  const currentSchedule = schedule || defaultSchedule;
+  // Ensure all days are present in schedule with safe fallback
+  const ensureCompleteSchedule = (partialSchedule: StaffSchedule | null): StaffSchedule => {
+    if (!partialSchedule) return defaultSchedule;
+    
+    return {
+      monday: partialSchedule.monday || defaultSchedule.monday,
+      tuesday: partialSchedule.tuesday || defaultSchedule.tuesday,
+      wednesday: partialSchedule.wednesday || defaultSchedule.wednesday,
+      thursday: partialSchedule.thursday || defaultSchedule.thursday,
+      friday: partialSchedule.friday || defaultSchedule.friday,
+      saturday: partialSchedule.saturday || defaultSchedule.saturday,
+      sunday: partialSchedule.sunday || defaultSchedule.sunday,
+    };
+  };
+
+  const currentSchedule = ensureCompleteSchedule(schedule);
 
   const handleToggleCustom = (checked: boolean) => {
     onUseCustomScheduleChange(checked);
@@ -82,10 +97,11 @@ export const StaffScheduleSection = ({
   };
 
   const updateDaySchedule = (day: keyof StaffSchedule, field: keyof DaySchedule, value: any) => {
+    const daySchedule = currentSchedule[day] || defaultDaySchedule;
     const newSchedule = {
       ...currentSchedule,
       [day]: {
-        ...currentSchedule[day],
+        ...daySchedule,
         [field]: value,
       },
     };
