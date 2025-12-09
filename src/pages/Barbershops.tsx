@@ -177,6 +177,19 @@ const Barbershops = () => {
             console.error('Erro ao associar usuário à barbearia:', linkError);
             toast.error('Barbearia criada, mas houve erro ao associá-la ao usuário.');
           } else {
+            // Criar a role de admin para o usuário
+            const { error: roleError } = await supabase
+              .from('user_roles')
+              .insert({
+                user_id: user.id,
+                role: 'admin',
+                barbershop_id: newBarbershop.id,
+              });
+            
+            if (roleError) {
+              console.error('Erro ao criar role de admin:', roleError);
+            }
+
             // Verificar se há registro pendente de barbeiro (do cadastro inicial)
             const pendingBarberData = localStorage.getItem('pendingBarberRegistration');
             if (pendingBarberData) {
@@ -189,10 +202,9 @@ const Barbershops = () => {
                     .insert({
                       user_id: user.id,
                       barbershop_id: newBarbershop.id,
-                      role: 'admin',
                       is_also_barber: true,
-                      specialties: [],
-                      commission_rate: 0,
+                      specialties: ['Corte', 'Barba'],
+                      commission_rate: 50,
                       active: true,
                     });
                   

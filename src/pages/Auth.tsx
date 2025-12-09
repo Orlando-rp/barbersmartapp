@@ -94,13 +94,15 @@ const Auth = () => {
         phone: signupPhone,
         password: signupPassword,
         confirmPassword: signupConfirmPassword,
+        isAlsoBarber: signupIsAlsoBarber,
       });
 
       const { error } = await signUp(
         validatedData.email,
         validatedData.password,
         validatedData.fullName,
-        validatedData.phone
+        validatedData.phone,
+        validatedData.isAlsoBarber
       );
       
       if (!error) {
