@@ -496,19 +496,20 @@ const SaasAdminPortal = () => {
 
   return (
     <SaasAdminLayout activeTab={activeTab} onTabChange={setActiveTab}>
-      <div className="p-6 space-y-6 bg-slate-950 min-h-screen">
+      <div className="p-4 md:p-6 space-y-6 bg-slate-950 min-h-screen">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Shield className="h-8 w-8 text-amber-500" />
-              Portal de Administração SaaS
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2 md:gap-3">
+              <Shield className="h-6 w-6 md:h-8 md:w-8 text-amber-500" />
+              <span className="hidden sm:inline">Portal de Administração SaaS</span>
+              <span className="sm:hidden">Admin SaaS</span>
             </h1>
-            <p className="text-slate-400">
+            <p className="text-slate-400 text-sm md:text-base mt-1">
               Gerencie tenants, planos e monitore o uso do sistema
             </p>
           </div>
-          <Button variant="outline" onClick={fetchAllData} className="border-slate-700 text-slate-300 hover:bg-slate-800">
+          <Button variant="outline" onClick={fetchAllData} className="border-slate-700 text-slate-300 hover:bg-slate-800 w-full sm:w-auto">
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </Button>
@@ -575,26 +576,26 @@ const SaasAdminPortal = () => {
           </Card>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs - Hidden on mobile since sidebar handles navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-slate-900 border border-slate-800">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+          <TabsList className="bg-slate-900 border border-slate-800 hidden md:flex flex-wrap gap-1">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
               <BarChart3 className="h-4 w-4 mr-2" />
               Visão Geral
             </TabsTrigger>
-            <TabsTrigger value="tenants" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+            <TabsTrigger value="tenants" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
               <Building2 className="h-4 w-4 mr-2" />
               Barbearias
             </TabsTrigger>
-            <TabsTrigger value="plans" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+            <TabsTrigger value="plans" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
               <Package className="h-4 w-4 mr-2" />
               Planos
             </TabsTrigger>
-            <TabsTrigger value="messages" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+            <TabsTrigger value="messages" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
               <MessageSquare className="h-4 w-4 mr-2" />
               Mensagens
             </TabsTrigger>
-            <TabsTrigger value="integrations" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
+            <TabsTrigger value="integrations" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
               <Smartphone className="h-4 w-4 mr-2" />
               Integrações
             </TabsTrigger>

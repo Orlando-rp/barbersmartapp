@@ -36,9 +36,10 @@ const saasNavigation: NavItem[] = [
 interface SaasAdminSidebarProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  isMobile?: boolean;
 }
 
-const SaasAdminSidebar = ({ activeTab = "overview", onTabChange }: SaasAdminSidebarProps) => {
+const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = false }: SaasAdminSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const { signOut } = useAuth();
   const navigate = useNavigate();
@@ -51,32 +52,38 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange }: SaasAdminSide
     onTabChange?.(tab);
   };
 
+  // For mobile, always show expanded
+  const isCollapsed = isMobile ? false : collapsed;
+
   return (
-    <div className={cn(
-      "h-screen bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col",
-      collapsed ? "w-16" : "w-64"
+    <aside className={cn(
+      "bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col shrink-0",
+      isMobile ? "w-full h-full" : (isCollapsed ? "w-16" : "w-64"),
+      !isMobile && "sticky top-0 h-screen hidden md:flex"
     )}>
       {/* Header */}
       <div className="p-4 border-b border-slate-800">
         <div className="flex items-center justify-between">
-          {!collapsed && (
+          {!isCollapsed && (
             <div className="flex items-center gap-2">
               <Shield className="h-6 w-6 text-amber-500" />
               <span className="font-bold text-white">Admin SaaS</span>
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCollapsed(!collapsed)}
-            className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
+          {!isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+              className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -91,11 +98,11 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange }: SaasAdminSide
               activeTab === item.tab
                 ? "bg-amber-500/20 text-amber-500"
                 : "text-slate-400 hover:text-white hover:bg-slate-800",
-              collapsed && "justify-center px-2"
+              isCollapsed && !isMobile && "justify-center px-2"
             )}
           >
-            <item.icon className={cn("h-5 w-5", !collapsed && "mr-3")} />
-            {!collapsed && <span>{item.name}</span>}
+            <item.icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+            {!isCollapsed && <span>{item.name}</span>}
           </button>
         ))}
       </nav>
@@ -107,34 +114,34 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange }: SaasAdminSide
           onClick={handleBackToApp}
           className={cn(
             "w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800",
-            collapsed && "justify-center px-2"
+            isCollapsed && !isMobile && "justify-center px-2"
           )}
         >
-          <Home className={cn("h-5 w-5", !collapsed && "mr-3")} />
-          {!collapsed && <span>Voltar ao App</span>}
+          <Home className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+          {!isCollapsed && <span>Voltar ao App</span>}
         </Button>
         <Button
           variant="ghost"
           onClick={signOut}
           className={cn(
             "w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-500/10",
-            collapsed && "justify-center px-2"
+            isCollapsed && !isMobile && "justify-center px-2"
           )}
         >
-          <LogOut className={cn("h-5 w-5", !collapsed && "mr-3")} />
-          {!collapsed && <span>Sair</span>}
+          <LogOut className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+          {!isCollapsed && <span>Sair</span>}
         </Button>
       </div>
 
       {/* Version Info */}
-      {!collapsed && (
+      {!isCollapsed && (
         <div className="p-3 border-t border-slate-800">
           <div className="text-xs text-slate-500 text-center">
             BarberSmart SaaS v1.0.0
           </div>
         </div>
       )}
-    </div>
+    </aside>
   );
 };
 
