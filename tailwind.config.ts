@@ -108,7 +108,38 @@ export default {
     			xl: 'var(--shadow-xl)',
     			'2xl': 'var(--shadow-2xl)'
     		},
-    		fontFamily: {}
+    		fontFamily: {
+    			sans: [
+    				'DM Sans',
+    				'ui-sans-serif',
+    				'system-ui',
+    				'sans-serif',
+    				'Apple Color Emoji',
+    				'Segoe UI Emoji',
+    				'Segoe UI Symbol',
+    				'Noto Color Emoji'
+    			],
+    			serif: [
+    				'Crimson Pro',
+    				'ui-serif',
+    				'Georgia',
+    				'Cambria',
+    				'Times New Roman',
+    				'Times',
+    				'serif'
+    			],
+    			mono: [
+    				'SF Mono',
+    				'ui-monospace',
+    				'SFMono-Regular',
+    				'Menlo',
+    				'Monaco',
+    				'Consolas',
+    				'Liberation Mono',
+    				'Courier New',
+    				'monospace'
+    			]
+    		}
     	}
     },
 	plugins: [require("tailwindcss-animate")],
