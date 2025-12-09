@@ -83,7 +83,6 @@ export const SocialAuthConfig = () => {
     try {
       setSaving(true);
 
-      // Fetch current config to preserve unchanged secrets
       const { data: currentData } = await supabase
         .from('system_config')
         .select('value')
@@ -126,7 +125,7 @@ export const SocialAuthConfig = () => {
       if (error) throw error;
 
       toast.success("Configuração de login social salva!");
-      loadConfig(); // Reload to show masked values
+      loadConfig();
     } catch (error) {
       console.error('Erro ao salvar:', error);
       toast.error("Erro ao salvar configuração");
@@ -148,7 +147,7 @@ export const SocialAuthConfig = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-warning" />
       </div>
     );
   }
@@ -156,10 +155,10 @@ export const SocialAuthConfig = () => {
   return (
     <div className="space-y-6">
       {/* Info Alert */}
-      <Alert className="border-blue-500/50 bg-blue-500/10">
-        <Info className="h-4 w-4 text-blue-500" />
-        <AlertTitle className="text-blue-400">Login Social - Configuração Global</AlertTitle>
-        <AlertDescription className="text-blue-300/90">
+      <Alert className="border-info/50 bg-info/10">
+        <Info className="h-4 w-4 text-info" />
+        <AlertTitle className="text-info">Login Social - Configuração Global</AlertTitle>
+        <AlertDescription className="text-info/90">
           <p className="mb-2">
             Configure os provedores de login social para permitir que clientes das barbearias 
             façam login usando Google ou Facebook.
@@ -171,9 +170,9 @@ export const SocialAuthConfig = () => {
       </Alert>
 
       {/* Google Configuration */}
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between text-white">
+          <CardTitle className="flex items-center justify-between text-foreground">
             <span className="flex items-center gap-2">
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -183,7 +182,7 @@ export const SocialAuthConfig = () => {
               </svg>
               Login com Google
             </span>
-            <Badge className={config.google.enabled ? "bg-emerald-500" : "bg-slate-600"}>
+            <Badge className={config.google.enabled ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}>
               {config.google.enabled ? (
                 <><CheckCircle className="h-3 w-3 mr-1" />Ativo</>
               ) : (
@@ -191,15 +190,15 @@ export const SocialAuthConfig = () => {
               )}
             </Badge>
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Permite login usando conta Google
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
             <div className="space-y-0.5">
-              <Label className="text-white">Habilitar Login com Google</Label>
-              <p className="text-sm text-slate-400">
+              <Label className="text-foreground">Habilitar Login com Google</Label>
+              <p className="text-sm text-muted-foreground">
                 Ativar opção de login via Google para clientes
               </p>
             </div>
@@ -210,34 +209,34 @@ export const SocialAuthConfig = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-300">Client ID</Label>
+            <Label className="text-foreground">Client ID</Label>
             <Input
               type="text"
               value={config.google.clientId}
               onChange={(e) => updateProvider('google', 'clientId', e.target.value)}
               placeholder="xxxxx.apps.googleusercontent.com"
-              className="bg-slate-800 border-slate-700 text-white"
+              className="bg-muted border-border text-foreground"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-300">Client Secret</Label>
+            <Label className="text-foreground">Client Secret</Label>
             <Input
               type="password"
               value={config.google.clientSecret}
               onChange={(e) => updateProvider('google', 'clientSecret', e.target.value)}
               placeholder="GOCSPX-..."
-              className="bg-slate-800 border-slate-700 text-white"
+              className="bg-muted border-border text-foreground"
             />
           </div>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Obtenha suas credenciais em{" "}
             <a 
               href="https://console.cloud.google.com/apis/credentials" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-blue-400 hover:underline inline-flex items-center gap-1"
+              className="text-info hover:underline inline-flex items-center gap-1"
             >
               Google Cloud Console
               <ExternalLink className="h-3 w-3" />
@@ -247,16 +246,16 @@ export const SocialAuthConfig = () => {
       </Card>
 
       {/* Facebook Configuration */}
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between text-white">
+          <CardTitle className="flex items-center justify-between text-foreground">
             <span className="flex items-center gap-2">
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#1877F2">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
               </svg>
               Login com Facebook
             </span>
-            <Badge className={config.facebook.enabled ? "bg-emerald-500" : "bg-slate-600"}>
+            <Badge className={config.facebook.enabled ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}>
               {config.facebook.enabled ? (
                 <><CheckCircle className="h-3 w-3 mr-1" />Ativo</>
               ) : (
@@ -264,15 +263,15 @@ export const SocialAuthConfig = () => {
               )}
             </Badge>
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Permite login usando conta Facebook
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
             <div className="space-y-0.5">
-              <Label className="text-white">Habilitar Login com Facebook</Label>
-              <p className="text-sm text-slate-400">
+              <Label className="text-foreground">Habilitar Login com Facebook</Label>
+              <p className="text-sm text-muted-foreground">
                 Ativar opção de login via Facebook para clientes
               </p>
             </div>
@@ -283,34 +282,34 @@ export const SocialAuthConfig = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-300">App ID</Label>
+            <Label className="text-foreground">App ID</Label>
             <Input
               type="text"
               value={config.facebook.clientId}
               onChange={(e) => updateProvider('facebook', 'clientId', e.target.value)}
               placeholder="123456789012345"
-              className="bg-slate-800 border-slate-700 text-white"
+              className="bg-muted border-border text-foreground"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-300">App Secret</Label>
+            <Label className="text-foreground">App Secret</Label>
             <Input
               type="password"
               value={config.facebook.clientSecret}
               onChange={(e) => updateProvider('facebook', 'clientSecret', e.target.value)}
               placeholder="..."
-              className="bg-slate-800 border-slate-700 text-white"
+              className="bg-muted border-border text-foreground"
             />
           </div>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Obtenha suas credenciais em{" "}
             <a 
               href="https://developers.facebook.com/apps" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-blue-400 hover:underline inline-flex items-center gap-1"
+              className="text-info hover:underline inline-flex items-center gap-1"
             >
               Facebook Developers
               <ExternalLink className="h-3 w-3" />
@@ -320,10 +319,10 @@ export const SocialAuthConfig = () => {
       </Card>
 
       {/* Important Notice */}
-      <Alert className="border-amber-500/50 bg-amber-500/10">
-        <Settings className="h-4 w-4 text-amber-500" />
-        <AlertTitle className="text-amber-400">Configuração no Supabase</AlertTitle>
-        <AlertDescription className="text-amber-300/90">
+      <Alert className="border-warning/50 bg-warning/10">
+        <Settings className="h-4 w-4 text-warning" />
+        <AlertTitle className="text-warning">Configuração no Supabase</AlertTitle>
+        <AlertDescription className="text-warning/90">
           <p className="mb-2">
             Após configurar aqui, você também precisa configurar os provedores no 
             painel do Supabase:
@@ -341,7 +340,7 @@ export const SocialAuthConfig = () => {
       <Button 
         onClick={saveConfig} 
         disabled={saving}
-        className="bg-blue-500 hover:bg-blue-600 text-white w-full"
+        className="bg-info hover:bg-info/90 text-info-foreground w-full"
       >
         {saving ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />

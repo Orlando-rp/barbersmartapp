@@ -54,7 +54,6 @@ export const GlobalEvolutionConfig = () => {
     try {
       setLoading(true);
       
-      // Buscar configuração global da tabela system_config
       const { data, error } = await supabase
         .from('system_config')
         .select('*')
@@ -87,7 +86,6 @@ export const GlobalEvolutionConfig = () => {
     try {
       setSaving(true);
 
-      // Usar upsert com a tabela system_config
       const { error } = await supabase
         .from('system_config')
         .upsert({
@@ -156,7 +154,6 @@ export const GlobalEvolutionConfig = () => {
     try {
       setLoadingStatuses(true);
 
-      // Buscar todas as barbearias com config WhatsApp
       const { data: barbershops, error: shopError } = await supabase
         .from('barbershops')
         .select('id, name');
@@ -177,7 +174,6 @@ export const GlobalEvolutionConfig = () => {
         const shopConfig = configs?.find(c => c.barbershop_id === shop.id);
         const instanceName = shopConfig?.config?.instance_name || `bs-${shop.id.split('-')[0]}`;
 
-        // Check connection status for each instance
         try {
           const { data } = await supabase.functions.invoke('send-whatsapp-evolution', {
             body: {
@@ -218,7 +214,7 @@ export const GlobalEvolutionConfig = () => {
   const getServerStatusBadge = () => {
     switch (serverStatus) {
       case 'online':
-        return <Badge className="bg-emerald-500"><Wifi className="h-3 w-3 mr-1" />Online</Badge>;
+        return <Badge className="bg-success text-success-foreground"><Wifi className="h-3 w-3 mr-1" />Online</Badge>;
       case 'offline':
         return <Badge variant="destructive"><WifiOff className="h-3 w-3 mr-1" />Offline</Badge>;
       default:
@@ -229,7 +225,7 @@ export const GlobalEvolutionConfig = () => {
   const getConnectionBadge = (status: string) => {
     switch (status) {
       case 'connected':
-        return <Badge className="bg-emerald-500 text-xs"><CheckCircle className="h-3 w-3 mr-1" />Conectado</Badge>;
+        return <Badge className="bg-success text-success-foreground text-xs"><CheckCircle className="h-3 w-3 mr-1" />Conectado</Badge>;
       case 'disconnected':
         return <Badge variant="outline" className="text-xs"><XCircle className="h-3 w-3 mr-1" />Desconectado</Badge>;
       default:
@@ -240,7 +236,7 @@ export const GlobalEvolutionConfig = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-warning" />
       </div>
     );
   }
@@ -248,10 +244,10 @@ export const GlobalEvolutionConfig = () => {
   return (
     <div className="space-y-6">
       {/* Info Alert */}
-      <Alert className="border-amber-500/50 bg-amber-500/10">
-        <Info className="h-4 w-4 text-amber-500" />
-        <AlertTitle className="text-amber-400">Configuração Global</AlertTitle>
-        <AlertDescription className="text-amber-300/90">
+      <Alert className="border-warning/50 bg-warning/10">
+        <Info className="h-4 w-4 text-warning" />
+        <AlertTitle className="text-warning">Configuração Global</AlertTitle>
+        <AlertDescription className="text-warning/90">
           <p className="mb-2">
             Configure aqui o servidor Evolution API global. Todas as barbearias herdarão essas configurações 
             de servidor, precisando apenas escanear o QR Code para conectar seu WhatsApp.
@@ -260,7 +256,7 @@ export const GlobalEvolutionConfig = () => {
             href="https://doc.evolution-api.com/v2/pt/get-started/introduction"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center text-sm font-medium hover:underline text-amber-400"
+            className="inline-flex items-center text-sm font-medium hover:underline text-warning"
           >
             <ExternalLink className="h-3 w-3 mr-1" />
             Documentação Evolution API
@@ -269,46 +265,46 @@ export const GlobalEvolutionConfig = () => {
       </Alert>
 
       {/* Server Configuration */}
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between text-white">
+          <CardTitle className="flex items-center justify-between text-foreground">
             <span className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-amber-500" />
+              <Settings className="h-5 w-5 text-warning" />
               Servidor Evolution API
             </span>
             {getServerStatusBadge()}
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Configuração global do servidor para todas as barbearias
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="global-api-url" className="text-slate-300">URL do Servidor</Label>
+            <Label htmlFor="global-api-url" className="text-foreground">URL do Servidor</Label>
             <Input
               id="global-api-url"
               type="url"
               value={config.apiUrl}
               onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
               placeholder="https://api.evolution.seudominio.com"
-              className="bg-slate-800 border-slate-700 text-white"
+              className="bg-muted border-border text-foreground"
             />
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               URL base do seu servidor Evolution API
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="global-api-key" className="text-slate-300">API Key Global</Label>
+            <Label htmlFor="global-api-key" className="text-foreground">API Key Global</Label>
             <Input
               id="global-api-key"
               type="password"
               value={config.apiKey}
               onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
               placeholder="sua-api-key-global"
-              className="bg-slate-800 border-slate-700 text-white"
+              className="bg-muted border-border text-foreground"
             />
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Chave de API configurada no servidor Evolution
             </p>
           </div>
@@ -318,7 +314,7 @@ export const GlobalEvolutionConfig = () => {
               onClick={testServerConnection} 
               disabled={testing || !config.apiUrl || !config.apiKey}
               variant="outline"
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-border text-foreground hover:bg-muted"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${testing ? 'animate-spin' : ''}`} />
               Testar Conexão
@@ -326,7 +322,7 @@ export const GlobalEvolutionConfig = () => {
             <Button 
               onClick={saveGlobalConfig} 
               disabled={saving}
-              className="bg-amber-500 hover:bg-amber-600 text-white"
+              className="bg-warning hover:bg-warning/90 text-warning-foreground"
             >
               <Save className="mr-2 h-4 w-4" />
               {saving ? "Salvando..." : "Salvar Configuração"}
@@ -336,11 +332,11 @@ export const GlobalEvolutionConfig = () => {
       </Card>
 
       {/* Barbershop Instances */}
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between text-white">
+          <CardTitle className="flex items-center justify-between text-foreground">
             <span className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-amber-500" />
+              <Building2 className="h-5 w-5 text-warning" />
               Instâncias das Barbearias
             </span>
             <Button 
@@ -348,19 +344,19 @@ export const GlobalEvolutionConfig = () => {
               size="sm"
               onClick={loadBarbershopStatuses}
               disabled={loadingStatuses || !config.apiUrl || !config.apiKey}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-border text-foreground hover:bg-muted"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loadingStatuses ? 'animate-spin' : ''}`} />
               Atualizar Status
             </Button>
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Status de conexão WhatsApp de cada barbearia
           </CardDescription>
         </CardHeader>
         <CardContent>
           {barbershopStatuses.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>Clique em "Atualizar Status" para ver as instâncias</p>
             </div>
@@ -369,11 +365,11 @@ export const GlobalEvolutionConfig = () => {
               {barbershopStatuses.map((shop) => (
                 <div 
                   key={shop.id} 
-                  className="flex items-center justify-between p-3 bg-slate-800 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
                 >
                   <div>
-                    <p className="text-white font-medium">{shop.name}</p>
-                    <p className="text-xs text-slate-500">Instância: {shop.instanceName}</p>
+                    <p className="text-foreground font-medium">{shop.name}</p>
+                    <p className="text-xs text-muted-foreground">Instância: {shop.instanceName}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {getConnectionBadge(shop.connectionStatus)}
