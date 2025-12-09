@@ -749,13 +749,13 @@ const SaasAdminPortal = () => {
 
           {/* Plans Tab */}
           <TabsContent value="plans">
-            <Card className="bg-slate-900 border-slate-800">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-white">Planos de Assinatura</CardTitle>
-                  <CardDescription className="text-slate-400">Gerencie os planos disponíveis</CardDescription>
+                  <CardTitle>Planos de Assinatura</CardTitle>
+                  <CardDescription>Gerencie os planos disponíveis</CardDescription>
                 </div>
-                <Button onClick={() => openPlanDialog()} className="bg-amber-500 hover:bg-amber-600 text-white">
+                <Button onClick={() => openPlanDialog()} className="bg-warning hover:bg-warning/90 text-warning-foreground">
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Plano
                 </Button>
@@ -763,24 +763,24 @@ const SaasAdminPortal = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {plans.map((plan) => (
-                    <Card key={plan.id} className={`relative bg-slate-800 border-slate-700 ${!plan.active ? 'opacity-60' : ''}`}>
+                    <Card key={plan.id} className={`relative ${!plan.active ? 'opacity-60' : ''}`}>
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg text-white">{plan.name}</CardTitle>
+                          <CardTitle className="text-lg">{plan.name}</CardTitle>
                           {!plan.active && (
-                            <Badge className="bg-slate-600 text-slate-300">Inativo</Badge>
+                            <Badge variant="secondary">Inativo</Badge>
                           )}
                         </div>
-                        <CardDescription className="text-slate-400">{plan.description}</CardDescription>
+                        <CardDescription>{plan.description}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-3xl font-bold text-amber-500 mb-4">
+                        <p className="text-3xl font-bold text-warning mb-4">
                           R$ {plan.price.toFixed(2)}
-                          <span className="text-sm text-slate-400 font-normal">
+                          <span className="text-sm text-muted-foreground font-normal">
                             /{plan.billing_period === 'monthly' ? 'mês' : 'ano'}
                           </span>
                         </p>
-                        <div className="space-y-2 text-sm text-slate-300">
+                        <div className="space-y-2 text-sm text-muted-foreground">
                           <p>👥 {plan.max_staff} profissionais</p>
                           <p>📋 {plan.max_clients} clientes</p>
                           <p>📅 {plan.max_appointments_month} agend./mês</p>
@@ -789,7 +789,7 @@ const SaasAdminPortal = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700"
+                            className="flex-1"
                             onClick={() => openPlanDialog(plan)}
                           >
                             <Edit className="h-4 w-4 mr-1" />
@@ -798,13 +798,13 @@ const SaasAdminPortal = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-slate-600 hover:bg-red-500/20"
+                            className="hover:bg-destructive/20"
                             onClick={() => {
                               setItemToDelete({ type: 'plan', id: plan.id });
                               setDeleteDialogOpen(true);
                             }}
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </CardContent>
@@ -816,52 +816,55 @@ const SaasAdminPortal = () => {
           </TabsContent>
           {/* Messages Tab */}
           <TabsContent value="messages">
-            <Card className="bg-slate-900 border-slate-800">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-white">Mensagens do Sistema</CardTitle>
-                  <CardDescription className="text-slate-400">Envie comunicados para os tenants</CardDescription>
+                  <CardTitle>Mensagens do Sistema</CardTitle>
+                  <CardDescription>Envie comunicados para os tenants</CardDescription>
                 </div>
-                <Button onClick={() => openMessageDialog()} className="bg-amber-500 hover:bg-amber-600 text-white">
+                <Button onClick={() => openMessageDialog()} className="bg-warning hover:bg-warning/90 text-warning-foreground">
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Mensagem
                 </Button>
               </CardHeader>
               <CardContent>
                 {messages.length === 0 ? (
-                  <div className="text-center py-12 text-slate-500">
+                  <div className="text-center py-12 text-muted-foreground">
                     Nenhuma mensagem cadastrada
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {messages.map((msg) => (
-                      <div key={msg.id} className="p-4 rounded-lg border border-slate-700 bg-slate-800/50">
+                      <div key={msg.id} className="p-4 rounded-lg border bg-muted/50">
                         <div className="flex items-start justify-between">
                           <div>
                             <div className="flex items-center gap-2 mb-2">
-                              <Badge className={
-                                msg.type === 'warning' ? 'bg-orange-500' :
-                                msg.type === 'alert' ? 'bg-red-500' :
-                                msg.type === 'update' ? 'bg-blue-500' : 'bg-slate-600'
+                              <Badge variant={
+                                msg.type === 'warning' ? 'default' :
+                                msg.type === 'alert' ? 'destructive' :
+                                msg.type === 'update' ? 'secondary' : 'outline'
+                              } className={
+                                msg.type === 'warning' ? 'bg-warning text-warning-foreground' :
+                                msg.type === 'update' ? 'bg-primary text-primary-foreground' : ''
                               }>
                                 {msg.type}
                               </Badge>
-                              <span className="font-semibold text-white">{msg.title}</span>
+                              <span className="font-semibold text-foreground">{msg.title}</span>
                             </div>
-                            <p className="text-sm text-slate-400">{msg.message}</p>
-                            <p className="text-xs text-slate-500 mt-2">
+                            <p className="text-sm text-muted-foreground">{msg.message}</p>
+                            <p className="text-xs text-muted-foreground/70 mt-2">
                               Publicado: {msg.published_at ? format(new Date(msg.published_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : 'Não publicado'}
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white hover:bg-slate-700" onClick={() => openMessageDialog(msg)}>
+                            <Button variant="ghost" size="icon" onClick={() => openMessageDialog(msg)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="hover:bg-red-500/20" onClick={() => {
+                            <Button variant="ghost" size="icon" className="hover:bg-destructive/20" onClick={() => {
                               setItemToDelete({ type: 'message', id: msg.id });
                               setDeleteDialogOpen(true);
                             }}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
                         </div>
@@ -876,22 +879,22 @@ const SaasAdminPortal = () => {
           {/* Integrations Tab */}
           <TabsContent value="integrations">
             <div className="space-y-8">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
-                <Smartphone className="h-5 w-5 text-amber-500" />
+              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
+                <Smartphone className="h-5 w-5 text-warning" />
                 WhatsApp Evolution API
               </h2>
               <GlobalEvolutionConfig />
               <WhatsAppStatusPanel />
               
-              <div className="border-t border-slate-800 pt-8">
-                <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+              <div className="border-t border-border pt-8">
+                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
                   🤖 Chatbot IA (OpenAI)
                 </h2>
                 <GlobalChatbotConfig />
               </div>
 
-              <div className="border-t border-slate-800 pt-8">
-                <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+              <div className="border-t border-border pt-8">
+                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
                   🔐 Login Social (OAuth)
                 </h2>
                 <SocialAuthConfig />
