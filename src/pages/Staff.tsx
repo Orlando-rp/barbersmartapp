@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, CheckCircle, XCircle, UserPlus } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle, XCircle, UserPlus, User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -367,7 +368,15 @@ const Staff = () => {
                     {staff.map((member) => (
                       <TableRow key={member.id}>
                         <TableCell className="font-medium">
-                          {member.profiles?.full_name || 'Nome não disponível'}
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={member.profiles?.avatar_url} alt={member.profiles?.full_name} />
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {member.profiles?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-4 w-4" />}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{member.profiles?.full_name || 'Nome não disponível'}</span>
+                          </div>
                         </TableCell>
                         <TableCell>{member.profiles?.phone || '-'}</TableCell>
                         <TableCell>
