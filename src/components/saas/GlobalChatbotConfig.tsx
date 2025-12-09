@@ -18,7 +18,6 @@ import {
   CheckCircle,
   XCircle,
   Building2,
-  MessageSquare,
   Settings,
   Sparkles,
   Brain
@@ -90,7 +89,6 @@ FLUXO DE AGENDAMENTO:
       
       if (data?.value?.api_key) {
         setApiKeyConfigured(true);
-        // Show masked key
         const key = data.value.api_key;
         setApiKey(key.substring(0, 7) + '...' + key.substring(key.length - 4));
       }
@@ -121,7 +119,6 @@ FLUXO DE AGENDAMENTO:
       if (error) throw error;
       
       setApiKeyConfigured(true);
-      // Mask the key after saving
       setApiKey(apiKey.substring(0, 7) + '...' + apiKey.substring(apiKey.length - 4));
       toast.success("API Key salva com sucesso!");
     } catch (error) {
@@ -175,7 +172,6 @@ FLUXO DE AGENDAMENTO:
     try {
       setSaving(true);
 
-      // Save to a chatbot_config table or use whatsapp_config
       const { error } = await supabase
         .from('whatsapp_config')
         .upsert({
@@ -218,21 +214,18 @@ FLUXO DE AGENDAMENTO:
       const statuses: BarbershopChatbotStatus[] = [];
 
       for (const shop of barbershops || []) {
-        // Get chatbot config for this barbershop
         const { data: whatsappConfig } = await supabase
           .from('whatsapp_config')
           .select('chatbot_enabled')
           .eq('barbershop_id', shop.id)
           .maybeSingle();
 
-        // Count conversations
         const { count: conversationsCount } = await supabase
           .from('chatbot_conversations')
           .select('*', { count: 'exact', head: true })
           .eq('barbershop_id', shop.id);
 
-        // Count appointments from chatbot (would need a source field)
-        const appointmentsCreated = 0; // Placeholder
+        const appointmentsCreated = 0;
 
         statuses.push({
           id: shop.id,
@@ -255,7 +248,7 @@ FLUXO DE AGENDAMENTO:
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -263,10 +256,10 @@ FLUXO DE AGENDAMENTO:
   return (
     <div className="space-y-6">
       {/* Info Alert */}
-      <Alert className="border-purple-500/50 bg-purple-500/10">
-        <Bot className="h-4 w-4 text-purple-500" />
-        <AlertTitle className="text-purple-400">Chatbot IA - Configuração Global</AlertTitle>
-        <AlertDescription className="text-purple-300/90">
+      <Alert className="border-primary/50 bg-primary/10">
+        <Bot className="h-4 w-4 text-primary" />
+        <AlertTitle className="text-primary">Chatbot IA - Configuração Global</AlertTitle>
+        <AlertDescription className="text-primary/90">
           <p className="mb-2">
             Configure aqui o chatbot de IA para agendamento automático via WhatsApp. 
             Todas as barbearias herdarão essas configurações de modelo e prompt.
@@ -278,25 +271,25 @@ FLUXO DE AGENDAMENTO:
       </Alert>
 
       {/* API Key Configuration */}
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
-            <Settings className="h-5 w-5 text-amber-500" />
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <Settings className="h-5 w-5 text-warning" />
             Configuração da API OpenAI
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Configure sua chave de API da OpenAI para habilitar o chatbot IA
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             {apiKeyConfigured ? (
-              <Badge className="bg-emerald-500">
+              <Badge className="bg-success text-success-foreground">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 API Key Configurada
               </Badge>
             ) : (
-              <Badge className="bg-red-500">
+              <Badge variant="destructive">
                 <XCircle className="h-3 w-3 mr-1" />
                 API Key Não Configurada
               </Badge>
@@ -304,19 +297,19 @@ FLUXO DE AGENDAMENTO:
           </div>
           
           <div className="space-y-2">
-            <Label className="text-slate-300">OpenAI API Key</Label>
+            <Label className="text-foreground">OpenAI API Key</Label>
             <div className="flex gap-2">
               <Input
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="sk-..."
-                className="bg-slate-800 border-slate-700 text-white flex-1"
+                className="bg-muted border-border text-foreground flex-1"
               />
               <Button 
                 onClick={saveApiKey}
                 disabled={savingApiKey || !apiKey}
-                className="bg-amber-500 hover:bg-amber-600 text-black"
+                className="bg-warning hover:bg-warning/90 text-warning-foreground"
               >
                 {savingApiKey ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -325,13 +318,13 @@ FLUXO DE AGENDAMENTO:
                 )}
               </Button>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Obtenha sua API Key em{" "}
               <a 
                 href="https://platform.openai.com/api-keys" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-amber-400 hover:underline inline-flex items-center gap-1"
+                className="text-warning hover:underline inline-flex items-center gap-1"
               >
                 platform.openai.com
                 <ExternalLink className="h-3 w-3" />
@@ -342,43 +335,43 @@ FLUXO DE AGENDAMENTO:
       </Card>
 
       <Tabs defaultValue="config" className="space-y-4">
-        <TabsList className="bg-slate-900 border border-slate-800">
-          <TabsTrigger value="config" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+        <TabsList className="bg-muted border border-border">
+          <TabsTrigger value="config" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Settings className="h-4 w-4 mr-2" />
             Configuração
           </TabsTrigger>
-          <TabsTrigger value="prompt" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+          <TabsTrigger value="prompt" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Brain className="h-4 w-4 mr-2" />
             Prompt do Sistema
           </TabsTrigger>
-          <TabsTrigger value="status" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+          <TabsTrigger value="status" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Building2 className="h-4 w-4 mr-2" />
             Status por Barbearia
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="config">
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between text-white">
+              <CardTitle className="flex items-center justify-between text-foreground">
                 <span className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-500" />
+                  <Sparkles className="h-5 w-5 text-primary" />
                   Configurações do Modelo IA
                 </span>
-                <Badge className={config.enabled ? "bg-emerald-500" : "bg-slate-600"}>
+                <Badge className={config.enabled ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}>
                   {config.enabled ? "Ativo" : "Inativo"}
                 </Badge>
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-muted-foreground">
                 Configurações globais do modelo de linguagem
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Enable/Disable */}
-              <div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                 <div className="space-y-0.5">
-                  <Label className="text-white">Chatbot Habilitado Globalmente</Label>
-                  <p className="text-sm text-slate-400">
+                  <Label className="text-foreground">Chatbot Habilitado Globalmente</Label>
+                  <p className="text-sm text-muted-foreground">
                     Quando desativado, nenhuma barbearia poderá usar o chatbot
                   </p>
                 </div>
@@ -390,41 +383,41 @@ FLUXO DE AGENDAMENTO:
 
               {/* Model Selection */}
               <div className="space-y-2">
-                <Label className="text-slate-300">Modelo OpenAI</Label>
+                <Label className="text-foreground">Modelo OpenAI</Label>
                 <select
                   value={config.model}
                   onChange={(e) => setConfig({ ...config, model: e.target.value })}
-                  className="w-full bg-slate-800 border-slate-700 text-white rounded-md p-2"
+                  className="w-full bg-muted border-border text-foreground rounded-md p-2"
                 >
                   <option value="gpt-4o-mini">GPT-4o Mini (Recomendado - Rápido e econômico)</option>
                   <option value="gpt-4o">GPT-4o (Mais preciso, maior custo)</option>
                   <option value="gpt-4-turbo">GPT-4 Turbo</option>
                   <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Mais econômico)</option>
                 </select>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Modelo usado para processar e responder mensagens
                 </p>
               </div>
 
               {/* Max Tokens */}
               <div className="space-y-2">
-                <Label className="text-slate-300">Máximo de Tokens na Resposta</Label>
+                <Label className="text-foreground">Máximo de Tokens na Resposta</Label>
                 <Input
                   type="number"
                   value={config.maxTokens}
                   onChange={(e) => setConfig({ ...config, maxTokens: parseInt(e.target.value) || 500 })}
                   min={100}
                   max={2000}
-                  className="bg-slate-800 border-slate-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Limite de tokens para cada resposta (100-2000)
                 </p>
               </div>
 
               {/* Temperature */}
               <div className="space-y-2">
-                <Label className="text-slate-300">Temperatura: {config.temperature}</Label>
+                <Label className="text-foreground">Temperatura: {config.temperature}</Label>
                 <input
                   type="range"
                   min="0"
@@ -434,7 +427,7 @@ FLUXO DE AGENDAMENTO:
                   onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
                   className="w-full"
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Baixo = respostas mais consistentes | Alto = respostas mais criativas
                 </p>
               </div>
@@ -442,7 +435,7 @@ FLUXO DE AGENDAMENTO:
               <Button 
                 onClick={saveGlobalConfig} 
                 disabled={saving}
-                className="bg-purple-500 hover:bg-purple-600 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Salvando..." : "Salvar Configurações"}
@@ -452,13 +445,13 @@ FLUXO DE AGENDAMENTO:
         </TabsContent>
 
         <TabsContent value="prompt">
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Brain className="h-5 w-5 text-purple-500" />
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <Brain className="h-5 w-5 text-primary" />
                 Prompt do Sistema
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-muted-foreground">
                 Template de instruções para o chatbot. Use {"{barbershop_name}"} para inserir o nome da barbearia.
               </CardDescription>
             </CardHeader>
@@ -467,7 +460,7 @@ FLUXO DE AGENDAMENTO:
                 value={config.systemPromptTemplate}
                 onChange={(e) => setConfig({ ...config, systemPromptTemplate: e.target.value })}
                 rows={15}
-                className="bg-slate-800 border-slate-700 text-white font-mono text-sm"
+                className="bg-muted border-border text-foreground font-mono text-sm"
                 placeholder="Digite o prompt do sistema..."
               />
 
@@ -475,14 +468,14 @@ FLUXO DE AGENDAMENTO:
                 <Button 
                   variant="outline"
                   onClick={() => setConfig({ ...config, systemPromptTemplate: defaultSystemPrompt })}
-                  className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                  className="border-border text-foreground hover:bg-muted"
                 >
                   Restaurar Padrão
                 </Button>
                 <Button 
                   onClick={saveGlobalConfig} 
                   disabled={saving}
-                  className="bg-purple-500 hover:bg-purple-600 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Save className="mr-2 h-4 w-4" />
                   {saving ? "Salvando..." : "Salvar Prompt"}
@@ -493,11 +486,11 @@ FLUXO DE AGENDAMENTO:
         </TabsContent>
 
         <TabsContent value="status">
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between text-white">
+              <CardTitle className="flex items-center justify-between text-foreground">
                 <span className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-purple-500" />
+                  <Building2 className="h-5 w-5 text-primary" />
                   Status do Chatbot por Barbearia
                 </span>
                 <Button 
@@ -505,19 +498,19 @@ FLUXO DE AGENDAMENTO:
                   size="sm"
                   onClick={loadBarbershopStatuses}
                   disabled={loadingStatuses}
-                  className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                  className="border-border text-foreground hover:bg-muted"
                 >
                   <RefreshCw className={`mr-2 h-4 w-4 ${loadingStatuses ? 'animate-spin' : ''}`} />
                   Atualizar
                 </Button>
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-muted-foreground">
                 Visualize quais barbearias estão usando o chatbot
               </CardDescription>
             </CardHeader>
             <CardContent>
               {barbershopStatuses.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
                   <p>Clique em "Atualizar" para ver o status</p>
                 </div>
@@ -526,20 +519,20 @@ FLUXO DE AGENDAMENTO:
                   {barbershopStatuses.map((shop) => (
                     <div 
                       key={shop.id} 
-                      className="flex items-center justify-between p-4 bg-slate-800 rounded-lg"
+                      className="flex items-center justify-between p-4 bg-muted rounded-lg"
                     >
                       <div>
-                        <p className="text-white font-medium">{shop.name}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-foreground font-medium">{shop.name}</p>
+                        <p className="text-xs text-muted-foreground">
                           {shop.conversationsCount} conversas registradas
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
-                          <p className="text-sm text-slate-400">Agendamentos</p>
-                          <p className="text-lg font-bold text-purple-400">{shop.appointmentsCreated}</p>
+                          <p className="text-sm text-muted-foreground">Agendamentos</p>
+                          <p className="text-lg font-bold text-primary">{shop.appointmentsCreated}</p>
                         </div>
-                        <Badge className={shop.chatbotEnabled ? "bg-emerald-500" : "bg-slate-600"}>
+                        <Badge className={shop.chatbotEnabled ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}>
                           {shop.chatbotEnabled ? (
                             <><CheckCircle className="h-3 w-3 mr-1" />Ativo</>
                           ) : (
