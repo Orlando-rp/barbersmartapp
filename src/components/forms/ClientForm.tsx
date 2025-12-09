@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { z } from "zod";
+import { ClientAvatarUpload } from "@/components/profile/ClientAvatarUpload";
 
 interface ClientFormProps {
   onClose?: () => void;
@@ -39,6 +40,7 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
   const [notes, setNotes] = useState(editingClient?.notes || "");
   const [tags, setTags] = useState<string[]>(editingClient?.tags || []);
   const [newTag, setNewTag] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(editingClient?.avatar_url || null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   
@@ -158,6 +160,19 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Avatar Upload - Only show when editing */}
+          {editingClient?.id && (
+            <div className="flex justify-center pb-4 border-b border-border">
+              <ClientAvatarUpload
+                clientId={editingClient.id}
+                currentAvatarUrl={avatarUrl}
+                clientName={name}
+                onAvatarUpdate={setAvatarUrl}
+                size="lg"
+              />
+            </div>
+          )}
+
           {/* Basic Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">

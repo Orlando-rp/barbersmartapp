@@ -4,7 +4,7 @@ import Layout from "@/components/layout/Layout";
 import { ClientDialog } from "@/components/dialogs/ClientDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -211,6 +211,14 @@ const Clients = () => {
                 >
                   <div className="flex items-center space-x-4 flex-1">
                     <Avatar className="h-12 w-12">
+                      <AvatarImage 
+                        src={client.avatar_url ? (
+                          client.avatar_url.startsWith('http') 
+                            ? client.avatar_url 
+                            : supabase.storage.from('client-avatars').getPublicUrl(client.avatar_url).data.publicUrl
+                        ) : undefined} 
+                        alt={client.name} 
+                      />
                       <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                         {client.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                       </AvatarFallback>
