@@ -86,7 +86,7 @@ export const RevenueWidget = ({
         </div>
         <div>
           <p className="text-sm text-muted-foreground">Este Mês</p>
-          <p className="text-3xl font-bold">
+          <p className="font-bold text-lg">
             R$ {monthRevenue.toFixed(2)}
           </p>
         </div>
