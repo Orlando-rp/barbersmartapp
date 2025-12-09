@@ -484,9 +484,9 @@ const SaasAdminPortal = () => {
     return (
       <SaasAdminLayout>
         <div className="flex flex-col items-center justify-center h-96 text-center">
-          <Shield className="h-16 w-16 text-slate-600 mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Acesso Restrito</h2>
-          <p className="text-slate-400 max-w-md">
+          <Shield className="h-16 w-16 text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-bold text-foreground mb-2">Acesso Restrito</h2>
+          <p className="text-muted-foreground max-w-md">
             Este portal é exclusivo para administradores do sistema (Super Admin).
           </p>
         </div>
@@ -496,20 +496,20 @@ const SaasAdminPortal = () => {
 
   return (
     <SaasAdminLayout activeTab={activeTab} onTabChange={setActiveTab}>
-      <div className="p-4 md:p-6 space-y-6 bg-slate-950 min-h-screen">
+      <div className="p-4 md:p-6 space-y-6 bg-background min-h-screen">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2 md:gap-3">
-              <Shield className="h-6 w-6 md:h-8 md:w-8 text-amber-500" />
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 md:gap-3">
+              <Shield className="h-6 w-6 md:h-8 md:w-8 text-warning" />
               <span className="hidden sm:inline">Portal de Administração SaaS</span>
               <span className="sm:hidden">Admin SaaS</span>
             </h1>
-            <p className="text-slate-400 text-sm md:text-base mt-1">
+            <p className="text-muted-foreground text-sm md:text-base mt-1">
               Gerencie tenants, planos e monitore o uso do sistema
             </p>
           </div>
-          <Button variant="outline" onClick={fetchAllData} className="border-slate-700 text-slate-300 hover:bg-slate-800 w-full sm:w-auto">
+          <Button variant="outline" onClick={fetchAllData} className="w-full sm:w-auto">
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </Button>
@@ -517,59 +517,59 @@ const SaasAdminPortal = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-slate-900 border-slate-800">
+          <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">Total de Tenants</p>
-                  <p className="text-2xl font-bold text-white">{stats.totalTenants}</p>
+                  <p className="text-sm text-muted-foreground">Total de Tenants</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalTenants}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-amber-500" />
+                <div className="h-12 w-12 rounded-full bg-warning/10 flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-warning" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-900 border-slate-800">
+          <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">Tenants Ativos</p>
-                  <p className="text-2xl font-bold text-emerald-500">{stats.activeTenants}</p>
+                  <p className="text-sm text-muted-foreground">Tenants Ativos</p>
+                  <p className="text-2xl font-bold text-success">{stats.activeTenants}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-emerald-500" />
+                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-success" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-900 border-slate-800">
+          <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">Em Trial</p>
-                  <p className="text-2xl font-bold text-amber-500">{stats.trialTenants}</p>
+                  <p className="text-sm text-muted-foreground">Em Trial</p>
+                  <p className="text-2xl font-bold text-warning">{stats.trialTenants}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-amber-500" />
+                <div className="h-12 w-12 rounded-full bg-warning/10 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-warning" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-900 border-slate-800">
+          <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-400">Receita Total (Mês)</p>
-                  <p className="text-2xl font-bold text-emerald-500">
+                  <p className="text-sm text-muted-foreground">Receita Total (Mês)</p>
+                  <p className="text-2xl font-bold text-success">
                     R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-emerald-500" />
+                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-success" />
                 </div>
               </div>
             </CardContent>
@@ -578,24 +578,24 @@ const SaasAdminPortal = () => {
 
         {/* Tabs - Hidden on mobile since sidebar handles navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-slate-900 border border-slate-800 hidden md:flex flex-wrap gap-1">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
+          <TabsList className="hidden md:flex flex-wrap gap-1">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
               <BarChart3 className="h-4 w-4 mr-2" />
               Visão Geral
             </TabsTrigger>
-            <TabsTrigger value="tenants" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
+            <TabsTrigger value="tenants" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
               <Building2 className="h-4 w-4 mr-2" />
               Barbearias
             </TabsTrigger>
-            <TabsTrigger value="plans" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
+            <TabsTrigger value="plans" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
               <Package className="h-4 w-4 mr-2" />
               Planos
             </TabsTrigger>
-            <TabsTrigger value="messages" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
+            <TabsTrigger value="messages" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
               <MessageSquare className="h-4 w-4 mr-2" />
               Mensagens
             </TabsTrigger>
-            <TabsTrigger value="integrations" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-slate-300">
+            <TabsTrigger value="integrations" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
               <Smartphone className="h-4 w-4 mr-2" />
               Integrações
             </TabsTrigger>
@@ -606,9 +606,9 @@ const SaasAdminPortal = () => {
             <div className="grid gap-6 md:grid-cols-2">
               {/* Plan Distribution Chart */}
               {planDistribution.length > 0 && (
-                <Card className="bg-slate-900 border-slate-800">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="text-white">Distribuição por Plano</CardTitle>
+                    <CardTitle>Distribuição por Plano</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={250}>
@@ -635,27 +635,27 @@ const SaasAdminPortal = () => {
               )}
 
               {/* Recent Tenants */}
-              <Card className="bg-slate-900 border-slate-800">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-white">Barbearias Recentes</CardTitle>
+                  <CardTitle>Barbearias Recentes</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {tenants.slice(0, 5).map((tenant) => (
-                      <div key={tenant.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                      <div key={tenant.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                         <div>
-                          <p className="text-white font-medium">{tenant.name}</p>
-                          <p className="text-sm text-slate-400">
+                          <p className="text-foreground font-medium">{tenant.name}</p>
+                          <p className="text-sm text-muted-foreground">
                             {format(new Date(tenant.created_at), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
                         </div>
-                        <Badge className={tenant.active ? "bg-emerald-500" : "bg-slate-600"}>
+                        <Badge className={tenant.active ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}>
                           {tenant.active ? "Ativo" : "Inativo"}
                         </Badge>
                       </div>
                     ))}
                     {tenants.length === 0 && (
-                      <p className="text-slate-400 text-center py-4">Nenhuma barbearia cadastrada</p>
+                      <p className="text-muted-foreground text-center py-4">Nenhuma barbearia cadastrada</p>
                     )}
                   </div>
                 </CardContent>
@@ -665,52 +665,52 @@ const SaasAdminPortal = () => {
 
           {/* Tenants Tab */}
           <TabsContent value="tenants">
-            <Card className="bg-slate-900 border-slate-800">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-white">Barbearias Cadastradas</CardTitle>
-                <CardDescription className="text-slate-400">{tenants.length} tenants no sistema</CardDescription>
+                <CardTitle>Barbearias Cadastradas</CardTitle>
+                <CardDescription>{tenants.length} tenants no sistema</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border border-slate-800 overflow-x-auto">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-slate-800 hover:bg-slate-800/50">
-                        <TableHead className="text-slate-300">Barbearia</TableHead>
-                        <TableHead className="text-slate-300">Plano</TableHead>
-                        <TableHead className="text-slate-300">Status</TableHead>
-                        <TableHead className="text-slate-300">Agendamentos</TableHead>
-                        <TableHead className="text-slate-300">Clientes</TableHead>
-                        <TableHead className="text-slate-300">Receita</TableHead>
-                        <TableHead className="text-slate-300">Criado em</TableHead>
-                        <TableHead className="text-right text-slate-300">Ações</TableHead>
+                      <TableRow>
+                        <TableHead>Barbearia</TableHead>
+                        <TableHead>Plano</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Agendamentos</TableHead>
+                        <TableHead>Clientes</TableHead>
+                        <TableHead>Receita</TableHead>
+                        <TableHead>Criado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {tenants.map((tenant) => (
-                        <TableRow key={tenant.id} className="border-slate-800 hover:bg-slate-800/50">
-                          <TableCell className="text-white">
+                        <TableRow key={tenant.id}>
+                          <TableCell>
                             <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-amber-500" />
+                              <Building2 className="h-4 w-4 text-warning" />
                               <span className="font-medium">{tenant.name}</span>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className="bg-slate-700 text-slate-200">
+                            <Badge variant="secondary">
                               {tenant.subscription?.plan_name || 'Free'}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             {tenant.subscription 
                               ? getStatusBadge(tenant.subscription.status)
-                              : <Badge variant="outline" className="border-slate-600 text-slate-400">Sem assinatura</Badge>
+                              : <Badge variant="outline">Sem assinatura</Badge>
                             }
                           </TableCell>
-                          <TableCell className="text-slate-300">{tenant.usage?.appointments_count || 0}</TableCell>
-                          <TableCell className="text-slate-300">{tenant.usage?.clients_count || 0}</TableCell>
-                          <TableCell className="text-emerald-500">
+                          <TableCell>{tenant.usage?.appointments_count || 0}</TableCell>
+                          <TableCell>{tenant.usage?.clients_count || 0}</TableCell>
+                          <TableCell className="text-success">
                             R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </TableCell>
-                          <TableCell className="text-slate-300">
+                          <TableCell>
                             {format(new Date(tenant.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
                           <TableCell className="text-right">
@@ -718,7 +718,6 @@ const SaasAdminPortal = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="text-slate-400 hover:text-white hover:bg-slate-800"
                                 onClick={() => {
                                   setSelectedTenant(tenant);
                                   setTenantDetailOpen(true);
@@ -729,13 +728,12 @@ const SaasAdminPortal = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="hover:bg-slate-800"
                                 onClick={() => handleToggleTenantStatus(tenant)}
                               >
                                 {tenant.active ? (
-                                  <XCircle className="h-4 w-4 text-orange-500" />
+                                  <XCircle className="h-4 w-4 text-warning" />
                                 ) : (
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                  <CheckCircle className="h-4 w-4 text-success" />
                                 )}
                               </Button>
                             </div>

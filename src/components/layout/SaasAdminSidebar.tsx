@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
 import {
   Building2,
   CreditCard,
@@ -14,6 +15,8 @@ import {
   Package,
   LayoutDashboard,
   Smartphone,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -42,7 +45,12 @@ interface SaasAdminSidebarProps {
 const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = false }: SaasAdminSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const { signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   const handleBackToApp = () => {
     navigate('/');
@@ -57,17 +65,17 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
 
   return (
     <aside className={cn(
-      "bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col shrink-0",
+      "bg-card border-r border-border transition-all duration-300 flex flex-col shrink-0",
       isMobile ? "w-full h-full" : (isCollapsed ? "w-16" : "w-64"),
       !isMobile && "sticky top-0 h-screen hidden md:flex"
     )}>
       {/* Header */}
-      <div className="p-4 border-b border-slate-800">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
             <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-amber-500" />
-              <span className="font-bold text-white">Admin SaaS</span>
+              <Shield className="h-6 w-6 text-warning" />
+              <span className="font-bold text-foreground">Admin SaaS</span>
             </div>
           )}
           {!isMobile && (
@@ -75,7 +83,7 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
               variant="ghost"
               size="icon"
               onClick={() => setCollapsed(!collapsed)}
-              className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               {isCollapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -96,8 +104,8 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
             className={cn(
               "w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors",
               activeTab === item.tab
-                ? "bg-amber-500/20 text-amber-500"
-                : "text-slate-400 hover:text-white hover:bg-slate-800",
+                ? "bg-warning/20 text-warning"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted",
               isCollapsed && !isMobile && "justify-center px-2"
             )}
           >
@@ -108,12 +116,29 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
       </nav>
 
       {/* Bottom Actions */}
-      <div className="p-3 border-t border-slate-800 space-y-2">
+      <div className="p-3 border-t border-border space-y-2">
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          onClick={toggleTheme}
+          className={cn(
+            "w-full justify-start text-muted-foreground hover:text-foreground hover:bg-muted",
+            isCollapsed && !isMobile && "justify-center px-2"
+          )}
+        >
+          {theme === 'dark' ? (
+            <Sun className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+          ) : (
+            <Moon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+          )}
+          {!isCollapsed && <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}</span>}
+        </Button>
+        
         <Button
           variant="ghost"
           onClick={handleBackToApp}
           className={cn(
-            "w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800",
+            "w-full justify-start text-muted-foreground hover:text-foreground hover:bg-muted",
             isCollapsed && !isMobile && "justify-center px-2"
           )}
         >
@@ -124,7 +149,7 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
           variant="ghost"
           onClick={signOut}
           className={cn(
-            "w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-500/10",
+            "w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10",
             isCollapsed && !isMobile && "justify-center px-2"
           )}
         >
@@ -135,8 +160,8 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
 
       {/* Version Info */}
       {!isCollapsed && (
-        <div className="p-3 border-t border-slate-800">
-          <div className="text-xs text-slate-500 text-center">
+        <div className="p-3 border-t border-border">
+          <div className="text-xs text-muted-foreground text-center">
             BarberSmart SaaS v1.0.0
           </div>
         </div>
