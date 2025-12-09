@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X } from "lucide-react";
 import { z } from "zod";
+import { StaffScheduleSection, StaffSchedule } from "./StaffScheduleSection";
+import { StaffServicesSection } from "./StaffServicesSection";
 
 interface StaffFormProps {
   staff?: any;
@@ -40,6 +42,74 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [specialties, setSpecialties] = useState<string[]>(staff?.specialties || []);
   const [newSpecialty, setNewSpecialty] = useState("");
   const [isAlsoBarber, setIsAlsoBarber] = useState(staff?.is_also_barber || false);
+
+  // New: Individual schedule
+  const [useCustomSchedule, setUseCustomSchedule] = useState(!!staff?.schedule);
+  const [schedule, setSchedule] = useState<StaffSchedule | null>(staff?.schedule || null);
+
+  // New: Services selection
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+
+  // Load staff services if editing
+  useEffect(() => {
+    if (staff?.id) {
+      loadStaffServices();
+    }
+  }, [staff?.id]);
+
+  const loadStaffServices = async () => {
+    if (!staff?.id) return;
+    
+    try {
+      setLoadingServices(true);
+      const { data, error } = await supabase
+        .from('staff_services')
+        .select('service_id')
+        .eq('staff_id', staff.id)
+        .eq('is_active', true);
+
+      if (error) {
+        console.warn('Erro ao carregar serviços do staff:', error);
+        return;
+      }
+
+      setSelectedServices((data || []).map(s => s.service_id));
+    } catch (error) {
+      console.warn('Tabela staff_services pode não existir ainda');
+    } finally {
+      setLoadingServices(false);
+    }
+  };
+
+  const saveStaffServices = async (staffId: string) => {
+    try {
+      // First, delete existing associations
+      await supabase
+        .from('staff_services')
+        .delete()
+        .eq('staff_id', staffId);
+
+      // Then insert new ones
+      if (selectedServices.length > 0) {
+        const inserts = selectedServices.map(serviceId => ({
+          staff_id: staffId,
+          service_id: serviceId,
+          is_active: true,
+        }));
+
+        const { error } = await supabase
+          .from('staff_services')
+          .insert(inserts);
+
+        if (error) {
+          console.warn('Erro ao salvar staff_services:', error);
+        }
+      }
+    } catch (error) {
+      console.warn('Erro ao salvar serviços do staff:', error);
+    }
+  };
 
   const handleAddSpecialty = () => {
     if (newSpecialty.trim() && !specialties.includes(newSpecialty.trim())) {
@@ -133,17 +203,21 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         if (profileError) throw profileError;
 
-        // Atualizar staff
+        // Atualizar staff com schedule
         const { error: staffError } = await supabase
           .from('staff')
           .update({
             specialties,
             commission_rate: commissionRate,
             is_also_barber: role === 'admin' ? isAlsoBarber : null,
+            schedule: useCustomSchedule ? schedule : null,
           })
           .eq('id', staff.id);
 
         if (staffError) throw staffError;
+
+        // Atualizar staff_services
+        await saveStaffServices(staff.id);
 
         // Atualizar role se mudou
         if (staff.user_roles?.[0]?.role !== role) {
@@ -237,7 +311,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         }
 
         // 3. Criar registro na tabela staff
-        const { error: staffError } = await supabase
+        const { data: staffInsertData, error: staffError } = await supabase
           .from('staff')
           .insert({
             barbershop_id: barbershopId,
@@ -246,7 +320,10 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
             commission_rate: commissionRate,
             active: true,
             is_also_barber: role === 'admin' ? isAlsoBarber : null,
-          });
+            schedule: useCustomSchedule ? schedule : null,
+          })
+          .select('id')
+          .single();
 
         if (staffError) {
           console.error('Erro ao criar staff:', staffError);
@@ -274,6 +351,11 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         if (roleError) {
           console.error('Erro ao atribuir role:', roleError);
           // Não bloquear se falhar, mas logar
+        }
+
+        // 5. Salvar staff_services
+        if (staffInsertData?.id) {
+          await saveStaffServices(staffInsertData.id);
         }
 
         toast({
@@ -436,6 +518,25 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           </div>
         )}
       </div>
+
+      {/* Individual Schedule Section */}
+      {(role === 'barbeiro' || isAlsoBarber) && (
+        <StaffScheduleSection
+          schedule={schedule}
+          onScheduleChange={setSchedule}
+          useCustomSchedule={useCustomSchedule}
+          onUseCustomScheduleChange={setUseCustomSchedule}
+        />
+      )}
+
+      {/* Services Selection Section */}
+      {(role === 'barbeiro' || isAlsoBarber) && barbershopId && (
+        <StaffServicesSection
+          barbershopId={barbershopId}
+          selectedServices={selectedServices}
+          onServicesChange={setSelectedServices}
+        />
+      )}
 
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
