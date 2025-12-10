@@ -148,7 +148,7 @@ const DomainSettings = () => {
             <TabsContent value="subdomain" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="subdomain">Seu Subdomínio</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <div className="flex-1 flex">
                     <Input
                       id="subdomain"
@@ -158,9 +158,9 @@ const DomainSettings = () => {
                         setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
                         setSubdomainAvailable(null);
                       }}
-                      className="rounded-r-none"
+                      className="rounded-r-none min-w-0"
                     />
-                    <div className="flex items-center px-3 bg-muted border border-l-0 rounded-r-md text-sm text-muted-foreground">
+                    <div className="flex items-center px-2 sm:px-3 bg-muted border border-l-0 rounded-r-md text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                       .{baseDomain}
                     </div>
                   </div>
@@ -168,6 +168,7 @@ const DomainSettings = () => {
                     variant="outline"
                     onClick={handleCheckSubdomain}
                     disabled={!subdomain.trim() || checkingSubdomain}
+                    className="w-full sm:w-auto"
                   >
                     {checkingSubdomain ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -298,44 +299,44 @@ const DomainSettings = () => {
                           Configure os seguintes registros DNS no seu provedor de domínio:
                         </p>
                         
-                        <div className="space-y-2 font-mono text-sm">
-                          <div className="p-3 bg-background rounded border">
-                            <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mb-1">
+                        <div className="space-y-2 text-sm">
+                          <div className="p-3 bg-background rounded border overflow-x-auto">
+                            <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mb-1 min-w-[200px]">
                               <span>Tipo</span>
                               <span>Nome</span>
                               <span>Valor</span>
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-3 gap-2 min-w-[200px]">
                               <span>A</span>
                               <span>@</span>
-                              <span>185.158.133.1</span>
+                              <span className="break-all">185.158.133.1</span>
                             </div>
                           </div>
                           
-                          <div className="p-3 bg-background rounded border">
-                            <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mb-1">
+                          <div className="p-3 bg-background rounded border overflow-x-auto">
+                            <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mb-1 min-w-[200px]">
                               <span>Tipo</span>
                               <span>Nome</span>
                               <span>Valor</span>
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-3 gap-2 min-w-[200px]">
                               <span>A</span>
                               <span>www</span>
-                              <span>185.158.133.1</span>
+                              <span className="break-all">185.158.133.1</span>
                             </div>
                           </div>
 
                           {domain.dns_verification_token && (
-                            <div className="p-3 bg-background rounded border">
-                              <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mb-1">
+                            <div className="p-3 bg-background rounded border overflow-x-auto">
+                              <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mb-1 min-w-[200px]">
                                 <span>Tipo</span>
                                 <span>Nome</span>
                                 <span>Valor</span>
                               </div>
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="grid grid-cols-3 gap-2 min-w-[200px]">
                                 <span>TXT</span>
                                 <span>_lovable</span>
-                                <span className="break-all">{domain.dns_verification_token}</span>
+                                <span className="break-all text-xs">{domain.dns_verification_token}</span>
                               </div>
                             </div>
                           )}
