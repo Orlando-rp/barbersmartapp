@@ -1,17 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Link, 
   Copy, 
   Check, 
   ExternalLink, 
   QrCode,
-  Share2
+  Share2,
+  Eye,
+  CalendarCheck,
+  TrendingUp,
+  BarChart3
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -22,10 +28,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+interface BookingStats {
+  total_visits: number;
+  unique_visits: number;
+  conversions: number;
+  conversion_rate: number;
+}
+
 export const PublicBookingLink = () => {
   const { selectedBarbershopId, barbershops } = useAuth();
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [stats, setStats] = useState<BookingStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   const currentBarbershop = barbershops.find(b => b.id === selectedBarbershopId);
   
@@ -34,6 +49,66 @@ export const PublicBookingLink = () => {
   const publicUrl = selectedBarbershopId 
     ? `${baseUrl}/agendar/${selectedBarbershopId}`
     : null;
+
+  useEffect(() => {
+    if (selectedBarbershopId) {
+      fetchStats();
+    }
+  }, [selectedBarbershopId]);
+
+  const fetchStats = async () => {
+    if (!selectedBarbershopId) return;
+    
+    setLoadingStats(true);
+    try {
+      // Try to use RPC function first
+      const { data, error } = await supabase.rpc('get_public_booking_stats', {
+        p_barbershop_id: selectedBarbershopId,
+        p_days: 30
+      });
+
+      if (error) {
+        // Fallback: query directly
+        const { data: visitsData, error: visitsError } = await supabase
+          .from('public_booking_visits')
+          .select('id, visitor_ip, converted')
+          .eq('barbershop_id', selectedBarbershopId)
+          .gte('visited_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+
+        if (!visitsError && visitsData) {
+          const total = visitsData.length;
+          const unique = new Set(visitsData.map(v => v.visitor_ip)).size;
+          const conversions = visitsData.filter(v => v.converted).length;
+          
+          setStats({
+            total_visits: total,
+            unique_visits: unique,
+            conversions: conversions,
+            conversion_rate: total > 0 ? Math.round((conversions / total) * 100 * 10) / 10 : 0
+          });
+        } else {
+          setStats({
+            total_visits: 0,
+            unique_visits: 0,
+            conversions: 0,
+            conversion_rate: 0
+          });
+        }
+      } else {
+        setStats(data);
+      }
+    } catch (error) {
+      console.log('Stats not available yet');
+      setStats({
+        total_visits: 0,
+        unique_visits: 0,
+        conversions: 0,
+        conversion_rate: 0
+      });
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   const handleCopy = async () => {
     if (!publicUrl) return;
@@ -59,7 +134,6 @@ export const PublicBookingLink = () => {
           url: publicUrl,
         });
       } catch (err) {
-        // User cancelled or error
         handleCopy();
       }
     } else {
@@ -73,7 +147,6 @@ export const PublicBookingLink = () => {
     }
   };
 
-  // Generate QR Code URL using a free QR API
   const qrCodeUrl = publicUrl 
     ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(publicUrl)}`
     : null;
@@ -91,7 +164,7 @@ export const PublicBookingLink = () => {
   return (
     <Card className="barbershop-card">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10">
               <Link className="h-5 w-5 text-primary" />
@@ -109,6 +182,69 @@ export const PublicBookingLink = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <div className="p-3 rounded-lg bg-muted/50 text-center">
+            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+              <Eye className="h-3.5 w-3.5" />
+              <span className="text-xs">Visitas</span>
+            </div>
+            {loadingStats ? (
+              <Skeleton className="h-6 w-12 mx-auto" />
+            ) : (
+              <p className="text-lg sm:text-xl font-bold text-foreground">
+                {stats?.total_visits || 0}
+              </p>
+            )}
+          </div>
+          
+          <div className="p-3 rounded-lg bg-muted/50 text-center">
+            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+              <CalendarCheck className="h-3.5 w-3.5" />
+              <span className="text-xs">Agendamentos</span>
+            </div>
+            {loadingStats ? (
+              <Skeleton className="h-6 w-12 mx-auto" />
+            ) : (
+              <p className="text-lg sm:text-xl font-bold text-success">
+                {stats?.conversions || 0}
+              </p>
+            )}
+          </div>
+          
+          <div className="p-3 rounded-lg bg-muted/50 text-center">
+            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="text-xs">Conversão</span>
+            </div>
+            {loadingStats ? (
+              <Skeleton className="h-6 w-12 mx-auto" />
+            ) : (
+              <p className="text-lg sm:text-xl font-bold text-primary">
+                {stats?.conversion_rate || 0}%
+              </p>
+            )}
+          </div>
+          
+          <div className="p-3 rounded-lg bg-muted/50 text-center">
+            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span className="text-xs">Únicos</span>
+            </div>
+            {loadingStats ? (
+              <Skeleton className="h-6 w-12 mx-auto" />
+            ) : (
+              <p className="text-lg sm:text-xl font-bold text-foreground">
+                {stats?.unique_visits || 0}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center">
+          Estatísticas dos últimos 30 dias
+        </p>
+
         {/* URL Display */}
         <div className="flex gap-2">
           <Input 
