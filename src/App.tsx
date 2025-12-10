@@ -25,6 +25,7 @@ import Reviews from "./pages/Reviews";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import Waitlist from "./pages/Waitlist";
 import PublicBooking from "./pages/PublicBooking";
+import BarbershopLanding from "./pages/BarbershopLanding";
 import MyEarnings from "./pages/MyEarnings";
 import MultiUnitDashboard from "./pages/MultiUnitDashboard";
 import StaffMultiUnit from "./pages/StaffMultiUnit";
@@ -49,6 +50,8 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/agendar/:barbershopId" element={<PublicBooking />} />
+            <Route path="/b/:barbershopId" element={<BarbershopLanding />} />
+            <Route path="/s/:subdomain" element={<BarbershopLanding />} />
             
             {/* Auth Routes */}
             <Route path="/auth" element={<Auth />} />

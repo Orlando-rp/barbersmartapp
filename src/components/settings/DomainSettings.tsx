@@ -194,30 +194,33 @@ const DomainSettings = () => {
               </div>
 
               {domain?.subdomain && (
-                <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
+                <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <Link className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{getFullSubdomainUrl()}</span>
+                      <span className="font-medium text-sm break-all">{`${window.location.origin}/s/${domain.subdomain}`}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(domain.subdomain_status)}
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => copyToClipboard(getFullSubdomainUrl() || '')}
+                        onClick={() => copyToClipboard(`${window.location.origin}/s/${domain.subdomain}`)}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => window.open(getFullSubdomainUrl() || '', '_blank')}
+                        onClick={() => window.open(`${window.location.origin}/s/${domain.subdomain}`, '_blank')}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Esta URL leva para a landing page da sua barbearia com informações, serviços, equipe e botão de agendamento.
+                  </p>
                 </div>
               )}
 
