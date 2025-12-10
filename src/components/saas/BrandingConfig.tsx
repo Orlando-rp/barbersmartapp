@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useBranding } from "@/contexts/BrandingContext";
 
 interface BrandingSettings {
   systemName: string;
@@ -56,6 +57,7 @@ const defaultBranding: BrandingSettings = {
 };
 
 export const BrandingConfig = () => {
+  const { refreshBranding } = useBranding();
   const [config, setConfig] = useState<BrandingSettings>(defaultBranding);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -70,24 +72,32 @@ export const BrandingConfig = () => {
     try {
       setLoading(true);
       
+      // Try system_branding table first
       const { data, error } = await supabase
-        .from('system_config')
-        .select('value')
-        .eq('key', 'branding')
+        .from('system_branding')
+        .select('*')
+        .limit(1)
         .maybeSingle();
 
-      if (error && !error.message?.includes('system_config')) {
-        console.error('Erro ao carregar branding:', error);
+      if (error) {
+        console.log('system_branding table not available:', error.message);
       }
 
-      if (data?.value) {
+      if (data) {
         setConfig({
-          ...defaultBranding,
-          ...data.value,
+          systemName: data.system_name || defaultBranding.systemName,
+          tagline: data.tagline || defaultBranding.tagline,
+          logoUrl: data.logo_url || '',
+          faviconUrl: data.favicon_url || '',
           colors: {
-            ...defaultBranding.colors,
-            ...data.value.colors,
+            primary: data.primary_color || defaultBranding.colors.primary,
+            primaryForeground: defaultBranding.colors.primaryForeground,
+            secondary: data.secondary_color || defaultBranding.colors.secondary,
+            warning: defaultBranding.colors.warning,
+            success: defaultBranding.colors.success,
+            destructive: defaultBranding.colors.destructive,
           },
+          allowTenantCustomization: data.allow_tenant_customization ?? true,
         });
       }
     } catch (error) {
@@ -101,22 +111,32 @@ export const BrandingConfig = () => {
     try {
       setSaving(true);
 
+      // Upsert to system_branding table
       const { error } = await supabase
-        .from('system_config')
+        .from('system_branding')
         .upsert({
-          key: 'branding',
-          value: config,
+          system_name: config.systemName,
+          tagline: config.tagline,
+          logo_url: config.logoUrl || null,
+          favicon_url: config.faviconUrl || null,
+          primary_color: config.colors.primary,
+          secondary_color: config.colors.secondary,
+          accent_color: config.colors.primary, // Use primary as accent fallback
+          allow_tenant_customization: config.allowTenantCustomization,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'key'
+          onConflict: 'id'
         });
 
       if (error) throw error;
 
+      // Refresh branding context to apply changes globally
+      await refreshBranding();
+
       toast.success("Configurações de branding salvas com sucesso!");
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
-      toast.error("Erro ao salvar configuração");
+      toast.error("Erro ao salvar configuração. Verifique se a tabela system_branding existe.");
     } finally {
       setSaving(false);
     }
