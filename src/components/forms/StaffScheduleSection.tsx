@@ -1,9 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo, useCallback, memo } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 
 interface DaySchedule {
   is_open: boolean;
@@ -64,6 +63,120 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
   return `${String(hour).padStart(2, "0")}:${minute}`;
 });
 
+// Native time select component to avoid Radix ref issues in dialogs
+const NativeTimeSelect = memo(({ 
+  value, 
+  onChange, 
+  disabled = false,
+  includeNone = false 
+}: { 
+  value: string; 
+  onChange: (value: string) => void; 
+  disabled?: boolean;
+  includeNone?: boolean;
+}) => (
+  <select
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    disabled={disabled}
+    className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    {includeNone && <option value="none">Sem intervalo</option>}
+    {timeOptions.map((time) => (
+      <option key={time} value={time}>
+        {time}
+      </option>
+    ))}
+  </select>
+));
+NativeTimeSelect.displayName = 'NativeTimeSelect';
+
+// Isolated day row component to prevent cascading re-renders
+interface DayScheduleRowProps {
+  day: keyof StaffSchedule;
+  daySchedule: DaySchedule;
+  onUpdate: (day: keyof StaffSchedule, field: keyof DaySchedule, value: any) => void;
+}
+
+const DayScheduleRow = memo(({ day, daySchedule, onUpdate }: DayScheduleRowProps) => {
+  const handleOpenChange = useCallback((checked: boolean) => {
+    onUpdate(day, "is_open", checked);
+  }, [day, onUpdate]);
+
+  const handleOpenTimeChange = useCallback((value: string) => {
+    onUpdate(day, "open_time", value);
+  }, [day, onUpdate]);
+
+  const handleCloseTimeChange = useCallback((value: string) => {
+    onUpdate(day, "close_time", value);
+  }, [day, onUpdate]);
+
+  const handleBreakStartChange = useCallback((value: string) => {
+    onUpdate(day, "break_start", value === "none" ? null : value);
+  }, [day, onUpdate]);
+
+  const handleBreakEndChange = useCallback((value: string) => {
+    onUpdate(day, "break_end", value === "none" ? null : value);
+  }, [day, onUpdate]);
+
+  return (
+    <div
+      className={`p-3 rounded-lg border ${
+        daySchedule.is_open ? "bg-background" : "bg-muted/50"
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={daySchedule.is_open}
+            onCheckedChange={handleOpenChange}
+          />
+          <span className={`font-medium ${!daySchedule.is_open && "text-muted-foreground"}`}>
+            {dayNames[day]}
+          </span>
+        </div>
+      </div>
+
+      {daySchedule.is_open && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+          <div>
+            <Label className="text-xs text-muted-foreground">Entrada</Label>
+            <NativeTimeSelect
+              value={daySchedule.open_time}
+              onChange={handleOpenTimeChange}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Saída</Label>
+            <NativeTimeSelect
+              value={daySchedule.close_time}
+              onChange={handleCloseTimeChange}
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Início Intervalo</Label>
+            <NativeTimeSelect
+              value={daySchedule.break_start || "none"}
+              onChange={handleBreakStartChange}
+              includeNone
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Fim Intervalo</Label>
+            <NativeTimeSelect
+              value={daySchedule.break_end || "none"}
+              onChange={handleBreakEndChange}
+              disabled={!daySchedule.break_start}
+              includeNone
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+DayScheduleRow.displayName = 'DayScheduleRow';
+
 export const StaffScheduleSection = ({
   schedule,
   onScheduleChange,
@@ -85,16 +198,20 @@ export const StaffScheduleSection = ({
     };
   }, [schedule]);
 
-  const handleToggleCustom = (checked: boolean) => {
+  const handleToggleCustom = useCallback((checked: boolean) => {
     onUseCustomScheduleChange(checked);
     if (checked && !schedule) {
       onScheduleChange(defaultSchedule);
     } else if (!checked) {
       onScheduleChange(null);
     }
-  };
+  }, [onUseCustomScheduleChange, schedule, onScheduleChange]);
 
-  const updateDaySchedule = (day: keyof StaffSchedule, field: keyof DaySchedule, value: any) => {
+  const updateDaySchedule = useCallback((
+    day: keyof StaffSchedule, 
+    field: keyof DaySchedule, 
+    value: any
+  ) => {
     const daySchedule = currentSchedule[day] || defaultDaySchedule;
     const newSchedule = {
       ...currentSchedule,
@@ -104,7 +221,9 @@ export const StaffScheduleSection = ({
       },
     };
     onScheduleChange(newSchedule);
-  };
+  }, [currentSchedule, onScheduleChange]);
+
+  const days = Object.keys(dayNames) as Array<keyof StaffSchedule>;
 
   return (
     <Card>
@@ -134,105 +253,13 @@ export const StaffScheduleSection = ({
 
       {useCustomSchedule && (
         <CardContent className="space-y-4">
-          {(Object.keys(dayNames) as Array<keyof StaffSchedule>).map((day) => (
-            <div
+          {days.map((day) => (
+            <DayScheduleRow
               key={day}
-              className={`p-3 rounded-lg border ${
-                currentSchedule[day].is_open ? "bg-background" : "bg-muted/50"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={currentSchedule[day].is_open}
-                    onCheckedChange={(checked) => updateDaySchedule(day, "is_open", checked)}
-                  />
-                  <span className={`font-medium ${!currentSchedule[day].is_open && "text-muted-foreground"}`}>
-                    {dayNames[day]}
-                  </span>
-                </div>
-              </div>
-
-              {currentSchedule[day].is_open && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Entrada</Label>
-                    <Select
-                      value={currentSchedule[day].open_time}
-                      onValueChange={(value) => updateDaySchedule(day, "open_time", value)}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeOptions.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {time}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Saída</Label>
-                    <Select
-                      value={currentSchedule[day].close_time}
-                      onValueChange={(value) => updateDaySchedule(day, "close_time", value)}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeOptions.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {time}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Início Intervalo</Label>
-                    <Select
-                      value={currentSchedule[day].break_start || "none"}
-                      onValueChange={(value) => updateDaySchedule(day, "break_start", value === "none" ? null : value)}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="Sem intervalo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem intervalo</SelectItem>
-                        {timeOptions.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {time}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Fim Intervalo</Label>
-                    <Select
-                      value={currentSchedule[day].break_end || "none"}
-                      onValueChange={(value) => updateDaySchedule(day, "break_end", value === "none" ? null : value)}
-                      disabled={!currentSchedule[day].break_start}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="Sem intervalo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem intervalo</SelectItem>
-                        {timeOptions.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {time}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-            </div>
+              day={day}
+              daySchedule={currentSchedule[day]}
+              onUpdate={updateDaySchedule}
+            />
           ))}
         </CardContent>
       )}
