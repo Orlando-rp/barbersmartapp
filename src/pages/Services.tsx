@@ -193,10 +193,11 @@ const Services = () => {
         </Card>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           {filteredServices.length === 0 ? (
-            <div className="col-span-full text-center py-8">
-              <p className="text-muted-foreground">
+            <div className="col-span-full text-center py-6 sm:py-8 px-4">
+              <Scissors className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">
                 {services.length === 0 
                   ? 'Nenhum serviço cadastrado ainda. Clique em "Novo Serviço" para começar.'
                   : 'Nenhum serviço encontrado para esta categoria.'}
