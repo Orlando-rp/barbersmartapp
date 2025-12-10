@@ -302,9 +302,49 @@ const SaasAdminPortal = () => {
     });
   };
 
+  // Função para detectar ciclos na hierarquia
+  const detectCycle = (unitId: string, proposedParentId: string): boolean => {
+    if (!proposedParentId) return false;
+    if (unitId === proposedParentId) return true;
+    
+    // Verificar se a unidade selecionada é ancestral do parent proposto
+    let currentId: string | null = proposedParentId;
+    const visited = new Set<string>();
+    
+    while (currentId) {
+      if (visited.has(currentId)) return true; // Ciclo detectado
+      if (currentId === unitId) return true; // A unidade é ancestral do parent
+      visited.add(currentId);
+      
+      const parent = allBarbershops.find(b => b.id === currentId);
+      currentId = parent?.parent_id || null;
+    }
+    
+    // Verificar se alguma unidade filha da barbearia selecionada é o parent proposto
+    const getDescendants = (id: string): string[] => {
+      const children = allBarbershops.filter(b => b.parent_id === id);
+      let descendants: string[] = children.map(c => c.id);
+      children.forEach(child => {
+        descendants = [...descendants, ...getDescendants(child.id)];
+      });
+      return descendants;
+    };
+    
+    const descendants = getDescendants(unitId);
+    if (descendants.includes(proposedParentId)) return true;
+    
+    return false;
+  };
+
   const handleLinkUnit = async () => {
     if (!linkForm.unitId) {
       toast.error("Selecione uma barbearia para vincular");
+      return;
+    }
+    
+    // Validação de ciclo
+    if (linkForm.parentId && detectCycle(linkForm.unitId, linkForm.parentId)) {
+      toast.error("Não é possível criar este vínculo: causaria um ciclo na hierarquia!");
       return;
     }
     
