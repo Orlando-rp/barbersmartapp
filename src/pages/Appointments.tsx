@@ -451,20 +451,20 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
 
         {/* Filters */}
         <Card className="barbershop-card">
-          <CardContent className="pt-4 lg:pt-6">
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 lg:gap-4">
-              <div className="flex-1 min-w-0 relative">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="flex flex-col gap-3">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Buscar..." 
-                  className="pl-10"
+                  placeholder="Buscar cliente ou telefone..." 
+                  className="pl-10 text-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <div className="flex gap-2">
                 <Select value={selectedBarber} onValueChange={setSelectedBarber}>
-                  <SelectTrigger className="w-[140px] sm:w-[180px]">
+                  <SelectTrigger className="flex-1 text-xs sm:text-sm h-9">
                     <SelectValue placeholder="Barbeiro" />
                   </SelectTrigger>
                   <SelectContent>
@@ -477,7 +477,7 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
                   </SelectContent>
                 </Select>
                 <Select value={selectedDate} onValueChange={setSelectedDate}>
-                  <SelectTrigger className="w-[120px] sm:w-[150px]">
+                  <SelectTrigger className="flex-1 text-xs sm:text-sm h-9">
                     <SelectValue placeholder="Data" />
                   </SelectTrigger>
                   <SelectContent>
@@ -501,10 +501,10 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
             </Card>
           ) : filteredAppointments.length === 0 ? (
             <Card className="barbershop-card">
-              <CardContent className="py-12 text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum agendamento encontrado</h3>
-                <p className="text-muted-foreground mb-4">
+              <CardContent className="py-8 sm:py-12 text-center px-4">
+                <Calendar className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">Nenhum agendamento encontrado</h3>
+                <p className="text-sm text-muted-foreground mb-4">
                   {searchTerm || selectedBarber !== "all" || selectedDate !== "all"
                     ? "Tente ajustar os filtros"
                     : "Crie seu primeiro agendamento para começar"}
