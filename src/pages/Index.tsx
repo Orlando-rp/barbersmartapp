@@ -14,6 +14,7 @@ import { AppointmentsWidget } from "@/components/dashboard/widgets/AppointmentsW
 import { ClientsWidget } from "@/components/dashboard/widgets/ClientsWidget";
 import { OccupancyWidget } from "@/components/dashboard/widgets/OccupancyWidget";
 import { WidgetSelector, defaultWidgets, WidgetConfig } from "@/components/dashboard/WidgetSelector";
+import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
 import { 
   Calendar, 
   Users, 
@@ -282,6 +283,9 @@ const Index = () => {
             />
           </div>
         )}
+
+        {/* Public Booking Link */}
+        <PublicBookingLink />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
