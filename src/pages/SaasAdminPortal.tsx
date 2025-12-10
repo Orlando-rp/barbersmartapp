@@ -62,6 +62,9 @@ import {
   RefreshCw,
   Smartphone,
   Globe,
+  ChevronDown,
+  ChevronRight,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -94,6 +97,7 @@ interface Tenant {
   name: string;
   active: boolean;
   created_at: string;
+  parent_id?: string | null;
   subscription?: {
     plan_name: string;
     status: string;
@@ -105,6 +109,7 @@ interface Tenant {
     staff_count: number;
     revenue: number;
   };
+  units?: Tenant[]; // Unidades filhas
 }
 
 interface Plan {
@@ -153,6 +158,7 @@ const SaasAdminPortal = () => {
     totalRevenue: 0,
     trialTenants: 0,
   });
+  const [expandedTenants, setExpandedTenants] = useState<Set<string>>(new Set());
 
   // Dialogs
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
@@ -256,15 +262,25 @@ const SaasAdminPortal = () => {
       })
     );
 
-    setTenants(tenantsWithDetails);
+    // Separar matrizes (sem parent_id) das unidades (com parent_id)
+    const headquarters = tenantsWithDetails.filter(t => !t.parent_id);
+    const units = tenantsWithDetails.filter(t => t.parent_id);
 
-    // Calcular estatísticas
-    const activeTenants = tenantsWithDetails.filter(t => t.active).length;
-    const trialTenants = tenantsWithDetails.filter(t => t.subscription?.status === 'trial').length;
+    // Associar unidades às suas matrizes
+    const tenantsHierarchy = headquarters.map(hq => ({
+      ...hq,
+      units: units.filter(u => u.parent_id === hq.id),
+    }));
+
+    setTenants(tenantsHierarchy);
+
+    // Calcular estatísticas (apenas matrizes)
+    const activeTenants = headquarters.filter(t => t.active).length;
+    const trialTenants = headquarters.filter(t => t.subscription?.status === 'trial').length;
     const totalRevenue = tenantsWithDetails.reduce((sum, t) => sum + (t.usage?.revenue || 0), 0);
 
     setStats({
-      totalTenants: tenantsWithDetails.length,
+      totalTenants: headquarters.length,
       activeTenants,
       trialTenants,
       totalRevenue,
@@ -472,6 +488,18 @@ const SaasAdminPortal = () => {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const toggleExpandTenant = (tenantId: string) => {
+    setExpandedTenants(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tenantId)) {
+        newSet.delete(tenantId);
+      } else {
+        newSet.add(tenantId);
+      }
+      return newSet;
+    });
   };
 
   const planDistribution = plans.map(plan => ({
@@ -686,45 +714,106 @@ const SaasAdminPortal = () => {
             <Card>
               <CardHeader className="p-3 sm:p-6">
                 <CardTitle className="text-sm sm:text-base">Barbearias Cadastradas</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">{tenants.length} tenants no sistema</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
+                  {tenants.length} barbearias (matrizes) • {tenants.reduce((sum, t) => sum + (t.units?.length || 0), 0)} unidades
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-3 sm:p-6 pt-0">
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
                   {tenants.map((tenant) => (
-                    <div key={tenant.id} className="border rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Building2 className="h-4 w-4 text-warning shrink-0" />
-                          <span className="font-medium text-sm truncate">{tenant.name}</span>
+                    <div key={tenant.id} className="border rounded-lg overflow-hidden">
+                      {/* Matriz */}
+                      <div className="p-3 space-y-2 bg-card">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {(tenant.units?.length || 0) > 0 && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 shrink-0" 
+                                onClick={() => toggleExpandTenant(tenant.id)}
+                              >
+                                {expandedTenants.has(tenant.id) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                            <Building2 className="h-4 w-4 text-warning shrink-0" />
+                            <span className="font-medium text-sm truncate">{tenant.name}</span>
+                            {(tenant.units?.length || 0) > 0 && (
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                {tenant.units?.length} unidade{tenant.units?.length !== 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }}>
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleTenantStatus(tenant)}>
+                              {tenant.active ? <XCircle className="h-3 w-3 text-warning" /> : <CheckCircle className="h-3 w-3 text-success" />}
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }}>
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleTenantStatus(tenant)}>
-                            {tenant.active ? <XCircle className="h-3 w-3 text-warning" /> : <CheckCircle className="h-3 w-3 text-success" />}
-                          </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary" className="text-xs">{tenant.subscription?.plan_name || 'Free'}</Badge>
+                          {tenant.subscription ? getStatusBadge(tenant.subscription.status) : <Badge variant="outline" className="text-xs">Sem assin.</Badge>}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <p className="text-muted-foreground">Agend.</p>
+                            <p className="font-medium">{tenant.usage?.appointments_count || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Clientes</p>
+                            <p className="font-medium">{tenant.usage?.clients_count || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Receita</p>
+                            <p className="font-medium text-success">R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary" className="text-xs">{tenant.subscription?.plan_name || 'Free'}</Badge>
-                        {tenant.subscription ? getStatusBadge(tenant.subscription.status) : <Badge variant="outline" className="text-xs">Sem assin.</Badge>}
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div>
-                          <p className="text-muted-foreground">Agend.</p>
-                          <p className="font-medium">{tenant.usage?.appointments_count || 0}</p>
+                      {/* Unidades */}
+                      {expandedTenants.has(tenant.id) && tenant.units && tenant.units.length > 0 && (
+                        <div className="border-t bg-muted/30">
+                          {tenant.units.map((unit) => (
+                            <div key={unit.id} className="p-3 pl-8 border-b last:border-b-0 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  <span className="text-sm truncate">{unit.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setSelectedTenant(unit); setTenantDetailOpen(true); }}>
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleToggleTenantStatus(unit)}>
+                                    {unit.active ? <XCircle className="h-3 w-3 text-warning" /> : <CheckCircle className="h-3 w-3 text-success" />}
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 text-xs">
+                                <div>
+                                  <p className="text-muted-foreground">Agend.</p>
+                                  <p className="font-medium">{unit.usage?.appointments_count || 0}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Clientes</p>
+                                  <p className="font-medium">{unit.usage?.clients_count || 0}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Receita</p>
+                                  <p className="font-medium text-success">R$ {(unit.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div>
-                          <p className="text-muted-foreground">Clientes</p>
-                          <p className="font-medium">{tenant.usage?.clients_count || 0}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Receita</p>
-                          <p className="font-medium text-success">R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -735,6 +824,7 @@ const SaasAdminPortal = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Barbearia</TableHead>
+                        <TableHead>Unidades</TableHead>
                         <TableHead>Plano</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Agend.</TableHead>
@@ -745,33 +835,92 @@ const SaasAdminPortal = () => {
                     </TableHeader>
                     <TableBody>
                       {tenants.map((tenant) => (
-                        <TableRow key={tenant.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-warning" />
-                              <span className="font-medium">{tenant.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{tenant.subscription?.plan_name || 'Free'}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {tenant.subscription ? getStatusBadge(tenant.subscription.status) : <Badge variant="outline">Sem assinatura</Badge>}
-                          </TableCell>
-                          <TableCell>{tenant.usage?.appointments_count || 0}</TableCell>
-                          <TableCell>{tenant.usage?.clients_count || 0}</TableCell>
-                          <TableCell className="text-success">R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleToggleTenantStatus(tenant)}>
-                                {tenant.active ? <XCircle className="h-4 w-4 text-warning" /> : <CheckCircle className="h-4 w-4 text-success" />}
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                        <>
+                          {/* Linha da Matriz */}
+                          <TableRow key={tenant.id} className="bg-card">
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {(tenant.units?.length || 0) > 0 ? (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6" 
+                                    onClick={() => toggleExpandTenant(tenant.id)}
+                                  >
+                                    {expandedTenants.has(tenant.id) ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                ) : (
+                                  <div className="w-6" />
+                                )}
+                                <Building2 className="h-4 w-4 text-warning" />
+                                <span className="font-medium">{tenant.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {tenant.units?.length || 0} unidade{(tenant.units?.length || 0) !== 1 ? 's' : ''}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{tenant.subscription?.plan_name || 'Free'}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {tenant.subscription ? getStatusBadge(tenant.subscription.status) : <Badge variant="outline">Sem assinatura</Badge>}
+                            </TableCell>
+                            <TableCell>{tenant.usage?.appointments_count || 0}</TableCell>
+                            <TableCell>{tenant.usage?.clients_count || 0}</TableCell>
+                            <TableCell className="text-success">R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="icon" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleToggleTenantStatus(tenant)}>
+                                  {tenant.active ? <XCircle className="h-4 w-4 text-warning" /> : <CheckCircle className="h-4 w-4 text-success" />}
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {/* Linhas das Unidades */}
+                          {expandedTenants.has(tenant.id) && tenant.units?.map((unit) => (
+                            <TableRow key={unit.id} className="bg-muted/30">
+                              <TableCell>
+                                <div className="flex items-center gap-2 pl-8">
+                                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-muted-foreground">{unit.name}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-xs text-muted-foreground">Unidade</span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-xs text-muted-foreground">—</span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={unit.active ? "secondary" : "outline"} className="text-xs">
+                                  {unit.active ? 'Ativa' : 'Inativa'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{unit.usage?.appointments_count || 0}</TableCell>
+                              <TableCell>{unit.usage?.clients_count || 0}</TableCell>
+                              <TableCell className="text-success">R$ {(unit.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button variant="ghost" size="icon" onClick={() => { setSelectedTenant(unit); setTenantDetailOpen(true); }}>
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleToggleTenantStatus(unit)}>
+                                    {unit.active ? <XCircle className="h-4 w-4 text-warning" /> : <CheckCircle className="h-4 w-4 text-success" />}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </>
                       ))}
                     </TableBody>
                   </Table>
@@ -1065,12 +1214,48 @@ const SaasAdminPortal = () => {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
+                {selectedTenant?.parent_id ? (
+                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                ) : (
+                  <Building2 className="h-5 w-5 text-warning" />
+                )}
                 {selectedTenant?.name}
+                {selectedTenant?.parent_id && (
+                  <Badge variant="outline" className="text-xs">Unidade</Badge>
+                )}
+                {!selectedTenant?.parent_id && selectedTenant?.units && selectedTenant.units.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">Matriz</Badge>
+                )}
               </DialogTitle>
             </DialogHeader>
             {selectedTenant && (
               <div className="space-y-4 py-4">
+                {/* Tipo */}
+                <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
+                  <p className="text-xs text-muted-foreground">Tipo</p>
+                  <p className="font-medium">
+                    {selectedTenant.parent_id ? 'Unidade (Filial)' : 'Barbearia (Matriz)'}
+                  </p>
+                </div>
+                
+                {/* Unidades (se matriz) */}
+                {!selectedTenant.parent_id && selectedTenant.units && selectedTenant.units.length > 0 && (
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground mb-2">Unidades ({selectedTenant.units.length})</p>
+                    <div className="space-y-1">
+                      {selectedTenant.units.map(unit => (
+                        <div key={unit.id} className="flex items-center gap-2 text-sm">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          <span>{unit.name}</span>
+                          <Badge variant={unit.active ? "secondary" : "outline"} className="text-xs ml-auto">
+                            {unit.active ? 'Ativa' : 'Inativa'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-xs text-muted-foreground">Status</p>
@@ -1078,7 +1263,7 @@ const SaasAdminPortal = () => {
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-xs text-muted-foreground">Plano</p>
-                    <p className="font-medium">{selectedTenant.subscription?.plan_name || 'Free'}</p>
+                    <p className="font-medium">{selectedTenant.subscription?.plan_name || (selectedTenant.parent_id ? '—' : 'Free')}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-xs text-muted-foreground">Agendamentos</p>
