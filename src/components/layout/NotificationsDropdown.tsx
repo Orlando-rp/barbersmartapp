@@ -26,18 +26,51 @@ interface Notification {
   data?: any;
 }
 
+// Helper para gerenciar estado de notificações no localStorage
+const getStorageKey = (barbershopId: string) => `notifications_state_${barbershopId}`;
+
+const getNotificationState = (barbershopId: string): { read: string[]; dismissed: string[] } => {
+  try {
+    const stored = localStorage.getItem(getStorageKey(barbershopId));
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Erro ao ler estado de notificações:', e);
+  }
+  return { read: [], dismissed: [] };
+};
+
+const saveNotificationState = (barbershopId: string, state: { read: string[]; dismissed: string[] }) => {
+  try {
+    localStorage.setItem(getStorageKey(barbershopId), JSON.stringify(state));
+  } catch (e) {
+    console.error('Erro ao salvar estado de notificações:', e);
+  }
+};
+
 export const NotificationsDropdown = () => {
   const { barbershopId, user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notifState, setNotifState] = useState<{ read: string[]; dismissed: string[] }>({ read: [], dismissed: [] });
   const { isSupported, permission, isSubscribed, requestPermission, loading: pushLoading } = usePushNotifications();
+
+  // Carregar estado salvo ao montar
+  useEffect(() => {
+    if (barbershopId) {
+      const savedState = getNotificationState(barbershopId);
+      setNotifState(savedState);
+    }
+  }, [barbershopId]);
 
   useEffect(() => {
     if (barbershopId) {
       fetchNotifications();
-      subscribeToNotifications();
+      const unsubscribe = subscribeToNotifications();
+      return unsubscribe;
     }
-  }, [barbershopId]);
+  }, [barbershopId, notifState.dismissed]);
 
   const fetchNotifications = async () => {
     try {
@@ -45,6 +78,7 @@ export const NotificationsDropdown = () => {
 
       // Buscar notificações reais do sistema
       const notifs: Notification[] = [];
+      const { dismissed, read } = notifState;
 
       // 1. Agendamentos pendentes de hoje
       const today = new Date().toISOString().split('T')[0];
@@ -57,13 +91,14 @@ export const NotificationsDropdown = () => {
         .order('appointment_time', { ascending: true })
         .limit(5);
 
-      if (pendingAppointments && pendingAppointments.length > 0) {
+      const pendingId = `pending-today-${today}`;
+      if (pendingAppointments && pendingAppointments.length > 0 && !dismissed.includes(pendingId)) {
         notifs.push({
-          id: 'pending-today',
+          id: pendingId,
           type: 'appointment',
           title: 'Agendamentos Pendentes',
           message: `${pendingAppointments.length} agendamento(s) pendente(s) para hoje`,
-          read: false,
+          read: read.includes(pendingId),
           created_at: new Date().toISOString(),
           data: { count: pendingAppointments.length }
         });
@@ -77,13 +112,14 @@ export const NotificationsDropdown = () => {
         .eq('status', 'waiting')
         .limit(5);
 
-      if (waitlistItems && waitlistItems.length > 0) {
+      const waitlistId = `waitlist-pending-${today}`;
+      if (waitlistItems && waitlistItems.length > 0 && !dismissed.includes(waitlistId)) {
         notifs.push({
-          id: 'waitlist-pending',
+          id: waitlistId,
           type: 'waitlist',
           title: 'Lista de Espera',
           message: `${waitlistItems.length} cliente(s) aguardando na fila`,
-          read: false,
+          read: read.includes(waitlistId),
           created_at: new Date().toISOString(),
           data: { count: waitlistItems.length }
         });
@@ -103,14 +139,17 @@ export const NotificationsDropdown = () => {
 
       if (recentReviews) {
         recentReviews.forEach((review) => {
-          notifs.push({
-            id: `review-${review.id}`,
-            type: 'review',
-            title: 'Nova Avaliação',
-            message: `${review.client_name} deixou uma avaliação de ${review.rating} estrelas`,
-            read: false,
-            created_at: review.created_at,
-          });
+          const reviewId = `review-${review.id}`;
+          if (!dismissed.includes(reviewId)) {
+            notifs.push({
+              id: reviewId,
+              type: 'review',
+              title: 'Nova Avaliação',
+              message: `${review.client_name} deixou uma avaliação de ${review.rating} estrelas`,
+              read: read.includes(reviewId),
+              created_at: review.created_at,
+            });
+          }
         });
       }
 
@@ -125,14 +164,17 @@ export const NotificationsDropdown = () => {
 
       if (newClients) {
         newClients.forEach((client) => {
-          notifs.push({
-            id: `client-${client.id}`,
-            type: 'client',
-            title: 'Novo Cliente',
-            message: `${client.name} foi cadastrado`,
-            read: false,
-            created_at: client.created_at,
-          });
+          const clientId = `client-${client.id}`;
+          if (!dismissed.includes(clientId)) {
+            notifs.push({
+              id: clientId,
+              type: 'client',
+              title: 'Novo Cliente',
+              message: `${client.name} foi cadastrado`,
+              read: read.includes(clientId),
+              created_at: client.created_at,
+            });
+          }
         });
       }
 
@@ -219,17 +261,49 @@ export const NotificationsDropdown = () => {
   };
 
   const markAsRead = (id: string) => {
+    if (!barbershopId) return;
+    
     setNotifications(prev => 
       prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
+    
+    // Persistir no localStorage
+    const newState = {
+      ...notifState,
+      read: [...new Set([...notifState.read, id])]
+    };
+    setNotifState(newState);
+    saveNotificationState(barbershopId, newState);
   };
 
   const markAllAsRead = () => {
+    if (!barbershopId) return;
+    
+    const allIds = notifications.map(n => n.id);
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    
+    // Persistir no localStorage
+    const newState = {
+      ...notifState,
+      read: [...new Set([...notifState.read, ...allIds])]
+    };
+    setNotifState(newState);
+    saveNotificationState(barbershopId, newState);
   };
 
   const clearAll = () => {
+    if (!barbershopId) return;
+    
+    const allIds = notifications.map(n => n.id);
     setNotifications([]);
+    
+    // Persistir no localStorage como descartadas
+    const newState = {
+      read: notifState.read,
+      dismissed: [...new Set([...notifState.dismissed, ...allIds])]
+    };
+    setNotifState(newState);
+    saveNotificationState(barbershopId, newState);
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
