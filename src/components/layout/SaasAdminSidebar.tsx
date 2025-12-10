@@ -17,6 +17,7 @@ import {
   Smartphone,
   Moon,
   Sun,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ const saasNavigation: NavItem[] = [
   { name: "Barbearias", tab: "tenants", icon: Building2 },
   { name: "Planos", tab: "plans", icon: Package },
   { name: "Mensagens", tab: "messages", icon: MessageSquare },
+  { name: "Branding", tab: "branding", icon: Palette },
   { name: "Integrações", tab: "integrations", icon: Smartphone },
 ];
 
