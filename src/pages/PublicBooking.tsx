@@ -114,8 +114,25 @@ export default function PublicBooking() {
   useEffect(() => {
     if (barbershopId) {
       loadBarbershopData();
+      trackVisit();
     }
   }, [barbershopId]);
+
+  // Track page visit for analytics
+  const trackVisit = async () => {
+    if (!barbershopId) return;
+    
+    try {
+      await supabase.from('public_booking_visits').insert({
+        barbershop_id: barbershopId,
+        referrer: document.referrer || null,
+        user_agent: navigator.userAgent,
+      });
+    } catch (error) {
+      // Silent fail - analytics shouldn't break the page
+      console.log('Visit tracking skipped');
+    }
+  };
 
   useEffect(() => {
     if (selectedDate && selectedStaff && selectedService) {
