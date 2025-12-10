@@ -76,6 +76,7 @@ interface LandingConfig {
   show_team?: boolean;
   show_reviews?: boolean;
   show_location?: boolean;
+  show_gallery?: boolean;
   theme?: string;
   primary_color?: string;
   secondary_color?: string;
@@ -85,6 +86,15 @@ interface LandingConfig {
   hero_image_url?: string;
   button_style?: 'rounded' | 'square' | 'pill';
   font_family?: string;
+}
+
+interface PortfolioPhoto {
+  id: string;
+  title: string | null;
+  description: string | null;
+  image_url: string;
+  category: string | null;
+  is_featured: boolean;
 }
 
 const dayNames: Record<string, string> = {
@@ -108,11 +118,14 @@ const BarbershopLanding = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
   const [averageRating, setAverageRating] = useState<number>(0);
+  const [portfolioPhotos, setPortfolioPhotos] = useState<PortfolioPhoto[]>([]);
+  const [selectedPhoto, setSelectedPhoto] = useState<PortfolioPhoto | null>(null);
   const [landingConfig, setLandingConfig] = useState<LandingConfig>({
     show_services: true,
     show_team: true,
     show_reviews: true,
     show_location: true,
+    show_gallery: true,
   });
   const [notFound, setNotFound] = useState(false);
 
@@ -180,6 +193,7 @@ const BarbershopLanding = () => {
         reviewsRes,
         hoursRes,
         ratingRes,
+        portfolioRes,
       ] = await Promise.all([
         supabase
           .from('barbershops')
@@ -219,6 +233,14 @@ const BarbershopLanding = () => {
           .select('day_of_week, is_open, open_time, close_time')
           .eq('barbershop_id', shopId),
         supabase.rpc('get_barbershop_average_rating', { shop_id: shopId }),
+        supabase
+          .from('portfolio_photos')
+          .select('id, title, description, image_url, category, is_featured')
+          .eq('barbershop_id', shopId)
+          .eq('active', true)
+          .order('is_featured', { ascending: false })
+          .order('display_order', { ascending: true })
+          .limit(12),
       ]);
 
       if (barbershopRes.error || !barbershopRes.data) {
@@ -242,6 +264,7 @@ const BarbershopLanding = () => {
       setReviews(reviewsRes.data || []);
       setBusinessHours(hoursRes.data || []);
       setAverageRating(ratingRes.data || 0);
+      setPortfolioPhotos(portfolioRes.data || []);
 
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -534,6 +557,90 @@ const BarbershopLanding = () => {
             </div>
           </div>
         </section>
+      )}
+
+      {/* Gallery Section */}
+      {landingConfig.show_gallery !== false && portfolioPhotos.length > 0 && (
+        <section className="py-16 px-4 bg-muted/30">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+                Nosso Portfolio
+              </h2>
+              <p className="text-muted-foreground">
+                Confira alguns dos nossos trabalhos
+              </p>
+            </div>
+
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {portfolioPhotos.map((photo) => (
+                <div
+                  key={photo.id}
+                  className="relative group cursor-pointer rounded-lg overflow-hidden aspect-square"
+                  onClick={() => setSelectedPhoto(photo)}
+                >
+                  <img
+                    src={photo.image_url}
+                    alt={photo.title || 'Portfolio'}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-end">
+                    <div className="p-3 opacity-0 group-hover:opacity-100 transition-opacity w-full">
+                      {photo.title && (
+                        <p className="text-white font-medium truncate">{photo.title}</p>
+                      )}
+                      {photo.category && (
+                        <p className="text-white/80 text-sm capitalize">{photo.category}</p>
+                      )}
+                    </div>
+                  </div>
+                  {photo.is_featured && (
+                    <div className="absolute top-2 right-2">
+                      <Badge className="bg-yellow-500 text-white">
+                        <Star className="h-3 w-3 mr-1 fill-current" />
+                        Destaque
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Photo Lightbox */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full">
+            <img
+              src={selectedPhoto.image_url}
+              alt={selectedPhoto.title || 'Portfolio'}
+              className="w-full h-full object-contain rounded-lg"
+            />
+            {(selectedPhoto.title || selectedPhoto.description) && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-lg">
+                {selectedPhoto.title && (
+                  <h3 className="text-white text-xl font-semibold">{selectedPhoto.title}</h3>
+                )}
+                {selectedPhoto.description && (
+                  <p className="text-white/80 mt-1">{selectedPhoto.description}</p>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => setSelectedPhoto(null)}
+              className="absolute top-4 right-4 text-white hover:text-white/80 p-2"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Reviews Section */}

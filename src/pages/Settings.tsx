@@ -10,7 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
 import DomainSettings from "@/components/settings/DomainSettings";
-import { Save, User, Bell, Clock, Globe } from "lucide-react";
+import PortfolioGalleryManager from "@/components/settings/PortfolioGalleryManager";
+import { Save, User, Bell, Clock, Globe, Image } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -301,6 +302,11 @@ const SettingsPage = () => {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Portfolio Gallery */}
+          <div className="lg:col-span-2">
+            <PortfolioGalleryManager />
+          </div>
         </div>
       </div>
     </Layout>

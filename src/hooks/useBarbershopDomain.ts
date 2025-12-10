@@ -22,6 +22,7 @@ export interface BarbershopDomain {
     show_team?: boolean;
     show_reviews?: boolean;
     show_location?: boolean;
+    show_gallery?: boolean;
     theme?: string;
     primary_color?: string;
     secondary_color?: string;
