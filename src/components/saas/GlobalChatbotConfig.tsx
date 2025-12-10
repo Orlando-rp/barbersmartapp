@@ -335,18 +335,19 @@ FLUXO DE AGENDAMENTO:
       </Card>
 
       <Tabs defaultValue="config" className="space-y-4">
-        <TabsList className="bg-muted border border-border">
-          <TabsTrigger value="config" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Settings className="h-4 w-4 mr-2" />
-            Configuração
+        <TabsList className="bg-muted border border-border w-full sm:w-auto flex flex-wrap h-auto p-1 gap-1">
+          <TabsTrigger value="config" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm flex-1 sm:flex-none">
+            <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Configuração</span>
+            <span className="sm:hidden">Config</span>
           </TabsTrigger>
-          <TabsTrigger value="prompt" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Brain className="h-4 w-4 mr-2" />
-            Prompt do Sistema
+          <TabsTrigger value="prompt" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm flex-1 sm:flex-none">
+            <Brain className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            Prompt
           </TabsTrigger>
-          <TabsTrigger value="status" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Building2 className="h-4 w-4 mr-2" />
-            Status por Barbearia
+          <TabsTrigger value="status" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm flex-1 sm:flex-none">
+            <Building2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            Status
           </TabsTrigger>
         </TabsList>
 
@@ -487,10 +488,10 @@ FLUXO DE AGENDAMENTO:
 
         <TabsContent value="status">
           <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between text-foreground">
-                <span className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-primary" />
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-foreground">
+                <span className="flex items-center gap-2 text-sm sm:text-base">
+                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Status do Chatbot por Barbearia
                 </span>
                 <Button 
@@ -498,41 +499,41 @@ FLUXO DE AGENDAMENTO:
                   size="sm"
                   onClick={loadBarbershopStatuses}
                   disabled={loadingStatuses}
-                  className="border-border text-foreground hover:bg-muted"
+                  className="border-border text-foreground hover:bg-muted w-full sm:w-auto"
                 >
                   <RefreshCw className={`mr-2 h-4 w-4 ${loadingStatuses ? 'animate-spin' : ''}`} />
                   Atualizar
                 </Button>
               </CardTitle>
-              <CardDescription className="text-muted-foreground">
+              <CardDescription className="text-muted-foreground text-xs sm:text-sm">
                 Visualize quais barbearias estão usando o chatbot
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-6 pt-0">
               {barbershopStatuses.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Clique em "Atualizar" para ver o status</p>
+                <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                  <Building2 className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">Clique em "Atualizar" para ver o status</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {barbershopStatuses.map((shop) => (
                     <div 
                       key={shop.id} 
-                      className="flex items-center justify-between p-4 bg-muted rounded-lg"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-muted rounded-lg gap-2 sm:gap-3"
                     >
-                      <div>
-                        <p className="text-foreground font-medium">{shop.name}</p>
-                        <p className="text-xs text-muted-foreground">
+                      <div className="min-w-0">
+                        <p className="text-foreground font-medium text-sm truncate">{shop.name}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
                           {shop.conversationsCount} conversas registradas
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Agendamentos</p>
-                          <p className="text-lg font-bold text-primary">{shop.appointmentsCreated}</p>
+                      <div className="flex items-center justify-between sm:justify-end gap-3">
+                        <div className="text-left sm:text-right">
+                          <p className="text-[10px] sm:text-sm text-muted-foreground">Agendamentos</p>
+                          <p className="text-sm sm:text-lg font-bold text-primary">{shop.appointmentsCreated}</p>
                         </div>
-                        <Badge className={shop.chatbotEnabled ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}>
+                        <Badge className={`shrink-0 text-xs ${shop.chatbotEnabled ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>
                           {shop.chatbotEnabled ? (
                             <><CheckCircle className="h-3 w-3 mr-1" />Ativo</>
                           ) : (

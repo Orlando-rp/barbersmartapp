@@ -195,11 +195,11 @@ export const SocialAuthConfig = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-            <div className="space-y-0.5">
-              <Label className="text-foreground">Habilitar Login com Google</Label>
-              <p className="text-sm text-muted-foreground">
-                Ativar opção de login via Google para clientes
+          <div className="flex items-center justify-between p-3 sm:p-4 bg-muted rounded-lg gap-3">
+            <div className="space-y-0.5 min-w-0">
+              <Label className="text-foreground text-sm">Habilitar Login com Google</Label>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Ativar opção de login via Google
               </p>
             </div>
             <Switch
@@ -268,11 +268,11 @@ export const SocialAuthConfig = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-            <div className="space-y-0.5">
-              <Label className="text-foreground">Habilitar Login com Facebook</Label>
-              <p className="text-sm text-muted-foreground">
-                Ativar opção de login via Facebook para clientes
+          <div className="flex items-center justify-between p-3 sm:p-4 bg-muted rounded-lg gap-3">
+            <div className="space-y-0.5 min-w-0">
+              <Label className="text-foreground text-sm">Habilitar Login com Facebook</Label>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Ativar opção de login via Facebook
               </p>
             </div>
             <Switch
@@ -340,14 +340,14 @@ export const SocialAuthConfig = () => {
       <Button 
         onClick={saveConfig} 
         disabled={saving}
-        className="bg-info hover:bg-info/90 text-info-foreground w-full"
+        className="bg-info hover:bg-info/90 text-info-foreground w-full text-sm"
       >
         {saving ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Save className="mr-2 h-4 w-4" />
         )}
-        {saving ? "Salvando..." : "Salvar Configurações de Login Social"}
+        {saving ? "Salvando..." : "Salvar Login Social"}
       </Button>
     </div>
   );

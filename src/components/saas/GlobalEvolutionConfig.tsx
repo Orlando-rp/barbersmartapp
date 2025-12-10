@@ -309,12 +309,12 @@ export const GlobalEvolutionConfig = () => {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               onClick={testServerConnection} 
               disabled={testing || !config.apiUrl || !config.apiKey}
               variant="outline"
-              className="border-border text-foreground hover:bg-muted"
+              className="border-border text-foreground hover:bg-muted w-full sm:w-auto"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${testing ? 'animate-spin' : ''}`} />
               Testar Conexão
@@ -322,7 +322,7 @@ export const GlobalEvolutionConfig = () => {
             <Button 
               onClick={saveGlobalConfig} 
               disabled={saving}
-              className="bg-warning hover:bg-warning/90 text-warning-foreground"
+              className="bg-warning hover:bg-warning/90 text-warning-foreground w-full sm:w-auto"
             >
               <Save className="mr-2 h-4 w-4" />
               {saving ? "Salvando..." : "Salvar Configuração"}
@@ -333,10 +333,10 @@ export const GlobalEvolutionConfig = () => {
 
       {/* Barbershop Instances */}
       <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between text-foreground">
-            <span className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-warning" />
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-foreground">
+            <span className="flex items-center gap-2 text-sm sm:text-base">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
               Instâncias das Barbearias
             </span>
             <Button 
@@ -344,34 +344,34 @@ export const GlobalEvolutionConfig = () => {
               size="sm"
               onClick={loadBarbershopStatuses}
               disabled={loadingStatuses || !config.apiUrl || !config.apiKey}
-              className="border-border text-foreground hover:bg-muted"
+              className="border-border text-foreground hover:bg-muted w-full sm:w-auto"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loadingStatuses ? 'animate-spin' : ''}`} />
               Atualizar Status
             </Button>
           </CardTitle>
-          <CardDescription className="text-muted-foreground">
+          <CardDescription className="text-muted-foreground text-xs sm:text-sm">
             Status de conexão WhatsApp de cada barbearia
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-6 pt-0">
           {barbershopStatuses.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>Clique em "Atualizar Status" para ver as instâncias</p>
+            <div className="text-center py-6 sm:py-8 text-muted-foreground">
+              <Building2 className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">Clique em "Atualizar Status" para ver as instâncias</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {barbershopStatuses.map((shop) => (
                 <div 
                   key={shop.id} 
-                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                  className="flex items-center justify-between p-2 sm:p-3 bg-muted rounded-lg gap-2"
                 >
-                  <div>
-                    <p className="text-foreground font-medium">{shop.name}</p>
-                    <p className="text-xs text-muted-foreground">Instância: {shop.instanceName}</p>
+                  <div className="min-w-0">
+                    <p className="text-foreground font-medium text-sm truncate">{shop.name}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Instância: {shop.instanceName}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     {getConnectionBadge(shop.connectionStatus)}
                   </div>
                 </div>
