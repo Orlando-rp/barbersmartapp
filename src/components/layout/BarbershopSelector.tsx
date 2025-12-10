@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const BarbershopSelector = () => {
-  const { barbershops, selectedBarbershopId, setSelectedBarbershop, userRole } = useAuth();
+  const { barbershops, selectedBarbershopId, setSelectedBarbershop } = useAuth();
 
   // Don't show selector if user has only one barbershop
   if (barbershops.length <= 1) {
@@ -61,24 +61,20 @@ const BarbershopSelector = () => {
             )}
           </DropdownMenuItem>
         ))}
-        {userRole === 'super_admin' && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => setSelectedBarbershop(null)}
-              className={cn(
-                "flex items-center gap-2 cursor-pointer",
-                selectedBarbershopId === null && "bg-primary/10"
-              )}
-            >
-              <Building2 className="h-4 w-4" />
-              <span>Todas as Unidades</span>
-              {selectedBarbershopId === null && (
-                <Check className="h-4 w-4 text-primary ml-auto" />
-              )}
-            </DropdownMenuItem>
-          </>
-        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => setSelectedBarbershop(null)}
+          className={cn(
+            "flex items-center gap-2 cursor-pointer",
+            selectedBarbershopId === null && "bg-primary/10"
+          )}
+        >
+          <Building2 className="h-4 w-4" />
+          <span>Todas as Unidades</span>
+          {selectedBarbershopId === null && (
+            <Check className="h-4 w-4 text-primary ml-auto" />
+          )}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
