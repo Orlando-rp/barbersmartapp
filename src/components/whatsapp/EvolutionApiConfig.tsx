@@ -325,26 +325,41 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
   const fetchInstanceInfo = async () => {
     try {
+      // Usar fetchInstances que já existe na API
       const { data } = await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
-          action: 'instanceInfo',
+          action: 'fetchInstances',
           apiUrl: config.apiUrl,
-          apiKey: config.apiKey,
-          instanceName: config.instanceName
+          apiKey: config.apiKey
         }
       });
 
-      console.log('Instance info:', data);
+      console.log('All instances:', data);
 
-      // Evolution API retorna array de instâncias ou objeto com a instância
+      // Procurar a instância pelo nome
       const instances = data?.instances || data || [];
-      const instance = Array.isArray(instances) ? instances[0] : instances;
+      const instanceList = Array.isArray(instances) ? instances : [instances];
+      const instance = instanceList.find((i: any) => 
+        i.instanceName === config.instanceName || 
+        i.instance?.instanceName === config.instanceName ||
+        i.name === config.instanceName
+      );
       
-      if (instance?.owner || instance?.ownerJid || instance?.instance?.owner) {
-        const ownerJid = instance.owner || instance.ownerJid || instance.instance?.owner;
-        const phoneNumber = ownerJid?.split('@')?.[0] || ownerJid;
-        setConnectedPhone(phoneNumber);
-        console.log('Connected phone:', phoneNumber);
+      console.log('Found instance:', instance);
+
+      if (instance) {
+        // Tentar extrair o número do telefone conectado de várias propriedades possíveis
+        const ownerJid = instance.owner || 
+                         instance.ownerJid || 
+                         instance.instance?.owner ||
+                         instance.instance?.ownerJid ||
+                         instance.connectionStatus?.ownerJid;
+        
+        if (ownerJid) {
+          const phoneNumber = ownerJid.split('@')?.[0] || ownerJid;
+          setConnectedPhone(phoneNumber);
+          console.log('Connected phone:', phoneNumber);
+        }
       }
     } catch (error) {
       console.error('Erro ao buscar info da instância:', error);
