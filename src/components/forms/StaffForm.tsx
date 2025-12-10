@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { Checkbox } from "@/components/ui/checkbox";
 import { z } from "zod";
 import { StaffScheduleSection, StaffSchedule } from "./StaffScheduleSection";
@@ -41,6 +42,7 @@ const staffTableSchema = z.object({
 
 export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const { barbershopId, barbershops } = useAuth();
+  const { sharedBarbershopId } = useSharedBarbershopId();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
@@ -616,10 +618,10 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         />
       )}
 
-      {/* Services Selection Section */}
-      {role === 'barbeiro' && (selectedBarbershopIds.length > 0 || barbershopId) && (
+      {/* Services Selection Section - Uses shared barbershop ID for multi-unit */}
+      {role === 'barbeiro' && (sharedBarbershopId || barbershopId) && (
         <StaffServicesSection
-          barbershopId={selectedBarbershopIds[0] || barbershopId || ''}
+          barbershopId={sharedBarbershopId || barbershopId || ''}
           selectedServices={selectedServices}
           onServicesChange={handleServicesChange}
         />

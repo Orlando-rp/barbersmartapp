@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, CheckCircle, XCircle, UserPlus, User } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle, XCircle, UserPlus, User, Building2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import {
   Table,
   TableBody,
@@ -50,11 +51,14 @@ interface StaffMember {
       role: string;
     }[];
   };
-  services?: string[]; // Service names from staff_services
+  services?: string[];
+  barbershop_name?: string;
+  units?: string[];
 }
 
 const Staff = () => {
-  const { barbershopId, user } = useAuth();
+  const { barbershopId, user, barbershops } = useAuth();
+  const { sharedBarbershopId, isUnit, loading: sharedLoading } = useSharedBarbershopId();
   const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,17 +69,30 @@ const Staff = () => {
   const [isCurrentUserInStaff, setIsCurrentUserInStaff] = useState(true);
   const [addingSelf, setAddingSelf] = useState(false);
 
+  // Get all barbershop IDs for shared staff (matriz + unidades)
+  const getAllBarbershopIds = async (): Promise<string[]> => {
+    if (!sharedBarbershopId) return barbershopId ? [barbershopId] : [];
+    
+    // Get parent and all children from database
+    const { data } = await supabase
+      .from('barbershops')
+      .select('id')
+      .or(`id.eq.${sharedBarbershopId},parent_id.eq.${sharedBarbershopId}`);
+    
+    return data?.map(b => b.id) || [sharedBarbershopId];
+  };
+
   useEffect(() => {
-    if (barbershopId) {
+    if (sharedBarbershopId && !sharedLoading) {
       fetchStaff();
-    } else {
+    } else if (!sharedLoading && !sharedBarbershopId) {
       setLoading(false);
     }
-  }, [barbershopId]);
+  }, [sharedBarbershopId, sharedLoading]);
 
   // Real-time updates
   useEffect(() => {
-    if (!barbershopId) return;
+    if (!sharedBarbershopId) return;
 
     const channel = supabase
       .channel('staff-realtime')
@@ -84,8 +101,7 @@ const Staff = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'staff',
-          filter: `barbershop_id=eq.${barbershopId}`
+          table: 'staff'
         },
         () => {
           fetchStaff();
@@ -96,10 +112,10 @@ const Staff = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [barbershopId]);
+  }, [sharedBarbershopId]);
 
   const fetchStaff = async () => {
-    if (!barbershopId) {
+    if (!sharedBarbershopId) {
       setLoading(false);
       return;
     }
@@ -107,7 +123,18 @@ const Staff = () => {
     try {
       setLoading(true);
       
-      // Buscar staff da barbearia
+      // Get all barbershop IDs (matriz + unidades)
+      const allBarbershopIds = await getAllBarbershopIds();
+      
+      // Buscar nomes das barbearias
+      const { data: barbershopsData } = await supabase
+        .from('barbershops')
+        .select('id, name')
+        .in('id', allBarbershopIds);
+      
+      const barbershopNames = new Map(barbershopsData?.map(b => [b.id, b.name]) || []);
+      
+      // Buscar staff de todas as unidades
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select(`
@@ -118,53 +145,74 @@ const Staff = () => {
             avatar_url
           )
         `)
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', allBarbershopIds)
         .order('active', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (staffError) throw staffError;
 
-      // Buscar roles e serviços separadamente para cada membro
-      const staffWithRolesAndServices = await Promise.all((staffData || []).map(async (member) => {
-        // Buscar roles
-        const { data: rolesData } = await supabase
-          .from('user_roles')
-          .select('id, role')
-          .eq('user_id', member.user_id)
-          .eq('barbershop_id', barbershopId);
+      // Group by user_id to avoid duplicates, keeping info about which units
+      const userStaffMap = new Map<string, StaffMember & { units: string[] }>();
+      
+      for (const member of staffData || []) {
+        const existing = userStaffMap.get(member.user_id);
+        const unitName = barbershopNames.get(member.barbershop_id) || 'Unidade';
         
-        // Buscar serviços do staff
-        let serviceNames: string[] = [];
-        try {
-          const { data: staffServices } = await supabase
-            .from('staff_services')
-            .select('service_id')
-            .eq('staff_id', member.id)
-            .eq('is_active', true);
-          
-          if (staffServices && staffServices.length > 0) {
-            const serviceIds = staffServices.map(ss => ss.service_id);
-            const { data: servicesData } = await supabase
-              .from('services')
-              .select('name')
-              .in('id', serviceIds);
-            
-            serviceNames = (servicesData || []).map(s => s.name);
-          }
-        } catch (e) {
-          console.warn('Erro ao buscar serviços do staff:', e);
+        if (existing) {
+          existing.units.push(unitName);
+        } else {
+          userStaffMap.set(member.user_id, {
+            ...member,
+            barbershop_name: unitName,
+            units: [unitName]
+          } as StaffMember & { units: string[] });
         }
-        
-        return {
-          ...member,
-          user_roles: rolesData || [],
-          services: serviceNames,
-          profiles: {
-            ...member.profiles,
-            user_roles: rolesData || []
+      }
+
+      // Buscar roles e serviços para cada membro único
+      const staffWithRolesAndServices = await Promise.all(
+        Array.from(userStaffMap.values()).map(async (member) => {
+          // Buscar roles de qualquer barbearia
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('id, role')
+            .eq('user_id', member.user_id)
+            .in('barbershop_id', allBarbershopIds)
+            .limit(1);
+          
+          // Buscar serviços do staff
+          let serviceNames: string[] = [];
+          try {
+            const { data: staffServices } = await supabase
+              .from('staff_services')
+              .select('service_id')
+              .eq('staff_id', member.id)
+              .eq('is_active', true);
+            
+            if (staffServices && staffServices.length > 0) {
+              const serviceIds = staffServices.map(ss => ss.service_id);
+              const { data: servicesData } = await supabase
+                .from('services')
+                .select('name')
+                .in('id', serviceIds);
+              
+              serviceNames = (servicesData || []).map(s => s.name);
+            }
+          } catch (e) {
+            console.warn('Erro ao buscar serviços do staff:', e);
           }
-        };
-      }));
+          
+          return {
+            ...member,
+            user_roles: rolesData || [],
+            services: serviceNames,
+            profiles: {
+              ...member.profiles,
+              user_roles: rolesData || []
+            }
+          };
+        })
+      );
 
       setStaff(staffWithRolesAndServices);
       
