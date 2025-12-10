@@ -89,7 +89,17 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     if (!barbershopId) return;
 
     try {
-      // Primeiro buscar configuração específica da barbearia
+      // Primeiro buscar config global da tabela system_config
+      const { data: globalConfig } = await supabase
+        .from('system_config')
+        .select('*')
+        .eq('key', 'evolution_api')
+        .maybeSingle();
+
+      const globalApiUrl = globalConfig?.value?.api_url || '';
+      const globalApiKey = globalConfig?.value?.api_key || '';
+
+      // Depois buscar configuração específica da barbearia
       const { data, error } = await supabase
         .from('whatsapp_config')
         .select('*')
@@ -102,36 +112,28 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       }
 
       if (data?.config) {
+        // Usa config local, mas herda api_url e api_key da global se não existir local
         setConfig({
-          apiUrl: data.config.api_url || '',
-          apiKey: data.config.api_key || '',
+          apiUrl: data.config.api_url || globalApiUrl,
+          apiKey: data.config.api_key || globalApiKey,
           instanceName: data.config.instance_name || generatedInstanceName
         });
         if (data.config.connection_status) {
           setConnectionStatus(data.config.connection_status);
         }
-        setIsUsingGlobalConfig(false);
+        setIsUsingGlobalConfig(!data.config.api_url && !data.config.api_key && (!!globalApiUrl || !!globalApiKey));
+      } else if (globalApiUrl || globalApiKey) {
+        // Usar config global com instanceName local
+        setConfig({
+          apiUrl: globalApiUrl,
+          apiKey: globalApiKey,
+          instanceName: generatedInstanceName
+        });
+        setIsUsingGlobalConfig(true);
       } else {
-        // Se não houver config da barbearia, buscar config global da tabela system_config
-        const { data: globalConfig } = await supabase
-          .from('system_config')
-          .select('*')
-          .eq('key', 'evolution_api')
-          .maybeSingle();
-
-        if (globalConfig?.value) {
-          // Usar config global mas com instanceName local
-          setConfig({
-            apiUrl: globalConfig.value.api_url || '',
-            apiKey: globalConfig.value.api_key || '',
-            instanceName: generatedInstanceName
-          });
-          setIsUsingGlobalConfig(true);
-        } else {
-          // Sem nenhuma config, apenas usar instanceName gerado
-          setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
-          setIsUsingGlobalConfig(false);
-        }
+        // Sem nenhuma config, apenas usar instanceName gerado
+        setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
+        setIsUsingGlobalConfig(false);
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
