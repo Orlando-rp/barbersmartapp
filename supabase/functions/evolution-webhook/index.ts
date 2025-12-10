@@ -102,32 +102,63 @@ serve(async (req) => {
 
     console.log(`[Evolution Webhook] Message from ${from}: ${messageText}`);
 
-    // Find barbershop by instance name
-    // Instance names are created as barbershop-{barbershopId}
+    // Find barbershop - try multiple strategies
     let barbershopId: string | null = null;
 
-    // Try to extract from instance name pattern: barbershop-{uuid}
+    // Strategy 1: Extract from instance name pattern: barbershop-{uuid}
     if (instanceName?.startsWith('barbershop-')) {
       barbershopId = instanceName.replace('barbershop-', '');
+      console.log('[Evolution Webhook] Found barbershop from instance name pattern:', barbershopId);
     }
 
-    // If not found, look up in whatsapp_config table by config->instance_name
-    if (!barbershopId) {
+    // Strategy 2: Look up by instance_name in whatsapp_config
+    if (!barbershopId && instanceName) {
       const { data: configs } = await supabase
         .from('whatsapp_config')
         .select('barbershop_id, config')
         .eq('provider', 'evolution');
 
-      // Find matching config by instance_name inside config JSON
       const matchingConfig = configs?.find(c => c.config?.instance_name === instanceName);
       if (matchingConfig) {
         barbershopId = matchingConfig.barbershop_id;
-        console.log('[Evolution Webhook] Found barbershop by config:', barbershopId);
+        console.log('[Evolution Webhook] Found barbershop by instance_name config:', barbershopId);
+      }
+    }
+
+    // Strategy 3: Look up by connected_phone number (most reliable)
+    if (!barbershopId) {
+      // The "to" number (recipient of incoming message) is the connected WhatsApp
+      const ownerJid = data?.key?.participant || instance?.owner || payload.owner;
+      let ownerPhone = ownerJid?.split('@')[0];
+      
+      // Also try to find by any config that has this webhook configured
+      const { data: configs } = await supabase
+        .from('whatsapp_config')
+        .select('barbershop_id, config')
+        .eq('provider', 'evolution')
+        .eq('is_active', true);
+
+      if (configs && configs.length > 0) {
+        // If only one active Evolution config, use it
+        if (configs.length === 1) {
+          barbershopId = configs[0].barbershop_id;
+          console.log('[Evolution Webhook] Found single active barbershop:', barbershopId);
+        } else if (ownerPhone) {
+          // Try to match by connected phone
+          const matchingConfig = configs.find(c => 
+            c.config?.connected_phone?.includes(ownerPhone) ||
+            ownerPhone.includes(c.config?.connected_phone)
+          );
+          if (matchingConfig) {
+            barbershopId = matchingConfig.barbershop_id;
+            console.log('[Evolution Webhook] Found barbershop by connected_phone:', barbershopId);
+          }
+        }
       }
     }
 
     if (!barbershopId) {
-      console.error('[Evolution Webhook] Could not determine barbershop from instance:', instanceName);
+      console.error('[Evolution Webhook] Could not determine barbershop. Instance:', instanceName, 'Payload keys:', Object.keys(payload));
       return new Response(
         JSON.stringify({ error: 'Barbershop not found for instance' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
