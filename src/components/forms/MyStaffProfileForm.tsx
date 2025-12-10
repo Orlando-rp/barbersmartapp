@@ -392,24 +392,11 @@ export const MyStaffProfileForm = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5" />
-              Serviços que Atendo
-            </CardTitle>
-            <CardDescription>
-              Selecione os serviços que você realiza
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <StaffServicesSection
-              barbershopId={unit.barbershop_id}
-              selectedServices={selectedServices[unit.barbershop_id] || []}
-              onServicesChange={(services) => handleServicesChange(unit.barbershop_id, services)}
-            />
-          </CardContent>
-        </Card>
+        <StaffServicesSection
+          barbershopId={unit.barbershop_id}
+          selectedServices={selectedServices[unit.barbershop_id] || []}
+          onServicesChange={(services) => handleServicesChange(unit.barbershop_id, services)}
+        />
 
         <div className="flex justify-end">
           <Button 
@@ -566,59 +553,50 @@ export const MyStaffProfileForm = () => {
               </Card>
 
               {/* Services */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Briefcase className="h-4 w-4" />
-                      Serviços em {unit.barbershop_name}
-                    </CardTitle>
-                    {staffUnits.length > 1 && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="gap-2">
-                            <RefreshCw className="h-4 w-4" />
-                            <span className="hidden sm:inline">Sincronizar</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Copiar serviços para</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => syncServicesToAllUnits(unit.barbershop_id)}>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Todas as outras unidades
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {staffUnits
-                            .filter(u => u.barbershop_id !== unit.barbershop_id)
-                            .map(targetUnit => (
-                              <DropdownMenuItem
-                                key={targetUnit.barbershop_id}
-                                onClick={() => handleSyncServices(unit.barbershop_id, [targetUnit.barbershop_id])}
-                              >
-                                <ArrowRight className="h-4 w-4 mr-2" />
-                                {targetUnit.barbershop_name}
-                              </DropdownMenuItem>
-                            ))
-                          }
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                  {(selectedServices[unit.barbershop_id]?.length || 0) > 0 && (
-                    <CardDescription>
-                      {selectedServices[unit.barbershop_id]?.length} serviço(s) selecionado(s)
-                    </CardDescription>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-medium flex items-center gap-2">
+                    <Briefcase className="h-4 w-4" />
+                    Serviços em {unit.barbershop_name}
+                  </h3>
+                  {staffUnits.length > 1 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="gap-2">
+                          <RefreshCw className="h-4 w-4" />
+                          <span className="hidden sm:inline">Sincronizar</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Copiar serviços para</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => syncServicesToAllUnits(unit.barbershop_id)}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Todas as outras unidades
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {staffUnits
+                          .filter(u => u.barbershop_id !== unit.barbershop_id)
+                          .map(targetUnit => (
+                            <DropdownMenuItem
+                              key={targetUnit.barbershop_id}
+                              onClick={() => handleSyncServices(unit.barbershop_id, [targetUnit.barbershop_id])}
+                            >
+                              <ArrowRight className="h-4 w-4 mr-2" />
+                              {targetUnit.barbershop_name}
+                            </DropdownMenuItem>
+                          ))
+                        }
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
-                </CardHeader>
-                <CardContent>
-                  <StaffServicesSection
-                    barbershopId={unit.barbershop_id}
-                    selectedServices={selectedServices[unit.barbershop_id] || []}
-                    onServicesChange={(services) => handleServicesChange(unit.barbershop_id, services)}
-                  />
-                </CardContent>
-              </Card>
+                </div>
+                <StaffServicesSection
+                  barbershopId={unit.barbershop_id}
+                  selectedServices={selectedServices[unit.barbershop_id] || []}
+                  onServicesChange={(services) => handleServicesChange(unit.barbershop_id, services)}
+                />
+              </div>
             </TabsContent>
           );
         })}
