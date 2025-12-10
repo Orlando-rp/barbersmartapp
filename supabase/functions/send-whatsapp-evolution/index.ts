@@ -141,7 +141,8 @@ serve(async (req) => {
         break;
 
       case 'deleteInstance':
-        // Delete instance completely
+        // Delete instance completely from Evolution API
+        console.log(`[Evolution API] Deleting instance: ${instanceName}`);
         endpoint = `/instance/delete/${instanceName}`;
         method = 'DELETE';
         break;
