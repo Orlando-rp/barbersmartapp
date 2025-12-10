@@ -25,17 +25,20 @@ const BarbershopSelector = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2 min-w-[180px] justify-between">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary" />
-            <span className="truncate max-w-[120px]">
-              {selectedBarbershop?.name || 'Selecionar Unidade'}
+        <Button variant="outline" className="gap-2 max-w-[280px] sm:max-w-none justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
+            <span className="truncate">
+              {selectedBarbershopId === null 
+                ? 'Todas as Unidades' 
+                : (selectedBarbershop?.name || 'Selecionar Unidade')
+              }
             </span>
           </div>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[220px]" align="start">
+      <DropdownMenuContent className="w-[280px] sm:w-[320px]" align="start">
         <DropdownMenuLabel>Suas Unidades</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {barbershops.map((barbershop) => (
@@ -47,17 +50,17 @@ const BarbershopSelector = () => {
               selectedBarbershopId === barbershop.id && "bg-primary/10"
             )}
           >
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              <span className="truncate">{barbershop.name}</span>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Building2 className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate flex-1">{barbershop.name}</span>
               {barbershop.is_primary && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs flex-shrink-0">
                   Principal
                 </Badge>
               )}
             </div>
             {selectedBarbershopId === barbershop.id && (
-              <Check className="h-4 w-4 text-primary" />
+              <Check className="h-4 w-4 text-primary flex-shrink-0 ml-2" />
             )}
           </DropdownMenuItem>
         ))}
@@ -65,14 +68,16 @@ const BarbershopSelector = () => {
         <DropdownMenuItem
           onClick={() => setSelectedBarbershop(null)}
           className={cn(
-            "flex items-center gap-2 cursor-pointer",
+            "flex items-center justify-between cursor-pointer",
             selectedBarbershopId === null && "bg-primary/10"
           )}
         >
-          <Building2 className="h-4 w-4" />
-          <span>Todas as Unidades</span>
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            <span>Todas as Unidades</span>
+          </div>
           {selectedBarbershopId === null && (
-            <Check className="h-4 w-4 text-primary ml-auto" />
+            <Check className="h-4 w-4 text-primary" />
           )}
         </DropdownMenuItem>
       </DropdownMenuContent>
