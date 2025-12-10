@@ -58,40 +58,42 @@ export const CampaignForm = ({
   const active = watch("active");
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Nome da Campanha *</Label>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+      <div className="space-y-1.5 sm:space-y-2">
+        <Label htmlFor="name" className="text-xs sm:text-sm">Nome da Campanha *</Label>
         <Input
           id="name"
           placeholder="Ex: Promoção de Aniversário"
+          className="text-sm"
           {...register("name")}
         />
         {errors.name && (
-          <p className="text-sm text-destructive">{errors.name.message}</p>
+          <p className="text-xs text-destructive">{errors.name.message}</p>
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Descrição</Label>
+      <div className="space-y-1.5 sm:space-y-2">
+        <Label htmlFor="description" className="text-xs sm:text-sm">Descrição</Label>
         <Textarea
           id="description"
           placeholder="Descreva o objetivo da campanha..."
           rows={2}
+          className="text-sm"
           {...register("description")}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="type">Tipo de Campanha *</Label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="type" className="text-xs sm:text-sm">Tipo de Campanha *</Label>
           <Select
             value={campaignType}
             onValueChange={(value: "whatsapp" | "email" | "sms") => setValue("type", value)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[100]">
               <SelectItem value="whatsapp">WhatsApp</SelectItem>
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="sms">SMS</SelectItem>
@@ -99,16 +101,16 @@ export const CampaignForm = ({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="target_segment">Segmento Alvo *</Label>
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="target_segment" className="text-xs sm:text-sm">Segmento Alvo *</Label>
           <Select
             value={watch("target_segment")}
             onValueChange={(value) => setValue("target_segment", value)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="text-sm">
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[100]">
               <SelectItem value="all">Todos os Clientes</SelectItem>
               <SelectItem value="active">Clientes Ativos</SelectItem>
               <SelectItem value="inactive">Clientes Inativos</SelectItem>
@@ -117,36 +119,38 @@ export const CampaignForm = ({
             </SelectContent>
           </Select>
           {errors.target_segment && (
-            <p className="text-sm text-destructive">{errors.target_segment.message}</p>
+            <p className="text-xs text-destructive">{errors.target_segment.message}</p>
           )}
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="message_template">Mensagem *</Label>
+      <div className="space-y-1.5 sm:space-y-2">
+        <Label htmlFor="message_template" className="text-xs sm:text-sm">Mensagem *</Label>
         <Textarea
           id="message_template"
           placeholder={
             campaignType === "whatsapp" 
-              ? "Olá {nome}! 🎉\n\nTemos uma promoção especial para você..."
+              ? "Olá {nome}! 🎉\n\nTemos uma promoção especial..."
               : "Olá {nome}, temos uma promoção especial..."
           }
-          rows={6}
+          rows={4}
+          className="text-sm"
           {...register("message_template")}
         />
         <p className="text-xs text-muted-foreground">
-          Use {"{nome}"} para personalizar com o nome do cliente
+          Use {"{nome}"} para personalizar
         </p>
         {errors.message_template && (
-          <p className="text-sm text-destructive">{errors.message_template.message}</p>
+          <p className="text-xs text-destructive">{errors.message_template.message}</p>
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="schedule_date">Agendar Envio (opcional)</Label>
+      <div className="space-y-1.5 sm:space-y-2">
+        <Label htmlFor="schedule_date" className="text-xs sm:text-sm">Agendar Envio (opcional)</Label>
         <Input
           id="schedule_date"
           type="datetime-local"
+          className="text-sm"
           {...register("schedule_date")}
         />
         <p className="text-xs text-muted-foreground">
@@ -154,10 +158,10 @@ export const CampaignForm = ({
         </p>
       </div>
 
-      <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg">
-        <div>
-          <Label htmlFor="active">Campanha Ativa</Label>
-          <p className="text-sm text-muted-foreground">
+      <div className="flex items-center justify-between p-3 sm:p-4 bg-accent/50 rounded-lg">
+        <div className="min-w-0 flex-1">
+          <Label htmlFor="active" className="text-xs sm:text-sm">Campanha Ativa</Label>
+          <p className="text-xs text-muted-foreground truncate">
             Desative para pausar a campanha
           </p>
         </div>
@@ -168,12 +172,12 @@ export const CampaignForm = ({
         />
       </div>
 
-      <div className="flex gap-3 pt-4">
+      <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-4">
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
           Cancelar
         </Button>
         <Button type="submit" variant="premium" disabled={isLoading} className="flex-1">
-          {isLoading ? <LoadingSpinner size="sm" /> : "Salvar Campanha"}
+          {isLoading ? <LoadingSpinner size="sm" /> : "Salvar"}
         </Button>
       </div>
     </form>

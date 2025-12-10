@@ -57,65 +57,67 @@ export const TransactionForm = ({
   const transactionType = watch("type");
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="type">Tipo *</Label>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="type" className="text-xs sm:text-sm">Tipo *</Label>
           <Select
             value={transactionType}
             onValueChange={(value: "receita" | "despesa") => setValue("type", value)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[100]">
               <SelectItem value="receita">Receita</SelectItem>
               <SelectItem value="despesa">Despesa</SelectItem>
             </SelectContent>
           </Select>
           {errors.type && (
-            <p className="text-sm text-destructive">{errors.type.message}</p>
+            <p className="text-xs text-destructive">{errors.type.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="amount">Valor (R$) *</Label>
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="amount" className="text-xs sm:text-sm">Valor (R$) *</Label>
           <Input
             id="amount"
             type="number"
             step="0.01"
             placeholder="0.00"
+            className="text-sm"
             {...register("amount")}
           />
           {errors.amount && (
-            <p className="text-sm text-destructive">{errors.amount.message}</p>
+            <p className="text-xs text-destructive">{errors.amount.message}</p>
           )}
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Descrição *</Label>
+      <div className="space-y-1.5 sm:space-y-2">
+        <Label htmlFor="description" className="text-xs sm:text-sm">Descrição *</Label>
         <Input
           id="description"
           placeholder="Ex: Venda de serviço"
+          className="text-sm"
           {...register("description")}
         />
         {errors.description && (
-          <p className="text-sm text-destructive">{errors.description.message}</p>
+          <p className="text-xs text-destructive">{errors.description.message}</p>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="category">Categoria *</Label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="category" className="text-xs sm:text-sm">Categoria *</Label>
           <Select
             value={watch("category")}
             onValueChange={(value) => setValue("category", value)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="text-sm">
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[100]">
               {transactionType === "receita" ? (
                 <>
                   <SelectItem value="servicos">Serviços</SelectItem>
@@ -135,22 +137,22 @@ export const TransactionForm = ({
             </SelectContent>
           </Select>
           {errors.category && (
-            <p className="text-sm text-destructive">{errors.category.message}</p>
+            <p className="text-xs text-destructive">{errors.category.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="payment_method">Forma de Pagamento *</Label>
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="payment_method" className="text-xs sm:text-sm">Forma de Pagamento *</Label>
           <Select
             value={watch("payment_method")}
             onValueChange={(value: "dinheiro" | "credito" | "debito" | "pix") => 
               setValue("payment_method", value)
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[100]">
               <SelectItem value="dinheiro">Dinheiro</SelectItem>
               <SelectItem value="credito">Crédito</SelectItem>
               <SelectItem value="debito">Débito</SelectItem>
@@ -158,34 +160,36 @@ export const TransactionForm = ({
             </SelectContent>
           </Select>
           {errors.payment_method && (
-            <p className="text-sm text-destructive">{errors.payment_method.message}</p>
+            <p className="text-xs text-destructive">{errors.payment_method.message}</p>
           )}
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="transaction_date">Data *</Label>
+      <div className="space-y-1.5 sm:space-y-2">
+        <Label htmlFor="transaction_date" className="text-xs sm:text-sm">Data *</Label>
         <Input
           id="transaction_date"
           type="date"
+          className="text-sm"
           {...register("transaction_date")}
         />
         {errors.transaction_date && (
-          <p className="text-sm text-destructive">{errors.transaction_date.message}</p>
+          <p className="text-xs text-destructive">{errors.transaction_date.message}</p>
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="notes">Observações</Label>
+      <div className="space-y-1.5 sm:space-y-2">
+        <Label htmlFor="notes" className="text-xs sm:text-sm">Observações</Label>
         <Textarea
           id="notes"
           placeholder="Informações adicionais (opcional)"
-          rows={3}
+          rows={2}
+          className="text-sm"
           {...register("notes")}
         />
       </div>
 
-      <div className="flex gap-3 pt-4">
+      <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-4">
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
           Cancelar
         </Button>

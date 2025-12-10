@@ -151,98 +151,98 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
   };
 
   return (
-    <Card className="barbershop-card w-full max-w-2xl">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <User className="h-5 w-5 text-primary" />
+    <div className="w-full">
+      <div className="flex items-center gap-2 mb-4">
+        <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+        <h2 className="text-base sm:text-lg font-semibold">
           {editingClient ? "Editar Cliente" : "Novo Cliente"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Avatar Upload - Only show when editing */}
-          {editingClient?.id && (
-            <div className="flex justify-center pb-4 border-b border-border">
-              <ClientAvatarUpload
-                clientId={editingClient.id}
-                currentAvatarUrl={avatarUrl}
-                clientName={name}
-                onAvatarUpdate={setAvatarUrl}
-                size="lg"
-              />
-            </div>
-          )}
+        </h2>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Avatar Upload - Only show when editing */}
+        {editingClient?.id && (
+          <div className="flex justify-center pb-3 sm:pb-4 border-b border-border">
+            <ClientAvatarUpload
+              clientId={editingClient.id}
+              currentAvatarUrl={avatarUrl}
+              clientName={name}
+              onAvatarUpdate={setAvatarUrl}
+              size="lg"
+            />
+          </div>
+        )}
 
           {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <User className="h-4 w-4" />
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
+              <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Informações Básicas
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome Completo *</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="name" className="text-xs sm:text-sm">Nome Completo *</Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Nome completo do cliente"
+                  className="text-sm"
                 />
                 {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name}</p>
+                  <p className="text-xs sm:text-sm text-destructive">{errors.name}</p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone *</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="phone" className="text-xs sm:text-sm">Telefone *</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                   <Input
                     id="phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="(11) 99999-9999"
-                    className="pl-10"
+                    className="pl-9 sm:pl-10 text-sm"
                   />
                 </div>
                 {errors.phone && (
-                  <p className="text-sm text-destructive">{errors.phone}</p>
+                  <p className="text-xs sm:text-sm text-destructive">{errors.phone}</p>
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="email" className="text-xs sm:text-sm">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="cliente@email.com"
-                    className="pl-10"
+                    className="pl-9 sm:pl-10 text-sm"
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
+                  <p className="text-xs sm:text-sm text-destructive">{errors.email}</p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label>Data de Nascimento</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">Data de Nascimento</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "w-full justify-start text-left font-normal text-sm",
                         !birthDate && "text-muted-foreground"
                       )}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       {birthDate ? format(birthDate, "dd/MM/yyyy") : "Selecione a data"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-[100]" align="start">
                     <Calendar
                       mode="single"
                       selected={birthDate}
@@ -258,68 +258,70 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
           </div>
 
           {/* Address */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
+          <div className="space-y-2 sm:space-y-3">
+            <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
+              <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Endereço
             </h3>
-            <div className="space-y-2">
-              <Label htmlFor="address">Endereço Completo</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="address" className="text-xs sm:text-sm">Endereço Completo</Label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <MapPin className="absolute left-3 top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                 <Textarea
                   id="address"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Rua, número, bairro, cidade..."
                   rows={2}
-                  className="pl-10"
+                  className="pl-9 sm:pl-10 text-sm"
                 />
               </div>
             </div>
           </div>
 
           {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Observações</Label>
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label htmlFor="notes" className="text-xs sm:text-sm">Observações</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Preferências, histórico, observações especiais..."
-              rows={3}
+              rows={2}
+              className="text-sm"
             />
           </div>
 
           {/* Tags */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Tag className="h-4 w-4" />
+          <div className="space-y-2 sm:space-y-3">
+            <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
+              <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Tags
             </h3>
             <div className="space-y-2">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Digite uma tag (ex: vip, novo, frequente)"
+                  placeholder="Ex: vip, frequente"
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  className="text-sm"
                 />
-                <Button type="button" variant="outline" onClick={addTag}>
+                <Button type="button" variant="outline" onClick={addTag} size="sm">
                   Adicionar
                 </Button>
               </div>
               {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-sm">
+                    <Badge key={tag} variant="secondary" className="text-xs sm:text-sm">
                       {tag}
                       <button
                         type="button"
                         onClick={() => removeTag(tag)}
-                        className="ml-2 hover:text-destructive"
+                        className="ml-1.5 sm:ml-2 hover:text-destructive"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                       </button>
                     </Badge>
                   ))}
@@ -329,16 +331,15 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2 sm:pt-4">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" variant="premium" disabled={loading}>
-              {loading ? "Salvando..." : editingClient ? "Atualizar Cliente" : "Cadastrar Cliente"}
+            <Button type="submit" variant="premium" disabled={loading} className="w-full sm:w-auto">
+              {loading ? "Salvando..." : editingClient ? "Atualizar" : "Cadastrar"}
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
   );
 };

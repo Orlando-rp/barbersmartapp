@@ -61,31 +61,31 @@ export const CouponForm = ({
   const active = watch("active");
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="code">Código do Cupom *</Label>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="code" className="text-xs sm:text-sm">Código do Cupom *</Label>
           <Input
             id="code"
             placeholder="DESCONTO10"
+            className="uppercase text-sm"
             {...register("code")}
-            className="uppercase"
           />
           {errors.code && (
-            <p className="text-sm text-destructive">{errors.code.message}</p>
+            <p className="text-xs text-destructive">{errors.code.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="discount_type">Tipo de Desconto *</Label>
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="discount_type" className="text-xs sm:text-sm">Tipo de Desconto *</Label>
           <Select
             value={discountType}
             onValueChange={(value: "percentage" | "fixed") => setValue("discount_type", value)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[100]">
               <SelectItem value="percentage">Percentual (%)</SelectItem>
               <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
             </SelectContent>
@@ -93,19 +93,20 @@ export const CouponForm = ({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Descrição</Label>
+      <div className="space-y-1.5 sm:space-y-2">
+        <Label htmlFor="description" className="text-xs sm:text-sm">Descrição</Label>
         <Textarea
           id="description"
           placeholder="Descreva a oferta..."
-          rows={3}
+          rows={2}
+          className="text-sm"
           {...register("description")}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="discount_value">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="discount_value" className="text-xs sm:text-sm">
             Valor do Desconto * {discountType === "percentage" ? "(%)" : "(R$)"}
           </Label>
           <Input
@@ -113,66 +114,71 @@ export const CouponForm = ({
             type="number"
             step="0.01"
             placeholder={discountType === "percentage" ? "10" : "20.00"}
+            className="text-sm"
             {...register("discount_value")}
           />
           {errors.discount_value && (
-            <p className="text-sm text-destructive">{errors.discount_value.message}</p>
+            <p className="text-xs text-destructive">{errors.discount_value.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="min_purchase_value">Compra Mínima (R$)</Label>
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="min_purchase_value" className="text-xs sm:text-sm">Compra Mínima (R$)</Label>
           <Input
             id="min_purchase_value"
             type="number"
             step="0.01"
             placeholder="0.00"
+            className="text-sm"
             {...register("min_purchase_value")}
           />
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="max_uses">Máximo de Usos (deixe vazio para ilimitado)</Label>
+      <div className="space-y-1.5 sm:space-y-2">
+        <Label htmlFor="max_uses" className="text-xs sm:text-sm">Máximo de Usos (vazio = ilimitado)</Label>
         <Input
           id="max_uses"
           type="number"
           placeholder="Ex: 100"
+          className="text-sm"
           {...register("max_uses")}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="valid_from">Válido De *</Label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="valid_from" className="text-xs sm:text-sm">Válido De *</Label>
           <Input
             id="valid_from"
             type="date"
+            className="text-sm"
             {...register("valid_from")}
           />
           {errors.valid_from && (
-            <p className="text-sm text-destructive">{errors.valid_from.message}</p>
+            <p className="text-xs text-destructive">{errors.valid_from.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="valid_until">Válido Até *</Label>
+        <div className="space-y-1.5 sm:space-y-2">
+          <Label htmlFor="valid_until" className="text-xs sm:text-sm">Válido Até *</Label>
           <Input
             id="valid_until"
             type="date"
+            className="text-sm"
             {...register("valid_until")}
           />
           {errors.valid_until && (
-            <p className="text-sm text-destructive">{errors.valid_until.message}</p>
+            <p className="text-xs text-destructive">{errors.valid_until.message}</p>
           )}
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg">
-        <div>
-          <Label htmlFor="active">Cupom Ativo</Label>
-          <p className="text-sm text-muted-foreground">
-            Desative para pausar o cupom temporariamente
+      <div className="flex items-center justify-between p-3 sm:p-4 bg-accent/50 rounded-lg">
+        <div className="min-w-0 flex-1">
+          <Label htmlFor="active" className="text-xs sm:text-sm">Cupom Ativo</Label>
+          <p className="text-xs text-muted-foreground truncate">
+            Desative para pausar o cupom
           </p>
         </div>
         <Switch
@@ -182,12 +188,12 @@ export const CouponForm = ({
         />
       </div>
 
-      <div className="flex gap-3 pt-4">
+      <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-4">
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
           Cancelar
         </Button>
         <Button type="submit" variant="premium" disabled={isLoading} className="flex-1">
-          {isLoading ? <LoadingSpinner size="sm" /> : "Salvar Cupom"}
+          {isLoading ? <LoadingSpinner size="sm" /> : "Salvar"}
         </Button>
       </div>
     </form>
