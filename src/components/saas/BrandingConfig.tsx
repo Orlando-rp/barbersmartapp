@@ -59,6 +59,7 @@ const defaultBranding: BrandingSettings = {
 export const BrandingConfig = () => {
   const { refreshBranding } = useBranding();
   const [config, setConfig] = useState<BrandingSettings>(defaultBranding);
+  const [existingId, setExistingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -84,6 +85,7 @@ export const BrandingConfig = () => {
       }
 
       if (data) {
+        setExistingId(data.id);
         setConfig({
           systemName: data.system_name || defaultBranding.systemName,
           tagline: data.tagline || defaultBranding.tagline,
@@ -93,7 +95,7 @@ export const BrandingConfig = () => {
             primary: data.primary_color || defaultBranding.colors.primary,
             primaryForeground: defaultBranding.colors.primaryForeground,
             secondary: data.secondary_color || defaultBranding.colors.secondary,
-            warning: defaultBranding.colors.warning,
+            warning: data.accent_color || defaultBranding.colors.warning,
             success: defaultBranding.colors.success,
             destructive: defaultBranding.colors.destructive,
           },
@@ -111,22 +113,39 @@ export const BrandingConfig = () => {
     try {
       setSaving(true);
 
-      // Upsert to system_branding table
-      const { error } = await supabase
-        .from('system_branding')
-        .upsert({
-          system_name: config.systemName,
-          tagline: config.tagline,
-          logo_url: config.logoUrl || null,
-          favicon_url: config.faviconUrl || null,
-          primary_color: config.colors.primary,
-          secondary_color: config.colors.secondary,
-          accent_color: config.colors.primary, // Use primary as accent fallback
-          allow_tenant_customization: config.allowTenantCustomization,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'id'
-        });
+      const brandingData = {
+        system_name: config.systemName,
+        tagline: config.tagline,
+        logo_url: config.logoUrl || null,
+        favicon_url: config.faviconUrl || null,
+        primary_color: config.colors.primary,
+        secondary_color: config.colors.secondary,
+        accent_color: config.colors.warning,
+        allow_tenant_customization: config.allowTenantCustomization,
+        updated_at: new Date().toISOString()
+      };
+
+      let error;
+      
+      if (existingId) {
+        // Update existing record
+        const result = await supabase
+          .from('system_branding')
+          .update(brandingData)
+          .eq('id', existingId);
+        error = result.error;
+      } else {
+        // Insert new record
+        const result = await supabase
+          .from('system_branding')
+          .insert(brandingData)
+          .select('id')
+          .single();
+        error = result.error;
+        if (result.data) {
+          setExistingId(result.data.id);
+        }
+      }
 
       if (error) throw error;
 
