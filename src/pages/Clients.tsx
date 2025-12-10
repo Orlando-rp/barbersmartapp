@@ -175,17 +175,15 @@ const Clients = () => {
 
         {/* Filters */}
         <Card className="barbershop-card">
-          <CardContent className="p-3 md:pt-6 md:p-6">
-            <div className="flex gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Buscar nome, email ou telefone..." 
-                  className="pl-10 text-sm"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+          <CardContent className="p-3 sm:p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar cliente..." 
+                className="pl-10 text-sm h-9"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </CardContent>
         </Card>
