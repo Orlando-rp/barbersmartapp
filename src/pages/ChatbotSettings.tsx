@@ -335,9 +335,26 @@ const ChatbotSettings = () => {
                   </div>
 
                   {!whatsappConnected && (
-                    <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
-                      <p className="text-sm text-warning">
-                        ⚠️ Configure o WhatsApp antes de ativar o chatbot.
+                    <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg space-y-2">
+                      <p className="text-sm font-medium text-warning">
+                        ⚠️ WhatsApp não configurado
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Para usar o chatbot, você precisa:
+                      </p>
+                      <ol className="text-xs text-muted-foreground list-decimal list-inside space-y-1">
+                        <li>Ir em <strong>WhatsApp → Evolution API</strong></li>
+                        <li>Clicar em "Conectar WhatsApp" e escanear o QR Code</li>
+                        <li>Aguardar a conexão ser estabelecida</li>
+                        <li>Voltar aqui e ativar o chatbot</li>
+                      </ol>
+                    </div>
+                  )}
+
+                  {whatsappConnected && chatbotEnabled && (
+                    <div className="p-3 bg-success/10 border border-success/20 rounded-lg">
+                      <p className="text-sm text-success">
+                        ✅ Chatbot ativo! Mensagens recebidas via WhatsApp serão respondidas automaticamente.
                       </p>
                     </div>
                   )}
