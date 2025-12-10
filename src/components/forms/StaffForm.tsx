@@ -543,7 +543,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
             <SelectTrigger className="text-sm">
               <SelectValue placeholder="Selecione a função" />
             </SelectTrigger>
-            <SelectContent className="z-[200]">
+            <SelectContent className="z-[200]" position="popper" sideOffset={4}>
               <SelectItem value="barbeiro">Barbeiro</SelectItem>
               <SelectItem value="recepcionista">Recepcionista</SelectItem>
               <SelectItem value="admin">Administrador</SelectItem>
