@@ -128,6 +128,12 @@ serve(async (req) => {
         method = 'GET';
         break;
 
+      case 'instanceInfo':
+        // Get instance info including connected phone number
+        endpoint = `/instance/fetchInstances?instanceName=${instanceName}`;
+        method = 'GET';
+        break;
+
       case 'fetchInstances':
         // List all instances
         endpoint = '/instance/fetchInstances';

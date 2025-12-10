@@ -63,6 +63,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
   const [sending, setSending] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>();
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
   const [isUsingGlobalConfig, setIsUsingGlobalConfig] = useState(false);
 
   const handleSelectTemplate = (template: MessageTemplate) => {
@@ -122,7 +123,15 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         if (data.config.connection_status) {
           setConnectionStatus(data.config.connection_status);
         }
+        if (data.config.connected_phone) {
+          setConnectedPhone(data.config.connected_phone);
+        }
         setIsUsingGlobalConfig(!data.config.api_url && !data.config.api_key && (!!globalApiUrl || !!globalApiKey));
+        
+        // Se já está marcado como conectado, verificar status real
+        if (data.config.connection_status === 'connected') {
+          setTimeout(() => checkConnection(), 1000);
+        }
       } else if (globalApiUrl || globalApiKey) {
         // Usar config global com instanceName local
         setConfig({
@@ -204,6 +213,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       // Handle instance not found (404) - treat as disconnected, not error
       if (data?.success === false && data?.details?.status === 404) {
         setConnectionStatus('disconnected');
+        setConnectedPhone(null);
         toast.info("Instância não encontrada. Clique em 'Conectar WhatsApp' para criar.");
         return;
       }
@@ -212,9 +222,14 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
       if (data?.state === 'open' || data?.instance?.state === 'open') {
         setConnectionStatus('connected');
+        // Buscar informações da instância incluindo número
+        await fetchInstanceInfo();
+        await updateConnectionInDatabase('connected');
         toast.success("WhatsApp conectado!");
       } else {
         setConnectionStatus('disconnected');
+        setConnectedPhone(null);
+        await updateConnectionInDatabase('disconnected');
         toast.info("WhatsApp não está conectado");
       }
     } catch (error) {
@@ -281,11 +296,19 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         });
 
         if (data?.state === 'open' || data?.instance?.state === 'open') {
-          setConnectionStatus('connected');
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
           }
+          
+          // Buscar informações da instância para obter o número conectado
+          await fetchInstanceInfo();
+          
+          setConnectionStatus('connected');
+          setQrModalOpen(false);
           toast.success("WhatsApp conectado com sucesso!");
+          
+          // Atualizar status no banco de dados
+          await updateConnectionInDatabase('connected');
         }
       } catch (error) {
         console.error('Erro no polling:', error);
@@ -298,6 +321,58 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         clearInterval(pollingRef.current);
       }
     }, 120000);
+  };
+
+  const fetchInstanceInfo = async () => {
+    try {
+      const { data } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'instanceInfo',
+          apiUrl: config.apiUrl,
+          apiKey: config.apiKey,
+          instanceName: config.instanceName
+        }
+      });
+
+      console.log('Instance info:', data);
+
+      // Evolution API retorna array de instâncias ou objeto com a instância
+      const instances = data?.instances || data || [];
+      const instance = Array.isArray(instances) ? instances[0] : instances;
+      
+      if (instance?.owner || instance?.ownerJid || instance?.instance?.owner) {
+        const ownerJid = instance.owner || instance.ownerJid || instance.instance?.owner;
+        const phoneNumber = ownerJid?.split('@')?.[0] || ownerJid;
+        setConnectedPhone(phoneNumber);
+        console.log('Connected phone:', phoneNumber);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar info da instância:', error);
+    }
+  };
+
+  const updateConnectionInDatabase = async (status: 'connected' | 'disconnected') => {
+    if (!barbershopId) return;
+    
+    try {
+      await supabase
+        .from('whatsapp_config')
+        .update({
+          config: {
+            api_url: config.apiUrl,
+            api_key: config.apiKey,
+            instance_name: config.instanceName,
+            connection_status: status,
+            connected_phone: status === 'connected' ? connectedPhone : null
+          },
+          is_active: status === 'connected',
+          updated_at: new Date().toISOString()
+        })
+        .eq('barbershop_id', barbershopId)
+        .eq('provider', 'evolution');
+    } catch (error) {
+      console.error('Erro ao atualizar status no banco:', error);
+    }
   };
 
   const disconnectInstance = async () => {
@@ -592,6 +667,18 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                 </p>
               </div>
               <div className="space-y-1">
+                <p className="text-muted-foreground">Telefone Conectado:</p>
+                <p className="font-mono text-xs">
+                  {connectedPhone ? (
+                    <span className="text-success font-medium">+{connectedPhone}</span>
+                  ) : connectionStatus === 'connected' ? (
+                    <span className="text-warning">Verificando...</span>
+                  ) : (
+                    <span className="text-muted-foreground">Nenhum</span>
+                  )}
+                </p>
+              </div>
+              <div className="space-y-1">
                 <p className="text-muted-foreground">Usando Config Global:</p>
                 <p className="text-xs">
                   {isUsingGlobalConfig ? (
@@ -599,6 +686,12 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                   ) : (
                     <Badge variant="secondary" className="text-xs">Não</Badge>
                   )}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Status Atual:</p>
+                <p className="text-xs">
+                  {getConnectionBadge()}
                 </p>
               </div>
             </div>
