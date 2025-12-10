@@ -126,22 +126,22 @@ const DomainSettings = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Configuração de Domínio
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+            <Globe className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <span className="truncate">Configuração de Domínio</span>
           </CardTitle>
-          <CardDescription>
-            Configure o subdomínio gratuito ou seu próprio domínio personalizado para a página da sua barbearia.
+          <CardDescription className="text-xs sm:text-sm line-clamp-2">
+            Configure o subdomínio ou domínio personalizado
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="subdomain" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="subdomain">Subdomínio Gratuito</TabsTrigger>
-              <TabsTrigger value="custom">Domínio Personalizado</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 h-auto">
+              <TabsTrigger value="subdomain" className="text-xs sm:text-sm py-2">Subdomínio</TabsTrigger>
+              <TabsTrigger value="custom" className="text-xs sm:text-sm py-2">Domínio Próprio</TabsTrigger>
             </TabsList>
 
             {/* Subdomain Tab */}
@@ -359,20 +359,20 @@ const DomainSettings = () => {
       {/* Landing Page Settings */}
       {domain?.subdomain && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings2 className="h-5 w-5" />
-              Configurações da Landing Page
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+              <Settings2 className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              <span className="truncate">Configurações da Landing Page</span>
             </CardTitle>
-            <CardDescription>
-              Personalize a página inicial da sua barbearia
+            <CardDescription className="text-xs sm:text-sm">
+              Personalize a página inicial
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Landing Page Ativada</Label>
-                <p className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
+                <Label className="text-sm">Landing Page Ativada</Label>
+                <p className="text-xs text-muted-foreground line-clamp-1">
                   Exibir página inicial antes do agendamento
                 </p>
               </div>
@@ -389,58 +389,58 @@ const DomainSettings = () => {
 
             <Separator />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <span className="text-sm">Mostrar Serviços</span>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex items-center justify-between p-2.5 sm:p-3 border rounded-lg">
+                <span className="text-xs sm:text-sm">Mostrar Serviços</span>
                 <Switch
                   checked={domain.landing_page_config?.show_services ?? true}
                   onCheckedChange={async (checked) => {
                     const result = await updateLandingPageConfig({ show_services: checked });
-                    if (result.success) toast.success("Configuração atualizada");
+                    if (result.success) toast.success("Atualizado");
                   }}
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <span className="text-sm">Mostrar Equipe</span>
+              <div className="flex items-center justify-between p-2.5 sm:p-3 border rounded-lg">
+                <span className="text-xs sm:text-sm">Mostrar Equipe</span>
                 <Switch
                   checked={domain.landing_page_config?.show_team ?? true}
                   onCheckedChange={async (checked) => {
                     const result = await updateLandingPageConfig({ show_team: checked });
-                    if (result.success) toast.success("Configuração atualizada");
+                    if (result.success) toast.success("Atualizado");
                   }}
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <span className="text-sm">Mostrar Avaliações</span>
+              <div className="flex items-center justify-between p-2.5 sm:p-3 border rounded-lg">
+                <span className="text-xs sm:text-sm">Mostrar Avaliações</span>
                 <Switch
                   checked={domain.landing_page_config?.show_reviews ?? true}
                   onCheckedChange={async (checked) => {
                     const result = await updateLandingPageConfig({ show_reviews: checked });
-                    if (result.success) toast.success("Configuração atualizada");
+                    if (result.success) toast.success("Atualizado");
                   }}
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <span className="text-sm">Mostrar Localização</span>
+              <div className="flex items-center justify-between p-2.5 sm:p-3 border rounded-lg">
+                <span className="text-xs sm:text-sm">Mostrar Localização</span>
                 <Switch
                   checked={domain.landing_page_config?.show_location ?? true}
                   onCheckedChange={async (checked) => {
                     const result = await updateLandingPageConfig({ show_location: checked });
-                    if (result.success) toast.success("Configuração atualizada");
+                    if (result.success) toast.success("Atualizado");
                   }}
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <span className="text-sm">Mostrar Galeria/Portfolio</span>
+              <div className="flex items-center justify-between p-2.5 sm:p-3 border rounded-lg">
+                <span className="text-xs sm:text-sm">Mostrar Galeria</span>
                 <Switch
                   checked={domain.landing_page_config?.show_gallery ?? true}
                   onCheckedChange={async (checked) => {
                     const result = await updateLandingPageConfig({ show_gallery: checked });
-                    if (result.success) toast.success("Configuração atualizada");
+                    if (result.success) toast.success("Atualizado");
                   }}
                 />
               </div>
