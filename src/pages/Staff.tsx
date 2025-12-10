@@ -309,19 +309,19 @@ const Staff = () => {
         {/* Alert for admin not in staff list */}
         {!isCurrentUserInStaff && !loading && (
           <Card className="border-amber-500/50 bg-amber-500/10">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <UserPlus className="h-5 w-5 text-amber-500" />
-                  <div>
-                    <p className="font-medium text-foreground">Você não está na lista de profissionais</p>
-                    <p className="text-sm text-muted-foreground">
-                      Clique para se adicionar como profissional e poder receber agendamentos
+            <CardContent className="p-3 sm:py-4 sm:px-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3">
+                  <UserPlus className="h-5 w-5 text-amber-500 shrink-0 mt-0.5 sm:mt-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground text-sm sm:text-base">Você não está na lista de profissionais</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Clique para se adicionar como profissional
                     </p>
                   </div>
                 </div>
-                <Button onClick={handleAddSelfAsStaff} disabled={addingSelf} variant="outline">
-                  {addingSelf ? 'Adicionando...' : 'Adicionar-me como Profissional'}
+                <Button onClick={handleAddSelfAsStaff} disabled={addingSelf} variant="outline" className="w-full sm:w-auto text-xs sm:text-sm shrink-0">
+                  {addingSelf ? 'Adicionando...' : 'Adicionar-me'}
                 </Button>
               </div>
             </CardContent>
@@ -329,135 +329,181 @@ const Staff = () => {
         )}
 
         <Card className="barbershop-card">
-          <CardHeader>
-            <CardTitle>Membros da Equipe</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Membros da Equipe</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               {staff.length} {staff.length === 1 ? 'membro cadastrado' : 'membros cadastrados'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">
                 Carregando...
               </div>
             ) : staff.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">
+                <p className="text-muted-foreground mb-4 text-sm">
                   Nenhum membro da equipe cadastrado
                 </p>
-                <Button onClick={handleAdd} variant="outline">
+                <Button onClick={handleAdd} variant="outline" size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   Adicionar Primeiro Membro
                 </Button>
               </div>
             ) : (
-              <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[150px]">Nome</TableHead>
-                      <TableHead className="hidden sm:table-cell">Telefone</TableHead>
-                      <TableHead className="hidden md:table-cell">Função</TableHead>
-                      <TableHead className="hidden lg:table-cell">Especialidades</TableHead>
-                      <TableHead className="hidden sm:table-cell">Comissão</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {staff.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
+              <>
+                {/* Mobile Cards View */}
+                <div className="block md:hidden space-y-3">
+                  {staff.map((member) => (
+                    <Card key={member.id} className="border">
+                      <CardContent className="p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Avatar className="h-9 w-9 shrink-0">
                               <AvatarImage src={member.profiles?.avatar_url} alt={member.profiles?.full_name} />
-                              <AvatarFallback className="bg-primary/10 text-primary">
-                                {member.profiles?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-4 w-4" />}
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                {member.profiles?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-3 w-3" />}
                               </AvatarFallback>
                             </Avatar>
-                            <span>{member.profiles?.full_name || 'Nome não disponível'}</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">{member.profiles?.full_name || 'Nome não disponível'}</p>
+                              <p className="text-xs text-muted-foreground truncate">{member.profiles?.phone || '-'}</p>
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">{member.profiles?.phone || '-'}</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {member.profiles?.user_roles && member.profiles.user_roles.length > 0 ? (
-                            <div className="flex gap-1">
-                              {member.profiles.user_roles.map((ur, idx) => (
-                                <Badge key={idx} variant={getRoleBadgeVariant(ur.role)}>
-                                  {getRoleLabel(ur.role)}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <Badge variant="outline">Sem função</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {member.specialties && member.specialties.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {member.specialties.slice(0, 2).map((spec, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
-                                  {spec}
-                                </Badge>
-                              ))}
-                              {member.specialties.length > 2 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  +{member.specialties.length - 2}
-                                </Badge>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Nenhuma</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">{member.commission_rate}%</TableCell>
-                        <TableCell>
-                          {member.active ? (
-                            <Badge variant="default" className="bg-green-500">
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Ativo
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">
-                              <XCircle className="mr-1 h-3 w-3" />
-                              Inativo
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(member)}
-                            >
-                              <Edit className="h-4 w-4" />
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(member)}>
+                              <Edit className="h-3.5 w-3.5" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleToggleActive(member)}
-                            >
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleActive(member)}>
                               {member.active ? (
-                                <XCircle className="h-4 w-4 text-orange-500" />
+                                <XCircle className="h-3.5 w-3.5 text-orange-500" />
                               ) : (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                               )}
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteClick(member.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteClick(member.id)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
                             </Button>
                           </div>
-                        </TableCell>
+                        </div>
+                        
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          {member.active ? (
+                            <Badge variant="default" className="bg-green-500 text-xs">Ativo</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">Inativo</Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs">{member.commission_rate}%</Badge>
+                          {member.profiles?.user_roles && member.profiles.user_roles.length > 0 && (
+                            member.profiles.user_roles.map((ur, idx) => (
+                              <Badge key={idx} variant={getRoleBadgeVariant(ur.role)} className="text-xs">
+                                {getRoleLabel(ur.role)}
+                              </Badge>
+                            ))
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[150px]">Nome</TableHead>
+                        <TableHead>Telefone</TableHead>
+                        <TableHead>Função</TableHead>
+                        <TableHead className="hidden lg:table-cell">Especialidades</TableHead>
+                        <TableHead>Comissão</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {staff.map((member) => (
+                        <TableRow key={member.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={member.profiles?.avatar_url} alt={member.profiles?.full_name} />
+                                <AvatarFallback className="bg-primary/10 text-primary">
+                                  {member.profiles?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-4 w-4" />}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="truncate max-w-[150px]">{member.profiles?.full_name || 'Nome não disponível'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{member.profiles?.phone || '-'}</TableCell>
+                          <TableCell>
+                            {member.profiles?.user_roles && member.profiles.user_roles.length > 0 ? (
+                              <div className="flex gap-1">
+                                {member.profiles.user_roles.map((ur, idx) => (
+                                  <Badge key={idx} variant={getRoleBadgeVariant(ur.role)}>
+                                    {getRoleLabel(ur.role)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <Badge variant="outline">Sem função</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {member.specialties && member.specialties.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {member.specialties.slice(0, 2).map((spec, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {spec}
+                                  </Badge>
+                                ))}
+                                {member.specialties.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{member.specialties.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Nenhuma</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{member.commission_rate}%</TableCell>
+                          <TableCell>
+                            {member.active ? (
+                              <Badge variant="default" className="bg-green-500">
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Ativo
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                <XCircle className="mr-1 h-3 w-3" />
+                                Inativo
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="icon" onClick={() => handleEdit(member)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleToggleActive(member)}>
+                                {member.active ? (
+                                  <XCircle className="h-4 w-4 text-orange-500" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                )}
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(member.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
