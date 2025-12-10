@@ -22,7 +22,7 @@ export const useSharedBarbershopId = () => {
   const currentBarbershopId = selectedBarbershopId || barbershopId;
 
   useEffect(() => {
-    // Skip if no barbershop ID or already fetched for this ID
+    // Skip if no barbershop ID
     if (!currentBarbershopId) {
       setSharedBarbershopId(null);
       setLoading(false);
@@ -30,14 +30,15 @@ export const useSharedBarbershopId = () => {
     }
 
     // Avoid re-fetching if we already have data for this ID
-    if (lastFetchedId.current === currentBarbershopId && sharedBarbershopId !== null) {
+    if (lastFetchedId.current === currentBarbershopId) {
+      setLoading(false);
       return;
     }
 
     const fetchParentId = async () => {
+      lastFetchedId.current = currentBarbershopId;
+      
       try {
-        lastFetchedId.current = currentBarbershopId;
-        
         const { data, error } = await supabase
           .from('barbershops')
           .select('id, parent_id')
@@ -46,14 +47,10 @@ export const useSharedBarbershopId = () => {
 
         if (error) {
           console.error('Erro ao buscar parent_id:', error);
-          // Fallback to current barbershop
           setSharedBarbershopId(currentBarbershopId);
         } else {
-          // Se tem parent_id, usa o parent (matriz)
-          // Se não tem, usa o próprio ID (é a matriz)
           const newSharedId = data.parent_id || data.id;
-          // Only update if different to prevent unnecessary re-renders
-          setSharedBarbershopId(prev => prev === newSharedId ? prev : newSharedId);
+          setSharedBarbershopId(newSharedId);
         }
       } catch (error) {
         console.error('Erro ao buscar barbershop:', error);
