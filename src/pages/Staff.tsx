@@ -50,6 +50,7 @@ interface StaffMember {
       role: string;
     }[];
   };
+  services?: string[]; // Service names from staff_services
 }
 
 const Staff = () => {
@@ -123,17 +124,41 @@ const Staff = () => {
 
       if (staffError) throw staffError;
 
-      // Buscar roles separadamente para cada membro (incluindo ID para updates)
-      const staffWithRoles = await Promise.all((staffData || []).map(async (member) => {
+      // Buscar roles e serviços separadamente para cada membro
+      const staffWithRolesAndServices = await Promise.all((staffData || []).map(async (member) => {
+        // Buscar roles
         const { data: rolesData } = await supabase
           .from('user_roles')
           .select('id, role')
           .eq('user_id', member.user_id)
           .eq('barbershop_id', barbershopId);
         
+        // Buscar serviços do staff
+        let serviceNames: string[] = [];
+        try {
+          const { data: staffServices } = await supabase
+            .from('staff_services')
+            .select('service_id')
+            .eq('staff_id', member.id)
+            .eq('is_active', true);
+          
+          if (staffServices && staffServices.length > 0) {
+            const serviceIds = staffServices.map(ss => ss.service_id);
+            const { data: servicesData } = await supabase
+              .from('services')
+              .select('name')
+              .in('id', serviceIds);
+            
+            serviceNames = (servicesData || []).map(s => s.name);
+          }
+        } catch (e) {
+          console.warn('Erro ao buscar serviços do staff:', e);
+        }
+        
         return {
           ...member,
           user_roles: rolesData || [],
+          services: serviceNames,
           profiles: {
             ...member.profiles,
             user_roles: rolesData || []
@@ -141,11 +166,11 @@ const Staff = () => {
         };
       }));
 
-      setStaff(staffWithRoles);
+      setStaff(staffWithRolesAndServices);
       
       // Check if current user is in staff list
       if (user) {
-        const currentUserInStaff = staffWithRoles.some(s => s.user_id === user.id);
+        const currentUserInStaff = staffWithRolesAndServices.some(s => s.user_id === user.id);
         setIsCurrentUserInStaff(currentUserInStaff);
       }
     } catch (error: any) {
@@ -410,6 +435,23 @@ const Staff = () => {
                             ))
                           )}
                         </div>
+                        
+                        {/* Services display on mobile */}
+                        {member.services && member.services.length > 0 && (
+                          <div className="mt-2 flex flex-wrap items-center gap-1">
+                            <span className="text-xs text-muted-foreground">Serviços:</span>
+                            {member.services.slice(0, 2).map((service, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {service}
+                              </Badge>
+                            ))}
+                            {member.services.length > 2 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{member.services.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -423,7 +465,7 @@ const Staff = () => {
                         <TableHead className="min-w-[150px]">Nome</TableHead>
                         <TableHead>Telefone</TableHead>
                         <TableHead>Função</TableHead>
-                        <TableHead className="hidden lg:table-cell">Especialidades</TableHead>
+                        <TableHead className="hidden lg:table-cell">Serviços</TableHead>
                         <TableHead>Comissão</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
@@ -458,21 +500,21 @@ const Staff = () => {
                             )}
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
-                            {member.specialties && member.specialties.length > 0 ? (
+                            {member.services && member.services.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
-                                {member.specialties.slice(0, 2).map((spec, idx) => (
+                                {member.services.slice(0, 2).map((service, idx) => (
                                   <Badge key={idx} variant="secondary" className="text-xs">
-                                    {spec}
+                                    {service}
                                   </Badge>
                                 ))}
-                                {member.specialties.length > 2 && (
+                                {member.services.length > 2 && (
                                   <Badge variant="secondary" className="text-xs">
-                                    +{member.specialties.length - 2}
+                                    +{member.services.length - 2}
                                   </Badge>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-muted-foreground text-sm">Nenhuma</span>
+                              <span className="text-muted-foreground text-sm">Todos</span>
                             )}
                           </TableCell>
                           <TableCell>{member.commission_rate}%</TableCell>
