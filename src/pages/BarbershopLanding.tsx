@@ -833,7 +833,16 @@ const BarbershopLanding = () => {
       <footer className="py-6 px-4 bg-muted/50 border-t">
         <div className="max-w-6xl mx-auto text-center text-sm text-muted-foreground">
           <p>© {new Date().getFullYear()} {barbershop.name}. Todos os direitos reservados.</p>
-          <p className="mt-1">
+          <div className="mt-2 flex items-center justify-center gap-4">
+            <a href="/privacy" className="hover:text-foreground transition-colors">
+              Política de Privacidade
+            </a>
+            <span>•</span>
+            <a href="/terms" className="hover:text-foreground transition-colors">
+              Termos de Serviço
+            </a>
+          </div>
+          <p className="mt-2">
             Powered by <span className="font-semibold text-foreground">BarberSmart</span>
           </p>
         </div>
