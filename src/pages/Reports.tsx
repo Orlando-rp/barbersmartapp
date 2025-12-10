@@ -297,21 +297,21 @@ const Reports = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Relatórios</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Análises e insights do seu negócio</p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Relatórios</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Análises e insights do seu negócio</p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="premium" size="default" disabled={isExporting} className="w-full sm:w-auto">
+              <Button variant="premium" size="sm" disabled={isExporting} className="w-full sm:w-auto h-9">
                 <Download className="mr-2 h-4 w-4" />
-                <span className="truncate">{isExporting ? "Exportando..." : "Exportar"}</span>
+                <span>{isExporting ? "Exportando..." : "Exportar"}</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="bg-popover">
               <DropdownMenuItem onClick={() => handleExportReport('pdf')}>
                 <FileText className="mr-2 h-4 w-4" />
                 Exportar como PDF
@@ -326,12 +326,12 @@ const Reports = () => {
 
         {/* Filters */}
         <Card className="barbershop-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
               <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                 <Select value={period} onValueChange={setPeriod}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-40 h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -341,13 +341,13 @@ const Reports = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Visualizando dados de {
-                  period === 'week' ? 'últimos 7 dias' :
-                  period === 'month' ? 'últimos 30 dias' :
-                  'último ano'
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Visualizando: {
+                  period === 'week' ? '7 dias' :
+                  period === 'month' ? '30 dias' :
+                  '1 ano'
                 }
-              </div>
+              </p>
             </div>
           </CardContent>
         </Card>
