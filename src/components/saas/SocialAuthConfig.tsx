@@ -112,23 +112,49 @@ export const SocialAuthConfig = () => {
         }
       };
 
-      const { error } = await supabase
+      // Tentar primeiro um update
+      const { data: existing } = await supabase
         .from('system_config')
-        .upsert({
-          key: 'social_auth_providers',
-          value: newConfig,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'key'
-        });
+        .select('id')
+        .eq('key', 'social_auth_providers')
+        .maybeSingle();
 
-      if (error) throw error;
+      let error;
+      
+      if (existing?.id) {
+        // Update
+        const result = await supabase
+          .from('system_config')
+          .update({
+            value: newConfig,
+            updated_at: new Date().toISOString()
+          })
+          .eq('key', 'social_auth_providers');
+        error = result.error;
+      } else {
+        // Insert
+        const result = await supabase
+          .from('system_config')
+          .insert({
+            key: 'social_auth_providers',
+            value: newConfig,
+            updated_at: new Date().toISOString()
+          });
+        error = result.error;
+      }
+
+      if (error) {
+        console.error('Erro detalhado ao salvar social auth:', error);
+        throw error;
+      }
 
       toast.success("Configuração de login social salva!");
       loadConfig();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar:', error);
-      toast.error("Erro ao salvar configuração");
+      toast.error("Erro ao salvar configuração", {
+        description: error?.message || 'Verifique se a tabela system_config existe e tem as permissões corretas'
+      });
     } finally {
       setSaving(false);
     }
