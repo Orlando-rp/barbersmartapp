@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { User, LogOut, Settings as SettingsIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranding } from "@/contexts/BrandingContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -19,6 +20,7 @@ import { MobileSidebar } from "./Sidebar";
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
+  const { branding } = useBranding();
   const navigate = useNavigate();
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileFullName, setProfileFullName] = useState<string | null>(null);
@@ -67,10 +69,22 @@ const Header = () => {
           <MobileSidebar />
           
           <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 lg:w-8 lg:h-8 gradient-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xs lg:text-sm">BS</span>
-            </div>
-            <h1 className="text-base lg:text-xl font-bold text-foreground hidden sm:block">BarberSmart</h1>
+            {branding?.logo_url ? (
+              <img 
+                src={branding.logo_url} 
+                alt={branding.system_name || 'Logo'} 
+                className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg object-contain"
+              />
+            ) : (
+              <div className="w-7 h-7 lg:w-8 lg:h-8 gradient-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-xs lg:text-sm">
+                  {branding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
+                </span>
+              </div>
+            )}
+            <h1 className="text-base lg:text-xl font-bold text-foreground hidden sm:block">
+              {branding?.system_name || 'BarberSmart'}
+            </h1>
           </div>
           
           {/* Barbershop Selector - hidden on very small screens */}
