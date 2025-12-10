@@ -298,19 +298,19 @@ const MyEarnings = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4">
+        <div className="space-y-3 sm:space-y-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Meus Ganhos</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Meus Ganhos</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Olá, {staffInfo?.name}! Acompanhe suas comissões.
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="h-9 text-sm sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -322,13 +322,13 @@ const MyEarnings = () => {
 
             <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="gap-2 w-full sm:w-auto justify-between sm:justify-start">
+                <Button variant="outline" size="sm" className="h-9 gap-2 justify-between sm:justify-start">
                   <CalendarIcon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{format(dateRange.from, 'dd/MM', { locale: ptBR })} - {format(dateRange.to, 'dd/MM', { locale: ptBR })}</span>
-                  <ChevronDown className="h-4 w-4 shrink-0" />
+                  <span className="text-sm">{format(dateRange.from, 'dd/MM', { locale: ptBR })} - {format(dateRange.to, 'dd/MM', { locale: ptBR })}</span>
+                  <ChevronDown className="h-3 w-3 shrink-0" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
+              <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   initialFocus
                   mode="range"
@@ -348,123 +348,126 @@ const MyEarnings = () => {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        {/* Summary Cards - 2 columns on mobile, 5 on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
           <Card className="barbershop-card">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="p-1.5 sm:p-2 rounded-lg bg-success/10">
-                  <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-success/10">
+                    <DollarSign className="h-3.5 w-3.5 text-success" />
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Receita</p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita</p>
-                  <p className="text-lg sm:text-2xl font-bold text-success truncate">
-                    R$ {totals.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
-                  </p>
-                </div>
+                <p className="text-base sm:text-lg lg:text-xl font-bold text-success">
+                  R$ {totals.totalRevenue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                </p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card border-warning/30 bg-warning/5">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="p-1.5 sm:p-2 rounded-lg bg-warning/10">
-                  <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-warning/10">
+                    <Wallet className="h-3.5 w-3.5 text-warning" />
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Comissão</p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Comissão</p>
-                  <p className="text-lg sm:text-2xl font-bold text-warning truncate">
-                    R$ {totals.totalCommission.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
-                  </p>
-                </div>
+                <p className="text-base sm:text-lg lg:text-xl font-bold text-warning">
+                  R$ {totals.totalCommission.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                </p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
-                  <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-primary/10">
+                    <Scissors className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Serviços</p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Serviços</p>
-                  <p className="text-lg sm:text-2xl font-bold text-foreground">
-                    {totals.servicesCount}
-                  </p>
-                </div>
+                <p className="text-base sm:text-lg lg:text-xl font-bold text-foreground">
+                  {totals.servicesCount}
+                </p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="p-1.5 sm:p-2 rounded-lg bg-muted">
-                  <Percent className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-muted">
+                    <Percent className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Taxa</p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Taxa</p>
-                  <p className="text-lg sm:text-2xl font-bold text-foreground">
-                    {staffInfo?.commissionRate || 0}%
-                  </p>
-                </div>
+                <p className="text-base sm:text-lg lg:text-xl font-bold text-foreground">
+                  {staffInfo?.commissionRate || 0}%
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="barbershop-card">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="p-1.5 sm:p-2 rounded-lg bg-success/10">
-                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
+          <Card className="barbershop-card col-span-2 sm:col-span-1">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-success/10">
+                    <Target className="h-3.5 w-3.5 text-success" />
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Conclusão</p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Conclusão</p>
-                  <p className="text-lg sm:text-2xl font-bold text-foreground">
-                    {totals.completionRate.toFixed(0)}%
-                  </p>
-                </div>
+                <p className="text-base sm:text-lg lg:text-xl font-bold text-foreground">
+                  {totals.completionRate.toFixed(0)}%
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Earnings Chart */}
           <Card className="barbershop-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
+            <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <TrendingUp className="h-4 w-4 text-primary" />
                 Evolução dos Ganhos
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2 sm:p-6 pt-0">
               {loading ? (
-                <div className="flex items-center justify-center h-[300px]">
+                <div className="flex items-center justify-center h-[200px] sm:h-[280px]">
                   <LoadingSpinner />
                 </div>
               ) : earningsData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={earningsData}>
+                <ResponsiveContainer width="100%" height={200} className="sm:!h-[280px]">
+                  <AreaChart data={earningsData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis 
                       dataKey="date" 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                       axisLine={{ stroke: 'hsl(var(--border))' }}
+                      interval="preserveStartEnd"
                     />
                     <YAxis 
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                       axisLine={{ stroke: 'hsl(var(--border))' }}
-                      tickFormatter={(value) => `R$${value}`}
+                      tickFormatter={(value) => `${value}`}
+                      width={35}
                     />
                     <Tooltip 
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
+                        borderRadius: '8px',
+                        fontSize: '12px'
                       }}
                       formatter={(value: number, name: string) => [
                         `R$ ${value.toFixed(2)}`, 
@@ -492,7 +495,7 @@ const MyEarnings = () => {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                <div className="flex items-center justify-center h-[200px] sm:h-[280px] text-sm text-muted-foreground">
                   Sem dados para exibir
                 </div>
               )}
@@ -501,37 +504,38 @@ const MyEarnings = () => {
 
           {/* Services Breakdown */}
           <Card className="barbershop-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-primary" />
+            <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <Award className="h-4 w-4 text-primary" />
                 Top Serviços por Comissão
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2 sm:p-6 pt-0">
               {loading ? (
-                <div className="flex items-center justify-center h-[300px]">
+                <div className="flex items-center justify-center h-[200px] sm:h-[280px]">
                   <LoadingSpinner />
                 </div>
               ) : serviceStats.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={serviceStats} layout="vertical">
+                <ResponsiveContainer width="100%" height={200} className="sm:!h-[280px]">
+                  <BarChart data={serviceStats} layout="vertical" margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis 
                       type="number"
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      tickFormatter={(value) => `R$${value}`}
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                      tickFormatter={(value) => `${value}`}
                     />
                     <YAxis 
                       type="category"
                       dataKey="name"
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      width={100}
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                      width={70}
                     />
                     <Tooltip 
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
+                        borderRadius: '8px',
+                        fontSize: '12px'
                       }}
                       formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Comissão']}
                     />
@@ -539,7 +543,7 @@ const MyEarnings = () => {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                <div className="flex items-center justify-center h-[200px] sm:h-[280px] text-sm text-muted-foreground">
                   Sem dados para exibir
                 </div>
               )}
