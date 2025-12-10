@@ -366,10 +366,10 @@ const MultiUnitReports = () => {
   if (barbershops.length <= 1 && userRole !== 'super_admin') {
     return (
       <Layout>
-        <div className="flex flex-col items-center justify-center h-96 text-center">
-          <BarChart3 className="h-16 w-16 text-muted-foreground mb-4" />
-          <h2 className="text-2xl font-bold text-foreground mb-2">Relatórios Multi-Unidade</h2>
-          <p className="text-muted-foreground max-w-md">
+        <div className="flex flex-col items-center justify-center h-96 text-center px-4">
+          <BarChart3 className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-3 sm:mb-4" />
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">Relatórios Multi-Unidade</h2>
+          <p className="text-sm sm:text-base text-muted-foreground max-w-md">
             Esta funcionalidade está disponível apenas para contas com múltiplas unidades de barbearia.
           </p>
         </div>
@@ -381,7 +381,7 @@ const MultiUnitReports = () => {
 
   return (
     <Layout>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4">
           <div className="min-w-0">
@@ -425,62 +425,62 @@ const MultiUnitReports = () => {
         </div>
 
         {/* Consolidated Totals */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Receita Total</p>
-                  <p className="text-2xl font-bold text-success">
-                    R$ {totals.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <CardContent className="p-3 md:p-6 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">Receita Total</p>
+                  <p className="text-base sm:text-lg md:text-2xl font-bold text-success truncate">
+                    R$ {totals.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-success" />
+                <div className="h-8 w-8 md:h-12 md:w-12 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+                  <DollarSign className="h-4 w-4 md:h-6 md:w-6 text-success" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Agendamentos</p>
-                  <p className="text-2xl font-bold text-primary">{totals.appointments}</p>
+            <CardContent className="p-3 md:p-6 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">Agendamentos</p>
+                  <p className="text-base sm:text-lg md:text-2xl font-bold text-primary">{totals.appointments}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="barbershop-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Clientes Ativos</p>
-                  <p className="text-2xl font-bold text-foreground">{totals.clients}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                  <Users className="h-6 w-6 text-foreground" />
+                <div className="h-8 w-8 md:h-12 md:w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="h-4 w-4 md:h-6 md:w-6 text-primary" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Avaliação Média</p>
-                  <p className="text-2xl font-bold text-warning">
+            <CardContent className="p-3 md:p-6 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">Clientes</p>
+                  <p className="text-base sm:text-lg md:text-2xl font-bold text-foreground">{totals.clients}</p>
+                </div>
+                <div className="h-8 w-8 md:h-12 md:w-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <Users className="h-4 w-4 md:h-6 md:w-6 text-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="barbershop-card">
+            <CardContent className="p-3 md:p-6 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">Avaliação</p>
+                  <p className="text-base sm:text-lg md:text-2xl font-bold text-warning">
                     {totals.avgRating.toFixed(1)} ⭐
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-warning/10 flex items-center justify-center">
-                  <Star className="h-6 w-6 text-warning" />
+                <div className="h-8 w-8 md:h-12 md:w-12 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+                  <Star className="h-4 w-4 md:h-6 md:w-6 text-warning" />
                 </div>
               </div>
             </CardContent>
