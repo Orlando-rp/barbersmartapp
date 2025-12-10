@@ -127,16 +127,16 @@ const SettingsPage = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Configurações</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Personalize sua experiência no BarberSmart</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Configurações</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">Personalize sua experiência</p>
           </div>
           <Button 
             variant="premium" 
-            size="default"
+            size="sm"
             onClick={handleSave}
             disabled={saving}
             className="w-full sm:w-auto"
@@ -153,50 +153,54 @@ const SettingsPage = () => {
         <DomainSettings />
 
         {/* Settings Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Profile Settings */}
           <Card className="barbershop-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
                 Perfil da Barbearia
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="barbershop-name">Nome da Barbearia</Label>
+            <CardContent className="space-y-3 sm:space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="barbershop-name" className="text-xs sm:text-sm">Nome da Barbearia</Label>
                 <Input 
                   id="barbershop-name" 
                   value={settings.name}
                   onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-                  placeholder="BarberShop Premium" 
+                  placeholder="BarberShop Premium"
+                  className="h-9 sm:h-10 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="barbershop-address">Endereço</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="barbershop-address" className="text-xs sm:text-sm">Endereço</Label>
                 <Input 
                   id="barbershop-address" 
                   value={settings.address}
                   onChange={(e) => setSettings({ ...settings, address: e.target.value })}
-                  placeholder="Rua das Flores, 123" 
+                  placeholder="Rua das Flores, 123"
+                  className="h-9 sm:h-10 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="barbershop-phone">Telefone</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="barbershop-phone" className="text-xs sm:text-sm">Telefone</Label>
                 <Input 
                   id="barbershop-phone" 
                   value={settings.phone}
                   onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
-                  placeholder="(11) 99999-9999" 
+                  placeholder="(11) 99999-9999"
+                  className="h-9 sm:h-10 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="barbershop-email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="barbershop-email" className="text-xs sm:text-sm">Email</Label>
                 <Input 
                   id="barbershop-email" 
                   value={settings.email}
                   onChange={(e) => setSettings({ ...settings, email: e.target.value })}
-                  placeholder="contato@barbearia.com" 
+                  placeholder="contato@barbearia.com"
+                  className="h-9 sm:h-10 text-sm"
                 />
               </div>
             </CardContent>
@@ -204,17 +208,17 @@ const SettingsPage = () => {
 
           {/* Notification Settings */}
           <Card className="barbershop-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
                 Notificações
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="whatsapp-notifications">WhatsApp</Label>
-                  <p className="text-sm text-muted-foreground">Receber notificações via WhatsApp</p>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 border rounded-lg">
+                <div className="min-w-0">
+                  <Label htmlFor="whatsapp-notifications" className="text-xs sm:text-sm">WhatsApp</Label>
+                  <p className="text-xs text-muted-foreground line-clamp-1">Receber via WhatsApp</p>
                 </div>
                 <Switch 
                   id="whatsapp-notifications"
@@ -233,10 +237,10 @@ const SettingsPage = () => {
                   }
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="email-notifications">Email</Label>
-                  <p className="text-sm text-muted-foreground">Receber notificações por email</p>
+              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 border rounded-lg">
+                <div className="min-w-0">
+                  <Label htmlFor="email-notifications" className="text-xs sm:text-sm">Email</Label>
+                  <p className="text-xs text-muted-foreground line-clamp-1">Receber por email</p>
                 </div>
                 <Switch 
                   id="email-notifications"
@@ -255,10 +259,10 @@ const SettingsPage = () => {
                   }
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="marketing-emails">Marketing</Label>
-                  <p className="text-sm text-muted-foreground">Receber emails promocionais</p>
+              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 border rounded-lg">
+                <div className="min-w-0">
+                  <Label htmlFor="marketing-emails" className="text-xs sm:text-sm">Marketing</Label>
+                  <p className="text-xs text-muted-foreground line-clamp-1">Emails promocionais</p>
                 </div>
                 <Switch 
                   id="marketing-emails"
@@ -282,18 +286,19 @@ const SettingsPage = () => {
 
           {/* Business Hours Link */}
           <Card className="barbershop-card lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
                 Horário de Funcionamento
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground">
-                Configure os horários de abertura, fechamento, intervalos e datas bloqueadas da barbearia.
+            <CardContent className="space-y-3">
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Configure horários de abertura, fechamento, intervalos e datas bloqueadas.
               </p>
               <Button 
                 variant="outline" 
+                size="sm"
                 onClick={() => navigate('/business-hours')}
                 className="w-full sm:w-auto"
               >
