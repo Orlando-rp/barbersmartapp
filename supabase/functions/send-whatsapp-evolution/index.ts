@@ -63,22 +63,36 @@ serve(async (req) => {
         method = 'GET';
         break;
 
-      case 'createInstance':
-        // Create new instance
+      case 'createInstance': {
+        // Create new instance with webhook configured
         endpoint = '/instance/create';
         method = 'POST';
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+        const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook`;
+        console.log(`[Evolution API] Creating instance with webhook: ${webhookUrl}`);
         body = JSON.stringify({
           instanceName,
           qrcode: true,
-          integration: 'WHATSAPP-BAILEYS'
+          integration: 'WHATSAPP-BAILEYS',
+          webhook: {
+            url: webhookUrl,
+            byEvents: false,
+            base64: false,
+            headers: {},
+            events: ['MESSAGES_UPSERT']
+          }
         });
         break;
+      }
 
-      case 'connect':
-        // Get QR code for connection - first try to create instance, then get QR
+      case 'connect': {
+        // Get QR code for connection - first try to create instance with webhook, then get QR
         console.log(`[Evolution API] Getting QR code for instance: ${instanceName}`);
         
-        // Try to create instance first (will fail if exists, that's ok)
+        const supabaseUrlConnect = Deno.env.get('SUPABASE_URL') || '';
+        const webhookUrlConnect = `${supabaseUrlConnect}/functions/v1/evolution-webhook`;
+        
+        // Try to create instance first with webhook (will fail if exists, that's ok)
         try {
           const createRes = await fetch(`${baseUrl}/instance/create`, {
             method: 'POST',
@@ -86,7 +100,14 @@ serve(async (req) => {
             body: JSON.stringify({
               instanceName,
               qrcode: true,
-              integration: 'WHATSAPP-BAILEYS'
+              integration: 'WHATSAPP-BAILEYS',
+              webhook: {
+                url: webhookUrlConnect,
+                byEvents: false,
+                base64: false,
+                headers: {},
+                events: ['MESSAGES_UPSERT']
+              }
             })
           });
           const createData = await createRes.text();
@@ -99,6 +120,7 @@ serve(async (req) => {
         endpoint = `/instance/connect/${instanceName}`;
         method = 'GET';
         break;
+      }
 
       case 'connectionState':
         // Check connection status
