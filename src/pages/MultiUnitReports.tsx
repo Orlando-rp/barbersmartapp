@@ -381,22 +381,22 @@ const MultiUnitReports = () => {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-              <BarChart3 className="h-8 w-8 text-primary" />
-              Relatórios Multi-Unidade
+        <div className="flex flex-col gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-3xl font-bold text-foreground flex items-center gap-2 md:gap-3">
+              <BarChart3 className="h-6 w-6 md:h-8 md:w-8 text-primary flex-shrink-0" />
+              <span className="truncate">Relatórios Multi-Unidade</span>
             </h1>
-            <p className="text-muted-foreground">
-              Comparativo de desempenho entre {barbershops.length} unidades
+            <p className="text-sm md:text-base text-muted-foreground">
+              Comparativo de {barbershops.length} unidades
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -407,18 +407,20 @@ const MultiUnitReports = () => {
               </SelectContent>
             </Select>
 
-            <Button variant="outline" onClick={exportToCSV}>
+            <Button variant="outline" onClick={exportToCSV} className="w-full sm:w-auto">
               <Download className="h-4 w-4 mr-2" />
-              Exportar CSV
+              <span className="sm:inline">Exportar CSV</span>
             </Button>
           </div>
         </div>
 
         {/* Period Badge */}
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-sm">
-            <Calendar className="h-3 w-3 mr-1" />
-            {format(new Date(dateRange.start), "dd 'de' MMM", { locale: ptBR })} - {format(new Date(dateRange.end), "dd 'de' MMM, yyyy", { locale: ptBR })}
+        <div className="flex items-center">
+          <Badge variant="secondary" className="text-xs md:text-sm">
+            <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+            <span className="truncate">
+              {format(new Date(dateRange.start), "dd MMM", { locale: ptBR })} - {format(new Date(dateRange.end), "dd MMM, yy", { locale: ptBR })}
+            </span>
           </Badge>
         </div>
 
@@ -486,25 +488,29 @@ const MultiUnitReports = () => {
         </div>
 
         {/* Tabs for different views */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Visão Geral
-            </TabsTrigger>
-            <TabsTrigger value="comparison">
-              <FileText className="h-4 w-4 mr-2" />
-              Tabela Comparativa
-            </TabsTrigger>
-            <TabsTrigger value="ranking">
-              <Target className="h-4 w-4 mr-2" />
-              Ranking
-            </TabsTrigger>
-            <TabsTrigger value="staff">
-              <UserCheck className="h-4 w-4 mr-2" />
-              Equipe
-            </TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="overview" className="space-y-4 md:space-y-6">
+          <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+            <TabsList className="inline-flex w-max md:w-auto">
+              <TabsTrigger value="overview" className="text-xs md:text-sm px-2 md:px-4">
+                <BarChart3 className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Visão Geral</span>
+                <span className="sm:hidden">Geral</span>
+              </TabsTrigger>
+              <TabsTrigger value="comparison" className="text-xs md:text-sm px-2 md:px-4">
+                <FileText className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Tabela Comparativa</span>
+                <span className="sm:hidden">Tabela</span>
+              </TabsTrigger>
+              <TabsTrigger value="ranking" className="text-xs md:text-sm px-2 md:px-4">
+                <Target className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                Ranking
+              </TabsTrigger>
+              <TabsTrigger value="staff" className="text-xs md:text-sm px-2 md:px-4">
+                <UserCheck className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                Equipe
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
@@ -517,19 +523,27 @@ const MultiUnitReports = () => {
                     Receita por Unidade
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
+                <CardContent className="p-2 md:p-6">
+                  <div className="h-[250px] md:h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={revenueChartData}>
+                      <BarChart data={revenueChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" className="text-xs" />
-                        <YAxis className="text-xs" />
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fontSize: 10 }} 
+                          interval={0}
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                        />
+                        <YAxis tick={{ fontSize: 10 }} width={50} />
                         <Tooltip 
                           formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Receita']}
                           contentStyle={{ 
                             backgroundColor: 'hsl(var(--card))', 
                             border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
+                            borderRadius: '8px',
+                            fontSize: '12px'
                           }}
                         />
                         <Bar dataKey="receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
@@ -547,13 +561,13 @@ const MultiUnitReports = () => {
                     Performance Comparativa
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
+                <CardContent className="p-2 md:p-6">
+                  <div className="h-[250px] md:h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={getRadarData()}>
+                      <RadarChart data={getRadarData()} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                         <PolarGrid className="stroke-muted" />
-                        <PolarAngleAxis dataKey="subject" className="text-xs" />
-                        <PolarRadiusAxis angle={30} domain={[0, 100]} className="text-xs" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
                         {unitMetrics.map((unit, index) => (
                           <Radar
                             key={unit.id}
@@ -564,12 +578,13 @@ const MultiUnitReports = () => {
                             fillOpacity={0.2}
                           />
                         ))}
-                        <Legend />
+                        <Legend wrapperStyle={{ fontSize: '11px' }} />
                         <Tooltip 
                           contentStyle={{ 
                             backgroundColor: 'hsl(var(--card))', 
                             border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
+                            borderRadius: '8px',
+                            fontSize: '12px'
                           }}
                         />
                       </RadarChart>
@@ -586,26 +601,37 @@ const MultiUnitReports = () => {
                     Agendamentos por Unidade
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
+                <CardContent className="p-2 md:p-6">
+                  <div className="h-[250px] md:h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={unitMetrics.map(u => ({
-                        name: u.name,
-                        total: u.appointments,
-                        concluidos: u.completedAppointments,
-                        cancelados: u.cancelledAppointments,
-                      }))}>
+                      <BarChart 
+                        data={unitMetrics.map(u => ({
+                          name: u.name,
+                          total: u.appointments,
+                          concluidos: u.completedAppointments,
+                          cancelados: u.cancelledAppointments,
+                        }))}
+                        margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+                      >
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" className="text-xs" />
-                        <YAxis className="text-xs" />
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fontSize: 10 }} 
+                          interval={0}
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                        />
+                        <YAxis tick={{ fontSize: 10 }} width={35} />
                         <Tooltip 
                           contentStyle={{ 
                             backgroundColor: 'hsl(var(--card))', 
                             border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
+                            borderRadius: '8px',
+                            fontSize: '12px'
                           }}
                         />
-                        <Legend />
+                        <Legend wrapperStyle={{ fontSize: '11px' }} />
                         <Bar dataKey="total" name="Total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="concluidos" name="Concluídos" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="cancelados" name="Cancelados" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
@@ -624,17 +650,17 @@ const MultiUnitReports = () => {
                 <CardTitle>Tabela Comparativa</CardTitle>
                 <CardDescription>Comparação detalhada de métricas entre unidades</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 md:p-6">
                 <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="font-bold">Métrica</TableHead>
+                        <TableHead className="font-bold text-xs md:text-sm min-w-[100px]">Métrica</TableHead>
                         {unitMetrics.map(unit => (
-                          <TableHead key={unit.id} className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <Building2 className="h-4 w-4 text-primary" />
-                              {unit.name}
+                          <TableHead key={unit.id} className="text-center min-w-[100px]">
+                            <div className="flex items-center justify-center gap-1 md:gap-2">
+                              <Building2 className="h-3 w-3 md:h-4 md:w-4 text-primary flex-shrink-0" />
+                              <span className="text-xs md:text-sm truncate max-w-[80px] md:max-w-none">{unit.name}</span>
                             </div>
                           </TableHead>
                         ))}
@@ -643,9 +669,9 @@ const MultiUnitReports = () => {
                     <TableBody>
                       {getComparisonTableData().map((row, idx) => (
                         <TableRow key={idx}>
-                          <TableCell className="font-medium">{row.metric}</TableCell>
+                          <TableCell className="font-medium text-xs md:text-sm whitespace-nowrap">{row.metric}</TableCell>
                           {unitMetrics.map(unit => (
-                            <TableCell key={unit.id} className="text-center">
+                            <TableCell key={unit.id} className="text-center text-xs md:text-sm whitespace-nowrap">
                               {row[unit.name]}
                             </TableCell>
                           ))}
@@ -659,35 +685,35 @@ const MultiUnitReports = () => {
           </TabsContent>
 
           {/* Ranking Tab */}
-          <TabsContent value="ranking" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <TabsContent value="ranking" className="space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {/* Ranking por Receita */}
               <Card className="barbershop-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-success" />
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                    <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-success" />
                     Ranking por Receita
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
+                  <div className="space-y-2 md:space-y-3">
                     {[...unitMetrics]
                       .sort((a, b) => b.revenue - a.revenue)
                       .map((unit, idx) => (
-                        <div key={unit.id} className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border">
-                          <div className="flex items-center gap-3">
+                        <div key={unit.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-background/50 border border-border">
+                          <div className="flex items-center gap-2 md:gap-3 min-w-0">
                             <span className={`
-                              w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                              w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold text-xs md:text-sm flex-shrink-0
                               ${idx === 0 ? 'bg-yellow-500 text-yellow-900' : 
                                 idx === 1 ? 'bg-gray-300 text-gray-700' : 
                                 idx === 2 ? 'bg-amber-600 text-amber-100' : 'bg-muted text-muted-foreground'}
                             `}>
                               {idx + 1}
                             </span>
-                            <span className="font-medium">{unit.name}</span>
+                            <span className="font-medium text-xs md:text-sm truncate">{unit.name}</span>
                           </div>
-                          <span className="font-bold text-success">
-                            R$ {unit.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          <span className="font-bold text-success text-xs md:text-sm whitespace-nowrap ml-2">
+                            R$ {unit.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </span>
                         </div>
                       ))}
@@ -697,30 +723,30 @@ const MultiUnitReports = () => {
 
               {/* Ranking por Agendamentos */}
               <Card className="barbershop-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-primary" />
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                    <Calendar className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                     Ranking por Agendamentos
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
+                  <div className="space-y-2 md:space-y-3">
                     {[...unitMetrics]
                       .sort((a, b) => b.appointments - a.appointments)
                       .map((unit, idx) => (
-                        <div key={unit.id} className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border">
-                          <div className="flex items-center gap-3">
+                        <div key={unit.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-background/50 border border-border">
+                          <div className="flex items-center gap-2 md:gap-3 min-w-0">
                             <span className={`
-                              w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                              w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold text-xs md:text-sm flex-shrink-0
                               ${idx === 0 ? 'bg-yellow-500 text-yellow-900' : 
                                 idx === 1 ? 'bg-gray-300 text-gray-700' : 
                                 idx === 2 ? 'bg-amber-600 text-amber-100' : 'bg-muted text-muted-foreground'}
                             `}>
                               {idx + 1}
                             </span>
-                            <span className="font-medium">{unit.name}</span>
+                            <span className="font-medium text-xs md:text-sm truncate">{unit.name}</span>
                           </div>
-                          <span className="font-bold text-primary">{unit.appointments}</span>
+                          <span className="font-bold text-primary text-xs md:text-sm ml-2">{unit.appointments}</span>
                         </div>
                       ))}
                   </div>
@@ -729,30 +755,30 @@ const MultiUnitReports = () => {
 
               {/* Ranking por Ocupação */}
               <Card className="barbershop-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-warning" />
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                    <Clock className="h-4 w-4 md:h-5 md:w-5 text-warning" />
                     Ranking por Ocupação
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
+                  <div className="space-y-2 md:space-y-3">
                     {[...unitMetrics]
                       .sort((a, b) => b.occupancyRate - a.occupancyRate)
                       .map((unit, idx) => (
-                        <div key={unit.id} className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border">
-                          <div className="flex items-center gap-3">
+                        <div key={unit.id} className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-background/50 border border-border">
+                          <div className="flex items-center gap-2 md:gap-3 min-w-0">
                             <span className={`
-                              w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                              w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold text-xs md:text-sm flex-shrink-0
                               ${idx === 0 ? 'bg-yellow-500 text-yellow-900' : 
                                 idx === 1 ? 'bg-gray-300 text-gray-700' : 
                                 idx === 2 ? 'bg-amber-600 text-amber-100' : 'bg-muted text-muted-foreground'}
                             `}>
                               {idx + 1}
                             </span>
-                            <span className="font-medium">{unit.name}</span>
+                            <span className="font-medium text-xs md:text-sm truncate">{unit.name}</span>
                           </div>
-                          <span className="font-bold text-warning">{unit.occupancyRate}%</span>
+                          <span className="font-bold text-warning text-xs md:text-sm ml-2">{unit.occupancyRate}%</span>
                         </div>
                       ))}
                   </div>
@@ -762,41 +788,41 @@ const MultiUnitReports = () => {
           </TabsContent>
 
           {/* Staff Tab */}
-          <TabsContent value="staff" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TabsContent value="staff" className="space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {unitMetrics.map((unit) => (
                 <Card key={unit.id} className="barbershop-card">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-primary" />
-                      {unit.name} - Top Profissionais
+                  <CardHeader className="p-4 md:p-6">
+                    <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                      <Building2 className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
+                      <span className="truncate">{unit.name} - Top Profissionais</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
                     {unit.topStaff.length === 0 ? (
-                      <p className="text-muted-foreground text-sm text-center py-4">
+                      <p className="text-muted-foreground text-xs md:text-sm text-center py-4">
                         Sem dados de profissionais para este período
                       </p>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-2 md:space-y-3">
                         {unit.topStaff.map((staff, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border">
-                            <div className="flex items-center gap-3">
+                          <div key={idx} className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-background/50 border border-border">
+                            <div className="flex items-center gap-2 md:gap-3 min-w-0">
                               <span className={`
-                                w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                                w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold text-xs md:text-sm flex-shrink-0
                                 ${idx === 0 ? 'bg-yellow-500 text-yellow-900' : 
                                   idx === 1 ? 'bg-gray-300 text-gray-700' : 
                                   idx === 2 ? 'bg-amber-600 text-amber-100' : 'bg-muted text-muted-foreground'}
                               `}>
                                 {idx + 1}
                               </span>
-                              <div>
-                                <p className="font-medium">{staff.name}</p>
-                                <p className="text-xs text-muted-foreground">{staff.appointments} agendamentos</p>
+                              <div className="min-w-0">
+                                <p className="font-medium text-xs md:text-sm truncate">{staff.name}</p>
+                                <p className="text-[10px] md:text-xs text-muted-foreground">{staff.appointments} agend.</p>
                               </div>
                             </div>
-                            <span className="font-bold text-success">
-                              R$ {staff.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            <span className="font-bold text-success text-xs md:text-sm whitespace-nowrap ml-2">
+                              R$ {staff.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </span>
                           </div>
                         ))}
