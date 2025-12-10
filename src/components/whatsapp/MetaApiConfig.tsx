@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { WhatsAppLogs } from "./WhatsAppLogs";
 import { MessageTemplates, MessageTemplate } from "./MessageTemplates";
+import { WhatsAppStats } from "./WhatsAppStats";
 
 export const MetaApiConfig = () => {
   const { user, barbershopId } = useAuth();
@@ -76,6 +77,9 @@ export const MetaApiConfig = () => {
 
   return (
     <div className="space-y-6">
+      {/* Statistics Dashboard */}
+      <WhatsAppStats provider="meta" />
+
       {/* Templates */}
       <MessageTemplates 
         onSelectTemplate={handleSelectTemplate}
