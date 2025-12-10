@@ -65,6 +65,8 @@ import {
   ChevronDown,
   ChevronRight,
   MapPin,
+  Link,
+  Unlink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -159,6 +161,10 @@ const SaasAdminPortal = () => {
     trialTenants: 0,
   });
   const [expandedTenants, setExpandedTenants] = useState<Set<string>>(new Set());
+  const [linkUnitDialogOpen, setLinkUnitDialogOpen] = useState(false);
+  const [allBarbershops, setAllBarbershops] = useState<{id: string; name: string; parent_id: string | null}[]>([]);
+  const [linkForm, setLinkForm] = useState({ unitId: '', parentId: '' });
+  const [savingLink, setSavingLink] = useState(false);
 
   // Dialogs
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
@@ -227,6 +233,9 @@ const SaasAdminPortal = () => {
 
     if (error) throw error;
 
+    // Guardar lista completa para o modal de vinculação
+    setAllBarbershops((barbershops || []).map(b => ({ id: b.id, name: b.name, parent_id: b.parent_id })));
+
     // Buscar assinaturas e uso para cada tenant
     const tenantsWithDetails = await Promise.all(
       (barbershops || []).map(async (shop) => {
@@ -272,9 +281,15 @@ const SaasAdminPortal = () => {
       units: units.filter(u => u.parent_id === hq.id),
     }));
 
+    // Adicionar barbearias órfãs (unidades sem matriz válida) como matrizes temporárias
+    const orphanUnits = units.filter(u => !headquarters.find(hq => hq.id === u.parent_id));
+    orphanUnits.forEach(orphan => {
+      tenantsHierarchy.push({ ...orphan, units: [] });
+    });
+
     setTenants(tenantsHierarchy);
 
-    // Calcular estatísticas (apenas matrizes)
+    // Calcular estatísticas (apenas matrizes reais)
     const activeTenants = headquarters.filter(t => t.active).length;
     const trialTenants = headquarters.filter(t => t.subscription?.status === 'trial').length;
     const totalRevenue = tenantsWithDetails.reduce((sum, t) => sum + (t.usage?.revenue || 0), 0);
@@ -285,6 +300,33 @@ const SaasAdminPortal = () => {
       trialTenants,
       totalRevenue,
     });
+  };
+
+  const handleLinkUnit = async () => {
+    if (!linkForm.unitId) {
+      toast.error("Selecione uma barbearia para vincular");
+      return;
+    }
+    
+    try {
+      setSavingLink(true);
+      
+      const { error } = await supabase
+        .from('barbershops')
+        .update({ parent_id: linkForm.parentId || null })
+        .eq('id', linkForm.unitId);
+
+      if (error) throw error;
+      
+      toast.success(linkForm.parentId ? "Unidade vinculada à matriz!" : "Barbearia definida como matriz!");
+      setLinkUnitDialogOpen(false);
+      setLinkForm({ unitId: '', parentId: '' });
+      fetchTenants();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setSavingLink(false);
+    }
   };
 
   const fetchPlans = async () => {
@@ -730,11 +772,17 @@ const SaasAdminPortal = () => {
           {/* Tenants Tab */}
           <TabsContent value="tenants">
             <Card>
-              <CardHeader className="p-3 sm:p-6">
-                <CardTitle className="text-sm sm:text-base">Barbearias Cadastradas</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  {tenants.length} barbearias (matrizes) • {tenants.reduce((sum, t) => sum + (t.units?.length || 0), 0)} unidades
-                </CardDescription>
+              <CardHeader className="p-3 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-sm sm:text-base">Barbearias Cadastradas</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    {tenants.length} barbearias (matrizes) • {tenants.reduce((sum, t) => sum + (t.units?.length || 0), 0)} unidades
+                  </CardDescription>
+                </div>
+                <Button onClick={() => setLinkUnitDialogOpen(true)} variant="outline" className="w-full sm:w-auto">
+                  <Link className="h-4 w-4 mr-2" />
+                  Gerenciar Hierarquia
+                </Button>
               </CardHeader>
               <CardContent className="p-3 sm:p-6 pt-0">
                 {/* Mobile Cards */}
@@ -1349,6 +1397,109 @@ const SaasAdminPortal = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Link Unit Dialog */}
+        <Dialog open={linkUnitDialogOpen} onOpenChange={setLinkUnitDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Link className="h-5 w-5 text-warning" />
+                Gerenciar Hierarquia de Barbearias
+              </DialogTitle>
+              <DialogDescription>
+                Vincule uma barbearia como unidade de outra (matriz) ou defina-a como matriz independente.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {/* Lista de todas as barbearias */}
+              <div className="rounded-lg border p-3 bg-muted/50 max-h-48 overflow-y-auto">
+                <p className="text-xs text-muted-foreground mb-2 font-medium">Barbearias no sistema:</p>
+                <div className="space-y-1">
+                  {allBarbershops.map(b => {
+                    const isMatrix = !b.parent_id;
+                    const parentName = b.parent_id ? allBarbershops.find(p => p.id === b.parent_id)?.name : null;
+                    return (
+                      <div key={b.id} className="flex items-center gap-2 text-sm py-1">
+                        {isMatrix ? (
+                          <Building2 className="h-3 w-3 text-warning shrink-0" />
+                        ) : (
+                          <MapPin className="h-3 w-3 text-muted-foreground shrink-0 ml-4" />
+                        )}
+                        <span className={isMatrix ? 'font-medium' : 'text-muted-foreground'}>{b.name}</span>
+                        {parentName && (
+                          <Badge variant="outline" className="text-xs ml-auto">
+                            → {parentName}
+                          </Badge>
+                        )}
+                        {isMatrix && (
+                          <Badge variant="secondary" className="text-xs ml-auto">Matriz</Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Formulário de vinculação */}
+              <div className="space-y-4 border-t pt-4">
+                <div className="space-y-2">
+                  <Label>Barbearia a vincular</Label>
+                  <Select value={linkForm.unitId} onValueChange={(v) => setLinkForm({ ...linkForm, unitId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione uma barbearia" /></SelectTrigger>
+                    <SelectContent>
+                      {allBarbershops.map(b => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name} {b.parent_id ? '(unidade)' : '(matriz)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Vincular como unidade de (matriz)</Label>
+                  <Select 
+                    value={linkForm.parentId} 
+                    onValueChange={(v) => setLinkForm({ ...linkForm, parentId: v === 'none' ? '' : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione a matriz (ou deixe vazio para ser matriz)" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <div className="flex items-center gap-2">
+                          <Unlink className="h-3 w-3" />
+                          Nenhuma (será matriz independente)
+                        </div>
+                      </SelectItem>
+                      {allBarbershops
+                        .filter(b => !b.parent_id && b.id !== linkForm.unitId)
+                        .map(b => (
+                          <SelectItem key={b.id} value={b.id}>
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-3 w-3 text-warning" />
+                              {b.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Se deixar vazio, a barbearia será uma matriz independente.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setLinkUnitDialogOpen(false)}>Cancelar</Button>
+              <Button 
+                onClick={handleLinkUnit} 
+                disabled={savingLink || !linkForm.unitId}
+                className="bg-warning hover:bg-warning/90 text-warning-foreground"
+              >
+                {savingLink ? 'Salvando...' : 'Salvar Vínculo'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </SaasAdminLayout>
   );
