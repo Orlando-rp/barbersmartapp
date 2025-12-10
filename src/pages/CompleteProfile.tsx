@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/contexts/BrandingContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ interface ExistingAccount {
 const CompleteProfile = () => {
   const navigate = useNavigate();
   const { user, refreshBarbershops } = useAuth();
+  const { branding } = useBranding();
   const [loading, setLoading] = useState(false);
   const [checkingAccount, setCheckingAccount] = useState(true);
   const [existingAccount, setExistingAccount] = useState<ExistingAccount | null>(null);
@@ -311,7 +313,7 @@ const CompleteProfile = () => {
       }
 
       toast.success('Perfil completo!', {
-        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Bem-vindo ao Barber Smart!`,
+        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Bem-vindo ao ${branding?.system_name || 'BarberSmart'}!`,
       });
 
       await refreshBarbershops();
