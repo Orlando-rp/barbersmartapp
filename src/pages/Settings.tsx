@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
 import { Save, User, Bell, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -142,6 +143,9 @@ const SettingsPage = () => {
             Salvar
           </Button>
         </div>
+
+        {/* Public Booking Link */}
+        <PublicBookingLink />
 
         {/* Settings Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
