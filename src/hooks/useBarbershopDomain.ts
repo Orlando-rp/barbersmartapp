@@ -23,6 +23,14 @@ export interface BarbershopDomain {
     show_reviews?: boolean;
     show_location?: boolean;
     theme?: string;
+    primary_color?: string;
+    secondary_color?: string;
+    accent_color?: string;
+    background_color?: string;
+    text_color?: string;
+    hero_image_url?: string;
+    button_style?: 'rounded' | 'square' | 'pill';
+    font_family?: string;
   };
   created_at: string;
   updated_at: string;

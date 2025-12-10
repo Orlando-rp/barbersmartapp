@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useBarbershopDomain } from "@/hooks/useBarbershopDomain";
 import { toast } from "@/components/ui/sonner";
+import LandingThemeCustomizer from "./LandingThemeCustomizer";
 
 const DomainSettings = () => {
   const {
@@ -434,6 +435,28 @@ const DomainSettings = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Theme Customizer */}
+      {domain?.subdomain && (
+        <LandingThemeCustomizer
+          config={{
+            primary_color: domain.landing_page_config?.primary_color,
+            secondary_color: domain.landing_page_config?.secondary_color,
+            accent_color: domain.landing_page_config?.accent_color,
+            background_color: domain.landing_page_config?.background_color,
+            text_color: domain.landing_page_config?.text_color,
+            hero_title: domain.landing_page_config?.hero_title,
+            hero_subtitle: domain.landing_page_config?.hero_subtitle,
+            hero_image_url: domain.landing_page_config?.hero_image_url,
+            button_style: domain.landing_page_config?.button_style,
+            font_family: domain.landing_page_config?.font_family,
+          }}
+          onSave={async (themeConfig) => {
+            return await updateLandingPageConfig(themeConfig);
+          }}
+          previewUrl={`${window.location.origin}/s/${domain.subdomain}`}
+        />
       )}
     </div>
   );
