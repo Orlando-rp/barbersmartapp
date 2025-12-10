@@ -35,8 +35,18 @@ serve(async (req) => {
 
     const data = payload.data;
     const instance = payload.instance;
-    const instanceName = instance?.instanceName || payload.instanceName;
-    const apiUrl = payload.apiUrl || payload.server_url || Deno.env.get('EVOLUTION_API_URL');
+    
+    // Evolution API 2.0 sends instanceName in different locations
+    const instanceName = instance?.instanceName || 
+                         payload.instanceName || 
+                         payload.instance_name ||
+                         payload.sender?.instance ||
+                         data?.instance?.instanceName;
+    
+    console.log('[Evolution Webhook] Instance object:', JSON.stringify(instance, null, 2));
+    console.log('[Evolution Webhook] Extracted instanceName:', instanceName);
+    
+    const apiUrl = payload.apiUrl || payload.server_url || instance?.serverUrl || Deno.env.get('EVOLUTION_API_URL');
 
     // Extract message details from Evolution API format
     const messageData = data?.message || data;
