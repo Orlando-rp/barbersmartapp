@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Lock, Settings as SettingsIcon } from "lucide-react";
+import { User, Lock, Settings as SettingsIcon, Scissors } from "lucide-react";
 import { ProfileForm } from "@/components/forms/ProfileForm";
 import { PasswordForm } from "@/components/forms/PasswordForm";
 import { PreferencesForm } from "@/components/forms/PreferencesForm";
+import { MyStaffProfileForm } from "@/components/forms/MyStaffProfileForm";
 import { AvatarUpload } from "@/components/profile/AvatarUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -18,7 +19,7 @@ interface ProfileData {
 }
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, barbershopId } = useAuth();
   const { toast } = useToast();
   const [profileData, setProfileData] = useState<ProfileData>({
     full_name: "",
@@ -26,12 +27,14 @@ const Profile = () => {
     avatar_url: null,
   });
   const [loading, setLoading] = useState(true);
+  const [isBarber, setIsBarber] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchProfile();
+      checkIfBarber();
     }
-  }, [user]);
+  }, [user, barbershopId]);
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -57,6 +60,24 @@ const Profile = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkIfBarber = async () => {
+    if (!user || !barbershopId) return;
+
+    try {
+      // Check if user has barbeiro role or is a staff member
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('barbershop_id', barbershopId)
+        .maybeSingle();
+
+      setIsBarber(!!staffData);
+    } catch (error) {
+      console.error('Erro ao verificar status de barbeiro:', error);
     }
   };
 
@@ -94,12 +115,19 @@ const Profile = () => {
         </Card>
 
         <Tabs defaultValue="personal" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsList className={`grid w-full h-auto ${isBarber ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="personal" className="flex flex-col sm:flex-row gap-1 py-2 text-xs sm:text-sm">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Informações Pessoais</span>
               <span className="sm:hidden">Perfil</span>
             </TabsTrigger>
+            {isBarber && (
+              <TabsTrigger value="professional" className="flex flex-col sm:flex-row gap-1 py-2 text-xs sm:text-sm">
+                <Scissors className="h-4 w-4" />
+                <span className="hidden sm:inline">Profissional</span>
+                <span className="sm:hidden">Prof.</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="security" className="flex flex-col sm:flex-row gap-1 py-2 text-xs sm:text-sm">
               <Lock className="h-4 w-4" />
               <span>Segurança</span>
@@ -127,6 +155,22 @@ const Profile = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {isBarber && (
+            <TabsContent value="professional">
+              <Card className="barbershop-card">
+                <CardHeader>
+                  <CardTitle>Configurações Profissionais</CardTitle>
+                  <CardDescription>
+                    Gerencie seus horários e serviços que você atende
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <MyStaffProfileForm />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           <TabsContent value="security">
             <Card className="barbershop-card">

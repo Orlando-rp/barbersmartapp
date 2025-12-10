@@ -51,6 +51,11 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [role, setRole] = useState<string>(staff?.user_roles?.[0]?.role || "barbeiro");
   const [commissionRate, setCommissionRate] = useState(staff?.commission_rate || 0);
   const [specialties] = useState<string[]>(staff?.specialties || []);
+  
+  // Selected barbershop for new staff - defaults to current barbershop
+  const [selectedBarbershopId, setSelectedBarbershopId] = useState<string>(
+    staff?.barbershop_id || barbershopId || ""
+  );
 
   // Individual schedule (for single unit)
   const [useCustomSchedule, setUseCustomSchedule] = useState(!!staff?.schedule);
@@ -66,11 +71,34 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   // Avatar
   const [avatarUrl, setAvatarUrl] = useState<string | null>(staff?.profiles?.avatar_url || null);
 
+  // All available barbershops for selection
+  const [availableBarbershops, setAvailableBarbershops] = useState<Array<{id: string, name: string}>>([]);
+
   // Memoize barbershop IDs to prevent unnecessary re-renders
   const barbershopIds = useMemo(() => barbershops.map(b => b.id), [barbershops]);
   
   // Check if user has multiple units
   const hasMultipleUnits = barbershops.length > 1;
+
+  // Load available barbershops
+  useEffect(() => {
+    const loadBarbershops = async () => {
+      const { data } = await supabase
+        .from('barbershops')
+        .select('id, name')
+        .in('id', barbershopIds)
+        .eq('active', true)
+        .order('name');
+      
+      if (data) {
+        setAvailableBarbershops(data);
+      }
+    };
+    
+    if (barbershopIds.length > 0) {
+      loadBarbershops();
+    }
+  }, [barbershopIds]);
 
   // Stable callbacks for child components
   const handleUnitScheduleChange = useCallback((newSchedule: StaffUnitSchedule) => {
@@ -338,11 +366,13 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         if (!userId) throw new Error("Falha ao criar usuário");
 
         // 2. Atualizar profile (caso o trigger não tenha criado)
+        const targetBarbershopId = selectedBarbershopId || barbershopId;
+        
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
             id: userId,
-            barbershop_id: barbershopId,
+            barbershop_id: targetBarbershopId,
             full_name: fullName,
             phone,
           });
@@ -356,7 +386,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         const scheduleToSave = hasMultipleUnits ? unitSchedule : (useCustomSchedule ? schedule : null);
         
         const staffInsertData = {
-          barbershop_id: barbershopId,
+          barbershop_id: targetBarbershopId,
           user_id: userId,
           specialties,
           commission_rate: commissionRate,
@@ -390,7 +420,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           .insert({
             user_id: userId,
             role,
-            barbershop_id: barbershopId,
+            barbershop_id: targetBarbershopId,
           });
 
         if (roleError) {
@@ -524,7 +554,24 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         </div>
       </div>
 
-
+      {/* Barbershop Selection - Only for new staff when user has multiple units */}
+      {!staff && hasMultipleUnits && availableBarbershops.length > 1 && (
+        <div className="space-y-2">
+          <Label htmlFor="barbershop" className="text-sm">Barbearia *</Label>
+          <Select value={selectedBarbershopId} onValueChange={setSelectedBarbershopId}>
+            <SelectTrigger className="text-sm">
+              <SelectValue placeholder="Selecione a barbearia" />
+            </SelectTrigger>
+            <SelectContent className="z-[200]">
+              {availableBarbershops.map((shop) => (
+                <SelectItem key={shop.id} value={shop.id}>
+                  {shop.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Multi-Unit Schedule Section (shows when user has multiple units and role is barbeiro) */}
       {role === 'barbeiro' && hasMultipleUnits && (
@@ -535,7 +582,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         />
       )}
 
-      {/* Individual Schedule Section (shows when user has single unit and role is barbeiro) */}
+      {/* Individual Schedule Section (shows for barbeiro) */}
       {role === 'barbeiro' && !hasMultipleUnits && (
         <StaffScheduleSection
           schedule={schedule}
@@ -546,9 +593,9 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       )}
 
       {/* Services Selection Section */}
-      {role === 'barbeiro' && barbershopId && (
+      {role === 'barbeiro' && (selectedBarbershopId || barbershopId) && (
         <StaffServicesSection
-          barbershopId={barbershopId}
+          barbershopId={selectedBarbershopId || barbershopId || ''}
           selectedServices={selectedServices}
           onServicesChange={handleServicesChange}
         />
