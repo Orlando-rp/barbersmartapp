@@ -36,17 +36,17 @@ serve(async (req) => {
     const data = payload.data;
     const instance = payload.instance;
     
-    // Evolution API 2.0 sends instanceName in different locations
-    const instanceName = instance?.instanceName || 
-                         payload.instanceName || 
-                         payload.instance_name ||
-                         payload.sender?.instance ||
-                         data?.instance?.instanceName;
+    // Evolution API 2.0 - instance can be a string OR an object
+    const instanceName = typeof instance === 'string' 
+      ? instance 
+      : (instance?.instanceName || payload.instanceName || payload.instance_name);
     
-    console.log('[Evolution Webhook] Instance object:', JSON.stringify(instance, null, 2));
+    console.log('[Evolution Webhook] Instance value:', instance);
     console.log('[Evolution Webhook] Extracted instanceName:', instanceName);
     
-    const apiUrl = payload.apiUrl || payload.server_url || instance?.serverUrl || Deno.env.get('EVOLUTION_API_URL');
+    // Get API URL and key from payload or environment
+    const apiUrl = payload.server_url || payload.apiUrl || Deno.env.get('EVOLUTION_API_URL');
+    const payloadApiKey = payload.apikey;
 
     // Extract message details from Evolution API format
     const messageData = data?.message || data;
