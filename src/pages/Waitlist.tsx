@@ -357,11 +357,11 @@ const Waitlist = () => {
 
         {/* Filters */}
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-4">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-3">
+              <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px] text-sm">
                   <SelectValue placeholder="Filtrar por status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -379,171 +379,281 @@ const Waitlist = () => {
 
         {/* Table */}
         <Card>
-          <CardHeader>
-            <CardTitle>Entradas na Lista de Espera</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Entradas na Lista de Espera</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : entries.length === 0 ? (
               <EmptyState
-                icon={<Clock className="h-12 w-12" />}
+                icon={<Clock className="h-10 w-10 sm:h-12 sm:w-12" />}
                 title="Nenhuma entrada na lista de espera"
                 description="Quando clientes se inscreverem para dias lotados, eles aparecerão aqui."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Data Preferida</TableHead>
-                      <TableHead>Horário</TableHead>
-                      <TableHead>Serviço</TableHead>
-                      <TableHead>Profissional</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {entries.map((entry) => {
-                      const dateIsPast = isPast(parseISO(entry.preferred_date + "T23:59:59"));
-                      const canNotify = entry.status === "waiting";
-                      const canConvert = entry.status === "waiting" || entry.status === "notified";
-                      const canCancel = entry.status === "waiting" || entry.status === "notified";
-                      const canExpire = entry.status === "waiting" && dateIsPast;
+              <>
+                {/* Mobile View - Cards */}
+                <div className="space-y-3 md:hidden">
+                  {entries.map((entry) => {
+                    const dateIsPast = isPast(parseISO(entry.preferred_date + "T23:59:59"));
+                    const canNotify = entry.status === "waiting";
+                    const canConvert = entry.status === "waiting" || entry.status === "notified";
+                    const canCancel = entry.status === "waiting" || entry.status === "notified";
+                    const canExpire = entry.status === "waiting" && dateIsPast;
 
-                      return (
-                        <TableRow key={entry.id}>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{entry.client_name}</span>
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {entry.client_phone}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span className={dateIsPast && entry.status === "waiting" ? "text-red-500" : ""}>
-                                {formatDate(entry.preferred_date)}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {formatTimeRange(entry.preferred_time_start, entry.preferred_time_end)}
-                          </TableCell>
-                          <TableCell>
-                            {entry.service?.name || (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {entry.staff?.profiles?.full_name || (
-                              <span className="text-muted-foreground">Qualquer</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={statusConfig[entry.status].color}
+                    return (
+                      <div key={entry.id} className="p-3 rounded-lg border bg-card space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm truncate">{entry.client_name}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Phone className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{entry.client_phone}</span>
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`${statusConfig[entry.status].color} text-xs flex-shrink-0`}
+                          >
+                            {statusConfig[entry.status].label}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Calendar className="h-3 w-3 flex-shrink-0" />
+                            <span className={dateIsPast && entry.status === "waiting" ? "text-red-500" : ""}>
+                              {formatDate(entry.preferred_date)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Clock className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{formatTimeRange(entry.preferred_time_start, entry.preferred_time_end)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Scissors className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{entry.service?.name || "-"}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <User className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{entry.staff?.profiles?.full_name || "Qualquer"}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 pt-2 border-t">
+                          {canNotify && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => setActionDialog({ open: true, entry, action: "notify" })}
                             >
-                              {statusConfig[entry.status].label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              {canNotify && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  title="Notificar cliente"
-                                  onClick={() =>
-                                    setActionDialog({
-                                      open: true,
-                                      entry,
-                                      action: "notify",
-                                    })
-                                  }
-                                >
-                                  <MessageSquare className="h-4 w-4 text-blue-600" />
-                                </Button>
+                              <MessageSquare className="h-3.5 w-3.5 mr-1 text-blue-600" />
+                              Notificar
+                            </Button>
+                          )}
+                          {canConvert && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => setAppointmentDialog({ open: true, entry })}
+                            >
+                              <CalendarPlus className="h-3.5 w-3.5 mr-1 text-primary" />
+                              Agendar
+                            </Button>
+                          )}
+                          {canConvert && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setActionDialog({ open: true, entry, action: "convert" })}
+                            >
+                              <Check className="h-3.5 w-3.5 text-green-600" />
+                            </Button>
+                          )}
+                          {canExpire && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setActionDialog({ open: true, entry, action: "expire" })}
+                            >
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                          )}
+                          {canCancel && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 ml-auto"
+                              onClick={() => setActionDialog({ open: true, entry, action: "cancel" })}
+                            >
+                              <X className="h-3.5 w-3.5 text-red-600" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop View - Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Data Preferida</TableHead>
+                        <TableHead>Horário</TableHead>
+                        <TableHead>Serviço</TableHead>
+                        <TableHead>Profissional</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {entries.map((entry) => {
+                        const dateIsPast = isPast(parseISO(entry.preferred_date + "T23:59:59"));
+                        const canNotify = entry.status === "waiting";
+                        const canConvert = entry.status === "waiting" || entry.status === "notified";
+                        const canCancel = entry.status === "waiting" || entry.status === "notified";
+                        const canExpire = entry.status === "waiting" && dateIsPast;
+
+                        return (
+                          <TableRow key={entry.id}>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{entry.client_name}</span>
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {entry.client_phone}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <span className={dateIsPast && entry.status === "waiting" ? "text-red-500" : ""}>
+                                  {formatDate(entry.preferred_date)}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {formatTimeRange(entry.preferred_time_start, entry.preferred_time_end)}
+                            </TableCell>
+                            <TableCell>
+                              {entry.service?.name || (
+                                <span className="text-muted-foreground">-</span>
                               )}
-                              {canConvert && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  title="Criar agendamento"
-                                  onClick={() =>
-                                    setAppointmentDialog({
-                                      open: true,
-                                      entry,
-                                    })
-                                  }
-                                >
-                                  <CalendarPlus className="h-4 w-4 text-primary" />
-                                </Button>
+                            </TableCell>
+                            <TableCell>
+                              {entry.staff?.profiles?.full_name || (
+                                <span className="text-muted-foreground">Qualquer</span>
                               )}
-                              {canConvert && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  title="Marcar como convertido"
-                                  onClick={() =>
-                                    setActionDialog({
-                                      open: true,
-                                      entry,
-                                      action: "convert",
-                                    })
-                                  }
-                                >
-                                  <Check className="h-4 w-4 text-green-600" />
-                                </Button>
-                              )}
-                              {canExpire && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  title="Marcar como expirado"
-                                  onClick={() =>
-                                    setActionDialog({
-                                      open: true,
-                                      entry,
-                                      action: "expire",
-                                    })
-                                  }
-                                >
-                                  <Clock className="h-4 w-4 text-muted-foreground" />
-                                </Button>
-                              )}
-                              {canCancel && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  title="Cancelar entrada"
-                                  onClick={() =>
-                                    setActionDialog({
-                                      open: true,
-                                      entry,
-                                      action: "cancel",
-                                    })
-                                  }
-                                >
-                                  <X className="h-4 w-4 text-red-600" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={statusConfig[entry.status].color}
+                              >
+                                {statusConfig[entry.status].label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                {canNotify && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Notificar cliente"
+                                    onClick={() =>
+                                      setActionDialog({
+                                        open: true,
+                                        entry,
+                                        action: "notify",
+                                      })
+                                    }
+                                  >
+                                    <MessageSquare className="h-4 w-4 text-blue-600" />
+                                  </Button>
+                                )}
+                                {canConvert && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Criar agendamento"
+                                    onClick={() =>
+                                      setAppointmentDialog({
+                                        open: true,
+                                        entry,
+                                      })
+                                    }
+                                  >
+                                    <CalendarPlus className="h-4 w-4 text-primary" />
+                                  </Button>
+                                )}
+                                {canConvert && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Marcar como convertido"
+                                    onClick={() =>
+                                      setActionDialog({
+                                        open: true,
+                                        entry,
+                                        action: "convert",
+                                      })
+                                    }
+                                  >
+                                    <Check className="h-4 w-4 text-green-600" />
+                                  </Button>
+                                )}
+                                {canExpire && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Marcar como expirado"
+                                    onClick={() =>
+                                      setActionDialog({
+                                        open: true,
+                                        entry,
+                                        action: "expire",
+                                      })
+                                    }
+                                  >
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                )}
+                                {canCancel && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Cancelar entrada"
+                                    onClick={() =>
+                                      setActionDialog({
+                                        open: true,
+                                        entry,
+                                        action: "cancel",
+                                      })
+                                    }
+                                  >
+                                    <X className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
