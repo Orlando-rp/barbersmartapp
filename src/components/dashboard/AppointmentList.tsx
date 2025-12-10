@@ -124,32 +124,32 @@ const AppointmentList = () => {
       </Card>;
   }
   return <Card className="barbershop-card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Agendamentos de Hoje
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        {appointments.length === 0 ? <div className="text-center py-8">
-            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-            <p className="text-muted-foreground">Nenhum agendamento para hoje</p>
-          </div> : <div className="space-y-4">
-            {appointments.map(appointment => <div key={appointment.id} className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/50 transition-smooth cursor-pointer">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-foreground">{appointment.client_name}</span>
+      <CardContent className="p-4 sm:p-6 pt-0">
+        {appointments.length === 0 ? <div className="text-center py-6 sm:py-8">
+            <Calendar className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4 opacity-50" />
+            <p className="text-sm sm:text-base text-muted-foreground">Nenhum agendamento para hoje</p>
+          </div> : <div className="space-y-3 sm:space-y-4">
+            {appointments.map(appointment => <div key={appointment.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border hover:bg-accent/50 transition-smooth cursor-pointer">
+                <div className="flex-1 space-y-1.5 sm:space-y-2 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="font-medium text-sm sm:text-base text-foreground truncate">{appointment.client_name}</span>
                     </div>
-                    <Badge className={getStatusColor(appointment.status)}>
+                    <Badge className={`${getStatusColor(appointment.status)} text-xs flex-shrink-0`}>
                       {getStatusText(appointment.status)}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Scissors className="h-3 w-3" />
-                      <span>{appointment.service_name}</span>
+                      <span className="truncate max-w-[100px] sm:max-w-none">{appointment.service_name}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -157,15 +157,16 @@ const AppointmentList = () => {
                     </div>
                     {appointment.barber_name && <div className="flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        <span>{appointment.barber_name}</span>
+                        <span className="truncate max-w-[80px] sm:max-w-none">{appointment.barber_name}</span>
                       </div>}
                   </div>
                 </div>
               </div>)}
           </div>}
-        <div className="mt-4 pt-4 border-t border-border">
-          <Button variant="outline" className="w-full" onClick={() => navigate('/appointments')}>
-            Ver Todos os Agendamentos
+        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border">
+          <Button variant="outline" className="w-full text-sm" onClick={() => navigate('/appointments')}>
+            <span className="sm:hidden">Ver Todos</span>
+            <span className="hidden sm:inline">Ver Todos os Agendamentos</span>
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

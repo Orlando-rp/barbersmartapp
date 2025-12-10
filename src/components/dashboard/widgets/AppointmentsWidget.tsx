@@ -69,27 +69,27 @@ export const AppointmentsWidget = ({
       supabase.removeChannel(channel);
     };
   }, [user]);
-  return <DashboardWidget title="Agendamentos" icon={<Calendar className="h-5 w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
-      <div className="space-y-4">
+  return <DashboardWidget title="Agendamentos" icon={<Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
+      <div className="space-y-2 sm:space-y-4">
         <div>
-          <p className="text-sm text-muted-foreground">Hoje</p>
-          <p className="font-bold text-lg">{todayAppointments}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Hoje</p>
+          <p className="font-bold text-sm sm:text-lg">{todayAppointments}</p>
         </div>
         
-        {nextAppointment && <div className="border-t pt-4">
-            <p className="text-sm text-muted-foreground mb-2">Próximo Agendamento</p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">
+        {nextAppointment && <div className="border-t pt-2 sm:pt-4">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1 sm:mb-2">Próximo</p>
+            <div className="space-y-1 sm:space-y-2">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                <span className="font-medium text-xs sm:text-sm">
                   {format(new Date(nextAppointment.appointment_time), "HH:mm", {
                 locale: ptBR
               })}
                 </span>
               </div>
-              <p className="text-sm">{nextAppointment.client_name}</p>
-              <p className="text-sm text-muted-foreground">{nextAppointment.service_name}</p>
-              <Badge variant={nextAppointment.status === 'confirmado' ? 'default' : nextAppointment.status === 'pendente' ? 'secondary' : 'destructive'}>
+              <p className="text-xs sm:text-sm truncate">{nextAppointment.client_name}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">{nextAppointment.service_name}</p>
+              <Badge className="text-xs" variant={nextAppointment.status === 'confirmado' ? 'default' : nextAppointment.status === 'pendente' ? 'secondary' : 'destructive'}>
                 {nextAppointment.status}
               </Badge>
             </div>

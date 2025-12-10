@@ -30,16 +30,16 @@ const StatsCard = ({ title, value, change, icon: Icon, variant = "default" }: St
 
   return (
     <Card className={cn("transition-smooth hover:shadow-medium", variants[variant])}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium text-muted-foreground">{title}</div>
-          <Icon className={cn("h-5 w-5", iconVariants[variant])} />
+      <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</div>
+          <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0", iconVariants[variant])} />
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold text-foreground">{value}</div>
+      <CardContent className="p-3 sm:p-4 pt-1 sm:pt-2">
+        <div className="text-lg sm:text-2xl font-bold text-foreground truncate">{value}</div>
         {change && (
-          <div className="flex items-center text-xs mt-2">
+          <div className="flex items-center flex-wrap text-xs mt-1 sm:mt-2">
             <span
               className={cn(
                 "font-medium",
@@ -48,7 +48,7 @@ const StatsCard = ({ title, value, change, icon: Icon, variant = "default" }: St
             >
               {change.type === "increase" ? "+" : "-"}{Math.abs(change.value)}%
             </span>
-            <span className="text-muted-foreground ml-1">vs. mês anterior</span>
+            <span className="text-muted-foreground ml-1 hidden sm:inline">vs. mês anterior</span>
           </div>
         )}
       </CardContent>

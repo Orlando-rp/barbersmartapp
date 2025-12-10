@@ -77,16 +77,16 @@ export const OccupancyWidget = ({
       supabase.removeChannel(channel);
     };
   }, [user]);
-  return <DashboardWidget title="Taxa de Ocupação" icon={<Activity className="h-5 w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
-      <div className="space-y-4">
+  return <DashboardWidget title="Ocupação" icon={<Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
+      <div className="space-y-2 sm:space-y-4">
         <div>
-          <p className="font-bold text-lg">{occupancyRate.toFixed(1)}%</p>
-          <p className="text-sm text-muted-foreground">Hoje</p>
+          <p className="font-bold text-sm sm:text-lg">{occupancyRate.toFixed(1)}%</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Hoje</p>
         </div>
-        <Progress value={occupancyRate} className="h-2" />
-        <div className="flex justify-between text-sm text-muted-foreground">
-          <span>{bookedSlots} agendados</span>
-          <span>{totalSlots} slots disponíveis</span>
+        <Progress value={occupancyRate} className="h-1.5 sm:h-2" />
+        <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
+          <span>{bookedSlots} agend.</span>
+          <span>{totalSlots} slots</span>
         </div>
       </div>
     </DashboardWidget>;

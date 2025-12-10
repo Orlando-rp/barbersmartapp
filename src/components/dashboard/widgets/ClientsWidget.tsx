@@ -77,23 +77,23 @@ export const ClientsWidget = ({
       supabase.removeChannel(channel);
     };
   }, [user]);
-  return <DashboardWidget title="Clientes" icon={<Users className="h-5 w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
-      <div className="space-y-4">
+  return <DashboardWidget title="Clientes" icon={<Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
+      <div className="space-y-2 sm:space-y-4">
         <div>
-          <p className="text-sm text-muted-foreground">Total</p>
-          <p className="font-bold text-lg">{totalClients}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
+          <p className="font-bold text-sm sm:text-lg">{totalClients}</p>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4">
           <div>
-            <p className="text-sm text-muted-foreground">Ativos</p>
-            <p className="font-semibold text-lg">{activeClients}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Ativos</p>
+            <p className="font-semibold text-sm sm:text-lg">{activeClients}</p>
           </div>
           <div>
-            <div className="flex items-center gap-1 mb-1">
-              <UserPlus className="h-3 w-3 text-green-500" />
-              <p className="text-sm text-muted-foreground">Novos (mês)</p>
+            <div className="flex items-center gap-1 mb-0.5 sm:mb-1">
+              <UserPlus className="h-3 w-3 text-success" />
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Novos</p>
             </div>
-            <p className="font-semibold text-green-500 text-lg">{newClients}</p>
+            <p className="font-semibold text-success text-sm sm:text-lg">{newClients}</p>
           </div>
         </div>
       </div>
