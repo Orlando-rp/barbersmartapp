@@ -284,10 +284,10 @@ const MyEarnings = () => {
   if (!staffId) {
     return (
       <Layout>
-        <div className="flex flex-col items-center justify-center h-96 text-center">
-          <Wallet className="h-16 w-16 text-muted-foreground mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Acesso Restrito</h2>
-          <p className="text-muted-foreground max-w-md">
+        <div className="flex flex-col items-center justify-center h-96 text-center px-4">
+          <Wallet className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-4" />
+          <h2 className="text-xl sm:text-2xl font-bold mb-2">Acesso Restrito</h2>
+          <p className="text-sm text-muted-foreground max-w-md">
             Esta página é exclusiva para profissionais cadastrados na barbearia.
             Entre em contato com o administrador se você deveria ter acesso.
           </p>
@@ -549,52 +549,86 @@ const MyEarnings = () => {
 
         {/* Recent Transactions */}
         <Card className="barbershop-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Últimos Serviços Realizados
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <LoadingSpinner />
               </div>
             ) : recentTransactions.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Serviço</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead className="text-center">Taxa</TableHead>
-                    <TableHead className="text-right">Minha Comissão</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Mobile View - Cards */}
+                <div className="space-y-3 md:hidden">
                   {recentTransactions.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="text-muted-foreground">
-                        {format(new Date(t.date), 'dd/MM/yyyy', { locale: ptBR })}
-                      </TableCell>
-                      <TableCell className="font-medium">{t.description}</TableCell>
-                      <TableCell className="text-right text-success">
-                        R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline">{t.commissionRate}%</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-warning">
-                        R$ {t.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </TableCell>
-                    </TableRow>
+                    <div key={t.id} className="p-3 rounded-lg border bg-card space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{t.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(t.date), 'dd/MM/yyyy', { locale: ptBR })}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-xs shrink-0">{t.commissionRate}%</Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Valor:</span>
+                        <span className="text-success font-medium">
+                          R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm border-t pt-2">
+                        <span className="text-muted-foreground">Minha Comissão:</span>
+                        <span className="font-bold text-warning">
+                          R$ {t.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* Desktop View - Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Serviço</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="text-center">Taxa</TableHead>
+                        <TableHead className="text-right">Minha Comissão</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentTransactions.map((t) => (
+                        <TableRow key={t.id}>
+                          <TableCell className="text-muted-foreground">
+                            {format(new Date(t.date), 'dd/MM/yyyy', { locale: ptBR })}
+                          </TableCell>
+                          <TableCell className="font-medium">{t.description}</TableCell>
+                          <TableCell className="text-right text-success">
+                            R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline">{t.commissionRate}%</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-warning">
+                            R$ {t.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             ) : (
-              <div className="text-center py-12">
-                <Scissors className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground">Nenhum serviço encontrado no período</p>
+              <div className="text-center py-8 sm:py-12">
+                <Scissors className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <p className="text-sm text-muted-foreground">Nenhum serviço encontrado no período</p>
               </div>
             )}
           </CardContent>
