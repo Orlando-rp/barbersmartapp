@@ -205,86 +205,86 @@ export const PredictiveAnalytics = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Insight Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Receita Média Mensal</p>
-                <p className="text-2xl font-bold">
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita Média</p>
+                <p className="text-base sm:text-2xl font-bold truncate">
                   R$ {insights.avgMonthlyRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
                 </p>
               </div>
-              <DollarSign className="h-8 w-8 text-primary opacity-80" />
+              <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-primary opacity-80 shrink-0 hidden sm:block" />
             </div>
-            <div className="mt-2 flex items-center text-sm">
+            <div className="mt-1 sm:mt-2 flex items-center text-xs sm:text-sm flex-wrap">
               {insights.revenueGrowthRate >= 0 ? (
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 mr-1 shrink-0" />
               ) : (
-                <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+                <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 mr-1 shrink-0" />
               )}
               <span className={insights.revenueGrowthRate >= 0 ? "text-green-500" : "text-red-500"}>
                 {insights.revenueGrowthRate > 0 ? "+" : ""}
                 {insights.revenueGrowthRate}%
               </span>
-              <span className="text-muted-foreground ml-1">vs trimestre anterior</span>
+              <span className="text-muted-foreground ml-1 hidden sm:inline">vs trimestre</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Previsão Próximo Mês</p>
-                <p className="text-2xl font-bold">
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Previsão</p>
+                <p className="text-base sm:text-2xl font-bold truncate">
                   R$ {(predictions[0]?.predictedRevenue || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
                 </p>
               </div>
-              <Target className="h-8 w-8 text-blue-500 opacity-80" />
+              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 opacity-80 shrink-0 hidden sm:block" />
             </div>
-            <div className="mt-2 flex items-center text-sm text-muted-foreground">
+            <div className="mt-1 sm:mt-2 flex items-center text-xs sm:text-sm text-muted-foreground">
               <span>Confiança: {predictions[0]?.confidence || 0}%</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Taxa de Não Comparecimento</p>
-                <p className="text-2xl font-bold">{insights.avgNoShowRate}%</p>
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">No-Show</p>
+                <p className="text-base sm:text-2xl font-bold">{insights.avgNoShowRate}%</p>
               </div>
-              <UserX className="h-8 w-8 text-amber-500 opacity-80" />
+              <UserX className="h-6 w-6 sm:h-8 sm:w-8 text-amber-500 opacity-80 shrink-0 hidden sm:block" />
             </div>
-            <div className="mt-2 flex items-center text-sm">
+            <div className="mt-1 sm:mt-2 flex items-center text-xs sm:text-sm flex-wrap">
               {insights.noShowTrend <= 0 ? (
-                <TrendingDown className="h-4 w-4 text-green-500 mr-1" />
+                <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 mr-1 shrink-0" />
               ) : (
-                <TrendingUp className="h-4 w-4 text-red-500 mr-1" />
+                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 mr-1 shrink-0" />
               )}
               <span className={insights.noShowTrend <= 0 ? "text-green-500" : "text-red-500"}>
                 {insights.noShowTrend > 0 ? "+" : ""}
                 {insights.noShowTrend}%
               </span>
-              <span className="text-muted-foreground ml-1">tendência</span>
+              <span className="text-muted-foreground ml-1 hidden sm:inline">tendência</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Melhor Mês</p>
-                <p className="text-2xl font-bold capitalize">{insights.bestMonth}</p>
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Melhor Mês</p>
+                <p className="text-base sm:text-2xl font-bold capitalize">{insights.bestMonth}</p>
               </div>
-              <Calendar className="h-8 w-8 text-green-500 opacity-80" />
+              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 opacity-80 shrink-0 hidden sm:block" />
             </div>
-            <div className="mt-2 flex items-center text-sm text-muted-foreground">
+            <div className="mt-1 sm:mt-2 flex items-center text-xs sm:text-sm text-muted-foreground">
               <span>Pior: {insights.worstMonth}</span>
             </div>
           </CardContent>
@@ -293,48 +293,40 @@ export const PredictiveAnalytics = () => {
 
       {/* Revenue Prediction Chart */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Previsão de Receita (12 meses + 3 meses previstos)
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <span className="truncate">Previsão de Receita</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
+        <CardContent className="p-2 sm:p-6 pt-0">
+          <div className="h-[200px] sm:h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorPrediction" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
-                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" className="text-xs" />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                 <YAxis
-                  tickFormatter={(value) => `R$${(value / 1000).toFixed(0)}k`}
-                  className="text-xs"
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  tick={{ fontSize: 10 }}
+                  width={35}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
                       return (
-                        <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+                        <div className="bg-popover border border-border rounded-lg p-2 sm:p-3 shadow-lg text-xs sm:text-sm">
                           <p className="font-medium">{data.month}</p>
-                          <p className="text-sm">
-                            {data.type === "previsão" ? "Previsão: " : "Receita: "}
-                            R$ {data.revenue?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          <p>
+                            {data.type === "previsão" ? "Prev: " : ""}
+                            R$ {data.revenue?.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
                           </p>
-                          {data.type === "previsão" && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              (Projeção baseada em histórico)
-                            </p>
-                          )}
                         </div>
                       );
                     }
@@ -351,13 +343,13 @@ export const PredictiveAnalytics = () => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+          <div className="flex items-center justify-center gap-4 sm:gap-6 mt-3 text-xs sm:text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 bg-primary" />
+              <div className="w-3 sm:w-4 h-0.5 bg-primary" />
               <span className="text-muted-foreground">Histórico</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 bg-primary opacity-50" />
+              <div className="w-3 sm:w-4 h-0.5 bg-primary opacity-50" />
               <span className="text-muted-foreground">Previsão</span>
             </div>
           </div>
@@ -366,38 +358,32 @@ export const PredictiveAnalytics = () => {
 
       {/* No-Show Rate Chart */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
-            Taxa de Não Comparecimento (Histórico + Previsão)
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <span className="truncate">Taxa de No-Show</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
+        <CardContent className="p-2 sm:p-6 pt-0">
+          <div className="h-[180px] sm:h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
+              <LineChart data={chartData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" className="text-xs" />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                 <YAxis
                   tickFormatter={(value) => `${value}%`}
                   domain={[0, 'auto']}
-                  className="text-xs"
+                  tick={{ fontSize: 10 }}
+                  width={35}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
                       return (
-                        <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+                        <div className="bg-popover border border-border rounded-lg p-2 shadow-lg text-xs sm:text-sm">
                           <p className="font-medium">{data.month}</p>
-                          <p className="text-sm">
-                            Taxa: {data.noShowRate?.toFixed(1)}%
-                          </p>
-                          {data.type === "previsão" && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              (Projeção)
-                            </p>
-                          )}
+                          <p>Taxa: {data.noShowRate?.toFixed(1)}%</p>
                         </div>
                       );
                     }
@@ -409,7 +395,7 @@ export const PredictiveAnalytics = () => {
                   dataKey="noShowRate"
                   stroke="hsl(var(--chart-3))"
                   strokeWidth={2}
-                  dot={{ fill: "hsl(var(--chart-3))", strokeWidth: 0 }}
+                  dot={{ fill: "hsl(var(--chart-3))", strokeWidth: 0, r: 3 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -417,30 +403,61 @@ export const PredictiveAnalytics = () => {
         </CardContent>
       </Card>
 
-      {/* Predictions Table */}
+      {/* Predictions - Mobile Cards / Desktop Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Previsões Detalhadas</CardTitle>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Previsões Detalhadas</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <CardContent className="p-3 sm:p-6 pt-0">
+          {/* Mobile Cards */}
+          <div className="sm:hidden space-y-3">
+            {predictions.map((pred) => (
+              <div key={pred.month} className="border rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium capitalize">{pred.month}</span>
+                  <span className="text-xs text-muted-foreground">Conf: {pred.confidence}%</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Receita</p>
+                    <p className="font-medium">R$ {pred.predictedRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">No-Show</p>
+                    <p className={pred.predictedNoShowRate > 15 ? "text-red-500 font-medium" : "text-green-500 font-medium"}>
+                      {pred.predictedNoShowRate.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full"
+                    style={{ width: `${pred.confidence}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Desktop Table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Mês</th>
-                  <th className="text-right py-3 px-4 font-medium">Receita Prevista</th>
-                  <th className="text-right py-3 px-4 font-medium">Taxa No-Show</th>
-                  <th className="text-right py-3 px-4 font-medium">Confiança</th>
+                  <th className="text-left py-3 px-4 font-medium text-sm">Mês</th>
+                  <th className="text-right py-3 px-4 font-medium text-sm">Receita</th>
+                  <th className="text-right py-3 px-4 font-medium text-sm">No-Show</th>
+                  <th className="text-right py-3 px-4 font-medium text-sm">Confiança</th>
                 </tr>
               </thead>
               <tbody>
                 {predictions.map((pred) => (
                   <tr key={pred.month} className="border-b last:border-0">
-                    <td className="py-3 px-4 capitalize">{pred.month}</td>
-                    <td className="py-3 px-4 text-right font-medium">
-                      R$ {pred.predictedRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    <td className="py-3 px-4 capitalize text-sm">{pred.month}</td>
+                    <td className="py-3 px-4 text-right font-medium text-sm">
+                      R$ {pred.predictedRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right text-sm">
                       <span className={pred.predictedNoShowRate > 15 ? "text-red-500" : "text-green-500"}>
                         {pred.predictedNoShowRate.toFixed(1)}%
                       </span>
@@ -453,7 +470,7 @@ export const PredictiveAnalytics = () => {
                             style={{ width: `${pred.confidence}%` }}
                           />
                         </div>
-                        <span className="text-sm text-muted-foreground">{pred.confidence}%</span>
+                        <span className="text-xs text-muted-foreground">{pred.confidence}%</span>
                       </div>
                     </td>
                   </tr>

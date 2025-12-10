@@ -353,27 +353,27 @@ const Reports = () => {
         </Card>
 
         {/* Reports Tabs */}
-        <Tabs defaultValue="general" className="space-y-4 sm:space-y-6">
-          <TabsList className="bg-muted/50 h-auto flex-wrap">
-            <TabsTrigger value="general" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
-            <TabsTrigger value="commissions" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Comissões</span>
-              <span className="sm:hidden">Com.</span>
+        <Tabs defaultValue="general" className="space-y-4">
+          <TabsList className="bg-muted/50 h-auto flex-wrap w-full grid grid-cols-3 gap-1 p-1">
+            <TabsTrigger value="general" className="text-xs sm:text-sm px-2 py-1.5">
+              Visão Geral
             </TabsTrigger>
-            <TabsTrigger value="predictive" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-              <BrainCircuit className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Análises Preditivas</span>
-              <span className="sm:hidden">Análises</span>
+            <TabsTrigger value="commissions" className="gap-1 text-xs sm:text-sm px-2 py-1.5">
+              <Wallet className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">Comissões</span>
+            </TabsTrigger>
+            <TabsTrigger value="predictive" className="gap-1 text-xs sm:text-sm px-2 py-1.5">
+              <BrainCircuit className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">Análises</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="space-y-6">
+          <TabsContent value="general" className="space-y-4 sm:space-y-6">
             {/* Sales Chart - Full Width */}
             <SalesChart period={period} />
 
             {/* Two Column Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <ClientsMetrics period={period} />
               <ServicesChart period={period} />
             </div>

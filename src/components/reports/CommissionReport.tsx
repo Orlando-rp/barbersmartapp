@@ -273,19 +273,19 @@ export const CommissionReport = ({ period }: Props) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Filters */}
       <Card className="barbershop-card">
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
+        <CardContent className="p-3 sm:p-4 sm:pt-6">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Todos profissionais" />
+                <SelectTrigger className="w-full sm:w-40 h-9 text-sm">
+                  <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos profissionais</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {staffList.map(staff => (
                     <SelectItem key={staff.id} value={staff.id}>
                       {staff.name}
@@ -297,10 +297,12 @@ export const CommissionReport = ({ period }: Props) => {
 
             <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  {format(dateRange.from, 'dd/MM/yy', { locale: ptBR })} - {format(dateRange.to, 'dd/MM/yy', { locale: ptBR })}
-                  <ChevronDown className="h-4 w-4" />
+                <Button variant="outline" className="gap-2 h-9 text-sm justify-start w-full sm:w-auto">
+                  <CalendarIcon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {format(dateRange.from, 'dd/MM', { locale: ptBR })} - {format(dateRange.to, 'dd/MM', { locale: ptBR })}
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 ml-auto" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -315,8 +317,24 @@ export const CommissionReport = ({ period }: Props) => {
                       setShowDatePicker(false);
                     }
                   }}
+                  numberOfMonths={1}
+                  locale={ptBR}
+                  className="sm:hidden"
+                />
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange.from}
+                  selected={{ from: dateRange.from, to: dateRange.to }}
+                  onSelect={(range) => {
+                    if (range?.from && range?.to) {
+                      setDateRange({ from: range.from, to: range.to });
+                      setShowDatePicker(false);
+                    }
+                  }}
                   numberOfMonths={2}
                   locale={ptBR}
+                  className="hidden sm:block"
                 />
               </PopoverContent>
             </Popover>
@@ -325,17 +343,17 @@ export const CommissionReport = ({ period }: Props) => {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card className="barbershop-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-success/10">
-                <DollarSign className="h-5 w-5 text-success" />
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-success/10 shrink-0">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Receita Total</p>
-                <p className="text-2xl font-bold text-success">
-                  R$ {totals.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita</p>
+                <p className="text-base sm:text-xl font-bold text-success truncate">
+                  R$ {totals.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                 </p>
               </div>
             </div>
@@ -343,15 +361,15 @@ export const CommissionReport = ({ period }: Props) => {
         </Card>
 
         <Card className="barbershop-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-warning/10">
-                <Wallet className="h-5 w-5 text-warning" />
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-warning/10 shrink-0">
+                <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Comissões</p>
-                <p className="text-2xl font-bold text-warning">
-                  R$ {totals.totalCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Comissões</p>
+                <p className="text-base sm:text-xl font-bold text-warning truncate">
+                  R$ {totals.totalCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                 </p>
               </div>
             </div>
@@ -359,14 +377,14 @@ export const CommissionReport = ({ period }: Props) => {
         </Card>
 
         <Card className="barbershop-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Percent className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 shrink-0">
+                <Percent className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Taxa Média</p>
-                <p className="text-2xl font-bold text-foreground">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Taxa Média</p>
+                <p className="text-base sm:text-xl font-bold text-foreground">
                   {totals.avgCommissionRate.toFixed(1)}%
                 </p>
               </div>
@@ -375,14 +393,14 @@ export const CommissionReport = ({ period }: Props) => {
         </Card>
 
         <Card className="barbershop-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-muted">
-                <TrendingUp className="h-5 w-5 text-muted-foreground" />
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-muted shrink-0">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Transações</p>
-                <p className="text-2xl font-bold text-foreground">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Transações</p>
+                <p className="text-base sm:text-xl font-bold text-foreground">
                   {totals.transactionsCount}
                 </p>
               </div>
@@ -392,198 +410,222 @@ export const CommissionReport = ({ period }: Props) => {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Bar Chart */}
         <Card className="barbershop-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Receita vs Comissão por Profissional</CardTitle>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-sm sm:text-lg">Receita vs Comissão</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-2 sm:p-6 pt-0">
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="name" 
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                  />
-                  <YAxis 
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
-                    tickFormatter={(value) => `R$${value}`}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }}
-                    formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
-                  />
-                  <Legend />
-                  <Bar dataKey="receita" name="Receita" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="comissao" name="Comissão" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                Sem dados para exibir
+              <div className="h-[200px] sm:h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} width={35} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, '']} />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                    <Bar dataKey="receita" name="Receita" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="comissao" name="Comissão" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] sm:h-[280px] text-muted-foreground text-sm">Sem dados</div>
             )}
           </CardContent>
         </Card>
 
         {/* Pie Chart */}
         <Card className="barbershop-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Distribuição de Comissões</CardTitle>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-sm sm:text-lg">Distribuição</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-2 sm:p-6 pt-0">
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {pieData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }}
-                    formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Comissão']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                Sem dados para exibir
+              <div className="h-[200px] sm:h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} outerRadius={70} fill="#8884d8" dataKey="value">
+                      {pieData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, 'Comissão']} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] sm:h-[280px] text-muted-foreground text-sm">Sem dados</div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Staff Commissions Table */}
+      {/* Staff Commissions - Mobile Cards / Desktop Table */}
       <Card className="barbershop-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             Resumo por Profissional
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-6 pt-0">
           {staffCommissions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Profissional</TableHead>
-                  <TableHead className="text-center">Serviços</TableHead>
-                  <TableHead className="text-right">Receita Gerada</TableHead>
-                  <TableHead className="text-center">Taxa %</TableHead>
-                  <TableHead className="text-right">Total Comissão</TableHead>
-                  <TableHead className="text-right">Média/Serviço</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile Cards */}
+              <div className="sm:hidden space-y-3">
                 {staffCommissions.map((staff) => (
-                  <TableRow key={staff.staffId}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={staff.avatar} />
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {staff.name.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{staff.name}</span>
+                  <div key={staff.staffId} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={staff.avatar} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                          {staff.name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{staff.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{staff.transactionsCount} serviços</span>
+                          <Badge variant="secondary" className="text-xs">{staff.commissionRate}%</Badge>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline">{staff.transactionsCount}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-success">
-                      R$ {staff.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary">{staff.commissionRate}%</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-warning">
-                      R$ {staff.totalCommission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      R$ {staff.avgCommission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <p className="text-muted-foreground">Receita</p>
+                        <p className="font-medium text-success">R$ {staff.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Comissão</p>
+                        <p className="font-bold text-warning">R$ {staff.totalCommission.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+              
+              {/* Desktop Table */}
+              <Table className="hidden sm:table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Profissional</TableHead>
+                    <TableHead className="text-center">Serviços</TableHead>
+                    <TableHead className="text-right">Receita</TableHead>
+                    <TableHead className="text-center">Taxa</TableHead>
+                    <TableHead className="text-right">Comissão</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staffCommissions.map((staff) => (
+                    <TableRow key={staff.staffId}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={staff.avatar} />
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {staff.name.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{staff.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline">{staff.transactionsCount}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-success">
+                        R$ {staff.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary">{staff.commissionRate}%</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-warning">
+                        R$ {staff.totalCommission.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
           ) : (
-            <div className="text-center py-12">
-              <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <p className="text-muted-foreground">Nenhuma comissão registrada no período</p>
+            <div className="text-center py-8 sm:py-12">
+              <Wallet className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <p className="text-sm text-muted-foreground">Nenhuma comissão registrada</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Recent Transactions */}
+      {/* Recent Transactions - Mobile Cards / Desktop Table */}
       <Card className="barbershop-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            Últimas Transações com Comissão
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            Últimas Transações
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-6 pt-0">
           {transactions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Profissional</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-center">Taxa</TableHead>
-                  <TableHead className="text-right">Comissão</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.slice(0, 10).map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="text-muted-foreground">
-                      {format(new Date(t.date), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell className="font-medium">{t.description}</TableCell>
-                    <TableCell>{t.staffName}</TableCell>
-                    <TableCell className="text-right text-success">
-                      R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline">{t.commissionRate}%</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-warning">
-                      R$ {t.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                  </TableRow>
+            <>
+              {/* Mobile Cards */}
+              <div className="sm:hidden space-y-3">
+                {transactions.slice(0, 5).map((t) => (
+                  <div key={t.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(t.date), 'dd/MM', { locale: ptBR })}
+                      </span>
+                      <Badge variant="outline" className="text-xs">{t.commissionRate}%</Badge>
+                    </div>
+                    <p className="text-sm font-medium truncate">{t.description}</p>
+                    <p className="text-xs text-muted-foreground truncate">{t.staffName}</p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-success">R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span>
+                      <span className="font-medium text-warning">Com: R$ {t.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+              
+              {/* Desktop Table */}
+              <Table className="hidden sm:table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Profissional</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-center">Taxa</TableHead>
+                    <TableHead className="text-right">Comissão</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.slice(0, 10).map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="text-muted-foreground">
+                        {format(new Date(t.date), 'dd/MM', { locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="font-medium">{t.description}</TableCell>
+                      <TableCell>{t.staffName}</TableCell>
+                      <TableCell className="text-right text-success">
+                        R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline">{t.commissionRate}%</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-warning">
+                        R$ {t.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Nenhuma transação encontrada</p>
+            <div className="text-center py-6 sm:py-8">
+              <p className="text-sm text-muted-foreground">Nenhuma transação encontrada</p>
             </div>
           )}
         </CardContent>
