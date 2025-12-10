@@ -130,141 +130,141 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
   };
 
   return (
-    <Card className="barbershop-card w-full max-w-2xl">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Scissors className="h-5 w-5 text-primary" />
+    <div className="w-full">
+      <div className="flex items-center gap-2 mb-4">
+        <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+        <h2 className="text-base sm:text-lg font-semibold">
           {editingService ? "Editar Serviço" : "Novo Serviço"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Tag className="h-4 w-4" />
-              Informações do Serviço
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome do Serviço *</Label>
+        </h2>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Basic Information */}
+        <div className="space-y-3 sm:space-y-4">
+          <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
+            <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Informações do Serviço
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="name" className="text-xs sm:text-sm">Nome do Serviço *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Corte Social"
+                className="text-sm"
+              />
+              {errors.name && (
+                <p className="text-xs text-destructive">{errors.name}</p>
+              )}
+            </div>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Categoria *</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent className="z-[100]">
+                  {serviceCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.category && (
+                <p className="text-xs text-destructive">{errors.category}</p>
+              )}
+            </div>
+          </div>
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label htmlFor="description" className="text-xs sm:text-sm">Descrição</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Descreva o serviço oferecido..."
+              rows={2}
+              className="text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Pricing and Duration */}
+        <div className="space-y-3 sm:space-y-4">
+          <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
+            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Preço e Duração
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="price" className="text-xs sm:text-sm">Preço (R$) *</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                 <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Corte Social"
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="25.00"
+                  className="pl-9 sm:pl-10 text-sm"
                 />
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name}</p>
-                )}
               </div>
-              <div className="space-y-2">
-                <Label>Categoria *</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {serviceCategories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.category && (
-                  <p className="text-sm text-destructive">{errors.category}</p>
-                )}
-              </div>
+              {errors.price && (
+                <p className="text-xs text-destructive">{errors.price}</p>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descreva o serviço oferecido..."
-                rows={3}
-              />
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="duration" className="text-xs sm:text-sm">Duração (minutos) *</Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                <Input
+                  id="duration"
+                  type="number"
+                  min="1"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                  placeholder="30"
+                  className="pl-9 sm:pl-10 text-sm"
+                />
+              </div>
+              {errors.duration && (
+                <p className="text-xs text-destructive">{errors.duration}</p>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Pricing and Duration */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Preço e Duração
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="price">Preço (R$) *</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="25.00"
-                    className="pl-10"
-                  />
-                </div>
-                {errors.price && (
-                  <p className="text-sm text-destructive">{errors.price}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duração (minutos) *</Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="duration"
-                    type="number"
-                    min="1"
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    placeholder="30"
-                    className="pl-10"
-                  />
-                </div>
-                {errors.duration && (
-                  <p className="text-sm text-destructive">{errors.duration}</p>
-                )}
-              </div>
+        {/* Status */}
+        <div className="space-y-2 sm:space-y-3">
+          <h3 className="text-sm sm:text-base font-semibold">Status</h3>
+          <div className="flex items-center justify-between p-3 sm:p-4 border border-border rounded-lg">
+            <div className="min-w-0 flex-1">
+              <Label htmlFor="active-status" className="text-xs sm:text-sm">Serviço Ativo</Label>
+              <p className="text-xs text-muted-foreground truncate">
+                Serviços ativos aparecerão para agendamento
+              </p>
             </div>
+            <Switch
+              id="active-status"
+              checked={isActive}
+              onCheckedChange={setIsActive}
+            />
           </div>
+        </div>
 
-          {/* Status */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Status</h3>
-            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-              <div>
-                <Label htmlFor="active-status">Serviço Ativo</Label>
-                <p className="text-sm text-muted-foreground">
-                  Serviços ativos aparecerão para agendamento
-                </p>
-              </div>
-              <Switch
-                id="active-status"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-              />
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="premium" disabled={loading}>
-              {loading ? "Salvando..." : editingService ? "Atualizar Serviço" : "Cadastrar Serviço"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        {/* Actions */}
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2 sm:pt-4">
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="w-full sm:w-auto">
+            Cancelar
+          </Button>
+          <Button type="submit" variant="premium" disabled={loading} className="w-full sm:w-auto">
+            {loading ? "Salvando..." : editingService ? "Atualizar" : "Cadastrar"}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 };
