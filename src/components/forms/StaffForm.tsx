@@ -46,6 +46,14 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
+  // Delay rendering of complex sections to avoid Radix ref conflicts
+  const [showComplexSections, setShowComplexSections] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setShowComplexSections(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+  
   const [fullName, setFullName] = useState(staff?.profiles?.full_name || "");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState(staff?.profiles?.phone || "");
@@ -600,7 +608,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       )}
 
       {/* Multi-Unit Schedule Section (shows when user has multiple units and role is barbeiro) */}
-      {role === 'barbeiro' && hasMultipleUnits && (
+      {showComplexSections && role === 'barbeiro' && hasMultipleUnits && (
         <StaffUnitsScheduleSection
           barbershopIds={barbershopIds}
           schedule={unitSchedule}
@@ -609,7 +617,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       )}
 
       {/* Individual Schedule Section (shows for barbeiro) */}
-      {role === 'barbeiro' && !hasMultipleUnits && (
+      {showComplexSections && role === 'barbeiro' && !hasMultipleUnits && (
         <StaffScheduleSection
           schedule={schedule}
           onScheduleChange={handleScheduleChange}
@@ -619,7 +627,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       )}
 
       {/* Services Selection Section - Uses shared barbershop ID for multi-unit */}
-      {role === 'barbeiro' && (sharedBarbershopId || barbershopId) && (
+      {showComplexSections && role === 'barbeiro' && (sharedBarbershopId || barbershopId) && (
         <StaffServicesSection
           barbershopId={sharedBarbershopId || barbershopId || ''}
           selectedServices={selectedServices}
