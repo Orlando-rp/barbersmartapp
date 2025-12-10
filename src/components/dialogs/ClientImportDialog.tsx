@@ -138,18 +138,24 @@ export function ClientImportDialog({ onSuccess, children }: ClientImportDialogPr
           }
 
           // Insert client
+          const clientData: any = {
+            barbershop_id: barbershopId,
+            name: nome,
+            phone: String(telefone).replace(/\D/g, ''),
+            email: email,
+            tags: tags,
+            notes: notas,
+            active: true,
+          };
+          
+          // Only add birth_date if provided
+          if (aniversario) {
+            clientData.birth_date = aniversario;
+          }
+          
           const { error } = await supabase
             .from('clients')
-            .insert({
-              barbershop_id: barbershopId,
-              name: nome,
-              phone: String(telefone).replace(/\D/g, ''),
-              email: email,
-              birthday: aniversario || null,
-              tags: tags,
-              notes: notas,
-              active: true,
-            });
+            .insert(clientData);
 
           if (error) {
             importResult.errors.push(`Linha ${rowNum}: ${error.message}`);
