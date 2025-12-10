@@ -294,75 +294,75 @@ const Index = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           <Card className="barbershop-card hover:shadow-medium cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Scissors className="h-5 w-5 text-primary" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 Serviços Populares
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-2 sm:space-y-3">
                 {stats?.popularServices && stats.popularServices.length > 0 ? (
                   stats.popularServices.map((service, idx) => (
-                    <div key={idx} className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">{service.name}</span>
-                      <span className="text-sm font-medium">{service.percentage}%</span>
+                    <div key={idx} className="flex justify-between items-center gap-2">
+                      <span className="text-xs sm:text-sm text-muted-foreground truncate">{service.name}</span>
+                      <span className="text-xs sm:text-sm font-medium flex-shrink-0">{service.percentage}%</span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground">Nenhum dado disponível</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Nenhum dado disponível</p>
                 )}
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card hover:shadow-medium cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-success" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
                 Performance do Mês
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-2 sm:space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Taxa de Ocupação</span>
-                  <span className="text-sm font-medium text-success">{stats?.occupancyRate}%</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Ocupação</span>
+                  <span className="text-xs sm:text-sm font-medium text-success">{stats?.occupancyRate}%</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Clientes Novos</span>
-                  <span className="text-sm font-medium text-primary">+{stats?.newClientsThisMonth}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Novos</span>
+                  <span className="text-xs sm:text-sm font-medium text-primary">+{stats?.newClientsThisMonth}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Fidelização</span>
-                  <span className="text-sm font-medium text-warning">{stats?.retentionRate}%</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Fidelização</span>
+                  <span className="text-xs sm:text-sm font-medium text-warning">{stats?.retentionRate}%</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="barbershop-card hover:shadow-medium cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-warning" />
+          <Card className="barbershop-card hover:shadow-medium cursor-pointer sm:col-span-2 lg:col-span-1">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
                 Horários de Pico
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-2 sm:space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Manhã (9h-12h)</span>
-                  <span className="text-sm font-medium">Alto</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Manhã (9h-12h)</span>
+                  <span className="text-xs sm:text-sm font-medium">Alto</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Tarde (14h-17h)</span>
-                  <span className="text-sm font-medium">Médio</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Tarde (14h-17h)</span>
+                  <span className="text-xs sm:text-sm font-medium">Médio</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Noite (18h-20h)</span>
-                  <span className="text-sm font-medium">Baixo</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">Noite (18h-20h)</span>
+                  <span className="text-xs sm:text-sm font-medium">Baixo</span>
                 </div>
               </div>
             </CardContent>
