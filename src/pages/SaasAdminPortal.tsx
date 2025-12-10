@@ -516,60 +516,60 @@ const SaasAdminPortal = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total de Tenants</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.totalTenants}</p>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-warning/10 flex items-center justify-center shrink-0">
+                  <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-warning" />
                 </div>
-                <div className="h-12 w-12 rounded-full bg-warning/10 flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-warning" />
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.totalTenants}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Tenants</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Tenants Ativos</p>
-                  <p className="text-2xl font-bold text-success">{stats.activeTenants}</p>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-success" />
                 </div>
-                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-success" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Em Trial</p>
-                  <p className="text-2xl font-bold text-warning">{stats.trialTenants}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-warning/10 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-warning" />
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-2xl font-bold text-success">{stats.activeTenants}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Ativos</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Receita Total (Mês)</p>
-                  <p className="text-2xl font-bold text-success">
-                    R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-warning/10 flex items-center justify-center shrink-0">
+                  <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-warning" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-2xl font-bold text-warning">{stats.trialTenants}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Trial</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                  <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-success" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-2xl font-bold text-success truncate">
+                    R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-success" />
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita</p>
                 </div>
               </div>
             </CardContent>
@@ -603,59 +603,60 @@ const SaasAdminPortal = () => {
 
           {/* Overview Tab */}
           <TabsContent value="overview">
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
               {/* Plan Distribution Chart */}
               {planDistribution.length > 0 && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Distribuição por Plano</CardTitle>
+                  <CardHeader className="p-3 sm:p-6">
+                    <CardTitle className="text-sm sm:text-base">Distribuição por Plano</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={planDistribution}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {planDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <CardContent className="p-2 sm:p-6 pt-0">
+                    <div className="h-[200px] sm:h-[250px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={planDistribution}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={60}
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {planDistribution.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
                   </CardContent>
                 </Card>
               )}
 
               {/* Recent Tenants */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Barbearias Recentes</CardTitle>
+                <CardHeader className="p-3 sm:p-6">
+                  <CardTitle className="text-sm sm:text-base">Barbearias Recentes</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-3 sm:p-6 pt-0">
+                  <div className="space-y-2 sm:space-y-3">
                     {tenants.slice(0, 5).map((tenant) => (
-                      <div key={tenant.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div>
-                          <p className="text-foreground font-medium">{tenant.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(tenant.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      <div key={tenant.id} className="flex items-center justify-between p-2 sm:p-3 bg-muted rounded-lg gap-2">
+                        <div className="min-w-0">
+                          <p className="text-foreground font-medium text-sm truncate">{tenant.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(tenant.created_at), "dd/MM/yy", { locale: ptBR })}
                           </p>
                         </div>
-                        <Badge className={tenant.active ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}>
+                        <Badge className={`shrink-0 text-xs ${tenant.active ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>
                           {tenant.active ? "Ativo" : "Inativo"}
                         </Badge>
                       </div>
                     ))}
                     {tenants.length === 0 && (
-                      <p className="text-muted-foreground text-center py-4">Nenhuma barbearia cadastrada</p>
+                      <p className="text-muted-foreground text-center py-4 text-sm">Nenhuma barbearia</p>
                     )}
                   </div>
                 </CardContent>
@@ -666,22 +667,62 @@ const SaasAdminPortal = () => {
           {/* Tenants Tab */}
           <TabsContent value="tenants">
             <Card>
-              <CardHeader>
-                <CardTitle>Barbearias Cadastradas</CardTitle>
-                <CardDescription>{tenants.length} tenants no sistema</CardDescription>
+              <CardHeader className="p-3 sm:p-6">
+                <CardTitle className="text-sm sm:text-base">Barbearias Cadastradas</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{tenants.length} tenants no sistema</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="rounded-md border overflow-x-auto">
+              <CardContent className="p-3 sm:p-6 pt-0">
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                  {tenants.map((tenant) => (
+                    <div key={tenant.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Building2 className="h-4 w-4 text-warning shrink-0" />
+                          <span className="font-medium text-sm truncate">{tenant.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }}>
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleTenantStatus(tenant)}>
+                            {tenant.active ? <XCircle className="h-3 w-3 text-warning" /> : <CheckCircle className="h-3 w-3 text-success" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="secondary" className="text-xs">{tenant.subscription?.plan_name || 'Free'}</Badge>
+                        {tenant.subscription ? getStatusBadge(tenant.subscription.status) : <Badge variant="outline" className="text-xs">Sem assin.</Badge>}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <p className="text-muted-foreground">Agend.</p>
+                          <p className="font-medium">{tenant.usage?.appointments_count || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Clientes</p>
+                          <p className="font-medium">{tenant.usage?.clients_count || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Receita</p>
+                          <p className="font-medium text-success">R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Barbearia</TableHead>
                         <TableHead>Plano</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Agendamentos</TableHead>
+                        <TableHead>Agend.</TableHead>
                         <TableHead>Clientes</TableHead>
                         <TableHead>Receita</TableHead>
-                        <TableHead>Criado em</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -695,46 +736,21 @@ const SaasAdminPortal = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="secondary">
-                              {tenant.subscription?.plan_name || 'Free'}
-                            </Badge>
+                            <Badge variant="secondary">{tenant.subscription?.plan_name || 'Free'}</Badge>
                           </TableCell>
                           <TableCell>
-                            {tenant.subscription 
-                              ? getStatusBadge(tenant.subscription.status)
-                              : <Badge variant="outline">Sem assinatura</Badge>
-                            }
+                            {tenant.subscription ? getStatusBadge(tenant.subscription.status) : <Badge variant="outline">Sem assinatura</Badge>}
                           </TableCell>
                           <TableCell>{tenant.usage?.appointments_count || 0}</TableCell>
                           <TableCell>{tenant.usage?.clients_count || 0}</TableCell>
-                          <TableCell className="text-success">
-                            R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(tenant.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                          </TableCell>
+                          <TableCell className="text-success">R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedTenant(tenant);
-                                  setTenantDetailOpen(true);
-                                }}
-                              >
+                              <Button variant="ghost" size="icon" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleToggleTenantStatus(tenant)}
-                              >
-                                {tenant.active ? (
-                                  <XCircle className="h-4 w-4 text-warning" />
-                                ) : (
-                                  <CheckCircle className="h-4 w-4 text-success" />
-                                )}
+                              <Button variant="ghost" size="icon" onClick={() => handleToggleTenantStatus(tenant)}>
+                                {tenant.active ? <XCircle className="h-4 w-4 text-warning" /> : <CheckCircle className="h-4 w-4 text-success" />}
                               </Button>
                             </div>
                           </TableCell>
@@ -750,61 +766,46 @@ const SaasAdminPortal = () => {
           {/* Plans Tab */}
           <TabsContent value="plans">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="p-3 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <CardTitle>Planos de Assinatura</CardTitle>
-                  <CardDescription>Gerencie os planos disponíveis</CardDescription>
+                  <CardTitle className="text-sm sm:text-base">Planos de Assinatura</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Gerencie os planos disponíveis</CardDescription>
                 </div>
-                <Button onClick={() => openPlanDialog()} className="bg-warning hover:bg-warning/90 text-warning-foreground">
+                <Button onClick={() => openPlanDialog()} className="bg-warning hover:bg-warning/90 text-warning-foreground w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Plano
                 </Button>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <CardContent className="p-3 sm:p-6 pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {plans.map((plan) => (
                     <Card key={plan.id} className={`relative ${!plan.active ? 'opacity-60' : ''}`}>
-                      <CardHeader>
+                      <CardHeader className="p-3 sm:p-6">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{plan.name}</CardTitle>
-                          {!plan.active && (
-                            <Badge variant="secondary">Inativo</Badge>
-                          )}
+                          <CardTitle className="text-sm sm:text-lg">{plan.name}</CardTitle>
+                          {!plan.active && <Badge variant="secondary" className="text-xs">Inativo</Badge>}
                         </div>
-                        <CardDescription>{plan.description}</CardDescription>
+                        <CardDescription className="text-xs sm:text-sm">{plan.description}</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <p className="text-3xl font-bold text-warning mb-4">
-                          R$ {plan.price.toFixed(2)}
-                          <span className="text-sm text-muted-foreground font-normal">
+                      <CardContent className="p-3 sm:p-6 pt-0">
+                        <p className="text-xl sm:text-3xl font-bold text-warning mb-3 sm:mb-4">
+                          R$ {plan.price.toFixed(0)}
+                          <span className="text-xs sm:text-sm text-muted-foreground font-normal">
                             /{plan.billing_period === 'monthly' ? 'mês' : 'ano'}
                           </span>
                         </p>
-                        <div className="space-y-2 text-sm text-muted-foreground">
+                        <div className="space-y-1 text-xs sm:text-sm text-muted-foreground">
                           <p>👥 {plan.max_staff} profissionais</p>
                           <p>📋 {plan.max_clients} clientes</p>
                           <p>📅 {plan.max_appointments_month} agend./mês</p>
                         </div>
-                        <div className="flex gap-2 mt-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => openPlanDialog(plan)}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
+                        <div className="flex gap-2 mt-3 sm:mt-4">
+                          <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => openPlanDialog(plan)}>
+                            <Edit className="h-3 w-3 mr-1" />
                             Editar
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="hover:bg-destructive/20"
-                            onClick={() => {
-                              setItemToDelete({ type: 'plan', id: plan.id });
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                          <Button variant="outline" size="sm" className="hover:bg-destructive/20" onClick={() => { setItemToDelete({ type: 'plan', id: plan.id }); setDeleteDialogOpen(true); }}>
+                            <Trash2 className="h-3 w-3 text-destructive" />
                           </Button>
                         </div>
                       </CardContent>
@@ -817,54 +818,51 @@ const SaasAdminPortal = () => {
           {/* Messages Tab */}
           <TabsContent value="messages">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="p-3 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <CardTitle>Mensagens do Sistema</CardTitle>
-                  <CardDescription>Envie comunicados para os tenants</CardDescription>
+                  <CardTitle className="text-sm sm:text-base">Mensagens do Sistema</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Envie comunicados para os tenants</CardDescription>
                 </div>
-                <Button onClick={() => openMessageDialog()} className="bg-warning hover:bg-warning/90 text-warning-foreground">
+                <Button onClick={() => openMessageDialog()} className="bg-warning hover:bg-warning/90 text-warning-foreground w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Mensagem
                 </Button>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 {messages.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-center py-8 sm:py-12 text-muted-foreground text-sm">
                     Nenhuma mensagem cadastrada
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {messages.map((msg) => (
-                      <div key={msg.id} className="p-4 rounded-lg border bg-muted/50">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
+                      <div key={msg.id} className="p-3 sm:p-4 rounded-lg border bg-muted/50">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1 sm:mb-2 flex-wrap">
                               <Badge variant={
                                 msg.type === 'warning' ? 'default' :
                                 msg.type === 'alert' ? 'destructive' :
                                 msg.type === 'update' ? 'secondary' : 'outline'
-                              } className={
+                              } className={`text-xs ${
                                 msg.type === 'warning' ? 'bg-warning text-warning-foreground' :
                                 msg.type === 'update' ? 'bg-primary text-primary-foreground' : ''
-                              }>
+                              }`}>
                                 {msg.type}
                               </Badge>
-                              <span className="font-semibold text-foreground">{msg.title}</span>
+                              <span className="font-semibold text-foreground text-sm truncate">{msg.title}</span>
                             </div>
-                            <p className="text-sm text-muted-foreground">{msg.message}</p>
-                            <p className="text-xs text-muted-foreground/70 mt-2">
-                              Publicado: {msg.published_at ? format(new Date(msg.published_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : 'Não publicado'}
+                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{msg.message}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground/70 mt-1 sm:mt-2">
+                              {msg.published_at ? format(new Date(msg.published_at), "dd/MM/yy HH:mm", { locale: ptBR }) : 'Não publicado'}
                             </p>
                           </div>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => openMessageDialog(msg)}>
-                              <Edit className="h-4 w-4" />
+                          <div className="flex gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => openMessageDialog(msg)}>
+                              <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="hover:bg-destructive/20" onClick={() => {
-                              setItemToDelete({ type: 'message', id: msg.id });
-                              setDeleteDialogOpen(true);
-                            }}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-destructive/20" onClick={() => { setItemToDelete({ type: 'message', id: msg.id }); setDeleteDialogOpen(true); }}>
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
                             </Button>
                           </div>
                         </div>
@@ -878,23 +876,23 @@ const SaasAdminPortal = () => {
 
           {/* Integrations Tab */}
           <TabsContent value="integrations">
-            <div className="space-y-8">
-              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
-                <Smartphone className="h-5 w-5 text-warning" />
+            <div className="space-y-6 sm:space-y-8">
+              <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2">
+                <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
                 WhatsApp Evolution API
               </h2>
               <GlobalEvolutionConfig />
               <WhatsAppStatusPanel />
               
-              <div className="border-t border-border pt-8">
-                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
+              <div className="border-t border-border pt-6 sm:pt-8">
+                <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
                   🤖 Chatbot IA (OpenAI)
                 </h2>
                 <GlobalChatbotConfig />
               </div>
 
-              <div className="border-t border-border pt-8">
-                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
+              <div className="border-t border-border pt-6 sm:pt-8">
+                <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
                   🔐 Login Social (OAuth)
                 </h2>
                 <SocialAuthConfig />
