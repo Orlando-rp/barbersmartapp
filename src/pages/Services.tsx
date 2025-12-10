@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Scissors, Plus, Search, Filter, Clock, DollarSign, Edit, Trash2 } from "lucide-react";
+import { Scissors, Plus, Search, Clock, Edit, Trash2, FolderOpen } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { CategoryManager } from "@/components/services/CategoryManager";
+import { useServiceCategories } from "@/hooks/useServiceCategories";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,10 +22,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const Services = () => {
   const { barbershopId } = useAuth();
   const { toast } = useToast();
+  const { categories: dbCategories } = useServiceCategories();
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("Todos");
@@ -31,6 +41,8 @@ const Services = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categorySheetOpen, setCategorySheetOpen] = useState(false);
 
   useEffect(() => {
     if (barbershopId) {
@@ -98,10 +110,18 @@ const Services = () => {
     }
   };
 
-  const categories = ["Todos", ...Array.from(new Set(services.map(s => s.category)))];
-  const filteredServices = selectedCategory === "Todos" 
-    ? services 
-    : services.filter(s => s.category === selectedCategory);
+  // Combine DB categories with existing service categories (fallback)
+  const categoryNames = ["Todos", ...dbCategories.map(c => c.name)];
+  const serviceCategoryNames = Array.from(new Set(services.map(s => s.category).filter(Boolean)));
+  const allCategories = [...new Set([...categoryNames, ...serviceCategoryNames])];
+  
+  const filteredServices = services.filter(s => {
+    const matchesCategory = selectedCategory === "Todos" || s.category === selectedCategory;
+    const matchesSearch = !searchQuery || 
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   if (loading) {
     return (
@@ -122,12 +142,28 @@ const Services = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Serviços</h1>
             <p className="text-sm sm:text-base text-muted-foreground">Gerencie o catálogo de serviços da sua barbearia</p>
           </div>
-          <ServiceDialog>
-            <Button variant="premium" size="default" className="w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Serviço
-            </Button>
-          </ServiceDialog>
+          <div className="flex gap-2">
+            <Sheet open={categorySheetOpen} onOpenChange={setCategorySheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="default" className="w-full sm:w-auto">
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Categorias
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+                <SheetHeader className="mb-4">
+                  <SheetTitle>Gerenciar Categorias</SheetTitle>
+                </SheetHeader>
+                <CategoryManager />
+              </SheetContent>
+            </Sheet>
+            <ServiceDialog>
+              <Button variant="premium" size="default" className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Serviço
+              </Button>
+            </ServiceDialog>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -173,10 +209,12 @@ const Services = () => {
                 <Input 
                   placeholder="Buscar serviços..." 
                   className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <div className="flex gap-1.5 sm:gap-2 flex-wrap">
-                {categories.map((category) => (
+                {allCategories.map((category) => (
                   <Button 
                     key={category}
                     variant={category === selectedCategory ? "default" : "outline"}

@@ -4,12 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Scissors, DollarSign, Clock, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useServiceCategories } from "@/hooks/useServiceCategories";
 import { z } from "zod";
 
 interface ServiceFormProps {
@@ -17,7 +17,8 @@ interface ServiceFormProps {
   editingService?: any;
 }
 
-const serviceCategories = [
+// Fallback categories if DB categories not available
+const DEFAULT_CATEGORIES = [
   "Corte",
   "Barba",
   "Sobrancelha",
@@ -46,6 +47,12 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
   
   const { toast } = useToast();
   const { barbershopId } = useAuth();
+  const { activeCategories, loading: categoriesLoading } = useServiceCategories();
+
+  // Use DB categories or fallback to defaults
+  const availableCategories = activeCategories.length > 0 
+    ? activeCategories.map(c => c.name) 
+    : DEFAULT_CATEGORIES;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,12 +167,12 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
             </div>
             <div className="space-y-1.5 sm:space-y-2">
               <Label className="text-xs sm:text-sm">Categoria *</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={setCategory} disabled={categoriesLoading}>
                 <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Selecione a categoria" />
+                  <SelectValue placeholder={categoriesLoading ? "Carregando..." : "Selecione a categoria"} />
                 </SelectTrigger>
                 <SelectContent className="z-[100]">
-                  {serviceCategories.map((cat) => (
+                  {availableCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
                     </SelectItem>
