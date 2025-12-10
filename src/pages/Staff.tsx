@@ -170,10 +170,18 @@ const Staff = () => {
         .insert({
           user_id: user.id,
           barbershop_id: barbershopId,
-          is_also_barber: true,
           specialties: ['Corte', 'Barba'],
           commission_rate: 50,
           active: true,
+          schedule: {
+            monday: { start: '09:00', end: '18:00', enabled: true },
+            tuesday: { start: '09:00', end: '18:00', enabled: true },
+            wednesday: { start: '09:00', end: '18:00', enabled: true },
+            thursday: { start: '09:00', end: '18:00', enabled: true },
+            friday: { start: '09:00', end: '18:00', enabled: true },
+            saturday: { start: '09:00', end: '14:00', enabled: true },
+            sunday: { start: '00:00', end: '00:00', enabled: false },
+          },
         });
 
       if (error) throw error;

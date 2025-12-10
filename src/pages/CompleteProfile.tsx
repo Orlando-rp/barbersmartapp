@@ -252,7 +252,7 @@ const CompleteProfile = () => {
         }
       }
 
-      // 2. Create or update profile
+      // 2. Create or update profile FIRST (staff needs this to exist)
       if (primaryBarbershopId) {
         const { error: profileError } = await supabase
           .from('profiles')
@@ -295,20 +295,59 @@ const CompleteProfile = () => {
 
         // If also barber, create staff entry
         if (isAlsoBarber) {
+          // Small delay to ensure profile is propagated
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
           const { error: staffError } = await supabase
             .from('staff')
             .insert({
               user_id: userId,
               barbershop_id: barbershop.id,
-              is_also_barber: true,
               specialties: ['Corte', 'Barba'],
               commission_rate: 50,
               active: true,
+              schedule: {
+                monday: { start: '09:00', end: '18:00', enabled: true },
+                tuesday: { start: '09:00', end: '18:00', enabled: true },
+                wednesday: { start: '09:00', end: '18:00', enabled: true },
+                thursday: { start: '09:00', end: '18:00', enabled: true },
+                friday: { start: '09:00', end: '18:00', enabled: true },
+                saturday: { start: '09:00', end: '14:00', enabled: true },
+                sunday: { start: '00:00', end: '00:00', enabled: false },
+              },
             });
 
           if (staffError) {
             console.error('Erro ao criar staff:', staffError);
+            // Try without schedule if there's an error
+            const { error: staffRetryError } = await supabase
+              .from('staff')
+              .insert({
+                user_id: userId,
+                barbershop_id: barbershop.id,
+                specialties: ['Corte', 'Barba'],
+                commission_rate: 50,
+                active: true,
+              });
+            
+            if (staffRetryError) {
+              console.error('Erro ao criar staff (retry):', staffRetryError);
+              toast.error('Aviso: Seu perfil de barbeiro não foi criado automaticamente', {
+                description: 'Você pode adicionar manualmente na tela de Equipe'
+              });
+            }
           }
+          
+          // Also add barbeiro role
+          const { error: barberRoleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: userId,
+              role: 'barbeiro',
+              barbershop_id: barbershop.id,
+            });
+
+          if (barberRoleError) console.error('Erro ao criar role barbeiro:', barberRoleError);
         }
       }
 
