@@ -242,9 +242,20 @@ async function callOpenAI(
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('[Chatbot] OpenAI error:', error);
-      throw new Error('Falha ao processar mensagem');
+      const errorText = await response.text();
+      console.error('[Chatbot] OpenAI API error status:', response.status);
+      console.error('[Chatbot] OpenAI API error body:', errorText);
+      
+      // Parse error for more details
+      try {
+        const errorJson = JSON.parse(errorText);
+        console.error('[Chatbot] OpenAI error type:', errorJson.error?.type);
+        console.error('[Chatbot] OpenAI error message:', errorJson.error?.message);
+      } catch {
+        // Ignore parse error
+      }
+      
+      return { response: '', error: true };
     }
 
     const data = await response.json();
