@@ -565,6 +565,68 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
               </div>
             </div>
           )}
+
+          {/* Diagnóstico detalhado */}
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg border space-y-3">
+            <h4 className="font-medium text-sm flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Diagnóstico da Conexão
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="space-y-1">
+                <p className="text-muted-foreground">URL do Servidor:</p>
+                <p className="font-mono text-xs break-all">
+                  {config.apiUrl || <span className="text-destructive">Não configurado</span>}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">API Key:</p>
+                <p className="font-mono text-xs">
+                  {config.apiKey ? '••••••••' + config.apiKey.slice(-4) : <span className="text-destructive">Não configurado</span>}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Nome da Instância:</p>
+                <p className="font-mono text-xs">
+                  {config.instanceName || <span className="text-destructive">Não configurado</span>}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Usando Config Global:</p>
+                <p className="text-xs">
+                  {isUsingGlobalConfig ? (
+                    <Badge variant="outline" className="text-xs">Sim</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">Não</Badge>
+                  )}
+                </p>
+              </div>
+            </div>
+            
+            {(!config.apiUrl || !config.apiKey) && (
+              <div className="mt-2 p-3 bg-warning/10 border border-warning/20 rounded text-sm">
+                <p className="text-warning font-medium">⚠️ Configuração Incompleta</p>
+                <p className="text-muted-foreground text-xs mt-1">
+                  {!config.apiUrl && "URL do servidor não está configurada. "}
+                  {!config.apiKey && "API Key não está configurada. "}
+                  {isUsingGlobalConfig 
+                    ? "Verifique a configuração global no portal SaaS Admin." 
+                    : "Configure os dados acima ou peça ao administrador SaaS para configurar globalmente."}
+                </p>
+              </div>
+            )}
+
+            {connectionStatus === 'disconnected' && config.apiUrl && config.apiKey && (
+              <div className="mt-2 p-3 bg-muted border rounded text-sm">
+                <p className="font-medium">📱 Próximos passos:</p>
+                <ol className="text-xs text-muted-foreground mt-1 space-y-1 list-decimal list-inside">
+                  <li>Clique em "Conectar WhatsApp"</li>
+                  <li>Escaneie o QR Code com seu telefone</li>
+                  <li>Aguarde a conexão ser estabelecida</li>
+                </ol>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
