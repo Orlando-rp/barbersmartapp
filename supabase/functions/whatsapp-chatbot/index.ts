@@ -30,8 +30,17 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Check if OpenAI API key is configured
+  if (!openaiApiKey) {
+    console.error('[Chatbot] OPENAI_API_KEY not configured');
+    return new Response(
+      JSON.stringify({ error: 'OpenAI API key not configured' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
   try {
     const { 
@@ -100,6 +109,19 @@ serve(async (req) => {
     // Call OpenAI to understand intent and generate response
     const aiResponse = await callOpenAI(openaiApiKey, systemPrompt, message, context);
     
+    // If there was an error, don't send any message to avoid loops
+    if (aiResponse.error || !aiResponse.response) {
+      console.log('[Chatbot] Skipping response due to error or empty response');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to generate response',
+          context: context.step
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Update conversation context based on AI response
     if (aiResponse.action) {
       context = await handleAction(supabase, context, aiResponse.action, services || [], staffList);
@@ -109,7 +131,7 @@ serve(async (req) => {
     // Send response via WhatsApp
     const responseMessage = aiResponse.response;
     
-    if (instanceName && apiUrl) {
+    if (instanceName && apiUrl && responseMessage) {
       await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, responseMessage, barbershopId, supabase);
     }
 
@@ -200,7 +222,7 @@ async function callOpenAI(
   systemPrompt: string, 
   userMessage: string,
   context: ConversationContext
-): Promise<{ response: string; action?: any }> {
+): Promise<{ response: string; action?: any; error?: boolean }> {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -244,8 +266,10 @@ async function callOpenAI(
 
   } catch (error) {
     console.error('[Chatbot] OpenAI call failed:', error);
+    // Return null to indicate we should NOT send a response (to avoid loops)
     return { 
-      response: 'Desculpe, estou com dificuldades técnicas. Por favor, tente novamente em alguns instantes ou entre em contato diretamente.' 
+      response: '',
+      error: true
     };
   }
 }

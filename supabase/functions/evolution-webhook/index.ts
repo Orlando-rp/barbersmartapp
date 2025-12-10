@@ -55,9 +55,22 @@ serve(async (req) => {
     
     // Skip if it's a message from the bot itself (fromMe = true)
     if (key?.fromMe === true) {
-      console.log('[Evolution Webhook] Ignoring outgoing message');
+      console.log('[Evolution Webhook] Ignoring outgoing message (fromMe)');
       return new Response(
         JSON.stringify({ success: true, message: 'Outgoing message ignored' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Additional check: skip if sender is the connected WhatsApp number
+    const senderNumber = payload.sender?.split('@')[0];
+    const connectedNumber = payload.destination?.includes('evolution-webhook') ? null : senderNumber;
+    
+    // Check if this is a bot response by looking at message source
+    if (data?.source === 'web' || data?.source === 'api') {
+      console.log('[Evolution Webhook] Ignoring API/web originated message');
+      return new Response(
+        JSON.stringify({ success: true, message: 'API message ignored' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
