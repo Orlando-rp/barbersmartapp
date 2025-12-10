@@ -164,19 +164,19 @@ export const PublicBookingLink = () => {
   return (
     <Card className="barbershop-card">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Link className="h-5 w-5 text-primary" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+              <Link className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div>
-              <CardTitle className="text-lg">Link Público de Agendamento</CardTitle>
-              <CardDescription className="text-sm">
-                Compartilhe este link para seus clientes agendarem online
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-sm sm:text-base font-semibold truncate">Link Público de Agendamento</CardTitle>
+              <CardDescription className="text-xs sm:text-sm line-clamp-1">
+                Compartilhe para clientes agendarem online
               </CardDescription>
             </div>
           </div>
-          <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30 self-start sm:self-center shrink-0 text-xs">
             Ativo
           </Badge>
         </div>
@@ -267,26 +267,26 @@ export const PublicBookingLink = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <Button variant="default" onClick={handleCopy} className="gap-2">
-            <Copy className="h-4 w-4" />
-            Copiar Link
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+          <Button variant="default" onClick={handleCopy} size="sm" className="gap-1.5 text-xs sm:text-sm">
+            <Copy className="h-3.5 w-3.5" />
+            <span className="hidden xs:inline">Copiar</span> Link
           </Button>
           
-          <Button variant="outline" onClick={handleShare} className="gap-2">
-            <Share2 className="h-4 w-4" />
+          <Button variant="outline" onClick={handleShare} size="sm" className="gap-1.5 text-xs sm:text-sm">
+            <Share2 className="h-3.5 w-3.5" />
             Compartilhar
           </Button>
           
-          <Button variant="outline" onClick={handleOpenLink} className="gap-2">
-            <ExternalLink className="h-4 w-4" />
+          <Button variant="outline" onClick={handleOpenLink} size="sm" className="gap-1.5 text-xs sm:text-sm">
+            <ExternalLink className="h-3.5 w-3.5" />
             Abrir
           </Button>
 
           <Dialog open={showQR} onOpenChange={setShowQR}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <QrCode className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs sm:text-sm">
+                <QrCode className="h-3.5 w-3.5" />
                 QR Code
               </Button>
             </DialogTrigger>
