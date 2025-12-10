@@ -18,7 +18,9 @@ serve(async (req) => {
       action, 
       apiUrl, 
       apiKey, 
-      instanceName, 
+      instanceName,
+      instanceToken, // Token específico para a instância
+      phoneNumber,   // Número do telefone (opcional)
       to, 
       message, 
       barbershopId, 
@@ -70,7 +72,8 @@ serve(async (req) => {
         const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
         const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook`;
         console.log(`[Evolution API] Creating instance with webhook: ${webhookUrl}`);
-        body = JSON.stringify({
+        
+        const createPayload: any = {
           instanceName,
           qrcode: true,
           integration: 'WHATSAPP-BAILEYS',
@@ -81,7 +84,19 @@ serve(async (req) => {
             headers: {},
             events: ['MESSAGES_UPSERT']
           }
-        });
+        };
+        
+        // Adicionar token se fornecido
+        if (instanceToken) {
+          createPayload.token = instanceToken;
+        }
+        
+        // Adicionar número se fornecido (para pairing code)
+        if (phoneNumber) {
+          createPayload.number = phoneNumber;
+        }
+        
+        body = JSON.stringify(createPayload);
         break;
       }
 
@@ -92,26 +107,39 @@ serve(async (req) => {
         const supabaseUrlConnect = Deno.env.get('SUPABASE_URL') || '';
         const webhookUrlConnect = `${supabaseUrlConnect}/functions/v1/evolution-webhook`;
         
+        // Preparar payload de criação
+        const connectPayload: any = {
+          instanceName,
+          qrcode: true,
+          integration: 'WHATSAPP-BAILEYS',
+          webhook: {
+            url: webhookUrlConnect,
+            byEvents: false,
+            base64: false,
+            headers: {},
+            events: ['MESSAGES_UPSERT']
+          }
+        };
+        
+        // Adicionar token se fornecido
+        if (instanceToken) {
+          connectPayload.token = instanceToken;
+        }
+        
+        // Adicionar número se fornecido
+        if (phoneNumber) {
+          connectPayload.number = phoneNumber;
+        }
+        
         // Try to create instance first with webhook (will fail if exists, that's ok)
         try {
           const createRes = await fetch(`${baseUrl}/instance/create`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({
-              instanceName,
-              qrcode: true,
-              integration: 'WHATSAPP-BAILEYS',
-              webhook: {
-                url: webhookUrlConnect,
-                byEvents: false,
-                base64: false,
-                headers: {},
-                events: ['MESSAGES_UPSERT']
-              }
-            })
+            body: JSON.stringify(connectPayload)
           });
           const createData = await createRes.text();
-          console.log(`[Evolution API] Create instance response: ${createData.substring(0, 200)}`);
+          console.log(`[Evolution API] Create instance response: ${createData.substring(0, 500)}`);
         } catch (e) {
           console.log(`[Evolution API] Instance may already exist: ${e}`);
         }
