@@ -432,68 +432,68 @@ const Marketing = () => {
 
           {/* Loyalty Tab */}
           <TabsContent value="loyalty" className="space-y-4">
-            <h2 className="text-xl font-semibold">Programa de Fidelidade</h2>
+            <h2 className="text-lg sm:text-xl font-semibold">Programa de Fidelidade</h2>
             
             <Card className="barbershop-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-primary" />
+              <CardHeader className="p-3 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <Star className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Como Funciona
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-                    <div className="text-3xl mb-2">💰</div>
-                    <h3 className="font-semibold mb-2">Ganhe Pontos</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Clientes ganham 1 ponto para cada R$ 1,00 gasto em serviços
+              <CardContent className="p-3 sm:p-6 pt-0 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="p-3 sm:p-4 bg-primary/5 rounded-lg border border-primary/20">
+                    <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">💰</div>
+                    <h3 className="font-semibold text-sm sm:text-base mb-1 sm:mb-2">Ganhe Pontos</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      1 ponto para cada R$ 1 gasto
                     </p>
                   </div>
                   
-                  <div className="p-4 bg-success/5 rounded-lg border border-success/20">
-                    <div className="text-3xl mb-2">🎁</div>
-                    <h3 className="font-semibold mb-2">Troque por Recompensas</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Pontos podem ser trocados por descontos em serviços futuros
+                  <div className="p-3 sm:p-4 bg-success/5 rounded-lg border border-success/20">
+                    <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">🎁</div>
+                    <h3 className="font-semibold text-sm sm:text-base mb-1 sm:mb-2">Troque</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Pontos viram descontos
                     </p>
                   </div>
                   
-                  <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
-                    <div className="text-3xl mb-2">⭐</div>
-                    <h3 className="font-semibold mb-2">Automático</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Pontos são adicionados automaticamente quando um agendamento é concluído
+                  <div className="p-3 sm:p-4 bg-warning/5 rounded-lg border border-warning/20">
+                    <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">⭐</div>
+                    <h3 className="font-semibold text-sm sm:text-base mb-1 sm:mb-2">Automático</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Pontos ao concluir serviço
                     </p>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t">
-                  <h3 className="font-semibold mb-3">Estatísticas do Programa</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="pt-3 sm:pt-4 border-t">
+                  <h3 className="font-semibold text-sm sm:text-base mb-2 sm:mb-3">Estatísticas</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                     <div>
-                      <div className="text-2xl font-bold text-foreground">
+                      <div className="text-lg sm:text-2xl font-bold text-foreground">
                         {loyaltyStats.activeParticipants}
                       </div>
-                      <p className="text-sm text-muted-foreground">Participantes</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">Participantes</p>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-success">
+                      <div className="text-lg sm:text-2xl font-bold text-success truncate">
                         {loyaltyStats.totalPointsEarned.toLocaleString()}
                       </div>
-                      <p className="text-sm text-muted-foreground">Pontos Ganhos</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">Pts Ganhos</p>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-warning">
+                      <div className="text-lg sm:text-2xl font-bold text-warning truncate">
                         {loyaltyStats.totalPointsRedeemed.toLocaleString()}
                       </div>
-                      <p className="text-sm text-muted-foreground">Pontos Resgatados</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">Pts Resgatados</p>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-primary">
+                      <div className="text-lg sm:text-2xl font-bold text-primary">
                         {Math.round((loyaltyStats.activeParticipants / (loyaltyStats.totalClients || 1)) * 100)}%
                       </div>
-                      <p className="text-sm text-muted-foreground">Taxa de Adesão</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">Adesão</p>
                     </div>
                   </div>
                 </div>
