@@ -21,6 +21,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { WhatsAppLogs } from "./WhatsAppLogs";
+import { WhatsAppStats } from "./WhatsAppStats";
 import { QRCodeModal } from "./QRCodeModal";
 import { MessageTemplates, MessageTemplate } from "./MessageTemplates";
 
@@ -445,6 +446,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
   return (
     <div className="space-y-6">
+      {/* Statistics Dashboard - Always on top */}
+      <WhatsAppStats provider="evolution" />
+
       {/* Server Configuration - Only for SaaS Admin */}
       {isSaasAdmin && (
         <Card>
