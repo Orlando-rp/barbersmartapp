@@ -8,8 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Scissors, DollarSign, Clock, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
 import { useServiceCategories } from "@/hooks/useServiceCategories";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { z } from "zod";
 
 interface ServiceFormProps {
@@ -46,7 +46,7 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
   const [errors, setErrors] = useState<any>({});
   
   const { toast } = useToast();
-  const { barbershopId } = useAuth();
+  const { sharedBarbershopId } = useSharedBarbershopId();
   const { activeCategories, loading: categoriesLoading } = useServiceCategories();
 
   // Use DB categories or fallback to defaults
@@ -58,7 +58,7 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
     e.preventDefault();
     setErrors({});
 
-    if (!barbershopId) {
+    if (!sharedBarbershopId) {
       toast({
         title: "Erro",
         description: "Barbearia não encontrada. Por favor, faça login novamente.",
@@ -79,7 +79,7 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
       setLoading(true);
 
       const serviceData = {
-        barbershop_id: barbershopId,
+        barbershop_id: sharedBarbershopId,
         name: validatedData.name,
         description: validatedData.description || null,
         category: validatedData.category,

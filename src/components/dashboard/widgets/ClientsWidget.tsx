@@ -4,51 +4,54 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardWidget } from "../DashboardWidget";
 import { startOfMonth } from "date-fns";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
+
 export const ClientsWidget = ({
   onRemove
 }: {
   onRemove?: () => void;
 }) => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
+  const { sharedBarbershopId, loading: loadingBarbershop } = useSharedBarbershopId();
   const [totalClients, setTotalClients] = useState(0);
   const [newClients, setNewClients] = useState(0);
   const [activeClients, setActiveClients] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
+
   const fetchClients = async () => {
-    if (!user) return;
+    if (!user || !sharedBarbershopId || loadingBarbershop) return;
     setIsUpdating(true);
     try {
-      const {
-        data: profile
-      } = await supabase.from('profiles').select('barbershop_id').eq('id', user.id).single();
-      if (!profile?.barbershop_id) return;
       const monthStart = startOfMonth(new Date()).toISOString();
+      
+      // Buscar clientes da matriz E de todas as unidades filhas
+      const { data: childUnits } = await supabase
+        .from('barbershops')
+        .select('id')
+        .eq('parent_id', sharedBarbershopId);
+      
+      const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
 
       // Total clients
-      const {
-        count: total
-      } = await supabase.from('clients').select('*', {
-        count: 'exact',
-        head: true
-      }).eq('barbershop_id', profile.barbershop_id);
+      const { count: total } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .in('barbershop_id', allBarbershopIds);
 
       // Active clients
-      const {
-        count: active
-      } = await supabase.from('clients').select('*', {
-        count: 'exact',
-        head: true
-      }).eq('barbershop_id', profile.barbershop_id).eq('active', true);
+      const { count: active } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .in('barbershop_id', allBarbershopIds)
+        .eq('active', true);
 
       // New clients this month
-      const {
-        count: newMonth
-      } = await supabase.from('clients').select('*', {
-        count: 'exact',
-        head: true
-      }).eq('barbershop_id', profile.barbershop_id).gte('created_at', monthStart);
+      const { count: newMonth } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .in('barbershop_id', allBarbershopIds)
+        .gte('created_at', monthStart);
+
       setTotalClients(total || 0);
       setActiveClients(active || 0);
       setNewClients(newMonth || 0);
@@ -59,7 +62,9 @@ export const ClientsWidget = ({
     }
   };
   useEffect(() => {
-    fetchClients();
+    if (!loadingBarbershop && sharedBarbershopId) {
+      fetchClients();
+    }
 
     // Auto-refresh every 60 seconds
     const interval = setInterval(fetchClients, 60000);
@@ -72,11 +77,12 @@ export const ClientsWidget = ({
     }, () => {
       fetchClients();
     }).subscribe();
+
     return () => {
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, sharedBarbershopId, loadingBarbershop]);
   return <DashboardWidget title="Clientes" icon={<Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
       <div className="space-y-2 sm:space-y-4">
         <div>

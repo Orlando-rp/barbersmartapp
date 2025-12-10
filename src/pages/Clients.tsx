@@ -26,12 +26,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Users, Plus, Search, Phone, Mail, Calendar, MoreVertical, Pencil, Trash2, BarChart, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 
 const Clients = () => {
-  const { barbershopId } = useAuth();
+  const { sharedBarbershopId, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
@@ -42,10 +42,10 @@ const Clients = () => {
   const [deletingClient, setDeletingClient] = useState<any>(null);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (sharedBarbershopId && !loadingBarbershop) {
       fetchClients();
     }
-  }, [barbershopId]);
+  }, [sharedBarbershopId, loadingBarbershop]);
 
   useEffect(() => {
     // Filter clients based on search term
@@ -62,12 +62,23 @@ const Clients = () => {
   }, [searchTerm, clients]);
 
   const fetchClients = async () => {
+    if (!sharedBarbershopId) return;
+    
     try {
       setLoading(true);
+      
+      // Buscar clientes da matriz E de todas as unidades filhas
+      const { data: childUnits } = await supabase
+        .from('barbershops')
+        .select('id')
+        .eq('parent_id', sharedBarbershopId);
+      
+      const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
+      
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', allBarbershopIds)
         .eq('active', true)
         .order('created_at', { ascending: false });
 

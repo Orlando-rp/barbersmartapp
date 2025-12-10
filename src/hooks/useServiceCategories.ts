@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSharedBarbershopId } from '@/hooks/useSharedBarbershopId';
 
 export interface ServiceCategory {
   id: string;
@@ -25,13 +25,13 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export const useServiceCategories = () => {
-  const { barbershopId } = useAuth();
+  const { sharedBarbershopId, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = useCallback(async () => {
-    if (!barbershopId) {
+    if (!sharedBarbershopId || loadingBarbershop) {
       setCategories([]);
       setLoading(false);
       return;
@@ -39,10 +39,19 @@ export const useServiceCategories = () => {
 
     try {
       setLoading(true);
+      
+      // Buscar categorias da matriz E de todas as unidades filhas
+      const { data: childUnits } = await supabase
+        .from('barbershops')
+        .select('id')
+        .eq('parent_id', sharedBarbershopId);
+      
+      const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
+      
       const { data, error } = await supabase
         .from('service_categories')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', allBarbershopIds)
         .order('name', { ascending: true });
 
       if (error) {
@@ -65,14 +74,14 @@ export const useServiceCategories = () => {
     } finally {
       setLoading(false);
     }
-  }, [barbershopId]);
+  }, [sharedBarbershopId, loadingBarbershop]);
 
   const createDefaultCategories = async () => {
-    if (!barbershopId) return;
+    if (!sharedBarbershopId) return;
 
     try {
       const categoriesToInsert = DEFAULT_CATEGORIES.map(cat => ({
-        barbershop_id: barbershopId,
+        barbershop_id: sharedBarbershopId,
         name: cat.name,
         description: cat.description,
         color: cat.color,
@@ -93,13 +102,13 @@ export const useServiceCategories = () => {
   };
 
   const createCategory = async (category: { name: string; description?: string; color?: string }) => {
-    if (!barbershopId) return null;
+    if (!sharedBarbershopId) return null;
 
     try {
       const { data, error } = await supabase
         .from('service_categories')
         .insert([{
-          barbershop_id: barbershopId,
+          barbershop_id: sharedBarbershopId,
           name: category.name,
           description: category.description || null,
           color: category.color || '#6b7280',
@@ -154,12 +163,22 @@ export const useServiceCategories = () => {
   };
 
   const deleteCategory = async (id: string) => {
+    if (!sharedBarbershopId) return false;
+    
     try {
-      // Check if category is in use
+      // Buscar todas as barbearias relacionadas
+      const { data: childUnits } = await supabase
+        .from('barbershops')
+        .select('id')
+        .eq('parent_id', sharedBarbershopId);
+      
+      const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
+      
+      // Check if category is in use in any related barbershop
       const { data: services } = await supabase
         .from('services')
         .select('id')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', allBarbershopIds)
         .eq('category', categories.find(c => c.id === id)?.name)
         .limit(1);
 
