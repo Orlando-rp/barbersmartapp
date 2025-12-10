@@ -72,10 +72,10 @@ export const ReviewDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Avaliar Atendimento</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md p-4 sm:p-6">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-base sm:text-lg">Avaliar Atendimento</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">
             Como foi sua experiência com o serviço {serviceName}
             {staffName && ` com ${staffName}`}?
           </DialogDescription>
