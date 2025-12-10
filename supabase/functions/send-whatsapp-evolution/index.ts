@@ -135,8 +135,14 @@ serve(async (req) => {
         break;
 
       case 'logout':
-        // Disconnect instance
+        // Disconnect instance (just logout, keeps instance)
         endpoint = `/instance/logout/${instanceName}`;
+        method = 'DELETE';
+        break;
+
+      case 'deleteInstance':
+        // Delete instance completely
+        endpoint = `/instance/delete/${instanceName}`;
         method = 'DELETE';
         break;
 
