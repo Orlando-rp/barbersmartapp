@@ -16,6 +16,13 @@ import { ClientsWidget } from "@/components/dashboard/widgets/ClientsWidget";
 import { OccupancyWidget } from "@/components/dashboard/widgets/OccupancyWidget";
 import { WidgetSelector, defaultWidgets, WidgetConfig } from "@/components/dashboard/WidgetSelector";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Calendar, 
   Users, 
@@ -25,7 +32,8 @@ import {
   UserPlus,
   Clock,
   Star,
-  Settings
+  Settings,
+  Building2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,21 +49,138 @@ interface DashboardStats {
 }
 
 const Index = () => {
-  const { barbershopId } = useAuth();
+  const { barbershopId, barbershops, setSelectedBarbershop } = useAuth();
   const { branding } = useBranding();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'individual' | 'consolidated'>('individual');
+  const [consolidatedStats, setConsolidatedStats] = useState<DashboardStats | null>(null);
   const [widgets, setWidgets] = useState<WidgetConfig[]>(() => {
     const saved = localStorage.getItem('dashboard-widgets');
     return saved ? JSON.parse(saved) : defaultWidgets;
   });
   const [customizeMode, setCustomizeMode] = useState(false);
 
+  const hasMultipleUnits = barbershops.length > 1;
+
   useEffect(() => {
     if (barbershopId) {
       fetchDashboardStats();
     }
   }, [barbershopId]);
+
+  useEffect(() => {
+    if (hasMultipleUnits && viewMode === 'consolidated') {
+      fetchConsolidatedStats();
+    }
+  }, [viewMode, barbershops]);
+
+  const fetchConsolidatedStats = async () => {
+    try {
+      setLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+      let totalTodayAppointments = 0;
+      let totalMonthRevenue = 0;
+      let totalActiveClients = 0;
+      let totalRating = 0;
+      let totalOccupancy = 0;
+      let totalNewClients = 0;
+      let totalRetention = 0;
+      const allServiceCounts: Record<string, number> = {};
+      let totalAppointments = 0;
+
+      for (const barbershop of barbershops) {
+        // Agendamentos hoje
+        const { count: todayCount } = await supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('barbershop_id', barbershop.id)
+          .eq('appointment_date', today);
+        totalTodayAppointments += todayCount || 0;
+
+        // Receita do mês
+        const { data: transactions } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('barbershop_id', barbershop.id)
+          .eq('type', 'receita')
+          .gte('transaction_date', firstDayOfMonth);
+        totalMonthRevenue += transactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+        // Clientes ativos
+        const { count: clientCount } = await supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true })
+          .eq('barbershop_id', barbershop.id)
+          .eq('active', true);
+        totalActiveClients += clientCount || 0;
+
+        // Serviços e agendamentos
+        const { data: appointments } = await supabase
+          .from('appointments')
+          .select('service_name, client_id')
+          .eq('barbershop_id', barbershop.id)
+          .gte('appointment_date', firstDayOfMonth);
+
+        appointments?.forEach(apt => {
+          if (apt.service_name) {
+            allServiceCounts[apt.service_name] = (allServiceCounts[apt.service_name] || 0) + 1;
+          }
+        });
+        totalAppointments += appointments?.length || 0;
+
+        // Taxa de ocupação
+        const { count: confirmedCount } = await supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('barbershop_id', barbershop.id)
+          .gte('appointment_date', firstDayOfMonth)
+          .in('status', ['confirmado', 'concluido']);
+        totalOccupancy += confirmedCount || 0;
+
+        // Novos clientes
+        const { count: newClientsCount } = await supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true })
+          .eq('barbershop_id', barbershop.id)
+          .gte('created_at', firstDayOfMonth);
+        totalNewClients += newClientsCount || 0;
+
+        // Avaliação
+        try {
+          const { data: avgRating } = await supabase
+            .rpc('get_barbershop_average_rating', { barbershop_uuid: barbershop.id });
+          totalRating += avgRating || 0;
+        } catch (e) {}
+      }
+
+      const popularServices = Object.entries(allServiceCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([name, count]) => ({
+          name,
+          percentage: Math.round((count / Math.max(totalAppointments, 1)) * 100)
+        }));
+
+      setConsolidatedStats({
+        todayAppointments: totalTodayAppointments,
+        monthRevenue: totalMonthRevenue,
+        activeClients: totalActiveClients,
+        averageRating: barbershops.length > 0 ? Math.round((totalRating / barbershops.length) * 10) / 10 : 0,
+        popularServices,
+        occupancyRate: totalAppointments > 0 ? Math.round((totalOccupancy / totalAppointments) * 100) : 0,
+        newClientsThisMonth: totalNewClients,
+        retentionRate: 0
+      });
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas consolidadas:', error);
+      toast.error('Erro ao carregar estatísticas consolidadas');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchDashboardStats = async () => {
     try {
@@ -201,42 +326,85 @@ const Index = () => {
     );
   }
 
+  const currentStats = viewMode === 'consolidated' ? consolidatedStats : stats;
+
   return (
     <Layout>
       <div className="space-y-4 lg:space-y-6">
         {/* Welcome Section */}
         <div className="gradient-subtle p-4 lg:p-6 rounded-xl border border-border">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
-                Bem-vindo ao {branding?.system_name || 'BarberSmart'}! 👋
-              </h1>
-              <p className="text-muted-foreground text-sm lg:text-lg">
-                {branding?.tagline || 'Gerencie sua barbearia de forma inteligente'}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={customizeMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCustomizeMode(!customizeMode)}
-              >
-                <Settings className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">{customizeMode ? 'Salvar' : 'Personalizar'}</span>
-              </Button>
-              {customizeMode && (
-                <WidgetSelector
-                  widgets={widgets}
-                  onToggleWidget={handleToggleWidget}
-                />
-              )}
-              <AppointmentDialog>
-                <Button variant="premium" size="sm" className="shadow-gold">
-                  <UserPlus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Novo Agendamento</span>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
+                  Bem-vindo ao {branding?.system_name || 'BarberSmart'}! 👋
+                </h1>
+                <p className="text-muted-foreground text-sm lg:text-lg">
+                  {branding?.tagline || 'Gerencie sua barbearia de forma inteligente'}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={customizeMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCustomizeMode(!customizeMode)}
+                >
+                  <Settings className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{customizeMode ? 'Salvar' : 'Personalizar'}</span>
                 </Button>
-              </AppointmentDialog>
+                {customizeMode && (
+                  <WidgetSelector
+                    widgets={widgets}
+                    onToggleWidget={handleToggleWidget}
+                  />
+                )}
+                <AppointmentDialog>
+                  <Button variant="premium" size="sm" className="shadow-gold">
+                    <UserPlus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Novo Agendamento</span>
+                  </Button>
+                </AppointmentDialog>
+              </div>
             </div>
+
+            {/* Multi-unit selector */}
+            {hasMultipleUnits && (
+              <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Visualização:</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Select value={viewMode} onValueChange={(v: 'individual' | 'consolidated') => setViewMode(v)}>
+                    <SelectTrigger className="w-[180px] h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="individual">Individual</SelectItem>
+                      <SelectItem value="consolidated">Consolidada (Todas)</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {viewMode === 'individual' && (
+                    <Select 
+                      value={barbershopId || ''} 
+                      onValueChange={(v) => setSelectedBarbershop(v)}
+                    >
+                      <SelectTrigger className="w-[200px] h-8 text-sm">
+                        <SelectValue placeholder="Selecione a unidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {barbershops.map((shop) => (
+                          <SelectItem key={shop.id} value={shop.id}>
+                            {shop.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -256,30 +424,30 @@ const Index = () => {
           )}
         </div>
 
-        {/* Legacy Quick Stats - Only show if no widgets are enabled */}
-        {!widgets.some(w => w.enabled) && (
+        {/* Legacy Quick Stats - Only show if no widgets are enabled OR consolidated view */}
+        {(!widgets.some(w => w.enabled) || viewMode === 'consolidated') && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             <StatsCard
-              title="Agendamentos Hoje"
-              value={stats?.todayAppointments || 0}
+              title={viewMode === 'consolidated' ? "Agendamentos Hoje (Total)" : "Agendamentos Hoje"}
+              value={currentStats?.todayAppointments || 0}
               icon={Calendar}
               variant="primary"
             />
             <StatsCard
-              title="Receita do Mês"
-              value={`R$ ${stats?.monthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+              title={viewMode === 'consolidated' ? "Receita do Mês (Total)" : "Receita do Mês"}
+              value={`R$ ${(currentStats?.monthRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               icon={DollarSign}
               variant="success"
             />
             <StatsCard
-              title="Clientes Ativos"
-              value={stats?.activeClients || 0}
+              title={viewMode === 'consolidated' ? "Clientes Ativos (Total)" : "Clientes Ativos"}
+              value={currentStats?.activeClients || 0}
               icon={Users}
               variant="default"
             />
             <StatsCard
-              title="Avaliação Média"
-              value={stats?.averageRating || 0}
+              title={viewMode === 'consolidated' ? "Avaliação Média (Geral)" : "Avaliação Média"}
+              value={currentStats?.averageRating || 0}
               icon={Star}
               variant="warning"
             />
@@ -310,8 +478,8 @@ const Index = () => {
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
               <div className="space-y-2 sm:space-y-3">
-                {stats?.popularServices && stats.popularServices.length > 0 ? (
-                  stats.popularServices.map((service, idx) => (
+                {currentStats?.popularServices && currentStats.popularServices.length > 0 ? (
+                  currentStats.popularServices.map((service, idx) => (
                     <div key={idx} className="flex justify-between items-center gap-2">
                       <span className="text-xs sm:text-sm text-muted-foreground truncate">{service.name}</span>
                       <span className="text-xs sm:text-sm font-medium flex-shrink-0">{service.percentage}%</span>
@@ -335,15 +503,15 @@ const Index = () => {
               <div className="space-y-2 sm:space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm text-muted-foreground">Ocupação</span>
-                  <span className="text-xs sm:text-sm font-medium text-success">{stats?.occupancyRate}%</span>
+                  <span className="text-xs sm:text-sm font-medium text-success">{currentStats?.occupancyRate}%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm text-muted-foreground">Novos</span>
-                  <span className="text-xs sm:text-sm font-medium text-primary">+{stats?.newClientsThisMonth}</span>
+                  <span className="text-xs sm:text-sm font-medium text-primary">+{currentStats?.newClientsThisMonth}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm text-muted-foreground">Fidelização</span>
-                  <span className="text-xs sm:text-sm font-medium text-warning">{stats?.retentionRate}%</span>
+                  <span className="text-xs sm:text-sm font-medium text-warning">{currentStats?.retentionRate}%</span>
                 </div>
               </div>
             </CardContent>
