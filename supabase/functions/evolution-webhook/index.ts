@@ -1,4 +1,5 @@
-// Evolution API Webhook Handler - Receives incoming WhatsApp messages
+// Evolution API Webhook Handler v2.1 - Receives incoming WhatsApp messages
+// Updated: 2025-12-10 - Fixed instance extraction for string format
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
