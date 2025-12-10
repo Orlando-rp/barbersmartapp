@@ -69,6 +69,8 @@ import { GlobalEvolutionConfig } from "@/components/saas/GlobalEvolutionConfig";
 import { GlobalChatbotConfig } from "@/components/saas/GlobalChatbotConfig";
 import { WhatsAppStatusPanel } from "@/components/saas/WhatsAppStatusPanel";
 import { SocialAuthConfig } from "@/components/saas/SocialAuthConfig";
+import { BrandingConfig } from "@/components/saas/BrandingConfig";
+import { PlanFeaturesSelector, defaultPlanFeatures, featuresToStringArray, stringArrayToFeatures, type PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import {
   BarChart,
   Bar,
@@ -114,6 +116,7 @@ interface Plan {
   max_clients: number;
   max_appointments_month: number;
   features: string[];
+  feature_flags?: PlanFeatures;
   active: boolean;
 }
 
@@ -170,6 +173,7 @@ const SaasAdminPortal = () => {
     max_clients: 100,
     max_appointments_month: 500,
     features: '',
+    feature_flags: defaultPlanFeatures as PlanFeatures,
     active: true,
   });
 
@@ -300,6 +304,7 @@ const SaasAdminPortal = () => {
       const planData = {
         ...planForm,
         features: planForm.features.split('\n').filter(f => f.trim()),
+        feature_flags: planForm.feature_flags,
       };
 
       if (selectedPlan) {
@@ -407,6 +412,7 @@ const SaasAdminPortal = () => {
         max_clients: plan.max_clients,
         max_appointments_month: plan.max_appointments_month,
         features: (plan.features || []).join('\n'),
+        feature_flags: plan.feature_flags || stringArrayToFeatures(plan.features || []),
         active: plan.active,
       });
     } else {
@@ -421,6 +427,7 @@ const SaasAdminPortal = () => {
         max_clients: 100,
         max_appointments_month: 500,
         features: '',
+        feature_flags: defaultPlanFeatures,
         active: true,
       });
     }
@@ -594,6 +601,10 @@ const SaasAdminPortal = () => {
             <TabsTrigger value="messages" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
               <MessageSquare className="h-4 w-4 mr-2" />
               Mensagens
+            </TabsTrigger>
+            <TabsTrigger value="branding" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
+              <Settings className="h-4 w-4 mr-2" />
+              Branding
             </TabsTrigger>
             <TabsTrigger value="integrations" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
               <Smartphone className="h-4 w-4 mr-2" />
@@ -874,6 +885,11 @@ const SaasAdminPortal = () => {
             </Card>
           </TabsContent>
 
+          {/* Branding Tab */}
+          <TabsContent value="branding">
+            <BrandingConfig />
+          </TabsContent>
+
           {/* Integrations Tab */}
           <TabsContent value="integrations">
             <div className="space-y-6 sm:space-y-8">
@@ -903,59 +919,87 @@ const SaasAdminPortal = () => {
 
         {/* Plan Dialog */}
         <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{selectedPlan ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
+              <DialogDescription>Configure os limites e funcionalidades do plano</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome</Label>
-                  <Input value={planForm.name} onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} />
+            <div className="space-y-6 py-4">
+              {/* Basic Info */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-foreground border-b pb-2">Informações Básicas</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nome</Label>
+                    <Input value={planForm.name} onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Slug</Label>
+                    <Input value={planForm.slug} onChange={(e) => setPlanForm({ ...planForm, slug: e.target.value })} />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Slug</Label>
-                  <Input value={planForm.slug} onChange={(e) => setPlanForm({ ...planForm, slug: e.target.value })} />
+                  <Label>Descrição</Label>
+                  <Textarea value={planForm.description} onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Preço (R$)</Label>
+                    <Input type="number" step="0.01" value={planForm.price} onChange={(e) => setPlanForm({ ...planForm, price: parseFloat(e.target.value) })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Período</Label>
+                    <Select value={planForm.billing_period} onValueChange={(v) => setPlanForm({ ...planForm, billing_period: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                        <SelectItem value="yearly">Anual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
+
+              {/* Limits */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-foreground border-b pb-2">Limites</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Max Staff</Label>
+                    <Input type="number" value={planForm.max_staff} onChange={(e) => setPlanForm({ ...planForm, max_staff: parseInt(e.target.value) })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max Clientes</Label>
+                    <Input type="number" value={planForm.max_clients} onChange={(e) => setPlanForm({ ...planForm, max_clients: parseInt(e.target.value) })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max Agend./mês</Label>
+                    <Input type="number" value={planForm.max_appointments_month} onChange={(e) => setPlanForm({ ...planForm, max_appointments_month: parseInt(e.target.value) })} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Features Selector */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-foreground border-b pb-2">Funcionalidades Incluídas</h3>
+                <PlanFeaturesSelector 
+                  features={planForm.feature_flags} 
+                  onChange={(features) => setPlanForm({ ...planForm, feature_flags: features })} 
+                />
+              </div>
+
+              {/* Legacy Features Text (optional) */}
               <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea value={planForm.description} onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })} />
+                <Label>Recursos Adicionais (texto livre)</Label>
+                <Textarea 
+                  rows={2} 
+                  value={planForm.features} 
+                  onChange={(e) => setPlanForm({ ...planForm, features: e.target.value })} 
+                  placeholder="Outros recursos personalizados (um por linha)"
+                  className="text-sm"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Preço (R$)</Label>
-                  <Input type="number" step="0.01" value={planForm.price} onChange={(e) => setPlanForm({ ...planForm, price: parseFloat(e.target.value) })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Período</Label>
-                  <Select value={planForm.billing_period} onValueChange={(v) => setPlanForm({ ...planForm, billing_period: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Mensal</SelectItem>
-                      <SelectItem value="yearly">Anual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Max Staff</Label>
-                  <Input type="number" value={planForm.max_staff} onChange={(e) => setPlanForm({ ...planForm, max_staff: parseInt(e.target.value) })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Max Clientes</Label>
-                  <Input type="number" value={planForm.max_clients} onChange={(e) => setPlanForm({ ...planForm, max_clients: parseInt(e.target.value) })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Max Agend.</Label>
-                  <Input type="number" value={planForm.max_appointments_month} onChange={(e) => setPlanForm({ ...planForm, max_appointments_month: parseInt(e.target.value) })} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Recursos (um por linha)</Label>
-                <Textarea rows={4} value={planForm.features} onChange={(e) => setPlanForm({ ...planForm, features: e.target.value })} placeholder="Agendamento online&#10;Notificações WhatsApp&#10;Relatórios" />
-              </div>
+
               <div className="flex items-center gap-2">
                 <Switch checked={planForm.active} onCheckedChange={(v) => setPlanForm({ ...planForm, active: v })} />
                 <Label>Plano Ativo</Label>
@@ -963,7 +1007,9 @@ const SaasAdminPortal = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setPlanDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleSavePlan} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
+              <Button onClick={handleSavePlan} disabled={saving} className="bg-warning hover:bg-warning/90 text-warning-foreground">
+                {saving ? 'Salvando...' : 'Salvar'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
