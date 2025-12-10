@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranding } from "@/contexts/BrandingContext";
 import { supabase } from "@/lib/supabase";
 import Layout from "@/components/layout/Layout";
 import StatsCard from "@/components/dashboard/StatsCard";
@@ -41,6 +42,7 @@ interface DashboardStats {
 
 const Index = () => {
   const { barbershopId } = useAuth();
+  const { branding } = useBranding();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [widgets, setWidgets] = useState<WidgetConfig[]>(() => {
@@ -207,10 +209,10 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
-                Bem-vindo ao BarberSmart! 👋
+                Bem-vindo ao {branding?.system_name || 'BarberSmart'}! 👋
               </h1>
               <p className="text-muted-foreground text-sm lg:text-lg">
-                Gerencie sua barbearia de forma inteligente
+                {branding?.tagline || 'Gerencie sua barbearia de forma inteligente'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">

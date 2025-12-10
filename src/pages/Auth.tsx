@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/contexts/BrandingContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +48,7 @@ interface BarbershopUnit {
 const Auth = () => {
   const navigate = useNavigate();
   const { user, signIn, refreshBarbershops } = useAuth();
+  const { branding } = useBranding();
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
   const [errors, setErrors] = useState<any>({});
@@ -362,7 +364,7 @@ const Auth = () => {
       }
 
       toast.success('Conta criada com sucesso!', {
-        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Bem-vindo ao Barber Smart!`,
+        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Bem-vindo ao ${branding?.system_name || 'BarberSmart'}!`,
       });
 
       // Refresh barbershops in context
@@ -729,13 +731,21 @@ const Auth = () => {
       <Card className="w-full max-w-lg barbershop-card">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Scissors className="h-8 w-8 text-primary" />
-            </div>
+            {branding?.logo_url ? (
+              <img 
+                src={branding.logo_url} 
+                alt={branding.system_name || 'Logo'} 
+                className="h-16 w-16 rounded-full object-contain"
+              />
+            ) : (
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Scissors className="h-8 w-8 text-primary" />
+              </div>
+            )}
           </div>
-          <CardTitle className="text-2xl">Barber Smart</CardTitle>
+          <CardTitle className="text-2xl">{branding?.system_name || 'BarberSmart'}</CardTitle>
           <CardDescription>
-            Sistema de gestão para barbearias
+            {branding?.tagline || 'Sistema de gestão para barbearias'}
           </CardDescription>
         </CardHeader>
         <CardContent>
