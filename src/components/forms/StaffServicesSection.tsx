@@ -36,6 +36,8 @@ export const StaffServicesSection = ({
   const fetchServices = async () => {
     try {
       setLoading(true);
+      console.log('[StaffServicesSection] Buscando serviços para barbershop_id:', barbershopId);
+      
       const { data, error } = await supabase
         .from("services")
         .select("id, name, price, duration, category")
@@ -44,7 +46,12 @@ export const StaffServicesSection = ({
         .order("category")
         .order("name");
 
-      if (error) throw error;
+      if (error) {
+        console.error("[StaffServicesSection] Erro na query:", error);
+        throw error;
+      }
+      
+      console.log('[StaffServicesSection] Serviços encontrados:', data?.length || 0, data);
       setServices(data || []);
     } catch (error) {
       console.error("Erro ao carregar serviços:", error);
