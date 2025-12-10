@@ -164,10 +164,10 @@ export const TeamPerformance = ({ period }: Props) => {
   if (loading) {
     return (
       <Card className="barbershop-card">
-        <CardHeader>
-          <CardTitle>Performance da Equipe</CardTitle>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-sm sm:text-base">Performance da Equipe</CardTitle>
         </CardHeader>
-        <CardContent className="flex justify-center py-12">
+        <CardContent className="flex justify-center py-8 sm:py-12">
           <LoadingSpinner size="lg" />
         </CardContent>
       </Card>
@@ -176,99 +176,144 @@ export const TeamPerformance = ({ period }: Props) => {
 
   return (
     <Card className="barbershop-card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
+      <CardHeader className="p-3 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Performance da Equipe
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 sm:p-6 pt-0">
         {/* Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span className="text-sm">Total Agendamentos</span>
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <div className="space-y-0.5 sm:space-y-1">
+            <div className="flex items-center gap-1 sm:gap-2 text-muted-foreground">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <span className="text-xs sm:text-sm truncate">Agendamentos</span>
             </div>
-            <p className="text-2xl font-bold text-foreground">{totalStats.totalAppointments}</p>
+            <p className="text-base sm:text-2xl font-bold text-foreground">{totalStats.totalAppointments}</p>
           </div>
           
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <DollarSign className="h-4 w-4" />
-              <span className="text-sm">Receita Total</span>
+          <div className="space-y-0.5 sm:space-y-1">
+            <div className="flex items-center gap-1 sm:gap-2 text-muted-foreground">
+              <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <span className="text-xs sm:text-sm truncate">Receita</span>
             </div>
-            <p className="text-2xl font-bold text-success">
-              R$ {totalStats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <p className="text-base sm:text-2xl font-bold text-success truncate">
+              R$ {totalStats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
             </p>
           </div>
 
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <TrendingUp className="h-4 w-4" />
-              <span className="text-sm">Comissões Total</span>
+          <div className="space-y-0.5 sm:space-y-1">
+            <div className="flex items-center gap-1 sm:gap-2 text-muted-foreground">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <span className="text-xs sm:text-sm truncate">Comissões</span>
             </div>
-            <p className="text-2xl font-bold text-warning">
-              R$ {totalStats.totalCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <p className="text-base sm:text-2xl font-bold text-warning truncate">
+              R$ {totalStats.totalCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
             </p>
           </div>
         </div>
 
-        {/* Performance Table */}
+        {/* Performance - Mobile Cards / Desktop Table */}
         {performance.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Barbeiro</TableHead>
-                <TableHead className="text-center">Agendamentos</TableHead>
-                <TableHead className="text-right">Receita</TableHead>
-                <TableHead className="text-right">Ticket Médio</TableHead>
-                <TableHead className="text-right">Comissão</TableHead>
-                <TableHead className="text-center">Taxa Conclusão</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Mobile Cards */}
+            <div className="sm:hidden space-y-3">
               {performance.map((staff) => (
-                <TableRow key={staff.staffId}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={staff.avatar} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {staff.name.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{staff.name}</span>
+                <div key={staff.staffId} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={staff.avatar} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {staff.name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{staff.name}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{staff.appointmentsCount} agend.</span>
+                        <Badge 
+                          variant={staff.completionRate >= 80 ? "default" : "secondary"}
+                          className={`text-xs ${staff.completionRate >= 80 ? "bg-success" : ""}`}
+                        >
+                          {staff.completionRate}%
+                        </Badge>
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="outline">{staff.appointmentsCount}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-success">
-                    R$ {staff.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    R$ {staff.avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-warning">
-                    R$ {staff.commission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge 
-                      variant={staff.completionRate >= 80 ? "default" : "secondary"}
-                      className={staff.completionRate >= 80 ? "bg-success" : ""}
-                    >
-                      {staff.completionRate}%
-                    </Badge>
-                  </TableCell>
-                </TableRow>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Receita</p>
+                      <p className="font-medium text-success">R$ {staff.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Ticket</p>
+                      <p className="font-medium">R$ {staff.avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Comissão</p>
+                      <p className="font-bold text-warning">R$ {staff.commission.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+            
+            {/* Desktop Table */}
+            <Table className="hidden sm:table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Barbeiro</TableHead>
+                  <TableHead className="text-center">Agend.</TableHead>
+                  <TableHead className="text-right">Receita</TableHead>
+                  <TableHead className="text-right">Ticket</TableHead>
+                  <TableHead className="text-right">Comissão</TableHead>
+                  <TableHead className="text-center">Conclusão</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {performance.map((staff) => (
+                  <TableRow key={staff.staffId}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={staff.avatar} />
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {staff.name.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{staff.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline">{staff.appointmentsCount}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-success">
+                      R$ {staff.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      R$ {staff.avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-warning">
+                      R$ {staff.commission.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge 
+                        variant={staff.completionRate >= 80 ? "default" : "secondary"}
+                        className={staff.completionRate >= 80 ? "bg-success" : ""}
+                      >
+                        {staff.completionRate}%
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </>
         ) : (
-          <div className="text-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-            <p className="text-muted-foreground">Nenhum barbeiro encontrado</p>
+          <div className="text-center py-8 sm:py-12">
+            <Users className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <p className="text-sm text-muted-foreground">Nenhum barbeiro encontrado</p>
           </div>
         )}
       </CardContent>
