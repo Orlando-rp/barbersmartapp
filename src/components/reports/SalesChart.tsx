@@ -154,70 +154,73 @@ export const SalesChart = ({ period }: Props) => {
 
   return (
     <Card className="barbershop-card">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+      <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+        <CardTitle className="flex items-center justify-between text-sm sm:text-base">
           <span>Relatório de Vendas</span>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
             {summary.growth >= 0 ? (
               <>
-                <TrendingUp className="h-4 w-4 text-success" />
+                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success" />
                 <span className="text-success">+{summary.growth}%</span>
               </>
             ) : (
               <>
-                <TrendingDown className="h-4 w-4 text-destructive" />
+                <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
                 <span className="text-destructive">{summary.growth}%</span>
               </>
             )}
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 sm:p-6 pt-0">
         {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Receita Total</p>
-            <p className="text-2xl font-bold text-success">
-              R$ {summary.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <div className="space-y-0.5 sm:space-y-1">
+            <p className="text-[10px] sm:text-sm text-muted-foreground">Receita</p>
+            <p className="text-sm sm:text-xl lg:text-2xl font-bold text-success truncate">
+              R$ {summary.totalRevenue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </p>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Despesas Totais</p>
-            <p className="text-2xl font-bold text-destructive">
-              R$ {summary.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          <div className="space-y-0.5 sm:space-y-1">
+            <p className="text-[10px] sm:text-sm text-muted-foreground">Despesas</p>
+            <p className="text-sm sm:text-xl lg:text-2xl font-bold text-destructive truncate">
+              R$ {summary.totalExpenses.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </p>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Lucro Líquido</p>
-            <p className="text-2xl font-bold text-primary">
-              R$ {summary.totalProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          <div className="space-y-0.5 sm:space-y-1">
+            <p className="text-[10px] sm:text-sm text-muted-foreground">Lucro</p>
+            <p className="text-sm sm:text-xl lg:text-2xl font-bold text-primary truncate">
+              R$ {summary.totalProfit.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </p>
           </div>
         </div>
 
         {/* Chart */}
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data}>
+        <ResponsiveContainer width="100%" height={200} className="sm:!h-[280px]">
+          <BarChart data={data} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="date" 
               stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
+              fontSize={10}
+              interval="preserveStartEnd"
             />
             <YAxis 
               stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-              tickFormatter={(value) => `R$ ${value}`}
+              fontSize={10}
+              tickFormatter={(value) => `${value}`}
+              width={30}
             />
             <Tooltip 
               contentStyle={{
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                fontSize: '12px'
               }}
               formatter={(value: number) => `R$ ${value.toFixed(2)}`}
             />
-            <Legend />
+            <Legend wrapperStyle={{ fontSize: '11px' }} />
             <Bar dataKey="revenue" name="Receita" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
             <Bar dataKey="expenses" name="Despesas" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
           </BarChart>

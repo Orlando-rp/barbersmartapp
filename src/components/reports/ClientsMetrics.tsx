@@ -152,78 +152,99 @@ export const ClientsMetrics = ({ period }: Props) => {
 
   return (
     <Card className="barbershop-card">
-      <CardHeader>
-        <CardTitle>Métricas de Clientes</CardTitle>
+      <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+        <CardTitle className="text-sm sm:text-base">Métricas de Clientes</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 sm:p-6 pt-0">
         {/* Summary Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span className="text-sm">Total</span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Users className="h-3.5 w-3.5" />
+              <span className="text-[10px] sm:text-xs">Total</span>
             </div>
-            <p className="text-2xl font-bold text-foreground">{metrics?.totalClients}</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground">{metrics?.totalClients}</p>
           </div>
           
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <UserCheck className="h-4 w-4" />
-              <span className="text-sm">Ativos</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <UserCheck className="h-3.5 w-3.5" />
+              <span className="text-[10px] sm:text-xs">Ativos</span>
             </div>
-            <p className="text-2xl font-bold text-success">{metrics?.activeClients}</p>
+            <p className="text-lg sm:text-2xl font-bold text-success">{metrics?.activeClients}</p>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <UserPlus className="h-4 w-4" />
-              <span className="text-sm">Novos (mês)</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <UserPlus className="h-3.5 w-3.5" />
+              <span className="text-[10px] sm:text-xs">Novos</span>
             </div>
-            <p className="text-2xl font-bold text-primary">{metrics?.newClientsThisMonth}</p>
+            <p className="text-lg sm:text-2xl font-bold text-primary">{metrics?.newClientsThisMonth}</p>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <TrendingUp className="h-4 w-4" />
-              <span className="text-sm">Retenção</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="text-[10px] sm:text-xs">Retenção</span>
             </div>
-            <p className="text-2xl font-bold text-warning">{metrics?.retentionRate}%</p>
+            <p className="text-lg sm:text-2xl font-bold text-warning">{metrics?.retentionRate}%</p>
           </div>
         </div>
 
-        {/* Top Clients Table */}
+        {/* Top Clients */}
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-foreground">Clientes Mais Frequentes</h3>
+          <h3 className="text-xs sm:text-sm font-medium text-foreground">Clientes Frequentes</h3>
           {metrics?.topClients && metrics.topClients.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-center">Agendamentos</TableHead>
-                  <TableHead className="text-right">Total Gasto</TableHead>
-                  <TableHead className="text-right">Última Visita</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile View - Cards */}
+              <div className="space-y-2 sm:hidden">
                 {metrics.topClients.map((client, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline">{client.appointmentsCount}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right text-success font-medium">
-                      R$ {client.totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {new Date(client.lastVisit).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                  </TableRow>
+                  <div key={idx} className="p-2.5 rounded-lg border bg-card">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-medium text-sm truncate">{client.name}</span>
+                      <Badge variant="outline" className="text-[10px]">{client.appointmentsCount}x</Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>R$ {client.totalSpent.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
+                      <span>{new Date(client.lastVisit).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop View - Table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Cliente</TableHead>
+                      <TableHead className="text-center text-xs">Agend.</TableHead>
+                      <TableHead className="text-right text-xs">Total</TableHead>
+                      <TableHead className="text-right text-xs">Última</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {metrics.topClients.map((client, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium text-sm">{client.name}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="text-xs">{client.appointmentsCount}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-success font-medium text-sm">
+                          R$ {client.totalSpent.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground text-sm">
+                          {new Date(client.lastVisit).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhum dado disponível para o período selecionado
+            <p className="text-xs sm:text-sm text-muted-foreground text-center py-4">
+              Nenhum dado disponível
             </p>
           )}
         </div>

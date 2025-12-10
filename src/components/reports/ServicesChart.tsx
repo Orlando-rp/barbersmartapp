@@ -126,30 +126,30 @@ export const ServicesChart = ({ period }: Props) => {
 
   return (
     <Card className="barbershop-card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Scissors className="h-5 w-5 text-primary" />
-          Serviços Mais Populares
+      <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <Scissors className="h-4 w-4 text-primary" />
+          Serviços Populares
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 sm:p-6 pt-0">
         {/* Summary */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span className="text-sm">Total de Serviços</span>
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <div className="space-y-0.5 sm:space-y-1">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span className="text-[10px] sm:text-xs">Total</span>
             </div>
-            <p className="text-2xl font-bold text-foreground">{totalAppointments}</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground">{totalAppointments}</p>
           </div>
           
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <DollarSign className="h-4 w-4" />
-              <span className="text-sm">Receita Total</span>
+          <div className="space-y-0.5 sm:space-y-1">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <DollarSign className="h-3.5 w-3.5" />
+              <span className="text-[10px] sm:text-xs">Receita</span>
             </div>
-            <p className="text-2xl font-bold text-success">
-              R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <p className="text-lg sm:text-2xl font-bold text-success truncate">
+              R$ {totalRevenue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </p>
           </div>
         </div>
@@ -157,15 +157,14 @@ export const ServicesChart = ({ period }: Props) => {
         {services.length > 0 ? (
           <>
             {/* Pie Chart */}
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={180} className="sm:!h-[220px]">
               <PieChart>
                 <Pie
                   data={services}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
-                  outerRadius={80}
+                  outerRadius={60}
                   fill="#8884d8"
                   dataKey="count"
                 >
@@ -177,37 +176,39 @@ export const ServicesChart = ({ period }: Props) => {
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    fontSize: '12px'
                   }}
+                  formatter={(value: number, name: string, props: any) => [
+                    `${value} (${props.payload.percentage}%)`,
+                    props.payload.name
+                  ]}
                 />
               </PieChart>
             </ResponsiveContainer>
 
             {/* Services List */}
-            <div className="space-y-3 mt-6">
+            <div className="space-y-2 mt-4">
               {services.map((service, idx) => (
                 <div 
                   key={idx}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border"
+                  className="flex items-center justify-between p-2 sm:p-3 rounded-lg border border-border"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div 
-                      className="w-3 h-3 rounded-full"
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: COLORS[idx % COLORS.length] }}
                     />
-                    <div>
-                      <p className="font-medium text-foreground">{service.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {service.count} agendamentos ({service.percentage}%)
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs sm:text-sm text-foreground truncate">{service.name}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        {service.count}x ({service.percentage}%)
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-success">
-                      R$ {service.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Média: R$ {(service.revenue / service.count).toFixed(2)}
+                  <div className="text-right shrink-0 ml-2">
+                    <p className="font-medium text-xs sm:text-sm text-success">
+                      R$ {service.revenue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                     </p>
                   </div>
                 </div>
@@ -215,9 +216,9 @@ export const ServicesChart = ({ period }: Props) => {
             </div>
           </>
         ) : (
-          <div className="text-center py-12">
-            <Scissors className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-            <p className="text-muted-foreground">Nenhum serviço registrado no período</p>
+          <div className="text-center py-8 sm:py-12">
+            <Scissors className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <p className="text-xs sm:text-sm text-muted-foreground">Nenhum serviço no período</p>
           </div>
         )}
       </CardContent>
