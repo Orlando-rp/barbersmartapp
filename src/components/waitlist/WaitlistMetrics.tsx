@@ -84,44 +84,44 @@ export const WaitlistMetrics = ({ entries }: WaitlistMetricsProps) => {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-foreground">Métricas de Conversão</h3>
+      <h3 className="text-base sm:text-lg font-semibold text-foreground">Métricas de Conversão</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         {/* Conversion Rate */}
         <Card className="barbershop-card">
-          <CardContent className="pt-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                <p className="text-3xl font-bold text-foreground">{metrics.conversionRate}%</p>
-                <p className="text-xs text-muted-foreground">
-                  {metrics.converted} de {metrics.totalProcessed} processados
+          <CardContent className="p-3 sm:pt-4 sm:p-6">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1 sm:space-y-2 min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Taxa de Conversão</p>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">{metrics.conversionRate}%</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  {metrics.converted}/{metrics.totalProcessed} proc.
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-success/10">
-                <Target className="h-5 w-5 text-success" />
+              <div className="p-1.5 sm:p-2 rounded-lg bg-success/10 flex-shrink-0">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
               </div>
             </div>
             <Progress 
               value={metrics.conversionRate} 
-              className="mt-3 h-2"
+              className="mt-2 sm:mt-3 h-1.5 sm:h-2"
             />
           </CardContent>
         </Card>
 
         {/* Average Wait Time */}
         <Card className="barbershop-card">
-          <CardContent className="pt-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Tempo Médio de Espera</p>
-                <p className="text-3xl font-bold text-foreground">{metrics.avgWaitTimeFormatted}</p>
-                <p className="text-xs text-muted-foreground">
-                  até ser notificado
+          <CardContent className="p-3 sm:pt-4 sm:p-6">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1 sm:space-y-2 min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Tempo Médio</p>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">{metrics.avgWaitTimeFormatted}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  até notificado
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Clock className="h-5 w-5 text-primary" />
+              <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -129,44 +129,44 @@ export const WaitlistMetrics = ({ entries }: WaitlistMetricsProps) => {
 
         {/* Overall Success Rate */}
         <Card className="barbershop-card">
-          <CardContent className="pt-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Taxa de Sucesso Geral</p>
-                <p className="text-3xl font-bold text-foreground">{metrics.overallSuccessRate}%</p>
-                <p className="text-xs text-muted-foreground">
-                  {metrics.converted} de {metrics.total} total
+          <CardContent className="p-3 sm:pt-4 sm:p-6">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1 sm:space-y-2 min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Taxa de Sucesso</p>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">{metrics.overallSuccessRate}%</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  {metrics.converted}/{metrics.total} total
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
+              <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10 flex-shrink-0">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
               </div>
             </div>
             <Progress 
               value={metrics.overallSuccessRate} 
-              className="mt-3 h-2"
+              className="mt-2 sm:mt-3 h-1.5 sm:h-2"
             />
           </CardContent>
         </Card>
 
         {/* Loss Rate */}
         <Card className="barbershop-card">
-          <CardContent className="pt-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Taxa de Perda</p>
-                <p className="text-3xl font-bold text-foreground">{metrics.lossRate}%</p>
-                <p className="text-xs text-muted-foreground">
-                  {metrics.expired + metrics.cancelled} expirados/cancelados
+          <CardContent className="p-3 sm:pt-4 sm:p-6">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1 sm:space-y-2 min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Taxa de Perda</p>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">{metrics.lossRate}%</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  {metrics.expired + metrics.cancelled} exp./canc.
                 </p>
               </div>
-              <div className="p-2 rounded-lg bg-destructive/10">
-                <Users className="h-5 w-5 text-destructive" />
+              <div className="p-1.5 sm:p-2 rounded-lg bg-destructive/10 flex-shrink-0">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
               </div>
             </div>
             <Progress 
               value={metrics.lossRate} 
-              className="mt-3 h-2 [&>div]:bg-destructive"
+              className="mt-2 sm:mt-3 h-1.5 sm:h-2 [&>div]:bg-destructive"
             />
           </CardContent>
         </Card>
@@ -174,40 +174,40 @@ export const WaitlistMetrics = ({ entries }: WaitlistMetricsProps) => {
 
       {/* Funnel Visualization */}
       <Card className="barbershop-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Funil de Conversão</CardTitle>
+        <CardHeader className="pb-2 p-3 sm:p-6 sm:pb-2">
+          <CardTitle className="text-sm sm:text-base">Funil de Conversão</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex flex-col items-center flex-1 min-w-[100px]">
-              <div className="w-full bg-yellow-500/20 rounded-lg p-4 text-center">
-                <p className="text-2xl font-bold text-yellow-600">{metrics.waiting}</p>
-                <p className="text-xs text-muted-foreground">Aguardando</p>
+        <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+          <div className="flex items-center justify-between gap-1 sm:gap-2">
+            <div className="flex flex-col items-center flex-1 min-w-0">
+              <div className="w-full bg-yellow-500/20 rounded-lg p-2 sm:p-4 text-center">
+                <p className="text-lg sm:text-2xl font-bold text-yellow-600">{metrics.waiting}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando</p>
               </div>
             </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <div className="flex flex-col items-center flex-1 min-w-[100px]">
-              <div className="w-full bg-blue-500/20 rounded-lg p-4 text-center">
-                <p className="text-2xl font-bold text-blue-600">{metrics.notified}</p>
-                <p className="text-xs text-muted-foreground">Notificados</p>
+            <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex flex-col items-center flex-1 min-w-0">
+              <div className="w-full bg-blue-500/20 rounded-lg p-2 sm:p-4 text-center">
+                <p className="text-lg sm:text-2xl font-bold text-blue-600">{metrics.notified}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Notificados</p>
               </div>
             </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <div className="flex flex-col items-center flex-1 min-w-[100px]">
-              <div className="w-full bg-success/20 rounded-lg p-4 text-center">
-                <p className="text-2xl font-bold text-success">{metrics.converted}</p>
-                <p className="text-xs text-muted-foreground">Convertidos</p>
+            <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex flex-col items-center flex-1 min-w-0">
+              <div className="w-full bg-success/20 rounded-lg p-2 sm:p-4 text-center">
+                <p className="text-lg sm:text-2xl font-bold text-success">{metrics.converted}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Convertidos</p>
               </div>
             </div>
           </div>
           
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex items-center justify-between text-sm">
+          <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border">
+            <div className="flex items-center justify-between text-[10px] sm:text-sm gap-2">
               <span className="text-muted-foreground">
-                Expirados: <span className="font-medium text-foreground">{metrics.expired}</span>
+                Exp.: <span className="font-medium text-foreground">{metrics.expired}</span>
               </span>
               <span className="text-muted-foreground">
-                Cancelados: <span className="font-medium text-foreground">{metrics.cancelled}</span>
+                Canc.: <span className="font-medium text-foreground">{metrics.cancelled}</span>
               </span>
               <span className="text-muted-foreground">
                 Total: <span className="font-medium text-foreground">{metrics.total}</span>
