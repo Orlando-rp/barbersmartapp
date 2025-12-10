@@ -432,6 +432,17 @@ const DomainSettings = () => {
                   }}
                 />
               </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <span className="text-sm">Mostrar Galeria/Portfolio</span>
+                <Switch
+                  checked={domain.landing_page_config?.show_gallery ?? true}
+                  onCheckedChange={async (checked) => {
+                    const result = await updateLandingPageConfig({ show_gallery: checked });
+                    if (result.success) toast.success("Configuração atualizada");
+                  }}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
