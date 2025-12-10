@@ -196,48 +196,48 @@ const Marketing = () => {
         {/* Loyalty Program Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
               <div className="flex items-center space-x-2">
-                <Users className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="text-2xl font-bold text-foreground">{loyaltyStats.totalClients}</div>
-                  <p className="text-sm text-muted-foreground">Total de Clientes</p>
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-2xl font-bold text-foreground">{loyaltyStats.totalClients}</div>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Total Clientes</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
               <div className="flex items-center space-x-2">
-                <Star className="h-5 w-5 text-success" />
-                <div>
-                  <div className="text-2xl font-bold text-foreground">{loyaltyStats.activeParticipants}</div>
-                  <p className="text-sm text-muted-foreground">Participantes Ativos</p>
+                <Star className="h-4 w-4 sm:h-5 sm:w-5 text-success shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-2xl font-bold text-foreground">{loyaltyStats.activeParticipants}</div>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Participantes</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5 text-warning" />
-                <div>
-                  <div className="text-2xl font-bold text-foreground">{loyaltyStats.totalPointsEarned.toLocaleString()}</div>
-                  <p className="text-sm text-muted-foreground">Pontos Ganhos</p>
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-warning shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-2xl font-bold text-foreground truncate">{loyaltyStats.totalPointsEarned.toLocaleString()}</div>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Pontos Ganhos</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
               <div className="flex items-center space-x-2">
-                <Gift className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="text-2xl font-bold text-foreground">{coupons.filter(c => c.active).length}</div>
-                  <p className="text-sm text-muted-foreground">Cupons Ativos</p>
+                <Gift className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg sm:text-2xl font-bold text-foreground">{coupons.filter(c => c.active).length}</div>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Cupons Ativos</p>
                 </div>
               </div>
             </CardContent>
@@ -255,7 +255,7 @@ const Marketing = () => {
           {/* Campaigns Tab */}
           <TabsContent value="campaigns" className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-              <h2 className="text-xl font-semibold">Campanhas de Marketing</h2>
+              <h2 className="text-lg sm:text-xl font-semibold">Campanhas de Marketing</h2>
               <CampaignDialog onSuccess={fetchMarketingData}>
                 <Button variant="premium" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
@@ -265,56 +265,94 @@ const Marketing = () => {
             </div>
 
             <Card className="barbershop-card">
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
                 {campaigns.length === 0 ? (
                   <div className="text-center py-12">
                     <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                    <p className="text-muted-foreground">Nenhuma campanha criada ainda</p>
+                    <p className="text-muted-foreground text-sm sm:text-base">Nenhuma campanha criada ainda</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Criada em</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <>
+                    {/* Mobile Cards View */}
+                    <div className="block md:hidden space-y-3">
                       {campaigns.map((campaign) => (
-                        <TableRow key={campaign.id}>
-                          <TableCell className="font-medium">{campaign.name}</TableCell>
-                          <TableCell className="capitalize">{campaign.type}</TableCell>
-                          <TableCell>
-                            <Badge variant={campaign.status === 'ativa' ? 'default' : 'secondary'}>
+                        <div key={campaign.id} className="p-3 rounded-lg border border-border">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <p className="font-medium text-sm truncate">{campaign.name}</p>
+                            <Badge variant={campaign.status === 'ativa' ? 'default' : 'secondary'} className="text-xs shrink-0">
                               {campaign.status}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(campaign.created_at).toLocaleDateString('pt-BR')}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex gap-2 justify-end">
-                              <CampaignDialog campaign={campaign} onSuccess={fetchMarketingData}>
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </CampaignDialog>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleDeleteCampaign(campaign.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span className="capitalize">{campaign.type}</span>
+                            <span>{new Date(campaign.created_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                          <div className="flex gap-2 justify-end mt-2 pt-2 border-t border-border">
+                            <CampaignDialog campaign={campaign} onSuccess={fetchMarketingData}>
+                              <Button variant="ghost" size="sm" className="h-8 px-2">
+                                <Edit className="h-4 w-4" />
                               </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                            </CampaignDialog>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => handleDeleteCampaign(campaign.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Criada em</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {campaigns.map((campaign) => (
+                            <TableRow key={campaign.id}>
+                              <TableCell className="font-medium">{campaign.name}</TableCell>
+                              <TableCell className="capitalize">{campaign.type}</TableCell>
+                              <TableCell>
+                                <Badge variant={campaign.status === 'ativa' ? 'default' : 'secondary'}>
+                                  {campaign.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {new Date(campaign.created_at).toLocaleDateString('pt-BR')}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex gap-2 justify-end">
+                                  <CampaignDialog campaign={campaign} onSuccess={fetchMarketingData}>
+                                    <Button variant="ghost" size="sm">
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </CampaignDialog>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleDeleteCampaign(campaign.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -322,10 +360,10 @@ const Marketing = () => {
 
           {/* Coupons Tab */}
           <TabsContent value="coupons" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Cupons de Desconto</h2>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <h2 className="text-lg sm:text-xl font-semibold">Cupons de Desconto</h2>
               <CouponDialog onSuccess={fetchMarketingData}>
-                <Button variant="premium">
+                <Button variant="premium" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Cupom
                 </Button>

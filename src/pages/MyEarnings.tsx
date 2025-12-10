@@ -383,14 +383,14 @@ const MyEarnings = () => {
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Scissors className="h-5 w-5 text-primary" />
+            <CardContent className="pt-4 sm:pt-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                  <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Serviços</p>
-                  <p className="text-2xl font-bold text-foreground">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Serviços</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">
                     {totals.servicesCount}
                   </p>
                 </div>
@@ -399,14 +399,14 @@ const MyEarnings = () => {
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-muted">
-                  <Percent className="h-5 w-5 text-muted-foreground" />
+            <CardContent className="pt-4 sm:pt-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-muted">
+                  <Percent className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Taxa</p>
-                  <p className="text-2xl font-bold text-foreground">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Taxa</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">
                     {staffInfo?.commissionRate || 0}%
                   </p>
                 </div>
@@ -415,14 +415,14 @@ const MyEarnings = () => {
           </Card>
 
           <Card className="barbershop-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-success/10">
-                  <Target className="h-5 w-5 text-success" />
+            <CardContent className="pt-4 sm:pt-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-lg bg-success/10">
+                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Taxa Conclusão</p>
-                  <p className="text-2xl font-bold text-foreground">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Conclusão</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">
                     {totals.completionRate.toFixed(0)}%
                   </p>
                 </div>

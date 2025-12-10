@@ -76,10 +76,10 @@ const Profile = () => {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Meu Perfil</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Meu Perfil</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie suas informações pessoais e preferências
           </p>
         </div>
