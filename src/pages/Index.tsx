@@ -16,13 +16,6 @@ import { ClientsWidget } from "@/components/dashboard/widgets/ClientsWidget";
 import { OccupancyWidget } from "@/components/dashboard/widgets/OccupancyWidget";
 import { WidgetSelector, defaultWidgets, WidgetConfig } from "@/components/dashboard/WidgetSelector";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { 
   Calendar, 
   Users, 
@@ -32,8 +25,7 @@ import {
   UserPlus,
   Clock,
   Star,
-  Settings,
-  Building2
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,11 +41,10 @@ interface DashboardStats {
 }
 
 const Index = () => {
-  const { barbershopId, barbershops, setSelectedBarbershop } = useAuth();
+  const { barbershopId, barbershops, selectedBarbershopId } = useAuth();
   const { branding } = useBranding();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'individual' | 'consolidated'>('individual');
   const [consolidatedStats, setConsolidatedStats] = useState<DashboardStats | null>(null);
   const [widgets, setWidgets] = useState<WidgetConfig[]>(() => {
     const saved = localStorage.getItem('dashboard-widgets');
@@ -62,18 +53,20 @@ const Index = () => {
   const [customizeMode, setCustomizeMode] = useState(false);
 
   const hasMultipleUnits = barbershops.length > 1;
+  // Visão consolidada quando "Todas as Unidades" está selecionado no Header (selectedBarbershopId === null)
+  const isConsolidatedView = hasMultipleUnits && selectedBarbershopId === null;
 
   useEffect(() => {
-    if (barbershopId) {
+    if (barbershopId && !isConsolidatedView) {
       fetchDashboardStats();
     }
-  }, [barbershopId]);
+  }, [barbershopId, isConsolidatedView]);
 
   useEffect(() => {
-    if (hasMultipleUnits && viewMode === 'consolidated') {
+    if (isConsolidatedView) {
       fetchConsolidatedStats();
     }
-  }, [viewMode, barbershops]);
+  }, [isConsolidatedView, barbershops]);
 
   const fetchConsolidatedStats = async () => {
     try {
@@ -326,85 +319,47 @@ const Index = () => {
     );
   }
 
-  const currentStats = viewMode === 'consolidated' ? consolidatedStats : stats;
+  const currentStats = isConsolidatedView ? consolidatedStats : stats;
 
   return (
     <Layout>
       <div className="space-y-4 lg:space-y-6">
         {/* Welcome Section */}
         <div className="gradient-subtle p-4 lg:p-6 rounded-xl border border-border">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
-                  Bem-vindo ao {branding?.system_name || 'BarberSmart'}! 👋
-                </h1>
-                <p className="text-muted-foreground text-sm lg:text-lg">
-                  {branding?.tagline || 'Gerencie sua barbearia de forma inteligente'}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={customizeMode ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCustomizeMode(!customizeMode)}
-                >
-                  <Settings className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">{customizeMode ? 'Salvar' : 'Personalizar'}</span>
-                </Button>
-                {customizeMode && (
-                  <WidgetSelector
-                    widgets={widgets}
-                    onToggleWidget={handleToggleWidget}
-                  />
-                )}
-                <AppointmentDialog>
-                  <Button variant="premium" size="sm" className="shadow-gold">
-                    <UserPlus className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Novo Agendamento</span>
-                  </Button>
-                </AppointmentDialog>
-              </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
+                Bem-vindo ao {branding?.system_name || 'BarberSmart'}! 👋
+              </h1>
+              <p className="text-muted-foreground text-sm lg:text-lg">
+                {isConsolidatedView 
+                  ? `Visão consolidada de ${barbershops.length} unidades`
+                  : (branding?.tagline || 'Gerencie sua barbearia de forma inteligente')
+                }
+              </p>
             </div>
-
-            {/* Multi-unit selector */}
-            {hasMultipleUnits && (
-              <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Visualização:</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Select value={viewMode} onValueChange={(v: 'individual' | 'consolidated') => setViewMode(v)}>
-                    <SelectTrigger className="w-[180px] h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="individual">Individual</SelectItem>
-                      <SelectItem value="consolidated">Consolidada (Todas)</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {viewMode === 'individual' && (
-                    <Select 
-                      value={barbershopId || ''} 
-                      onValueChange={(v) => setSelectedBarbershop(v)}
-                    >
-                      <SelectTrigger className="w-[200px] h-8 text-sm">
-                        <SelectValue placeholder="Selecione a unidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {barbershops.map((shop) => (
-                          <SelectItem key={shop.id} value={shop.id}>
-                            {shop.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={customizeMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCustomizeMode(!customizeMode)}
+              >
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{customizeMode ? 'Salvar' : 'Personalizar'}</span>
+              </Button>
+              {customizeMode && (
+                <WidgetSelector
+                  widgets={widgets}
+                  onToggleWidget={handleToggleWidget}
+                />
+              )}
+              <AppointmentDialog>
+                <Button variant="premium" size="sm" className="shadow-gold">
+                  <UserPlus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Novo Agendamento</span>
+                </Button>
+              </AppointmentDialog>
+            </div>
           </div>
         </div>
 
@@ -425,28 +380,28 @@ const Index = () => {
         </div>
 
         {/* Legacy Quick Stats - Only show if no widgets are enabled OR consolidated view */}
-        {(!widgets.some(w => w.enabled) || viewMode === 'consolidated') && (
+        {(!widgets.some(w => w.enabled) || isConsolidatedView) && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             <StatsCard
-              title={viewMode === 'consolidated' ? "Agendamentos Hoje (Total)" : "Agendamentos Hoje"}
+              title={isConsolidatedView ? "Agendamentos Hoje (Total)" : "Agendamentos Hoje"}
               value={currentStats?.todayAppointments || 0}
               icon={Calendar}
               variant="primary"
             />
             <StatsCard
-              title={viewMode === 'consolidated' ? "Receita do Mês (Total)" : "Receita do Mês"}
+              title={isConsolidatedView ? "Receita do Mês (Total)" : "Receita do Mês"}
               value={`R$ ${(currentStats?.monthRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               icon={DollarSign}
               variant="success"
             />
             <StatsCard
-              title={viewMode === 'consolidated' ? "Clientes Ativos (Total)" : "Clientes Ativos"}
+              title={isConsolidatedView ? "Clientes Ativos (Total)" : "Clientes Ativos"}
               value={currentStats?.activeClients || 0}
               icon={Users}
               variant="default"
             />
             <StatsCard
-              title={viewMode === 'consolidated' ? "Avaliação Média (Geral)" : "Avaliação Média"}
+              title={isConsolidatedView ? "Avaliação Média (Geral)" : "Avaliação Média"}
               value={currentStats?.averageRating || 0}
               icon={Star}
               variant="warning"
