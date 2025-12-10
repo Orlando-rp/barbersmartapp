@@ -100,17 +100,18 @@ serve(async (req) => {
       barbershopId = instanceName.replace('barbershop-', '');
     }
 
-    // If not found, look up in whatsapp_config table
+    // If not found, look up in whatsapp_config table by config->instance_name
     if (!barbershopId) {
-      const { data: config } = await supabase
+      const { data: configs } = await supabase
         .from('whatsapp_config')
-        .select('barbershop_id')
-        .eq('instance_name', instanceName)
-        .eq('provider', 'evolution')
-        .maybeSingle();
+        .select('barbershop_id, config')
+        .eq('provider', 'evolution');
 
-      if (config) {
-        barbershopId = config.barbershop_id;
+      // Find matching config by instance_name inside config JSON
+      const matchingConfig = configs?.find(c => c.config?.instance_name === instanceName);
+      if (matchingConfig) {
+        barbershopId = matchingConfig.barbershop_id;
+        console.log('[Evolution Webhook] Found barbershop by config:', barbershopId);
       }
     }
 
@@ -125,10 +126,12 @@ serve(async (req) => {
     // Check if chatbot is enabled for this barbershop
     const { data: chatbotConfig } = await supabase
       .from('whatsapp_config')
-      .select('chatbot_enabled, api_url, api_key, instance_name')
+      .select('chatbot_enabled, config')
       .eq('barbershop_id', barbershopId)
       .eq('provider', 'evolution')
       .maybeSingle();
+
+    console.log('[Evolution Webhook] Chatbot config:', JSON.stringify(chatbotConfig, null, 2));
 
     if (!chatbotConfig?.chatbot_enabled) {
       console.log('[Evolution Webhook] Chatbot not enabled for barbershop:', barbershopId);
@@ -138,36 +141,34 @@ serve(async (req) => {
       );
     }
 
-    // Get global Evolution API config if not in barbershop config
-    let evolutionApiUrl = chatbotConfig.api_url || apiUrl;
-    let evolutionApiKey = chatbotConfig.api_key;
+    // Get Evolution API config from chatbot config or global
+    let evolutionApiUrl = chatbotConfig?.config?.api_url || apiUrl;
+    let evolutionApiKey = chatbotConfig?.config?.api_key;
+    const configInstanceName = chatbotConfig?.config?.instance_name || instanceName;
 
-    if (!evolutionApiUrl) {
+    if (!evolutionApiUrl || !evolutionApiKey) {
+      // Try to get from global system_config
       const { data: globalConfig } = await supabase
         .from('system_config')
         .select('value')
-        .eq('key', 'evolution_api_url')
+        .eq('key', 'evolution_api')
         .maybeSingle();
       
-      evolutionApiUrl = globalConfig?.value;
+      if (globalConfig?.value) {
+        evolutionApiUrl = evolutionApiUrl || globalConfig.value.api_url;
+        evolutionApiKey = evolutionApiKey || globalConfig.value.api_key;
+      }
     }
 
-    if (!evolutionApiKey) {
-      const { data: globalConfig } = await supabase
-        .from('system_config')
-        .select('value')
-        .eq('key', 'evolution_api_key')
-        .maybeSingle();
-      
-      evolutionApiKey = globalConfig?.value;
-    }
+    console.log('[Evolution Webhook] API URL:', evolutionApiUrl);
+    console.log('[Evolution Webhook] Instance:', configInstanceName);
 
     // Forward to chatbot function
     const chatbotPayload = {
       message: messageText,
       from: from,
       barbershopId: barbershopId,
-      instanceName: chatbotConfig.instance_name || instanceName,
+      instanceName: configInstanceName,
       apiUrl: evolutionApiUrl,
       apiKey: evolutionApiKey
     };
