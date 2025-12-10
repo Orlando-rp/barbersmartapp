@@ -21,14 +21,18 @@ import {
   Bot,
   Menu,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useSubscription } from "@/hooks/useSubscription";
 import { PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface NavItem {
   name: string;
@@ -69,6 +73,7 @@ export const MobileSidebar = () => {
   const { barbershops, userRole } = useAuth();
   const { branding } = useBranding();
   const { hasFeature } = useFeatureFlags();
+  const { subscription, loading: subscriptionLoading } = useSubscription();
   const location = useLocation();
 
   // Fechar sidebar ao mudar de rota
@@ -145,11 +150,36 @@ export const MobileSidebar = () => {
           {/* Bottom Info */}
           <div className="p-4 border-t border-border">
             <div className="barbershop-card p-3">
-              <div className="text-xs text-muted-foreground">Plano Atual</div>
-              <div className="text-sm font-semibold text-brand">Premium</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                Válido até 15/08/2025
-              </div>
+              {subscriptionLoading ? (
+                <div className="flex items-center justify-center py-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : subscription ? (
+                <>
+                  <div className="text-xs text-muted-foreground">Plano Atual</div>
+                  <div className="text-sm font-semibold text-brand">{subscription.planName}</div>
+                  {subscription.isTrialing && subscription.trialEndsAt && (
+                    <div className="text-xs text-warning mt-1">
+                      Trial até {format(subscription.trialEndsAt, "dd/MM/yyyy", { locale: ptBR })}
+                    </div>
+                  )}
+                  {!subscription.isTrialing && subscription.validUntil && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Válido até {format(subscription.validUntil, "dd/MM/yyyy", { locale: ptBR })}
+                    </div>
+                  )}
+                  {subscription.status === 'none' && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Sem assinatura ativa
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="text-xs text-muted-foreground">Plano Atual</div>
+                  <div className="text-sm font-semibold text-muted-foreground">Não configurado</div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -163,6 +193,7 @@ const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { barbershops, userRole } = useAuth();
   const { hasFeature } = useFeatureFlags();
+  const { subscription, loading: subscriptionLoading } = useSubscription();
 
   const filteredNavigation = navigation.filter(item => {
     if (item.superAdminOnly) {
@@ -225,11 +256,36 @@ const Sidebar = () => {
       {!collapsed && (
         <div className="p-4 border-t border-border">
           <div className="barbershop-card p-3">
-            <div className="text-xs text-muted-foreground">Plano Atual</div>
-            <div className="text-sm font-semibold text-brand">Premium</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Válido até 15/08/2025
-            </div>
+            {subscriptionLoading ? (
+              <div className="flex items-center justify-center py-2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : subscription ? (
+              <>
+                <div className="text-xs text-muted-foreground">Plano Atual</div>
+                <div className="text-sm font-semibold text-brand">{subscription.planName}</div>
+                {subscription.isTrialing && subscription.trialEndsAt && (
+                  <div className="text-xs text-warning mt-1">
+                    Trial até {format(subscription.trialEndsAt, "dd/MM/yyyy", { locale: ptBR })}
+                  </div>
+                )}
+                {!subscription.isTrialing && subscription.validUntil && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Válido até {format(subscription.validUntil, "dd/MM/yyyy", { locale: ptBR })}
+                  </div>
+                )}
+                {subscription.status === 'none' && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Sem assinatura ativa
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="text-xs text-muted-foreground">Plano Atual</div>
+                <div className="text-sm font-semibold text-muted-foreground">Não configurado</div>
+              </>
+            )}
           </div>
         </div>
       )}
