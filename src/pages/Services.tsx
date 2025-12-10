@@ -176,7 +176,6 @@ const Services = () => {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center space-x-2 sm:space-x-4">
                     <div className="flex items-center text-xs sm:text-sm">
-                      <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success mr-0.5 sm:mr-1" />
                       <span className="font-semibold text-success">R$ {service.price}</span>
                     </div>
                     <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
