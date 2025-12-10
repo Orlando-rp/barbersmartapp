@@ -6,11 +6,32 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { StaffServicesSection } from "./StaffServicesSection";
-import { Loader2, Calendar, Briefcase, Save, Building2, Clock, DollarSign } from "lucide-react";
+import { 
+  Loader2, Calendar, Briefcase, Save, Building2, Clock, DollarSign, 
+  Copy, RefreshCw, ArrowRight, Check, MoreVertical 
+} from "lucide-react";
 
 interface StaffUnit {
   id: string;
@@ -51,6 +72,12 @@ export const MyStaffProfileForm = () => {
 
   // Services selection (per unit)
   const [selectedServices, setSelectedServices] = useState<Record<string, string[]>>({});
+  
+  // Sync dialog state
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncSource, setSyncSource] = useState<string>("");
+  const [syncTargets, setSyncTargets] = useState<string[]>([]);
+  const [syncType, setSyncType] = useState<'services' | 'schedule' | 'both'>('services');
 
   useEffect(() => {
     if (user) {
@@ -153,6 +180,81 @@ export const MyStaffProfileForm = () => {
       [barbershopId]: services,
     }));
   }, []);
+
+  // Sync services from one unit to others
+  const handleSyncServices = (sourceUnitId: string, targetUnitIds: string[]) => {
+    const sourceServices = selectedServices[sourceUnitId] || [];
+    
+    setSelectedServices(prev => {
+      const updated = { ...prev };
+      targetUnitIds.forEach(targetId => {
+        updated[targetId] = [...sourceServices];
+      });
+      return updated;
+    });
+
+    toast({
+      title: 'Serviços sincronizados!',
+      description: `Serviços copiados para ${targetUnitIds.length} unidade(s).`,
+    });
+  };
+
+  // Sync schedule from one unit to others
+  const handleSyncSchedule = (sourceUnitId: string, targetUnitIds: string[]) => {
+    const sourceUnit = staffUnits.find(u => u.barbershop_id === sourceUnitId);
+    if (!sourceUnit?.schedule) return;
+
+    setStaffUnits(prev => prev.map(unit => {
+      if (targetUnitIds.includes(unit.barbershop_id)) {
+        return {
+          ...unit,
+          schedule: { ...sourceUnit.schedule! },
+        };
+      }
+      return unit;
+    }));
+
+    toast({
+      title: 'Horários sincronizados!',
+      description: `Horários copiados para ${targetUnitIds.length} unidade(s).`,
+    });
+  };
+
+  // Handle sync confirmation
+  const handleConfirmSync = () => {
+    if (!syncSource || syncTargets.length === 0) return;
+
+    if (syncType === 'services' || syncType === 'both') {
+      handleSyncServices(syncSource, syncTargets);
+    }
+    if (syncType === 'schedule' || syncType === 'both') {
+      handleSyncSchedule(syncSource, syncTargets);
+    }
+
+    setSyncDialogOpen(false);
+    setSyncSource("");
+    setSyncTargets([]);
+  };
+
+  // Open sync dialog
+  const openSyncDialog = (sourceUnitId: string, type: 'services' | 'schedule' | 'both') => {
+    setSyncSource(sourceUnitId);
+    setSyncType(type);
+    setSyncTargets(staffUnits.filter(u => u.barbershop_id !== sourceUnitId).map(u => u.barbershop_id));
+    setSyncDialogOpen(true);
+  };
+
+  // Sync all services to match current unit
+  const syncServicesToAllUnits = (sourceUnitId: string) => {
+    const otherUnits = staffUnits.filter(u => u.barbershop_id !== sourceUnitId);
+    handleSyncServices(sourceUnitId, otherUnits.map(u => u.barbershop_id));
+  };
+
+  // Sync all schedules to match current unit
+  const syncScheduleToAllUnits = (sourceUnitId: string) => {
+    const otherUnits = staffUnits.filter(u => u.barbershop_id !== sourceUnitId);
+    handleSyncSchedule(sourceUnitId, otherUnits.map(u => u.barbershop_id));
+  };
 
   const handleSave = async () => {
     try {
@@ -379,10 +481,43 @@ export const MyStaffProfileForm = () => {
               {/* Schedule */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Horários em {unit.barbershop_name}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Horários em {unit.barbershop_name}
+                    </CardTitle>
+                    {staffUnits.length > 1 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="gap-2">
+                            <RefreshCw className="h-4 w-4" />
+                            <span className="hidden sm:inline">Sincronizar</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Copiar horários para</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => syncScheduleToAllUnits(unit.barbershop_id)}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Todas as outras unidades
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {staffUnits
+                            .filter(u => u.barbershop_id !== unit.barbershop_id)
+                            .map(targetUnit => (
+                              <DropdownMenuItem
+                                key={targetUnit.barbershop_id}
+                                onClick={() => handleSyncSchedule(unit.barbershop_id, [targetUnit.barbershop_id])}
+                              >
+                                <ArrowRight className="h-4 w-4 mr-2" />
+                                {targetUnit.barbershop_name}
+                              </DropdownMenuItem>
+                            ))
+                          }
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {Object.entries(DAY_LABELS).map(([day, label]) => {
@@ -433,10 +568,48 @@ export const MyStaffProfileForm = () => {
               {/* Services */}
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Briefcase className="h-4 w-4" />
-                    Serviços em {unit.barbershop_name}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Serviços em {unit.barbershop_name}
+                    </CardTitle>
+                    {staffUnits.length > 1 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="gap-2">
+                            <RefreshCw className="h-4 w-4" />
+                            <span className="hidden sm:inline">Sincronizar</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Copiar serviços para</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => syncServicesToAllUnits(unit.barbershop_id)}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Todas as outras unidades
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {staffUnits
+                            .filter(u => u.barbershop_id !== unit.barbershop_id)
+                            .map(targetUnit => (
+                              <DropdownMenuItem
+                                key={targetUnit.barbershop_id}
+                                onClick={() => handleSyncServices(unit.barbershop_id, [targetUnit.barbershop_id])}
+                              >
+                                <ArrowRight className="h-4 w-4 mr-2" />
+                                {targetUnit.barbershop_name}
+                              </DropdownMenuItem>
+                            ))
+                          }
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                  {(selectedServices[unit.barbershop_id]?.length || 0) > 0 && (
+                    <CardDescription>
+                      {selectedServices[unit.barbershop_id]?.length} serviço(s) selecionado(s)
+                    </CardDescription>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <StaffServicesSection
@@ -450,6 +623,74 @@ export const MyStaffProfileForm = () => {
           );
         })}
       </Tabs>
+
+      {/* Quick Sync All Button */}
+      {staffUnits.length > 1 && (
+        <Card className="bg-muted/30">
+          <CardContent className="py-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-medium text-sm">Sincronização Rápida</h4>
+                <p className="text-xs text-muted-foreground">
+                  Copie todas as configurações da unidade atual para as outras
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openSyncDialog(activeTab, 'both')}
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Sincronizar Tudo
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sync Confirmation Dialog */}
+      <AlertDialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Sincronização</AlertDialogTitle>
+            <AlertDialogDescription>
+              {syncType === 'both' && (
+                <>
+                  Isso irá copiar <strong>horários e serviços</strong> de{' '}
+                  <strong>{staffUnits.find(u => u.barbershop_id === syncSource)?.barbershop_name}</strong>{' '}
+                  para as outras {syncTargets.length} unidade(s).
+                </>
+              )}
+              {syncType === 'services' && (
+                <>
+                  Isso irá copiar os <strong>serviços</strong> de{' '}
+                  <strong>{staffUnits.find(u => u.barbershop_id === syncSource)?.barbershop_name}</strong>{' '}
+                  para as outras {syncTargets.length} unidade(s).
+                </>
+              )}
+              {syncType === 'schedule' && (
+                <>
+                  Isso irá copiar os <strong>horários</strong> de{' '}
+                  <strong>{staffUnits.find(u => u.barbershop_id === syncSource)?.barbershop_name}</strong>{' '}
+                  para as outras {syncTargets.length} unidade(s).
+                </>
+              )}
+              <br /><br />
+              As configurações atuais das outras unidades serão substituídas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSync}>
+              <Check className="h-4 w-4 mr-2" />
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex justify-end">
         <Button 
