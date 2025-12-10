@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { ClientDialog } from "@/components/dialogs/ClientDialog";
+import { ClientImportDialog } from "@/components/dialogs/ClientImportDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Plus, Search, Phone, Mail, Calendar, MoreVertical, Pencil, Trash2, BarChart } from "lucide-react";
+import { Users, Plus, Search, Phone, Mail, Calendar, MoreVertical, Pencil, Trash2, BarChart, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -130,13 +131,21 @@ const Clients = () => {
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Clientes</h1>
             <p className="text-sm text-muted-foreground">Gerencie a base de clientes</p>
           </div>
-          <ClientDialog editingClient={null} onSuccess={fetchClients}>
-            <Button variant="premium" size="default" className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Novo Cliente</span>
-              <span className="sm:hidden">Novo</span>
-            </Button>
-          </ClientDialog>
+          <div className="flex gap-2">
+            <ClientImportDialog onSuccess={fetchClients}>
+              <Button variant="outline" size="default" className="w-full sm:w-auto">
+                <Upload className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Importar</span>
+              </Button>
+            </ClientImportDialog>
+            <ClientDialog editingClient={null} onSuccess={fetchClients}>
+              <Button variant="premium" size="default" className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Novo Cliente</span>
+                <span className="sm:hidden">Novo</span>
+              </Button>
+            </ClientDialog>
+          </div>
         </div>
 
         {/* Stats Cards */}
