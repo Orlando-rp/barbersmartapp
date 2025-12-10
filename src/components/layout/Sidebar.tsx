@@ -20,7 +20,7 @@ import {
   Building2,
   Bot,
   Menu,
-  X,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -58,6 +58,7 @@ const navigation: NavItem[] = [
   { name: "Chatbot IA", href: "/chatbot", icon: Bot, requiredFeature: 'whatsapp_chatbot' },
   { name: "Horários", href: "/business-hours", icon: Clock },
   { name: "Auditoria", href: "/audit", icon: Shield },
+  { name: "Upgrade", href: "/upgrade", icon: Sparkles },
   { name: "Configurações", href: "/settings", icon: Settings },
   { name: "Admin SaaS", href: "/saas-admin", icon: Shield, superAdminOnly: true },
 ];
