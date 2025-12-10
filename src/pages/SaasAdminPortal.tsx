@@ -61,6 +61,7 @@ import {
   Shield,
   RefreshCw,
   Smartphone,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -70,6 +71,7 @@ import { GlobalChatbotConfig } from "@/components/saas/GlobalChatbotConfig";
 import { WhatsAppStatusPanel } from "@/components/saas/WhatsAppStatusPanel";
 import { SocialAuthConfig } from "@/components/saas/SocialAuthConfig";
 import { BrandingConfig } from "@/components/saas/BrandingConfig";
+import DomainsManagement from "@/components/saas/DomainsManagement";
 import { PlanFeaturesSelector, defaultPlanFeatures, featuresToStringArray, stringArrayToFeatures, type PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import {
   BarChart,
@@ -610,6 +612,10 @@ const SaasAdminPortal = () => {
               <Smartphone className="h-4 w-4 mr-2" />
               Integrações
             </TabsTrigger>
+            <TabsTrigger value="domains" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
+              <Globe className="h-4 w-4 mr-2" />
+              Domínios
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -914,6 +920,11 @@ const SaasAdminPortal = () => {
                 <SocialAuthConfig />
               </div>
             </div>
+          </TabsContent>
+
+          {/* Domains Tab */}
+          <TabsContent value="domains">
+            <DomainsManagement />
           </TabsContent>
         </Tabs>
 
