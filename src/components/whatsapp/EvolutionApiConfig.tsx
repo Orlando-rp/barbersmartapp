@@ -303,7 +303,8 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     try {
       setCheckingConnection(true);
 
-      const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+      // Primeiro faz logout da sessão
+      await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
           action: 'logout',
           apiUrl: config.apiUrl,
@@ -312,10 +313,38 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         }
       });
 
-      if (error) throw error;
+      // Depois exclui a instância completamente
+      const { error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'deleteInstance',
+          apiUrl: config.apiUrl,
+          apiKey: config.apiKey,
+          instanceName: config.instanceName
+        }
+      });
+
+      if (error) {
+        console.error('Erro ao excluir instância:', error);
+      }
+
+      // Atualiza status no banco de dados
+      await supabase
+        .from('whatsapp_config')
+        .update({
+          config: {
+            api_url: config.apiUrl,
+            api_key: config.apiKey,
+            instance_name: config.instanceName,
+            connection_status: 'disconnected'
+          },
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('barbershop_id', barbershopId)
+        .eq('provider', 'evolution');
 
       setConnectionStatus('disconnected');
-      toast.success("WhatsApp desconectado");
+      toast.success("WhatsApp desconectado e instância excluída");
     } catch (error) {
       console.error('Erro ao desconectar:', error);
       toast.error("Erro ao desconectar");
