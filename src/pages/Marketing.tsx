@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { CampaignDialog } from "@/components/dialogs/CampaignDialog";
 import { CouponDialog } from "@/components/dialogs/CouponDialog";
+import { FeatureGate } from "@/components/FeatureGate";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { 
   MessageSquare, 
   Plus, 

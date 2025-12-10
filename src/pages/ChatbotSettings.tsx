@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { FeatureGate } from "@/components/FeatureGate";
 import { 
   Bot, 
   MessageSquare, 
@@ -216,6 +217,11 @@ const ChatbotSettings = () => {
             Atualizar
           </Button>
         </div>
+
+        <FeatureGate 
+          feature="whatsapp_chatbot"
+          upgradeMessage="O Chatbot IA não está disponível no seu plano atual. Faça upgrade para automatizar agendamentos via WhatsApp."
+        >
 
         {/* Status Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
@@ -513,6 +519,7 @@ const ChatbotSettings = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        </FeatureGate>
       </div>
     </Layout>
   );

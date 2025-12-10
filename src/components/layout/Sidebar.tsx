@@ -26,6 +26,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
 interface NavItem {
@@ -34,13 +36,14 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   multiUnitOnly?: boolean;
   superAdminOnly?: boolean;
+  requiredFeature?: keyof PlanFeatures;
 }
 
 const navigation: NavItem[] = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Minhas Unidades", href: "/barbershops", icon: Building2 },
-  { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true },
-  { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true },
+  { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true, requiredFeature: 'multi_unit' },
+  { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true, requiredFeature: 'multi_unit' },
   { name: "Agendamentos", href: "/appointments", icon: Calendar },
   { name: "Lista de Espera", href: "/waitlist", icon: ListChecks },
   { name: "Clientes", href: "/clients", icon: Users },
@@ -49,10 +52,10 @@ const navigation: NavItem[] = [
   { name: "Financeiro", href: "/finance", icon: DollarSign },
   { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet },
   { name: "Relatórios", href: "/reports", icon: BarChart3 },
-  { name: "Marketing", href: "/marketing", icon: MessageSquare },
+  { name: "Marketing", href: "/marketing", icon: MessageSquare, requiredFeature: 'marketing_campaigns' },
   { name: "Avaliações", href: "/reviews", icon: StarIcon },
-  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare },
-  { name: "Chatbot IA", href: "/chatbot", icon: Bot },
+  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, requiredFeature: 'whatsapp_notifications' },
+  { name: "Chatbot IA", href: "/chatbot", icon: Bot, requiredFeature: 'whatsapp_chatbot' },
   { name: "Horários", href: "/business-hours", icon: Clock },
   { name: "Auditoria", href: "/audit", icon: Shield },
   { name: "Configurações", href: "/settings", icon: Settings },
@@ -64,6 +67,7 @@ export const MobileSidebar = () => {
   const [open, setOpen] = useState(false);
   const { barbershops, userRole } = useAuth();
   const { branding } = useBranding();
+  const { hasFeature } = useFeatureFlags();
   const location = useLocation();
 
   // Fechar sidebar ao mudar de rota
@@ -76,7 +80,11 @@ export const MobileSidebar = () => {
       return userRole === 'super_admin';
     }
     if (item.multiUnitOnly) {
-      return barbershops.length > 1 || userRole === 'super_admin';
+      if (!(barbershops.length > 1 || userRole === 'super_admin')) return false;
+    }
+    // Check feature flag requirement
+    if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
+      return false;
     }
     return true;
   });
@@ -153,13 +161,18 @@ export const MobileSidebar = () => {
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { barbershops, userRole } = useAuth();
+  const { hasFeature } = useFeatureFlags();
 
   const filteredNavigation = navigation.filter(item => {
     if (item.superAdminOnly) {
       return userRole === 'super_admin';
     }
     if (item.multiUnitOnly) {
-      return barbershops.length > 1 || userRole === 'super_admin';
+      if (!(barbershops.length > 1 || userRole === 'super_admin')) return false;
+    }
+    // Check feature flag requirement
+    if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
+      return false;
     }
     return true;
   });
