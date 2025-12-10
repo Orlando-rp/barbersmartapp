@@ -19,6 +19,7 @@ interface StaffFormProps {
   onSuccess?: () => void;
 }
 
+// Schema for validating staff form data - only includes fields that exist in the database
 const staffSchema = z.object({
   full_name: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(100),
   email: z.string().trim().email("Email inválido").max(255),
@@ -26,6 +27,16 @@ const staffSchema = z.object({
   role: z.enum(['admin', 'barbeiro', 'recepcionista']),
   commission_rate: z.number().min(0).max(100),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional(),
+});
+
+// Schema for staff table insert/update - only valid database columns
+const staffTableSchema = z.object({
+  barbershop_id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  specialties: z.array(z.string()).optional(),
+  commission_rate: z.number().min(0).max(100),
+  active: z.boolean(),
+  schedule: z.record(z.any()).nullable().optional(),
 });
 
 export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
@@ -40,7 +51,6 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [role, setRole] = useState<string>(staff?.user_roles?.[0]?.role || "barbeiro");
   const [commissionRate, setCommissionRate] = useState(staff?.commission_rate || 0);
   const [specialties] = useState<string[]>(staff?.specialties || []);
-  const [isAlsoBarber, setIsAlsoBarber] = useState(staff?.is_also_barber || false);
 
   // Individual schedule (for single unit)
   const [useCustomSchedule, setUseCustomSchedule] = useState(!!staff?.schedule);
@@ -224,14 +234,15 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         // Atualizar staff com schedule (usa unitSchedule se multi-unidade)
         const scheduleToSave = hasMultipleUnits ? unitSchedule : (useCustomSchedule ? schedule : null);
         
+        const staffUpdateData = {
+          specialties,
+          commission_rate: commissionRate,
+          schedule: scheduleToSave,
+        };
+        
         const { error: staffError } = await supabase
           .from('staff')
-          .update({
-            specialties,
-            commission_rate: commissionRate,
-            is_also_barber: role === 'admin' ? isAlsoBarber : null,
-            schedule: scheduleToSave,
-          })
+          .update(staffUpdateData)
           .eq('id', staff.id);
 
         if (staffError) throw staffError;
@@ -344,17 +355,18 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         // 3. Criar registro na tabela staff (usa unitSchedule se multi-unidade)
         const scheduleToSave = hasMultipleUnits ? unitSchedule : (useCustomSchedule ? schedule : null);
         
-        const { data: staffInsertData, error: staffError } = await supabase
+        const staffInsertData = {
+          barbershop_id: barbershopId,
+          user_id: userId,
+          specialties,
+          commission_rate: commissionRate,
+          active: true,
+          schedule: scheduleToSave,
+        };
+
+        const { data: staffResult, error: staffError } = await supabase
           .from('staff')
-          .insert({
-            barbershop_id: barbershopId,
-            user_id: userId,
-            specialties,
-            commission_rate: commissionRate,
-            active: true,
-            is_also_barber: role === 'admin' ? isAlsoBarber : null,
-            schedule: scheduleToSave,
-          })
+          .insert(staffInsertData)
           .select('id')
           .single();
 
@@ -387,8 +399,8 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         }
 
         // 5. Salvar staff_services
-        if (staffInsertData?.id) {
-          await saveStaffServices(staffInsertData.id);
+        if (staffResult?.id) {
+          await saveStaffServices(staffResult.id);
         }
 
         toast({
@@ -483,10 +495,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         <div className="space-y-2">
           <Label htmlFor="role" className="text-sm">Função *</Label>
-          <Select value={role} onValueChange={(value) => {
-            setRole(value);
-            if (value !== 'admin') setIsAlsoBarber(false);
-          }}>
+          <Select value={role} onValueChange={setRole}>
             <SelectTrigger className="text-sm">
               <SelectValue placeholder="Selecione a função" />
             </SelectTrigger>
@@ -515,28 +524,10 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         </div>
       </div>
 
-      {role === 'admin' && (
-        <div className="flex items-start space-x-2 p-3 sm:p-4 bg-muted rounded-lg">
-          <Checkbox
-            id="isAlsoBarber"
-            checked={isAlsoBarber}
-            onCheckedChange={(checked) => setIsAlsoBarber(checked === true)}
-            className="mt-0.5"
-          />
-          <div className="grid gap-1 leading-none min-w-0">
-            <Label htmlFor="isAlsoBarber" className="cursor-pointer text-sm">
-              Também atende como barbeiro
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Marque se também realiza atendimentos
-            </p>
-          </div>
-        </div>
-      )}
 
 
-      {/* Multi-Unit Schedule Section (shows when user has multiple units) */}
-      {(role === 'barbeiro' || isAlsoBarber) && hasMultipleUnits && (
+      {/* Multi-Unit Schedule Section (shows when user has multiple units and role is barbeiro) */}
+      {role === 'barbeiro' && hasMultipleUnits && (
         <StaffUnitsScheduleSection
           barbershopIds={barbershopIds}
           schedule={unitSchedule}
@@ -544,8 +535,8 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         />
       )}
 
-      {/* Individual Schedule Section (shows when user has single unit) */}
-      {(role === 'barbeiro' || isAlsoBarber) && !hasMultipleUnits && (
+      {/* Individual Schedule Section (shows when user has single unit and role is barbeiro) */}
+      {role === 'barbeiro' && !hasMultipleUnits && (
         <StaffScheduleSection
           schedule={schedule}
           onScheduleChange={handleScheduleChange}
@@ -555,7 +546,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       )}
 
       {/* Services Selection Section */}
-      {(role === 'barbeiro' || isAlsoBarber) && barbershopId && (
+      {role === 'barbeiro' && barbershopId && (
         <StaffServicesSection
           barbershopId={barbershopId}
           selectedServices={selectedServices}
