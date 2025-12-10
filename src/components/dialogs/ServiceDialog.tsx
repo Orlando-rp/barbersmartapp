@@ -31,7 +31,7 @@ export const ServiceDialog = ({ children, editingService, open: controlledOpen, 
           {children}
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <ServiceForm 
           onClose={() => handleOpenChange(false)} 
           editingService={editingService}

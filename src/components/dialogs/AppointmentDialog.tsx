@@ -29,14 +29,14 @@ export const AppointmentDialog = ({ children, appointment, open, onOpenChange, o
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+      <DialogContent className="w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] sm:max-w-2xl lg:max-w-4xl max-h-[95vh] sm:max-h-[90vh] p-0 overflow-hidden">
         <DialogTitle className="sr-only">
           {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
         </DialogTitle>
         <DialogDescription className="sr-only">
           {appointment ? 'Formulário para editar um agendamento existente' : 'Formulário para criar um novo agendamento na barbearia'}
         </DialogDescription>
-        <div className="max-h-[90vh] overflow-y-auto">
+        <div className="max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
           <AppointmentForm appointment={appointment} onClose={handleClose} waitlistPrefill={waitlistPrefill} />
         </div>
       </DialogContent>
