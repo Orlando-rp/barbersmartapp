@@ -171,10 +171,17 @@ const SaasAdminPortal = () => {
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [tenantDetailOpen, setTenantDetailOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<SystemMessage | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{ type: string; id: string } | null>(null);
+  const [subscriptionForm, setSubscriptionForm] = useState({
+    planId: '',
+    status: 'active',
+    validUntil: '',
+  });
+  const [savingSubscription, setSavingSubscription] = useState(false);
 
   // Form states
   const [planForm, setPlanForm] = useState({
@@ -366,6 +373,83 @@ const SaasAdminPortal = () => {
       toast.error(error.message);
     } finally {
       setSavingLink(false);
+    }
+  };
+
+  const openSubscriptionDialog = async (tenant: Tenant) => {
+    setSelectedTenant(tenant);
+    
+    // Buscar assinatura atual
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('*, subscription_plans(id)')
+      .eq('barbershop_id', tenant.id)
+      .maybeSingle();
+    
+    if (subscription) {
+      setSubscriptionForm({
+        planId: (subscription.subscription_plans as any)?.id || '',
+        status: subscription.status || 'active',
+        validUntil: subscription.current_period_end ? subscription.current_period_end.split('T')[0] : '',
+      });
+    } else {
+      // Nova assinatura
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      setSubscriptionForm({
+        planId: plans[0]?.id || '',
+        status: 'active',
+        validUntil: nextMonth.toISOString().split('T')[0],
+      });
+    }
+    
+    setSubscriptionDialogOpen(true);
+  };
+
+  const handleSaveSubscription = async () => {
+    if (!selectedTenant || !subscriptionForm.planId) {
+      toast.error("Selecione um plano");
+      return;
+    }
+    
+    try {
+      setSavingSubscription(true);
+      
+      // Verificar se já existe assinatura
+      const { data: existing } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('barbershop_id', selectedTenant.id)
+        .maybeSingle();
+      
+      const subscriptionData = {
+        barbershop_id: selectedTenant.id,
+        plan_id: subscriptionForm.planId,
+        status: subscriptionForm.status,
+        current_period_start: new Date().toISOString(),
+        current_period_end: subscriptionForm.validUntil ? new Date(subscriptionForm.validUntil).toISOString() : null,
+      };
+      
+      if (existing) {
+        const { error } = await supabase
+          .from('subscriptions')
+          .update(subscriptionData)
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('subscriptions')
+          .insert(subscriptionData);
+        if (error) throw error;
+      }
+      
+      toast.success("Assinatura atualizada com sucesso!");
+      setSubscriptionDialogOpen(false);
+      fetchTenants();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setSavingSubscription(false);
     }
   };
 
@@ -861,8 +945,11 @@ const SaasAdminPortal = () => {
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }}>
                               <Eye className="h-3 w-3" />
                             </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openSubscriptionDialog(tenant)} title="Gerenciar plano">
+                              <CreditCard className="h-3 w-3 text-warning" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleTenantStatus(tenant)}>
-                              {tenant.active ? <XCircle className="h-3 w-3 text-warning" /> : <CheckCircle className="h-3 w-3 text-success" />}
+                              {tenant.active ? <XCircle className="h-3 w-3 text-destructive" /> : <CheckCircle className="h-3 w-3 text-success" />}
                             </Button>
                           </div>
                         </div>
@@ -1007,12 +1094,15 @@ const SaasAdminPortal = () => {
                               </div>
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }}>
+                              <div className="flex justify-end gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }} title="Ver detalhes">
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleToggleTenantStatus(tenant)}>
-                                  {tenant.active ? <XCircle className="h-4 w-4 text-warning" /> : <CheckCircle className="h-4 w-4 text-success" />}
+                                <Button variant="ghost" size="icon" onClick={() => openSubscriptionDialog(tenant)} title="Gerenciar plano">
+                                  <CreditCard className="h-4 w-4 text-warning" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleToggleTenantStatus(tenant)} title={tenant.active ? 'Desativar' : 'Ativar'}>
+                                  {tenant.active ? <XCircle className="h-4 w-4 text-destructive" /> : <CheckCircle className="h-4 w-4 text-success" />}
                                 </Button>
                               </div>
                             </TableCell>
@@ -1536,6 +1626,139 @@ const SaasAdminPortal = () => {
                 className="bg-warning hover:bg-warning/90 text-warning-foreground"
               >
                 {savingLink ? 'Salvando...' : 'Salvar Vínculo'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Subscription Management Dialog */}
+        <Dialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-warning" />
+                Gerenciar Assinatura
+              </DialogTitle>
+              <DialogDescription>
+                {selectedTenant?.name} - Configure o plano e status da assinatura
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {/* Plano */}
+              <div className="space-y-2">
+                <Label>Plano de Assinatura</Label>
+                <Select value={subscriptionForm.planId} onValueChange={(v) => setSubscriptionForm({ ...subscriptionForm, planId: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um plano" /></SelectTrigger>
+                  <SelectContent>
+                    {plans.map(plan => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{plan.name}</span>
+                          <span className="text-muted-foreground text-xs">
+                            R$ {plan.price.toFixed(0)}/{plan.billing_period === 'monthly' ? 'mês' : 'ano'}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Status */}
+              <div className="space-y-2">
+                <Label>Status da Assinatura</Label>
+                <Select value={subscriptionForm.status} onValueChange={(v) => setSubscriptionForm({ ...subscriptionForm, status: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-success" />
+                        Ativo
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="trial">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3 w-3 text-warning" />
+                        Trial (Teste)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="cancelled">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-3 w-3 text-destructive" />
+                        Cancelado
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="expired">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-3 w-3 text-muted-foreground" />
+                        Expirado
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Validade */}
+              <div className="space-y-2">
+                <Label>Válido até</Label>
+                <Input 
+                  type="date" 
+                  value={subscriptionForm.validUntil}
+                  onChange={(e) => setSubscriptionForm({ ...subscriptionForm, validUntil: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Data de expiração do período atual da assinatura
+                </p>
+              </div>
+              
+              {/* Ações rápidas */}
+              <div className="border-t pt-4 space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Ações Rápidas</p>
+                <div className="flex gap-2 flex-wrap">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const nextMonth = new Date();
+                      nextMonth.setMonth(nextMonth.getMonth() + 1);
+                      setSubscriptionForm({ ...subscriptionForm, status: 'active', validUntil: nextMonth.toISOString().split('T')[0] });
+                    }}
+                  >
+                    +1 Mês
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const next3Months = new Date();
+                      next3Months.setMonth(next3Months.getMonth() + 3);
+                      setSubscriptionForm({ ...subscriptionForm, status: 'active', validUntil: next3Months.toISOString().split('T')[0] });
+                    }}
+                  >
+                    +3 Meses
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const nextYear = new Date();
+                      nextYear.setFullYear(nextYear.getFullYear() + 1);
+                      setSubscriptionForm({ ...subscriptionForm, status: 'active', validUntil: nextYear.toISOString().split('T')[0] });
+                    }}
+                  >
+                    +1 Ano
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSubscriptionDialogOpen(false)}>Cancelar</Button>
+              <Button 
+                onClick={handleSaveSubscription} 
+                disabled={savingSubscription || !subscriptionForm.planId}
+                className="bg-warning hover:bg-warning/90 text-warning-foreground"
+              >
+                {savingSubscription ? 'Salvando...' : 'Salvar Assinatura'}
               </Button>
             </DialogFooter>
           </DialogContent>
