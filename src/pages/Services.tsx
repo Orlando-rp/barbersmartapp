@@ -10,6 +10,16 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Services = () => {
   const { barbershopId } = useAuth();
@@ -17,6 +27,10 @@ const Services = () => {
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [editingService, setEditingService] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (barbershopId) {
@@ -42,6 +56,45 @@ const Services = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEdit = (service: any) => {
+    setEditingService(service);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setServiceToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!serviceToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', serviceToDelete);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Serviço removido',
+        description: 'Serviço removido com sucesso.',
+      });
+
+      fetchServices();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao remover serviço',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setServiceToDelete(null);
     }
   };
 
@@ -161,10 +214,20 @@ const Services = () => {
                     </div>
                   </div>
                   <div className="flex gap-0.5 sm:gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 sm:h-8 sm:w-8"
+                      onClick={() => handleEdit(service)}
+                    >
                       <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 sm:h-8 sm:w-8 text-destructive"
+                      onClick={() => handleDeleteClick(service.id)}
+                    >
                       <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
@@ -196,6 +259,37 @@ const Services = () => {
           ))
           )}
         </div>
+
+        {/* Edit Dialog */}
+        <ServiceDialog 
+          open={editDialogOpen} 
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) {
+              setEditingService(null);
+              fetchServices();
+            }
+          }}
+          editingService={editingService}
+        />
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja remover este serviço? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
+                Remover
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );
