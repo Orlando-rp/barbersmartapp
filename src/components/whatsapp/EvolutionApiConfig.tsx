@@ -222,10 +222,13 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
       if (data?.state === 'open' || data?.instance?.state === 'open') {
         setConnectionStatus('connected');
-        // Buscar informações da instância incluindo número
-        await fetchInstanceInfo();
-        await updateConnectionInDatabase('connected');
-        toast.success("WhatsApp conectado!");
+        // Buscar informações da instância incluindo número - retorna o telefone encontrado
+        const phone = await fetchInstanceInfo();
+        if (phone) {
+          toast.success(`WhatsApp conectado: +${phone}`);
+        } else {
+          toast.success("WhatsApp conectado!");
+        }
       } else {
         setConnectionStatus('disconnected');
         setConnectedPhone(null);
@@ -301,14 +304,16 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           }
           
           // Buscar informações da instância para obter o número conectado
-          await fetchInstanceInfo();
+          const phone = await fetchInstanceInfo();
           
           setConnectionStatus('connected');
           setQrModalOpen(false);
-          toast.success("WhatsApp conectado com sucesso!");
           
-          // Atualizar status no banco de dados
-          await updateConnectionInDatabase('connected');
+          if (phone) {
+            toast.success(`WhatsApp conectado: +${phone}`);
+          } else {
+            toast.success("WhatsApp conectado com sucesso!");
+          }
         }
       } catch (error) {
         console.error('Erro no polling:', error);
@@ -323,7 +328,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     }, 120000);
   };
 
-  const fetchInstanceInfo = async () => {
+  const fetchInstanceInfo = async (): Promise<string | null> => {
     try {
       const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
@@ -335,17 +340,15 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
       if (error) {
         console.error('Erro ao buscar instâncias:', error);
-        return;
+        return null;
       }
 
       console.log('[fetchInstanceInfo] Raw response:', JSON.stringify(data, null, 2));
 
       // A resposta vem como objeto com índices numéricos: {"0": {...}, "1": {...}, "success": true}
-      // Precisamos converter para array
       let instanceList: any[] = [];
       
       if (data) {
-        // Extrair instâncias dos índices numéricos
         Object.keys(data).forEach(key => {
           if (!isNaN(Number(key)) && data[key] && typeof data[key] === 'object') {
             instanceList.push(data[key]);
@@ -372,7 +375,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
             setConnectedPhone(phoneNumber);
             console.log('[fetchInstanceInfo] Connected phone:', phoneNumber);
             
-            // Atualizar no banco de dados
+            // Atualizar no banco de dados imediatamente com o telefone encontrado
             if (barbershopId) {
               await supabase
                 .from('whatsapp_config')
@@ -389,17 +392,20 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                 })
                 .eq('barbershop_id', barbershopId)
                 .eq('provider', 'evolution');
-              
-              toast.success(`Telefone conectado: +${phoneNumber}`);
             }
+            
+            return phoneNumber;
           } else {
             console.log('[fetchInstanceInfo] No ownerJid found');
+            setConnectedPhone(null);
           }
           break;
         }
       }
+      return null;
     } catch (error) {
       console.error('Erro ao buscar info da instância:', error);
+      return null;
     }
   };
 
