@@ -35,6 +35,8 @@ import Barbershops from "./pages/Barbershops";
 import ChatbotSettings from "./pages/ChatbotSettings";
 import CompleteProfile from "./pages/CompleteProfile";
 import UpgradePlans from "./pages/UpgradePlans";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +54,8 @@ const App = () => (
             <Route path="/agendar/:barbershopId" element={<PublicBooking />} />
             <Route path="/b/:barbershopId" element={<BarbershopLanding />} />
             <Route path="/s/:subdomain" element={<BarbershopLanding />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             
             {/* Auth Routes */}
             <Route path="/auth" element={<Auth />} />
