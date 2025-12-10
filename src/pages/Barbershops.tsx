@@ -318,28 +318,29 @@ const Barbershops = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Minhas Unidades</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Minhas Unidades</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Gerencie as unidades da sua barbearia
             </p>
           </div>
-          <Button onClick={openCreateDialog} className="gap-2">
+          <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
-            Nova Unidade
+            <span className="sm:hidden">Nova</span>
+            <span className="hidden sm:inline">Nova Unidade</span>
           </Button>
         </div>
 
         {barbershops.length === 0 ? (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
+            <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+              <Building2 className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-medium text-foreground mb-2 text-center">
                 Nenhuma unidade cadastrada
               </h3>
-              <p className="text-muted-foreground text-center mb-4">
+              <p className="text-sm text-muted-foreground text-center mb-4">
                 Crie sua primeira unidade para começar a gerenciar sua barbearia
               </p>
               <Button onClick={openCreateDialog} className="gap-2">
@@ -350,114 +351,200 @@ const Barbershops = () => {
           </Card>
         ) : (
           <Card>
-            <CardHeader>
-              <CardTitle>Unidades Cadastradas</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Unidades Cadastradas</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 {barbershops.length} unidade{barbershops.length !== 1 ? 's' : ''} encontrada{barbershops.length !== 1 ? 's' : ''}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Endereço</TableHead>
-                    <TableHead>Contato</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {barbershops.map((barbershop) => (
-                    <TableRow key={barbershop.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="p-0 h-auto"
-                                  onClick={() => setPrimary(barbershop)}
-                                  disabled={barbershop.is_primary}
-                                >
-                                  <Star
-                                    className={`h-4 w-4 ${
-                                      barbershop.is_primary
-                                        ? 'fill-yellow-400 text-yellow-400'
-                                        : 'text-muted-foreground hover:text-yellow-400'
-                                    }`}
-                                  />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {barbershop.is_primary ? 'Unidade principal' : 'Definir como principal'}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{barbershop.name}</span>
-                          {barbershop.is_primary && (
-                            <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-600">
-                              Principal
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {barbershop.address ? (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            {barbershop.address}
+            <CardContent className="p-4 sm:p-6 pt-0">
+              {/* Mobile Cards View */}
+              <div className="block lg:hidden space-y-3">
+                {barbershops.map((barbershop) => (
+                  <div key={barbershop.id} className="border border-border rounded-lg p-3 sm:p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="p-0 h-auto flex-shrink-0"
+                                onClick={() => setPrimary(barbershop)}
+                                disabled={barbershop.is_primary}
+                              >
+                                <Star
+                                  className={`h-4 w-4 ${
+                                    barbershop.is_primary
+                                      ? 'fill-warning text-warning'
+                                      : 'text-muted-foreground hover:text-warning'
+                                  }`}
+                                />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {barbershop.is_primary ? 'Unidade principal' : 'Definir como principal'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm truncate">{barbershop.name}</span>
+                            {barbershop.is_primary && (
+                              <Badge variant="outline" className="text-xs border-warning text-warning">
+                                Principal
+                              </Badge>
+                            )}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {barbershop.phone && (
+                          <Badge className="mt-1" variant={barbershop.active ? "default" : "secondary"}>
+                            {barbershop.active ? "Ativa" : "Inativa"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(barbershop)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Switch
+                          checked={barbershop.active}
+                          onCheckedChange={() => toggleActive(barbershop)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1.5 text-xs sm:text-sm text-muted-foreground">
+                      {barbershop.address && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                          <span className="break-words">{barbershop.address}</span>
+                        </div>
+                      )}
+                      {barbershop.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3 w-3 flex-shrink-0" />
+                          <span>{barbershop.phone}</span>
+                        </div>
+                      )}
+                      {barbershop.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{barbershop.email}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Endereço</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {barbershops.map((barbershop) => (
+                      <TableRow key={barbershop.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="p-0 h-auto"
+                                    onClick={() => setPrimary(barbershop)}
+                                    disabled={barbershop.is_primary}
+                                  >
+                                    <Star
+                                      className={`h-4 w-4 ${
+                                        barbershop.is_primary
+                                          ? 'fill-warning text-warning'
+                                          : 'text-muted-foreground hover:text-warning'
+                                      }`}
+                                    />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {barbershop.is_primary ? 'Unidade principal' : 'Definir como principal'}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{barbershop.name}</span>
+                            {barbershop.is_primary && (
+                              <Badge variant="outline" className="text-xs border-warning text-warning">
+                                Principal
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {barbershop.address ? (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Phone className="h-3 w-3" />
-                              {barbershop.phone}
+                              <MapPin className="h-3 w-3" />
+                              {barbershop.address}
                             </div>
-                          )}
-                          {barbershop.email && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Mail className="h-3 w-3" />
-                              {barbershop.email}
-                            </div>
-                          )}
-                          {!barbershop.phone && !barbershop.email && (
+                          ) : (
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={barbershop.active ? "default" : "secondary"}>
-                          {barbershop.active ? "Ativa" : "Inativa"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(barbershop)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Switch
-                            checked={barbershop.active}
-                            onCheckedChange={() => toggleActive(barbershop)}
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {barbershop.phone && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Phone className="h-3 w-3" />
+                                {barbershop.phone}
+                              </div>
+                            )}
+                            {barbershop.email && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Mail className="h-3 w-3" />
+                                {barbershop.email}
+                              </div>
+                            )}
+                            {!barbershop.phone && !barbershop.email && (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={barbershop.active ? "default" : "secondary"}>
+                            {barbershop.active ? "Ativa" : "Inativa"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(barbershop)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Switch
+                              checked={barbershop.active}
+                              onCheckedChange={() => toggleActive(barbershop)}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -497,9 +584,9 @@ const Barbershops = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
+                  <Label htmlFor="phone" className="text-sm">Telefone</Label>
                   <Input
                     id="phone"
                     placeholder="(11) 99999-9999"
@@ -509,7 +596,7 @@ const Barbershops = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -520,10 +607,10 @@ const Barbershops = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div>
-                  <Label htmlFor="active">Unidade Ativa</Label>
-                  <p className="text-sm text-muted-foreground">
+              <div className="flex items-center justify-between p-3 sm:p-4 bg-muted rounded-lg gap-4">
+                <div className="min-w-0">
+                  <Label htmlFor="active" className="text-sm">Unidade Ativa</Label>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Unidades inativas não aparecem para agendamento
                   </p>
                 </div>
@@ -535,11 +622,11 @@ const Barbershops = () => {
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
                 {saving ? (
                   <>
                     <LoadingSpinner size="sm" className="mr-2" />
