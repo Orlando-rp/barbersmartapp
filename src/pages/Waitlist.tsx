@@ -335,19 +335,19 @@ const Waitlist = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Lista de Espera</h1>
-            <p className="text-muted-foreground">
-              Gerencie clientes aguardando vagas em dias lotados
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Lista de Espera</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Gerencie clientes aguardando vagas
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={expireOldEntries}>
-              <Clock className="h-4 w-4 mr-2" />
-              Expirar Antigos
+            <Button variant="outline" size="sm" onClick={expireOldEntries} className="text-xs sm:text-sm">
+              <Clock className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Expirar Antigos</span>
             </Button>
-            <Button variant="outline" onClick={fetchEntries} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Atualizar
+            <Button variant="outline" size="sm" onClick={fetchEntries} disabled={loading} className="text-xs sm:text-sm">
+              <RefreshCw className={`h-4 w-4 sm:mr-2 ${loading ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Atualizar</span>
             </Button>
           </div>
         </div>

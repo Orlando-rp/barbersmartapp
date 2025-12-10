@@ -440,7 +440,7 @@ const Auth = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div className="space-y-2">
           <Label htmlFor="signup-password">Senha *</Label>
           <Input
@@ -452,7 +452,7 @@ const Auth = () => {
             required
           />
           {errors.password && (
-            <p className="text-sm text-destructive">{errors.password}</p>
+            <p className="text-xs sm:text-sm text-destructive">{errors.password}</p>
           )}
         </div>
 
@@ -467,7 +467,7 @@ const Auth = () => {
             required
           />
           {errors.confirmPassword && (
-            <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+            <p className="text-xs sm:text-sm text-destructive">{errors.confirmPassword}</p>
           )}
         </div>
       </div>

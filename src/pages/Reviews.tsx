@@ -161,14 +161,14 @@ const Reviews = () => {
         {/* Stats Cards */}
         <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardHeader className="p-3 sm:pb-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-400" />
                 Avaliação Média
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-2xl sm:text-3xl font-bold">
                 {averageRating.toFixed(1)}
               </div>
               <div className="flex gap-1 mt-2">
@@ -178,29 +178,29 @@ const Reviews = () => {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardHeader className="p-3 sm:pb-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
                 Total de Avaliações
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{totalReviews}</div>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-2xl sm:text-3xl font-bold">{totalReviews}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Clientes avaliaram os serviços
+                Clientes avaliaram
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardHeader className="p-3 sm:pb-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
                 <Award className="h-4 w-4 text-success" />
-                Avaliações 5 Estrelas
+                5 Estrelas
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{ratingDistribution[4]}</div>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-2xl sm:text-3xl font-bold">{ratingDistribution[4]}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 {totalReviews > 0
                   ? `${Math.round((ratingDistribution[4] / totalReviews) * 100)}% do total`
@@ -212,20 +212,20 @@ const Reviews = () => {
 
         {/* Rating Distribution */}
         <Card>
-          <CardHeader>
-            <CardTitle>Distribuição de Avaliações</CardTitle>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Distribuição de Avaliações</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className="space-y-2 sm:space-y-3">
               {[5, 4, 3, 2, 1].map((star) => {
                 const count = ratingDistribution[star - 1];
                 const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
 
                 return (
-                  <div key={star} className="flex items-center gap-4">
-                    <div className="flex items-center gap-1 w-24">
-                      <span className="text-sm font-medium">{star}</span>
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <div key={star} className="flex items-center gap-2 sm:gap-4">
+                    <div className="flex items-center gap-1 w-12 sm:w-24">
+                      <span className="text-xs sm:text-sm font-medium">{star}</span>
+                      <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
                     </div>
                     <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
@@ -233,7 +233,7 @@ const Reviews = () => {
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
-                    <span className="text-sm text-muted-foreground w-16 text-right">
+                    <span className="text-xs text-muted-foreground w-12 sm:w-16 text-right">
                       {count} ({Math.round(percentage)}%)
                     </span>
                   </div>
@@ -245,52 +245,52 @@ const Reviews = () => {
 
         {/* Reviews List */}
         <Card>
-          <CardHeader>
-            <CardTitle>Todas as Avaliações</CardTitle>
-            <CardDescription>Feedback detalhado dos clientes</CardDescription>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Todas as Avaliações</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Feedback detalhado dos clientes</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {reviews.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground py-8 text-sm">
                 Nenhuma avaliação ainda
               </p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {reviews.map((review) => (
                   <div
                     key={review.id}
-                    className="p-4 border border-border rounded-lg space-y-3"
+                    className="p-3 sm:p-4 border border-border rounded-lg space-y-2 sm:space-y-3"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarFallback className="bg-primary/10 text-primary">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm">
                             {review.client.name.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="font-medium">{review.client.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(review.created_at), "dd 'de' MMMM 'de' yyyy", {
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm sm:text-base truncate">{review.client.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(review.created_at), "dd/MM/yyyy", {
                               locale: ptBR,
                             })}
                           </p>
                         </div>
                       </div>
-                      {renderStars(review.rating)}
+                      <div className="shrink-0">{renderStars(review.rating)}</div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Badge variant="outline">{review.appointments.service_name}</Badge>
+                    <div className="flex flex-wrap gap-1 sm:gap-2">
+                      <Badge variant="outline" className="text-xs truncate max-w-[120px] sm:max-w-none">{review.appointments.service_name}</Badge>
                       {review.staff?.profiles?.full_name && (
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="text-xs truncate max-w-[100px] sm:max-w-none">
                           {review.staff.profiles.full_name}
                         </Badge>
                       )}
                     </div>
 
                     {review.comment && (
-                      <p className="text-sm text-muted-foreground">{review.comment}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground line-clamp-3 sm:line-clamp-none">{review.comment}</p>
                     )}
                   </div>
                 ))}

@@ -412,7 +412,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
       {/* Avatar Upload - Only show when editing existing staff */}
       {staff && (
         <div className="flex justify-center pb-4 border-b">
@@ -426,21 +426,22 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div className="space-y-2">
-          <Label htmlFor="fullName">Nome Completo *</Label>
+          <Label htmlFor="fullName" className="text-sm">Nome Completo *</Label>
           <Input
             id="fullName"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Nome completo"
             required
+            className="text-sm"
           />
         </div>
 
         {!staff && (
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email" className="text-sm">Email *</Label>
             <Input
               id="email"
               type="email"
@@ -448,24 +449,26 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@exemplo.com"
               required
+              className="text-sm"
             />
           </div>
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="phone">Telefone *</Label>
+          <Label htmlFor="phone" className="text-sm">Telefone *</Label>
           <Input
             id="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="(11) 99999-9999"
             required
+            className="text-sm"
           />
         </div>
 
         {!staff && (
           <div className="space-y-2">
-            <Label htmlFor="password">Senha *</Label>
+            <Label htmlFor="password" className="text-sm">Senha *</Label>
             <Input
               id="password"
               type="password"
@@ -473,20 +476,21 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Mínimo 6 caracteres"
               required
+              className="text-sm"
             />
           </div>
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="role">Função *</Label>
+          <Label htmlFor="role" className="text-sm">Função *</Label>
           <Select value={role} onValueChange={(value) => {
             setRole(value);
             if (value !== 'admin') setIsAlsoBarber(false);
           }}>
-            <SelectTrigger>
+            <SelectTrigger className="text-sm">
               <SelectValue placeholder="Selecione a função" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[200]">
               <SelectItem value="barbeiro">Barbeiro</SelectItem>
               <SelectItem value="recepcionista">Recepcionista</SelectItem>
               <SelectItem value="admin">Administrador</SelectItem>
@@ -495,7 +499,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="commissionRate">Taxa de Comissão (%) *</Label>
+          <Label htmlFor="commissionRate" className="text-sm">Comissão (%) *</Label>
           <Input
             id="commissionRate"
             type="number"
@@ -506,23 +510,25 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
             onChange={(e) => setCommissionRate(parseFloat(e.target.value))}
             placeholder="0.00"
             required
+            className="text-sm"
           />
         </div>
       </div>
 
       {role === 'admin' && (
-        <div className="flex items-center space-x-2 p-4 bg-muted rounded-lg">
+        <div className="flex items-start space-x-2 p-3 sm:p-4 bg-muted rounded-lg">
           <Checkbox
             id="isAlsoBarber"
             checked={isAlsoBarber}
             onCheckedChange={(checked) => setIsAlsoBarber(checked === true)}
+            className="mt-0.5"
           />
-          <div className="grid gap-1.5 leading-none">
-            <Label htmlFor="isAlsoBarber" className="cursor-pointer">
+          <div className="grid gap-1 leading-none min-w-0">
+            <Label htmlFor="isAlsoBarber" className="cursor-pointer text-sm">
               Também atende como barbeiro
             </Label>
-            <p className="text-sm text-muted-foreground">
-              Marque esta opção se o administrador também realiza atendimentos e deve aparecer nos agendamentos
+            <p className="text-xs text-muted-foreground">
+              Marque se também realiza atendimentos
             </p>
           </div>
         </div>
@@ -557,12 +563,12 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         />
       )}
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+      <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t">
+        <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="w-full sm:w-auto">
           Cancelar
         </Button>
-        <Button type="submit" variant="premium" disabled={loading}>
-          {loading ? 'Salvando...' : (staff ? 'Atualizar Membro' : 'Adicionar Membro')}
+        <Button type="submit" variant="premium" disabled={loading} className="w-full sm:w-auto">
+          {loading ? 'Salvando...' : (staff ? 'Atualizar' : 'Adicionar')}
         </Button>
       </div>
     </form>
