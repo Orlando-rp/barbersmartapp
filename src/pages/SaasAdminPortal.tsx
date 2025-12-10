@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import SaasAdminLayout from "@/components/layout/SaasAdminLayout";
@@ -502,6 +502,24 @@ const SaasAdminPortal = () => {
     });
   };
 
+  // Calcular métricas consolidadas (matriz + unidades)
+  const getConsolidatedMetrics = (tenant: Tenant) => {
+    const matrizAppointments = tenant.usage?.appointments_count || 0;
+    const matrizClients = tenant.usage?.clients_count || 0;
+    const matrizRevenue = tenant.usage?.revenue || 0;
+    
+    const unitsAppointments = tenant.units?.reduce((sum, u) => sum + (u.usage?.appointments_count || 0), 0) || 0;
+    const unitsClients = tenant.units?.reduce((sum, u) => sum + (u.usage?.clients_count || 0), 0) || 0;
+    const unitsRevenue = tenant.units?.reduce((sum, u) => sum + (u.usage?.revenue || 0), 0) || 0;
+    
+    return {
+      appointments: matrizAppointments + unitsAppointments,
+      clients: matrizClients + unitsClients,
+      revenue: matrizRevenue + unitsRevenue,
+      hasUnits: (tenant.units?.length || 0) > 0,
+    };
+  };
+
   const planDistribution = plans.map(plan => ({
     name: plan.name,
     value: tenants.filter(t => t.subscription?.plan_name === plan.name).length,
@@ -721,7 +739,9 @@ const SaasAdminPortal = () => {
               <CardContent className="p-3 sm:p-6 pt-0">
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
-                  {tenants.map((tenant) => (
+                  {tenants.map((tenant) => {
+                    const consolidated = getConsolidatedMetrics(tenant);
+                    return (
                     <div key={tenant.id} className="border rounded-lg overflow-hidden">
                       {/* Matriz */}
                       <div className="p-3 space-y-2 bg-card">
@@ -764,16 +784,16 @@ const SaasAdminPortal = () => {
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <div>
-                            <p className="text-muted-foreground">Agend.</p>
-                            <p className="font-medium">{tenant.usage?.appointments_count || 0}</p>
+                            <p className="text-muted-foreground">Agend.{consolidated.hasUnits && ' (total)'}</p>
+                            <p className="font-medium">{consolidated.appointments}</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Clientes</p>
-                            <p className="font-medium">{tenant.usage?.clients_count || 0}</p>
+                            <p className="text-muted-foreground">Clientes{consolidated.hasUnits && ' (total)'}</p>
+                            <p className="font-medium">{consolidated.clients}</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Receita</p>
-                            <p className="font-medium text-success">R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                            <p className="text-muted-foreground">Receita{consolidated.hasUnits && ' (total)'}</p>
+                            <p className="font-medium text-success">R$ {consolidated.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
                           </div>
                         </div>
                       </div>
@@ -815,7 +835,8 @@ const SaasAdminPortal = () => {
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Desktop Table */}
@@ -834,10 +855,12 @@ const SaasAdminPortal = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {tenants.map((tenant) => (
-                        <>
+                      {tenants.map((tenant) => {
+                        const consolidated = getConsolidatedMetrics(tenant);
+                        return (
+                        <React.Fragment key={tenant.id}>
                           {/* Linha da Matriz */}
-                          <TableRow key={tenant.id} className="bg-card">
+                          <TableRow className="bg-card">
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 {(tenant.units?.length || 0) > 0 ? (
@@ -871,9 +894,30 @@ const SaasAdminPortal = () => {
                             <TableCell>
                               {tenant.subscription ? getStatusBadge(tenant.subscription.status) : <Badge variant="outline">Sem assinatura</Badge>}
                             </TableCell>
-                            <TableCell>{tenant.usage?.appointments_count || 0}</TableCell>
-                            <TableCell>{tenant.usage?.clients_count || 0}</TableCell>
-                            <TableCell className="text-success">R$ {(tenant.usage?.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{consolidated.appointments}</span>
+                                {consolidated.hasUnits && (
+                                  <span className="text-xs text-muted-foreground">consolidado</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{consolidated.clients}</span>
+                                {consolidated.hasUnits && (
+                                  <span className="text-xs text-muted-foreground">consolidado</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-success">
+                              <div className="flex flex-col">
+                                <span className="font-medium">R$ {consolidated.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span>
+                                {consolidated.hasUnits && (
+                                  <span className="text-xs text-muted-foreground">consolidado</span>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
                                 <Button variant="ghost" size="icon" onClick={() => { setSelectedTenant(tenant); setTenantDetailOpen(true); }}>
@@ -920,8 +964,9 @@ const SaasAdminPortal = () => {
                               </TableCell>
                             </TableRow>
                           ))}
-                        </>
-                      ))}
+                        </React.Fragment>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
