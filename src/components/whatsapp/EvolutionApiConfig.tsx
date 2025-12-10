@@ -326,7 +326,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
   const fetchInstanceInfo = async () => {
     try {
       // Usar fetchInstances que já existe na API
-      const { data } = await supabase.functions.invoke('send-whatsapp-evolution', {
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
           action: 'fetchInstances',
           apiUrl: config.apiUrl,
@@ -334,31 +334,74 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         }
       });
 
-      console.log('All instances:', data);
+      if (error) {
+        console.error('Erro ao buscar instâncias:', error);
+        return;
+      }
 
-      // Procurar a instância pelo nome
-      const instances = data?.instances || data || [];
-      const instanceList = Array.isArray(instances) ? instances : [instances];
-      const instance = instanceList.find((i: any) => 
-        i.instanceName === config.instanceName || 
-        i.instance?.instanceName === config.instanceName ||
-        i.name === config.instanceName
-      );
+      console.log('[fetchInstanceInfo] Raw response:', JSON.stringify(data, null, 2));
+
+      // A resposta da Evolution API v2 é: [{ instance: { instanceName, owner, ... } }]
+      // O data pode ter success: true adicionado pela nossa edge function
+      let instanceList: any[] = [];
       
-      console.log('Found instance:', instance);
+      if (Array.isArray(data)) {
+        instanceList = data;
+      } else if (data?.success && Array.isArray(data)) {
+        instanceList = data;
+      } else if (typeof data === 'object') {
+        // Se for objeto, tentar extrair array
+        const possibleArrays = Object.values(data).filter(v => Array.isArray(v));
+        if (possibleArrays.length > 0) {
+          instanceList = possibleArrays[0] as any[];
+        } else {
+          // Pode ser um único objeto de resposta
+          instanceList = [data];
+        }
+      }
 
-      if (instance) {
-        // Tentar extrair o número do telefone conectado de várias propriedades possíveis
-        const ownerJid = instance.owner || 
-                         instance.ownerJid || 
-                         instance.instance?.owner ||
-                         instance.instance?.ownerJid ||
-                         instance.connectionStatus?.ownerJid;
+      console.log('[fetchInstanceInfo] Instance list:', instanceList);
+
+      // Procurar a instância pelo nome - formato: { instance: { instanceName, owner } }
+      for (const item of instanceList) {
+        const instanceData = item?.instance || item;
+        const name = instanceData?.instanceName || instanceData?.name;
         
-        if (ownerJid) {
-          const phoneNumber = ownerJid.split('@')?.[0] || ownerJid;
-          setConnectedPhone(phoneNumber);
-          console.log('Connected phone:', phoneNumber);
+        console.log('[fetchInstanceInfo] Checking instance:', name, 'looking for:', config.instanceName);
+        
+        if (name === config.instanceName) {
+          console.log('[fetchInstanceInfo] Found matching instance:', instanceData);
+          
+          // owner está no formato "553198296801@s.whatsapp.net"
+          const owner = instanceData?.owner;
+          
+          if (owner) {
+            const phoneNumber = owner.split('@')[0];
+            setConnectedPhone(phoneNumber);
+            console.log('[fetchInstanceInfo] Connected phone extracted:', phoneNumber);
+            
+            // Atualizar no banco de dados também
+            if (barbershopId) {
+              await supabase
+                .from('whatsapp_config')
+                .update({
+                  config: {
+                    api_url: config.apiUrl,
+                    api_key: config.apiKey,
+                    instance_name: config.instanceName,
+                    connection_status: 'connected',
+                    connected_phone: phoneNumber
+                  },
+                  is_active: true,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('barbershop_id', barbershopId)
+                .eq('provider', 'evolution');
+            }
+          } else {
+            console.log('[fetchInstanceInfo] No owner field found in instance data');
+          }
+          break;
         }
       }
     } catch (error) {
