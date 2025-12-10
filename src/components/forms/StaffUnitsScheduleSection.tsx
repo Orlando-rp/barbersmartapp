@@ -262,9 +262,21 @@ export const StaffUnitsScheduleSection = ({
     [firstBarbershopId]
   );
 
-  // Memoize current schedule
-  const currentSchedule = useMemo(() => {
-    return schedule || defaultScheduleForUnit;
+  // Memoize current schedule - ensure all days have valid values
+  const currentSchedule = useMemo((): StaffUnitSchedule => {
+    const base = defaultScheduleForUnit;
+    if (!schedule) return base;
+    
+    // Merge with defaults to ensure all days exist
+    return {
+      monday: schedule.monday || base.monday,
+      tuesday: schedule.tuesday || base.tuesday,
+      wednesday: schedule.wednesday || base.wednesday,
+      thursday: schedule.thursday || base.thursday,
+      friday: schedule.friday || base.friday,
+      saturday: schedule.saturday || base.saturday,
+      sunday: schedule.sunday || base.sunday,
+    };
   }, [schedule, defaultScheduleForUnit]);
 
   // Memoized update handler
@@ -337,15 +349,18 @@ export const StaffUnitsScheduleSection = ({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {days.map((day) => (
-          <DayScheduleRow
-            key={day}
-            day={day}
-            daySchedule={currentSchedule[day]}
-            barbershops={barbershops}
-            onUpdate={updateDaySchedule}
-          />
-        ))}
+        {days.map((day) => {
+          const daySchedule = currentSchedule[day] || defaultDaySchedule;
+          return (
+            <DayScheduleRow
+              key={day}
+              day={day}
+              daySchedule={daySchedule}
+              barbershops={barbershops}
+              onUpdate={updateDaySchedule}
+            />
+          );
+        })}
       </CardContent>
     </Card>
   );
