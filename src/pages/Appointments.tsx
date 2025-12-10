@@ -514,59 +514,65 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
           ) : (
             filteredAppointments.map((appointment) => (
               <Card key={appointment.id} className="barbershop-card hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold text-lg">{appointment.client_name}</span>
+                <CardContent className="p-3 md:p-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+                    <div className="flex-1 space-y-2 md:space-y-3 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1 md:mb-2">
+                            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="font-semibold text-base md:text-lg truncate">{appointment.client_name}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-3 w-3" />
+                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                            <Phone className="h-3 w-3 flex-shrink-0" />
                             <span>{appointment.client_phone}</span>
                           </div>
                         </div>
-                        <Badge variant={statusConfig[appointment.status as keyof typeof statusConfig].variant}>
+                        <Badge 
+                          variant={statusConfig[appointment.status as keyof typeof statusConfig].variant}
+                          className="text-[10px] md:text-xs flex-shrink-0"
+                        >
                           {statusConfig[appointment.status as keyof typeof statusConfig].label}
                         </Badge>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-primary" />
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs md:text-sm">
+                        <div className="flex items-center gap-1 md:gap-2">
+                          <Calendar className="h-3 w-3 md:h-4 md:w-4 text-primary" />
                           <span className="font-medium">
-                            {format(parseISO(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR })}
+                            {format(parseISO(appointment.appointment_date), "dd/MM/yy", { locale: ptBR })}
                           </span>
-                          <Clock className="h-4 w-4 text-primary ml-2" />
+                          <Clock className="h-3 w-3 md:h-4 md:w-4 text-primary ml-1" />
                           <span className="font-medium">{appointment.appointment_time}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Scissors className="h-4 w-4 text-primary" />
-                          <span>{appointment.service_name}</span>
-                          <span className="text-muted-foreground">- R$ {appointment.service_price?.toFixed(2)}</span>
+                        <div className="flex items-center gap-1 md:gap-2">
+                          <Scissors className="h-3 w-3 md:h-4 md:w-4 text-primary" />
+                          <span className="truncate max-w-[120px] md:max-w-none">{appointment.service_name}</span>
+                          <span className="text-muted-foreground whitespace-nowrap">R$ {appointment.service_price?.toFixed(0)}</span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 text-sm">
-                        <Avatar className="h-8 w-8">
+                      <div className="flex items-center gap-2 text-xs md:text-sm">
+                        <Avatar className="h-6 w-6 md:h-8 md:w-8">
                           <AvatarImage src={appointment.staff?.avatar_url || undefined} alt={appointment.staff?.name || ''} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {appointment.staff?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-4 w-4" />}
+                          <AvatarFallback className="bg-primary/10 text-primary text-[10px] md:text-xs">
+                            {appointment.staff?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-3 w-3 md:h-4 md:w-4" />}
                           </AvatarFallback>
                         </Avatar>
-                        <span>Barbeiro: <span className="font-medium">{appointment.staff?.name || 'Não especificado'}</span></span>
+                        <span className="truncate">
+                          <span className="hidden sm:inline">Barbeiro: </span>
+                          <span className="font-medium">{appointment.staff?.name || 'Não especificado'}</span>
+                        </span>
                       </div>
 
                       {appointment.notes && (
-                        <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                        <div className="text-xs md:text-sm text-muted-foreground bg-muted/50 p-2 rounded line-clamp-2">
                           {appointment.notes}
                         </div>
                       )}
                     </div>
 
-                    <div className="flex md:flex-col gap-2">
+                    <div className="flex flex-row md:flex-col gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-border">
                       <Button
                         variant="outline"
                         size="sm"
@@ -574,16 +580,16 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
                           setEditingAppointment(appointment);
                           setIsDialogOpen(true);
                         }}
-                        className="w-full md:w-[140px]"
+                        className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9"
                       >
-                        <Edit className="mr-2 h-4 w-4" />
+                        <Edit className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                         Editar
                       </Button>
                       <Select
                         value={appointment.status}
                         onValueChange={(value) => updateStatus(appointment.id, value)}
                       >
-                        <SelectTrigger className="w-full md:w-[140px]">
+                        <SelectTrigger className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
