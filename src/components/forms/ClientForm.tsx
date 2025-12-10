@@ -12,9 +12,9 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
 import { z } from "zod";
 import { ClientAvatarUpload } from "@/components/profile/ClientAvatarUpload";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 
 interface ClientFormProps {
   onClose?: () => void;
@@ -45,7 +45,7 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
   const [errors, setErrors] = useState<any>({});
   
   const { toast } = useToast();
-  const { barbershopId } = useAuth();
+  const { sharedBarbershopId } = useSharedBarbershopId();
 
   const addTag = () => {
     const trimmedTag = newTag.trim().toLowerCase();
@@ -70,7 +70,7 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
     e.preventDefault();
     setErrors({});
     
-    if (!barbershopId) {
+    if (!sharedBarbershopId) {
       toast({
         title: "Erro",
         description: "Barbearia não encontrada. Por favor, faça login novamente.",
@@ -91,7 +91,7 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
       setLoading(true);
 
       const clientData = {
-        barbershop_id: barbershopId,
+        barbershop_id: sharedBarbershopId,
         name: validatedData.name,
         email: validatedData.email || null,
         phone: validatedData.phone,

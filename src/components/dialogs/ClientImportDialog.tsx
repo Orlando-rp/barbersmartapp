@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import * as XLSX from "xlsx";
@@ -27,7 +27,7 @@ interface ClientImportDialogProps {
 }
 
 export function ClientImportDialog({ onSuccess, children }: ClientImportDialogProps) {
-  const { barbershopId } = useAuth();
+  const { sharedBarbershopId } = useSharedBarbershopId();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -124,11 +124,18 @@ export function ClientImportDialog({ onSuccess, children }: ClientImportDialogPr
             ? tagsStr.split(",").map((t: string) => t.trim()).filter((t: string) => t)
             : [];
 
-          // Check for duplicate phone
+          // Check for duplicate phone in shared barbershop
+          const { data: childUnits } = await supabase
+            .from('barbershops')
+            .select('id')
+            .eq('parent_id', sharedBarbershopId);
+          
+          const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
+          
           const { data: existing } = await supabase
             .from('clients')
             .select('id')
-            .eq('barbershop_id', barbershopId)
+            .in('barbershop_id', allBarbershopIds)
             .eq('phone', String(telefone).replace(/\D/g, ''))
             .maybeSingle();
 
@@ -139,7 +146,7 @@ export function ClientImportDialog({ onSuccess, children }: ClientImportDialogPr
 
           // Insert client
           const clientData: any = {
-            barbershop_id: barbershopId,
+            barbershop_id: sharedBarbershopId,
             name: nome,
             phone: String(telefone).replace(/\D/g, ''),
             email: email,

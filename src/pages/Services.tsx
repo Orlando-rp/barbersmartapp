@@ -7,11 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Scissors, Plus, Search, Clock, Edit, Trash2, FolderOpen } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { CategoryManager } from "@/components/services/CategoryManager";
 import { useServiceCategories } from "@/hooks/useServiceCategories";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/sheet";
 
 const Services = () => {
-  const { barbershopId } = useAuth();
+  const { sharedBarbershopId, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const { categories: dbCategories } = useServiceCategories();
   const [services, setServices] = useState<any[]>([]);
@@ -45,17 +45,27 @@ const Services = () => {
   const [categorySheetOpen, setCategorySheetOpen] = useState(false);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (sharedBarbershopId && !loadingBarbershop) {
       fetchServices();
     }
-  }, [barbershopId]);
+  }, [sharedBarbershopId, loadingBarbershop]);
 
   const fetchServices = async () => {
+    if (!sharedBarbershopId) return;
+    
     try {
+      // Buscar serviços da matriz E de todas as unidades filhas
+      const { data: childUnits } = await supabase
+        .from('barbershops')
+        .select('id')
+        .eq('parent_id', sharedBarbershopId);
+      
+      const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
+      
       const { data, error } = await supabase
         .from('services')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', allBarbershopIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
