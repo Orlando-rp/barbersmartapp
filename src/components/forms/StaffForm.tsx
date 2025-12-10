@@ -539,11 +539,11 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         <div className="space-y-2">
           <Label htmlFor="role" className="text-sm">Função *</Label>
-          <Select value={role} onValueChange={setRole}>
+          <Select key={`role-${staff?.id || 'new'}`} value={role} onValueChange={setRole}>
             <SelectTrigger className="text-sm">
               <SelectValue placeholder="Selecione a função" />
             </SelectTrigger>
-            <SelectContent className="z-[200]" position="popper" sideOffset={4}>
+            <SelectContent position="popper" sideOffset={4}>
               <SelectItem value="barbeiro">Barbeiro</SelectItem>
               <SelectItem value="recepcionista">Recepcionista</SelectItem>
               <SelectItem value="admin">Administrador</SelectItem>
