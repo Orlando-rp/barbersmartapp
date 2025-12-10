@@ -36,7 +36,7 @@ const WhatsAppSettings = () => {
           </TabsList>
 
           <TabsContent value="evolution" className="space-y-6">
-            <EvolutionApiConfig isSaasAdmin={isSaasAdmin} />
+            <EvolutionApiConfig isSaasAdmin={false} />
           </TabsContent>
 
           <TabsContent value="official" className="space-y-6">
