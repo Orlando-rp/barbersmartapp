@@ -33,6 +33,7 @@ import SaasAdminPortal from "./pages/SaasAdminPortal";
 import Barbershops from "./pages/Barbershops";
 import ChatbotSettings from "./pages/ChatbotSettings";
 import CompleteProfile from "./pages/CompleteProfile";
+import UpgradePlans from "./pages/UpgradePlans";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ const App = () => (
             <Route path="/multi-unit-reports" element={<ProtectedRoute><MultiUnitReports /></ProtectedRoute>} />
             <Route path="/barbershops" element={<ProtectedRoute><Barbershops /></ProtectedRoute>} />
             <Route path="/saas-admin" element={<ProtectedRoute><SaasAdminPortal /></ProtectedRoute>} />
+            <Route path="/upgrade" element={<ProtectedRoute><UpgradePlans /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

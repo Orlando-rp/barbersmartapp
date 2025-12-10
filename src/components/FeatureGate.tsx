@@ -79,7 +79,7 @@ export const FeatureGate = ({
         <Button 
           variant="default" 
           className="gap-2"
-          onClick={() => navigate('/settings')}
+          onClick={() => navigate('/upgrade')}
         >
           <Sparkles className="h-4 w-4" />
           Fazer Upgrade
