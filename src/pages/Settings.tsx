@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
-import { Save, User, Bell, Clock } from "lucide-react";
+import DomainSettings from "@/components/settings/DomainSettings";
+import { Save, User, Bell, Clock, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -146,6 +147,9 @@ const SettingsPage = () => {
 
         {/* Public Booking Link */}
         <PublicBookingLink />
+
+        {/* Domain Settings */}
+        <DomainSettings />
 
         {/* Settings Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
