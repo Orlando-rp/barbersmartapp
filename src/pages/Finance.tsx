@@ -265,65 +265,111 @@ const Finance = () => {
           <CardHeader className="p-4 lg:p-6">
             <CardTitle className="text-base lg:text-xl">Histórico de Transações</CardTitle>
           </CardHeader>
-          <CardContent className="p-0 lg:p-6 lg:pt-0 overflow-x-auto">
+          <CardContent className="p-3 lg:p-6 lg:pt-0">
             {transactions.length === 0 ? (
               <div className="text-center py-12">
                 <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
                 <p className="text-muted-foreground">Nenhuma transação registrada neste mês</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Pagamento</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Mobile Cards View */}
+                <div className="block md:hidden space-y-3">
                   {transactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>
-                        {format(new Date(transaction.transaction_date), 'dd/MM/yyyy', { locale: ptBR })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={transaction.type === 'receita' ? 'default' : 'destructive'}>
+                    <div 
+                      key={transaction.id} 
+                      className="p-3 rounded-lg border border-border bg-background/50"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge variant={transaction.type === 'receita' ? 'default' : 'destructive'} className="text-xs">
                           {transaction.type === 'receita' ? 'Receita' : 'Despesa'}
                         </Badge>
-                      </TableCell>
-                      <TableCell>{transaction.description}</TableCell>
-                      <TableCell className="capitalize">{transaction.category}</TableCell>
-                      <TableCell>{getPaymentMethodLabel(transaction.payment_method)}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        <span className={transaction.type === 'receita' ? 'text-success' : 'text-destructive'}>
+                        <span className={`font-bold text-sm ${transaction.type === 'receita' ? 'text-success' : 'text-destructive'}`}>
                           {transaction.type === 'receita' ? '+' : '-'}
                           R$ {Number(transaction.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <TransactionDialog transaction={transaction} onSuccess={fetchFinancialData}>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TransactionDialog>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDelete(transaction.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                      </div>
+                      <p className="font-medium text-sm text-foreground truncate">{transaction.description}</p>
+                      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                        <span>{format(new Date(transaction.transaction_date), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                        <span className="capitalize">{transaction.category}</span>
+                        <span>{getPaymentMethodLabel(transaction.payment_method)}</span>
+                      </div>
+                      <div className="flex gap-2 justify-end mt-2 pt-2 border-t border-border">
+                        <TransactionDialog transaction={transaction} onSuccess={fetchFinancialData}>
+                          <Button variant="ghost" size="sm" className="h-8 px-2">
+                            <Edit className="h-4 w-4" />
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                        </TransactionDialog>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-8 px-2"
+                          onClick={() => handleDelete(transaction.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">Data</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead>Pagamento</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions.map((transaction) => (
+                        <TableRow key={transaction.id}>
+                          <TableCell className="whitespace-nowrap">
+                            {format(new Date(transaction.transaction_date), 'dd/MM/yyyy', { locale: ptBR })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={transaction.type === 'receita' ? 'default' : 'destructive'}>
+                              {transaction.type === 'receita' ? 'Receita' : 'Despesa'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate">{transaction.description}</TableCell>
+                          <TableCell className="capitalize whitespace-nowrap">{transaction.category}</TableCell>
+                          <TableCell className="whitespace-nowrap">{getPaymentMethodLabel(transaction.payment_method)}</TableCell>
+                          <TableCell className="text-right font-medium whitespace-nowrap">
+                            <span className={transaction.type === 'receita' ? 'text-success' : 'text-destructive'}>
+                              {transaction.type === 'receita' ? '+' : '-'}
+                              R$ {Number(transaction.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-1 justify-end">
+                              <TransactionDialog transaction={transaction} onSuccess={fetchFinancialData}>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TransactionDialog>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleDelete(transaction.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
