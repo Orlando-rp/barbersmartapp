@@ -185,7 +185,7 @@ export const WhatsAppStatusPanel = () => {
   const getStatusBadge = (status?: string, isActive?: boolean) => {
     if (!status || status === 'disconnected') {
       return (
-        <Badge variant="outline" className="text-slate-400 border-slate-600">
+        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
           <WifiOff className="h-3 w-3 mr-1" />
           Desconectado
         </Badge>
@@ -193,7 +193,7 @@ export const WhatsAppStatusPanel = () => {
     }
     if (status === 'connected' && isActive) {
       return (
-        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50">
+        <Badge className="bg-success/20 text-success border-success/50 text-xs">
           <Wifi className="h-3 w-3 mr-1" />
           Conectado
         </Badge>
@@ -201,14 +201,14 @@ export const WhatsAppStatusPanel = () => {
     }
     if (status === 'connecting') {
       return (
-        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/50">
+        <Badge className="bg-warning/20 text-warning border-warning/50 text-xs">
           <Loader2 className="h-3 w-3 mr-1 animate-spin" />
           Conectando
         </Badge>
       );
     }
     return (
-      <Badge variant="outline" className="text-red-400 border-red-500/50">
+      <Badge variant="outline" className="text-destructive border-destructive/50 text-xs">
         <XCircle className="h-3 w-3 mr-1" />
         Erro
       </Badge>
@@ -228,26 +228,26 @@ export const WhatsAppStatusPanel = () => {
 
   if (loading) {
     return (
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="bg-card border-border">
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-warning" />
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Global Config Status */}
       {!globalConfig && (
-        <Card className="bg-amber-500/10 border-amber-500/50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
+        <Card className="bg-warning/10 border-warning/50">
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
+            <div className="flex items-start sm:items-center gap-3">
+              <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-warning shrink-0 mt-0.5 sm:mt-0" />
               <div>
-                <p className="font-medium text-amber-400">Configuração Global Pendente</p>
-                <p className="text-sm text-amber-400/80">
-                  Configure o servidor Evolution API na aba Integrações para habilitar o WhatsApp nas barbearias.
+                <p className="font-medium text-warning text-sm sm:text-base">Configuração Global Pendente</p>
+                <p className="text-xs sm:text-sm text-warning/80">
+                  Configure o servidor Evolution API acima para habilitar o WhatsApp nas barbearias.
                 </p>
               </div>
             </div>
@@ -256,129 +256,192 @@ export const WhatsAppStatusPanel = () => {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <Card className="bg-card border-border">
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Total Barbearias</p>
-                <p className="text-2xl font-bold text-white">{stats.total}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Barbearias</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.total}</p>
               </div>
-              <Building2 className="h-8 w-8 text-slate-600" />
+              <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
+        <Card className="bg-card border-border">
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Conectados</p>
-                <p className="text-2xl font-bold text-emerald-500">{stats.connected}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Conectados</p>
+                <p className="text-lg sm:text-2xl font-bold text-success">{stats.connected}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-emerald-500/50" />
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-success/50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
+        <Card className="bg-card border-border">
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Configurados</p>
-                <p className="text-2xl font-bold text-amber-500">{stats.configured}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Configurados</p>
+                <p className="text-lg sm:text-2xl font-bold text-warning">{stats.configured}</p>
               </div>
-              <MessageSquare className="h-8 w-8 text-amber-500/50" />
+              <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-warning/50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
+        <Card className="bg-card border-border">
+          <CardContent className="p-3 sm:pt-6 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-400">Não Configurados</p>
-                <p className="text-2xl font-bold text-slate-400">{stats.notConfigured}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Não Configurados</p>
+                <p className="text-lg sm:text-2xl font-bold text-muted-foreground">{stats.notConfigured}</p>
               </div>
-              <WifiOff className="h-8 w-8 text-slate-600" />
+              <WifiOff className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Table */}
-      <Card className="bg-slate-900 border-slate-800">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      {/* Table / Mobile Cards */}
+      <Card className="bg-card border-border">
+        <CardHeader className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-white flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-foreground flex items-center gap-2 text-sm sm:text-base">
+                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
                 Status de Conexão WhatsApp
               </CardTitle>
-              <CardDescription className="text-slate-400">
-                Visualize o status de conexão de todas as barbearias
+              <CardDescription className="text-muted-foreground text-xs sm:text-sm">
+                Status de conexão de todas as barbearias
               </CardDescription>
             </div>
             <Button
               variant="outline"
+              size="sm"
               onClick={fetchData}
               disabled={refreshing}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-border text-foreground hover:bg-muted w-full sm:w-auto"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-6 pt-0">
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar barbearia..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="pl-10 bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
 
-          <div className="rounded-md border border-slate-800 overflow-x-auto">
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {filteredShops.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                Nenhuma barbearia encontrada
+              </div>
+            ) : (
+              filteredShops.map((shop) => (
+                <div key={shop.id} className="p-3 rounded-lg border border-border bg-muted/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Building2 className="h-4 w-4 text-warning shrink-0" />
+                      <span className="font-medium text-foreground text-sm truncate">{shop.name}</span>
+                      {!shop.active && (
+                        <Badge variant="outline" className="text-[10px] shrink-0">Inativo</Badge>
+                      )}
+                    </div>
+                    {getStatusBadge(shop.whatsappConfig?.connection_status, shop.whatsappConfig?.is_active)}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Instância:</span>
+                      <p className="text-foreground truncate">{shop.whatsappConfig?.instance_name || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Mensagens (30d):</span>
+                      <p className="text-foreground">
+                        {shop.messageStats && shop.messageStats.total > 0 ? (
+                          <>
+                            {shop.messageStats.total} (
+                            <span className="text-success">{shop.messageStats.success}</span>/
+                            <span className="text-destructive">{shop.messageStats.failed}</span>)
+                          </>
+                        ) : '-'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      {shop.whatsappConfig?.updated_at
+                        ? format(new Date(shop.whatsappConfig.updated_at), "dd/MM/yy HH:mm", { locale: ptBR })
+                        : '-'}
+                    </span>
+                    {shop.whatsappConfig && globalConfig && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => checkInstanceStatus(shop)}
+                        disabled={refreshing}
+                        className="h-7 text-xs"
+                      >
+                        <RefreshCw className={`h-3 w-3 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
+                        Verificar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden md:block rounded-md border border-border overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-800 hover:bg-slate-800/50">
-                  <TableHead className="text-slate-300">Barbearia</TableHead>
-                  <TableHead className="text-slate-300">Instância</TableHead>
-                  <TableHead className="text-slate-300">Status</TableHead>
-                  <TableHead className="text-slate-300 text-center">Mensagens (30d)</TableHead>
-                  <TableHead className="text-slate-300">Última Atualização</TableHead>
-                  <TableHead className="text-right text-slate-300">Ações</TableHead>
+                <TableRow className="border-border hover:bg-muted/50">
+                  <TableHead className="text-muted-foreground">Barbearia</TableHead>
+                  <TableHead className="text-muted-foreground">Instância</TableHead>
+                  <TableHead className="text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-muted-foreground text-center">Mensagens (30d)</TableHead>
+                  <TableHead className="text-muted-foreground">Última Atualização</TableHead>
+                  <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredShops.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Nenhuma barbearia encontrada
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredShops.map((shop) => (
-                    <TableRow key={shop.id} className="border-slate-800 hover:bg-slate-800/50">
+                    <TableRow key={shop.id} className="border-border hover:bg-muted/50">
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-amber-500" />
+                          <Building2 className="h-4 w-4 text-warning" />
                           <div>
-                            <span className="font-medium text-white">{shop.name}</span>
+                            <span className="font-medium text-foreground">{shop.name}</span>
                             {!shop.active && (
-                              <Badge variant="outline" className="ml-2 text-xs text-slate-500">
+                              <Badge variant="outline" className="ml-2 text-xs">
                                 Inativo
                               </Badge>
                             )}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-400">
+                      <TableCell className="text-muted-foreground">
                         {shop.whatsappConfig?.instance_name || '-'}
                       </TableCell>
                       <TableCell>
@@ -390,18 +453,18 @@ export const WhatsAppStatusPanel = () => {
                       <TableCell className="text-center">
                         {shop.messageStats && shop.messageStats.total > 0 ? (
                           <div className="flex items-center justify-center gap-2">
-                            <span className="text-white">{shop.messageStats.total}</span>
-                            <span className="text-xs text-slate-500">
-                              (<span className="text-emerald-500">{shop.messageStats.success}</span>
+                            <span className="text-foreground">{shop.messageStats.total}</span>
+                            <span className="text-xs text-muted-foreground">
+                              (<span className="text-success">{shop.messageStats.success}</span>
                               /
-                              <span className="text-red-500">{shop.messageStats.failed}</span>)
+                              <span className="text-destructive">{shop.messageStats.failed}</span>)
                             </span>
                           </div>
                         ) : (
-                          <span className="text-slate-500">-</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-slate-400">
+                      <TableCell className="text-muted-foreground">
                         {shop.whatsappConfig?.updated_at
                           ? format(new Date(shop.whatsappConfig.updated_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
                           : '-'}
@@ -413,7 +476,7 @@ export const WhatsAppStatusPanel = () => {
                             size="sm"
                             onClick={() => checkInstanceStatus(shop)}
                             disabled={refreshing}
-                            className="text-slate-400 hover:text-white hover:bg-slate-700"
+                            className="text-muted-foreground hover:text-foreground hover:bg-muted"
                           >
                             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                           </Button>
