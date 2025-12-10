@@ -585,63 +585,65 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       {/* Server Configuration - Only for SaaS Admin */}
       {isSaasAdmin && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-primary" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Configuração do Servidor
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Configure a conexão com seu servidor Evolution API
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="api-url">URL do Servidor</Label>
+          <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="api-url" className="text-xs sm:text-sm">URL do Servidor</Label>
               <Input
                 id="api-url"
                 type="url"
                 value={config.apiUrl}
                 onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
                 placeholder="https://api.evolution.seudominio.com"
+                className="text-sm"
               />
-              <p className="text-xs text-muted-foreground">
-                URL base do seu servidor Evolution API
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                URL base do servidor Evolution API
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="api-key">API Key (Global)</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="api-key" className="text-xs sm:text-sm">API Key (Global)</Label>
               <Input
                 id="api-key"
                 type="password"
                 value={config.apiKey}
                 onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
                 placeholder="sua-api-key-global"
+                className="text-sm"
               />
-              <p className="text-xs text-muted-foreground">
-                Chave de API configurada no servidor Evolution
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Chave de API do servidor Evolution
               </p>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="instance-name">Nome da Instância</Label>
-                <Badge variant="secondary" className="text-xs">Gerado automaticamente</Badge>
+            <div className="space-y-1.5 sm:space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="instance-name" className="text-xs sm:text-sm">Nome da Instância</Label>
+                <Badge variant="secondary" className="text-[10px] sm:text-xs">Auto</Badge>
               </div>
               <Input
                 id="instance-name"
                 type="text"
                 value={config.instanceName}
                 readOnly
-                className="bg-muted cursor-not-allowed"
+                className="bg-muted cursor-not-allowed text-sm"
               />
-              <p className="text-xs text-muted-foreground">
-                Identificador único gerado com base no ID da sua barbearia
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Identificador único gerado automaticamente
               </p>
             </div>
 
-            <Button onClick={saveConfig} disabled={saving} className="w-full">
-              <Save className="mr-2 h-4 w-4" />
+            <Button onClick={saveConfig} disabled={saving} className="w-full text-xs sm:text-sm" size="sm">
+              <Save className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
               {saving ? "Salvando..." : "Salvar Configuração"}
             </Button>
           </CardContent>
@@ -650,23 +652,25 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
       {/* Connection Status */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Wifi className="h-5 w-5 text-primary" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <span className="flex items-center gap-2 text-sm sm:text-base">
+              <Wifi className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Status da Conexão
             </span>
             {getConnectionBadge()}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+        <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={checkConnection}
               disabled={checkingConnection || !config.apiUrl || !config.instanceName}
+              className="text-xs sm:text-sm"
+              size="sm"
             >
-              <RefreshCw className={`mr-2 h-4 w-4 ${checkingConnection ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 ${checkingConnection ? 'animate-spin' : ''}`} />
               Verificar Status
             </Button>
 
@@ -674,8 +678,10 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
               <Button
                 onClick={connectInstance}
                 disabled={!config.apiUrl || !config.apiKey || !config.instanceName}
+                className="text-xs sm:text-sm"
+                size="sm"
               >
-                <QrCode className="mr-2 h-4 w-4" />
+                <QrCode className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Conectar WhatsApp
               </Button>
             ) : (
@@ -683,50 +689,52 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                 variant="destructive"
                 onClick={disconnectInstance}
                 disabled={checkingConnection}
+                className="text-xs sm:text-sm"
+                size="sm"
               >
-                <WifiOff className="mr-2 h-4 w-4" />
+                <WifiOff className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Desconectar
               </Button>
             )}
           </div>
 
           {connectionStatus === 'connected' && (
-            <div className="p-4 bg-success/10 rounded-lg border border-success/20">
+            <div className="p-3 sm:p-4 bg-success/10 rounded-lg border border-success/20">
               <div className="flex items-center gap-2 text-success">
-                <CheckCircle className="h-5 w-5" />
-                <span className="font-medium">WhatsApp conectado e pronto para uso!</span>
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium">WhatsApp conectado!</span>
               </div>
             </div>
           )}
 
           {/* Diagnóstico detalhado */}
-          <div className="mt-4 p-4 bg-muted/50 rounded-lg border space-y-3">
-            <h4 className="font-medium text-sm flex items-center gap-2">
-              <Settings className="h-4 w-4" />
+          <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border space-y-2 sm:space-y-3">
+            <h4 className="font-medium text-xs sm:text-sm flex items-center gap-2">
+              <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Diagnóstico da Conexão
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <div className="space-y-1">
-                <p className="text-muted-foreground">URL do Servidor:</p>
-                <p className="font-mono text-xs break-all">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">URL do Servidor:</p>
+                <p className="font-mono text-[10px] sm:text-xs break-all">
                   {config.apiUrl || <span className="text-destructive">Não configurado</span>}
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">API Key:</p>
-                <p className="font-mono text-xs">
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">API Key:</p>
+                <p className="font-mono text-[10px] sm:text-xs">
                   {config.apiKey ? '••••••••' + config.apiKey.slice(-4) : <span className="text-destructive">Não configurado</span>}
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Nome da Instância:</p>
-                <p className="font-mono text-xs">
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Instância:</p>
+                <p className="font-mono text-[10px] sm:text-xs">
                   {config.instanceName || <span className="text-destructive">Não configurado</span>}
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Telefone Conectado:</p>
-                <p className="font-mono text-xs">
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Telefone:</p>
+                <p className="font-mono text-[10px] sm:text-xs">
                   {connectedPhone ? (
                     <span className="text-success font-medium">+{connectedPhone}</span>
                   ) : connectionStatus === 'connected' ? (
@@ -736,44 +744,44 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                   )}
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Usando Config Global:</p>
-                <p className="text-xs">
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Config Global:</p>
+                <p className="text-[10px] sm:text-xs">
                   {isUsingGlobalConfig ? (
-                    <Badge variant="outline" className="text-xs">Sim</Badge>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs h-5">Sim</Badge>
                   ) : (
-                    <Badge variant="secondary" className="text-xs">Não</Badge>
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs h-5">Não</Badge>
                   )}
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Status Atual:</p>
-                <p className="text-xs">
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Status:</p>
+                <div className="text-[10px] sm:text-xs">
                   {getConnectionBadge()}
-                </p>
+                </div>
               </div>
             </div>
             
             {(!config.apiUrl || !config.apiKey) && (
-              <div className="mt-2 p-3 bg-warning/10 border border-warning/20 rounded text-sm">
-                <p className="text-warning font-medium">⚠️ Configuração Incompleta</p>
-                <p className="text-muted-foreground text-xs mt-1">
-                  {!config.apiUrl && "URL do servidor não está configurada. "}
-                  {!config.apiKey && "API Key não está configurada. "}
+              <div className="mt-2 p-2 sm:p-3 bg-warning/10 border border-warning/20 rounded text-xs sm:text-sm">
+                <p className="text-warning font-medium text-xs">⚠️ Config Incompleta</p>
+                <p className="text-muted-foreground text-[10px] sm:text-xs mt-1">
+                  {!config.apiUrl && "URL não configurada. "}
+                  {!config.apiKey && "API Key não configurada. "}
                   {isUsingGlobalConfig 
-                    ? "Verifique a configuração global no portal SaaS Admin." 
-                    : "Configure os dados acima ou peça ao administrador SaaS para configurar globalmente."}
+                    ? "Verifique config global no SaaS Admin." 
+                    : "Configure acima ou peça ao admin SaaS."}
                 </p>
               </div>
             )}
 
             {connectionStatus === 'disconnected' && config.apiUrl && config.apiKey && (
-              <div className="mt-2 p-3 bg-muted border rounded text-sm">
-                <p className="font-medium">📱 Próximos passos:</p>
-                <ol className="text-xs text-muted-foreground mt-1 space-y-1 list-decimal list-inside">
+              <div className="mt-2 p-2 sm:p-3 bg-muted border rounded text-xs sm:text-sm">
+                <p className="font-medium text-xs">📱 Próximos passos:</p>
+                <ol className="text-[10px] sm:text-xs text-muted-foreground mt-1 space-y-0.5 sm:space-y-1 list-decimal list-inside">
                   <li>Clique em "Conectar WhatsApp"</li>
-                  <li>Escaneie o QR Code com seu telefone</li>
-                  <li>Aguarde a conexão ser estabelecida</li>
+                  <li>Escaneie o QR Code</li>
+                  <li>Aguarde a conexão</li>
                 </ol>
               </div>
             )}
@@ -789,18 +797,18 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
       {/* Test Message */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5 text-primary" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Send className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             Enviar Mensagem de Teste
           </CardTitle>
-          <CardDescription>
-            Teste a integração enviando uma mensagem via Evolution API
+          <CardDescription className="text-xs sm:text-sm">
+            Teste a integração via Evolution API
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="evo-phone">Número de Telefone (com DDI)</Label>
+        <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label htmlFor="evo-phone" className="text-xs sm:text-sm">Telefone (com DDI)</Label>
             <Input
               id="evo-phone"
               type="tel"
@@ -808,14 +816,15 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
               onChange={(e) => setTestPhone(e.target.value)}
               placeholder="5511999999999"
               disabled={sending || connectionStatus !== 'connected'}
+              className="text-sm"
             />
-            <p className="text-xs text-muted-foreground">
-              Formato: código do país + DDD + número (ex: 5511999999999)
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Formato: país + DDD + número
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="evo-message">Mensagem</Label>
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label htmlFor="evo-message" className="text-xs sm:text-sm">Mensagem</Label>
             <Textarea
               id="evo-message"
               value={testMessage}
@@ -823,27 +832,29 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                 setTestMessage(e.target.value);
                 setSelectedTemplateId(undefined);
               }}
-              placeholder="Digite sua mensagem de teste..."
-              rows={8}
+              placeholder="Digite sua mensagem..."
+              rows={6}
               disabled={sending || connectionStatus !== 'connected'}
+              className="text-sm"
             />
-            <p className="text-xs text-muted-foreground">
-              Use variáveis como {'{nome}'}, {'{data}'}, {'{hora}'} para personalizar
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Use variáveis: {'{nome}'}, {'{data}'}, {'{hora}'}
             </p>
           </div>
 
           <Button 
             onClick={handleSendTest} 
             disabled={sending || !testPhone.trim() || !testMessage.trim() || connectionStatus !== 'connected'}
-            className="w-full"
+            className="w-full text-xs sm:text-sm"
+            size="sm"
           >
-            <Send className="mr-2 h-4 w-4" />
-            {sending ? "Enviando..." : "Enviar Mensagem de Teste"}
+            <Send className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            {sending ? "Enviando..." : "Enviar Teste"}
           </Button>
 
           {connectionStatus !== 'connected' && (
-            <p className="text-sm text-muted-foreground text-center">
-              Conecte o WhatsApp primeiro para enviar mensagens
+            <p className="text-[10px] sm:text-sm text-muted-foreground text-center">
+              Conecte o WhatsApp primeiro
             </p>
           )}
         </CardContent>

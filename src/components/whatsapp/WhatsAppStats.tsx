@@ -83,48 +83,48 @@ export const WhatsAppStats = ({ provider }: WhatsAppStatsProps) => {
   };
 
   return (
-    <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+    <div className="grid gap-2 sm:gap-4 grid-cols-2 md:grid-cols-4">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Enviado</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+          <CardTitle className="text-xs sm:text-sm font-medium">Total Enviado</CardTitle>
+          <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats?.total_sent || 0}</div>
-          <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="text-lg sm:text-2xl font-bold">{stats?.total_sent || 0}</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Últimos 30 dias</p>
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Sucesso</CardTitle>
-          <CheckCircle className="h-4 w-4 text-success" />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+          <CardTitle className="text-xs sm:text-sm font-medium">Sucesso</CardTitle>
+          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-success">{stats?.total_success || 0}</div>
-          <p className="text-xs text-muted-foreground">Mensagens entregues</p>
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="text-lg sm:text-2xl font-bold text-success">{stats?.total_success || 0}</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Entregues</p>
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Falhas</CardTitle>
-          <XCircle className="h-4 w-4 text-destructive" />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+          <CardTitle className="text-xs sm:text-sm font-medium">Falhas</CardTitle>
+          <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-destructive">{stats?.total_failed || 0}</div>
-          <p className="text-xs text-muted-foreground">Erros de envio</p>
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="text-lg sm:text-2xl font-bold text-destructive">{stats?.total_failed || 0}</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Erros</p>
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+          <CardTitle className="text-xs sm:text-sm font-medium">Taxa Sucesso</CardTitle>
+          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats?.success_rate || 0}%</div>
-          <p className="text-xs text-muted-foreground">Média geral</p>
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="text-lg sm:text-2xl font-bold">{stats?.success_rate || 0}%</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Média</p>
         </CardContent>
       </Card>
     </div>

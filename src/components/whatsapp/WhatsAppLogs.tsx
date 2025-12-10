@@ -86,61 +86,88 @@ export const WhatsAppLogs = ({ provider }: WhatsAppLogsProps) => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-primary" />
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Histórico de Mensagens
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 sm:p-6 pt-0">
         {loading ? (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
             Carregando logs...
           </div>
         ) : logs.length === 0 ? (
-          <div className="text-center py-8 space-y-2">
-            <p className="text-muted-foreground">Nenhuma mensagem enviada ainda</p>
+          <div className="text-center py-6 sm:py-8 space-y-2">
+            <p className="text-muted-foreground text-xs sm:text-sm">Nenhuma mensagem enviada ainda</p>
           </div>
         ) : (
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data/Hora</TableHead>
-                  <TableHead>Destinatário</TableHead>
-                  <TableHead>Mensagem</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Erro</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {logs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="font-mono text-xs whitespace-nowrap">
-                      {format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{log.recipient_name || "Não informado"}</div>
-                        <div className="text-xs text-muted-foreground">{log.recipient_phone}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="truncate text-sm">{log.message_content}</div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(log.status)}</TableCell>
-                    <TableCell className="max-w-xs">
-                      {log.error_message && (
-                        <span className="text-xs text-destructive truncate block">
-                          {log.error_message}
-                        </span>
-                      )}
-                    </TableCell>
+          <>
+            {/* Mobile view - card layout */}
+            <div className="sm:hidden space-y-3">
+              {logs.map((log) => (
+                <div key={log.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs truncate">{log.recipient_name || "Não informado"}</p>
+                      <p className="text-[10px] text-muted-foreground">{log.recipient_phone}</p>
+                    </div>
+                    {getStatusBadge(log.status)}
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{log.message_content}</p>
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span className="font-mono">
+                      {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </span>
+                    {log.error_message && (
+                      <span className="text-destructive truncate max-w-[50%]">{log.error_message}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop view - table layout */}
+            <div className="hidden sm:block rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Data/Hora</TableHead>
+                    <TableHead className="text-xs">Destinatário</TableHead>
+                    <TableHead className="text-xs">Mensagem</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Erro</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">
+                        {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-xs">{log.recipient_name || "Não informado"}</div>
+                          <div className="text-[10px] text-muted-foreground">{log.recipient_phone}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <div className="truncate text-xs">{log.message_content}</div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(log.status)}</TableCell>
+                      <TableCell className="max-w-xs">
+                        {log.error_message && (
+                          <span className="text-[10px] text-destructive truncate block">
+                            {log.error_message}
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

@@ -389,35 +389,35 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
   return (
     <>
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                 <FileText className="h-4 w-4 text-primary" />
                 Templates de Mensagem
               </CardTitle>
-              <CardDescription>
-                Selecione ou crie templates com variáveis dinâmicas
+              <CardDescription className="text-xs sm:text-sm">
+                Selecione ou crie templates
               </CardDescription>
             </div>
-            <Button size="sm" onClick={openCreateDialog}>
-              <Plus className="h-4 w-4 mr-1" />
+            <Button size="sm" onClick={openCreateDialog} className="w-full sm:w-auto text-xs sm:text-sm">
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
               Novo
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <ScrollArea className="h-[320px] pr-4">
+            <ScrollArea className="h-[280px] sm:h-[320px] pr-2 sm:pr-4">
               <div className="space-y-2">
                 {templates.map((template) => (
                   <div
                     key={template.id}
-                    className={`group relative p-3 rounded-lg border transition-all hover:bg-accent/50 ${
+                    className={`group relative p-2.5 sm:p-3 rounded-lg border transition-all hover:bg-accent/50 ${
                       selectedTemplateId === template.id 
                         ? 'border-primary bg-primary/5' 
                         : 'border-border hover:border-primary/50'
@@ -428,30 +428,32 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
                       className="w-full text-left"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-primary">{categoryIcons[template.category]}</span>
-                          <span className="font-medium text-sm">{template.name}</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                          <span className="text-primary flex-shrink-0">{categoryIcons[template.category]}</span>
+                          <span className="font-medium text-xs sm:text-sm truncate">{template.name}</span>
                           {template.is_default && (
-                            <Badge variant="outline" className="text-xs">Padrão</Badge>
+                            <Badge variant="outline" className="text-[10px] sm:text-xs hidden sm:inline-flex">Padrão</Badge>
                           )}
                         </div>
-                        {getCategoryBadge(template.category)}
+                        <div className="flex-shrink-0">
+                          {getCategoryBadge(template.category)}
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
-                        {template.message.replace(/\*/g, '').substring(0, 80)}...
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-1.5 line-clamp-2">
+                        {template.message.replace(/\*/g, '').substring(0, 60)}...
                       </p>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {template.variables.slice(0, 4).map((variable) => (
+                      <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2">
+                        {template.variables.slice(0, 3).map((variable) => (
                           <span 
                             key={variable} 
-                            className="text-[10px] px-1.5 py-0.5 bg-muted rounded font-mono"
+                            className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 bg-muted rounded font-mono"
                           >
                             {`{${variable}}`}
                           </span>
                         ))}
-                        {template.variables.length > 4 && (
-                          <span className="text-[10px] px-1.5 py-0.5 text-muted-foreground">
-                            +{template.variables.length - 4} mais
+                        {template.variables.length > 3 && (
+                          <span className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 text-muted-foreground">
+                            +{template.variables.length - 3}
                           </span>
                         )}
                       </div>
@@ -509,33 +511,34 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-sm sm:text-base">
               {selectedForEdit ? 'Editar Template' : 'Novo Template'}
             </DialogTitle>
-            <DialogDescription>
-              Use variáveis como {'{nome}'}, {'{data}'}, {'{hora}'} para personalizar
+            <DialogDescription className="text-xs sm:text-sm">
+              Use variáveis como {'{nome}'}, {'{data}'}, {'{hora}'}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nome do Template</Label>
+          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Nome do Template</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Lembrete de Retorno"
+                className="text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Categoria</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Categoria</Label>
               <Select
                 value={formData.category}
                 onValueChange={(v) => setFormData({ ...formData, category: v as MessageTemplate['category'] })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -549,47 +552,48 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Mensagem</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Mensagem</Label>
               <Textarea
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                placeholder="Olá {nome}! Seu agendamento para {data} às {hora} foi confirmado."
-                rows={8}
+                placeholder="Olá {nome}! Seu agendamento..."
+                rows={6}
+                className="text-sm"
               />
-              <p className="text-xs text-muted-foreground">
-                Variáveis disponíveis: {'{nome}'}, {'{data}'}, {'{hora}'}, {'{servico}'}, {'{profissional}'}, {'{barbearia}'}, {'{endereco}'}, {'{desconto}'}, {'{validade}'}
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Variáveis: {'{nome}'}, {'{data}'}, {'{hora}'}, {'{servico}'}, {'{profissional}'}
               </p>
             </div>
 
             {formData.message && (
-              <div className="space-y-3">
-                <div className="p-3 rounded-lg bg-muted/50 border">
-                  <p className="text-xs text-muted-foreground mb-1">Variáveis detectadas:</p>
+              <div className="space-y-2 sm:space-y-3">
+                <div className="p-2 sm:p-3 rounded-lg bg-muted/50 border">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-1">Variáveis detectadas:</p>
                   <div className="flex flex-wrap gap-1">
                     {extractVariables(formData.message).map((v) => (
-                      <Badge key={v} variant="secondary" className="text-xs font-mono">
+                      <Badge key={v} variant="secondary" className="text-[10px] sm:text-xs font-mono">
                         {`{${v}}`}
                       </Badge>
                     ))}
                     {extractVariables(formData.message).length === 0 && (
-                      <span className="text-xs text-muted-foreground">Nenhuma variável</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">Nenhuma variável</span>
                     )}
                   </div>
                 </div>
                 
                 {/* Live Preview */}
                 <div className="border rounded-lg overflow-hidden">
-                  <div className="bg-primary/10 px-3 py-2 flex items-center gap-2 border-b">
-                    <Smartphone className="h-4 w-4 text-primary" />
-                    <span className="text-xs font-medium">Preview da Mensagem</span>
+                  <div className="bg-primary/10 px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-2 border-b">
+                    <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+                    <span className="text-[10px] sm:text-xs font-medium">Preview</span>
                   </div>
-                  <div className="bg-[#e5ddd5] p-4">
-                    <div className="max-w-[280px] ml-auto bg-[#dcf8c6] rounded-lg p-3 shadow-sm">
-                      <p className="text-sm whitespace-pre-wrap text-gray-800">
+                  <div className="bg-[#e5ddd5] p-3 sm:p-4">
+                    <div className="max-w-[240px] sm:max-w-[280px] ml-auto bg-[#dcf8c6] rounded-lg p-2.5 sm:p-3 shadow-sm">
+                      <p className="text-xs sm:text-sm whitespace-pre-wrap text-gray-800">
                         {replaceVariablesWithSample(formData.message)}
                       </p>
-                      <p className="text-[10px] text-gray-500 text-right mt-1">14:30 ✓✓</p>
+                      <p className="text-[9px] sm:text-[10px] text-gray-500 text-right mt-1">14:30 ✓✓</p>
                     </div>
                   </div>
                 </div>
@@ -597,11 +601,11 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="text-xs sm:text-sm">
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving} className="text-xs sm:text-sm">
               {saving ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
@@ -610,54 +614,54 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
 
       {/* Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-primary" />
-              Preview: {previewTemplate?.name}
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <span className="truncate">{previewTemplate?.name}</span>
             </DialogTitle>
-            <DialogDescription>
-              Visualização de como a mensagem aparecerá para o cliente
+            <DialogDescription className="text-xs sm:text-sm">
+              Como a mensagem aparecerá
             </DialogDescription>
           </DialogHeader>
           
           {previewTemplate && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {/* WhatsApp style preview */}
               <div className="border rounded-xl overflow-hidden shadow-lg">
                 {/* Phone header */}
-                <div className="bg-[#075e54] px-4 py-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                    <span className="text-gray-600 text-lg font-semibold">B</span>
+                <div className="bg-[#075e54] px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                    <span className="text-gray-600 text-sm sm:text-lg font-semibold">B</span>
                   </div>
                   <div className="text-white">
-                    <p className="font-semibold text-sm">Barbearia Premium</p>
-                    <p className="text-xs text-green-200">online</p>
+                    <p className="font-semibold text-xs sm:text-sm">Barbearia Premium</p>
+                    <p className="text-[10px] sm:text-xs text-green-200">online</p>
                   </div>
                 </div>
                 
                 {/* Chat area */}
-                <div className="bg-[#e5ddd5] p-4 min-h-[200px]" style={{
+                <div className="bg-[#e5ddd5] p-3 sm:p-4 min-h-[150px] sm:min-h-[200px]" style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4cfc4' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                 }}>
-                  <div className="max-w-[85%] ml-auto bg-[#dcf8c6] rounded-lg p-3 shadow-sm">
-                    <p className="text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">
+                  <div className="max-w-[90%] sm:max-w-[85%] ml-auto bg-[#dcf8c6] rounded-lg p-2.5 sm:p-3 shadow-sm">
+                    <p className="text-xs sm:text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">
                       {replaceVariablesWithSample(previewTemplate.message)}
                     </p>
-                    <p className="text-[10px] text-gray-500 text-right mt-1">14:30 ✓✓</p>
+                    <p className="text-[9px] sm:text-[10px] text-gray-500 text-right mt-1">14:30 ✓✓</p>
                   </div>
                 </div>
               </div>
               
               {/* Variables used */}
-              <div className="bg-muted/50 rounded-lg p-3 border">
-                <p className="text-xs font-medium mb-2">Variáveis utilizadas (dados de exemplo):</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-muted/50 rounded-lg p-2.5 sm:p-3 border">
+                <p className="text-[10px] sm:text-xs font-medium mb-1.5 sm:mb-2">Variáveis (dados exemplo):</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
                   {previewTemplate.variables.map((v) => (
-                    <div key={v} className="flex items-center gap-2">
-                      <code className="bg-background px-1.5 py-0.5 rounded text-[10px]">{`{${v}}`}</code>
+                    <div key={v} className="flex items-center gap-1 sm:gap-2">
+                      <code className="bg-background px-1 sm:px-1.5 py-0.5 rounded text-[9px] sm:text-[10px]">{`{${v}}`}</code>
                       <span className="text-muted-foreground">→</span>
-                      <span className="font-medium">{sampleData[v] || '...'}</span>
+                      <span className="font-medium truncate">{sampleData[v] || '...'}</span>
                     </div>
                   ))}
                 </div>
@@ -665,8 +669,8 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
             </div>
           )}
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)} className="text-xs sm:text-sm">
               Fechar
             </Button>
             <Button onClick={() => {
@@ -674,7 +678,7 @@ export const MessageTemplates = ({ onSelectTemplate, selectedTemplateId }: Messa
                 onSelectTemplate(previewTemplate);
                 setPreviewDialogOpen(false);
               }
-            }}>
+            }} className="text-xs sm:text-sm">
               Usar Template
             </Button>
           </DialogFooter>
