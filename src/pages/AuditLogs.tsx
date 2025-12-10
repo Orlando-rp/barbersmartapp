@@ -159,26 +159,26 @@ export default function AuditLogs() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Shield className="h-6 w-6 text-primary" />
+            <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+              <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Logs de Auditoria</h1>
-              <p className="text-muted-foreground">
-                Rastreamento de todas as alterações críticas no sistema
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight truncate">Logs de Auditoria</h1>
+              <p className="text-sm text-muted-foreground line-clamp-1">
+                Rastreamento de alterações no sistema
               </p>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
+        <Card className="p-3 sm:p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="relative sm:col-span-2 lg:col-span-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por usuário ou barbearia..."
@@ -190,7 +190,7 @@ export default function AuditLogs() {
 
             <Select value={tableFilter} onValueChange={setTableFilter}>
               <SelectTrigger>
-                <Database className="h-4 w-4 mr-2" />
+                <Database className="h-4 w-4 mr-2 shrink-0" />
                 <SelectValue placeholder="Filtrar por tabela" />
               </SelectTrigger>
               <SelectContent>
@@ -209,7 +209,7 @@ export default function AuditLogs() {
 
             <Select value={operationFilter} onValueChange={setOperationFilter}>
               <SelectTrigger>
-                <Filter className="h-4 w-4 mr-2" />
+                <Filter className="h-4 w-4 mr-2 shrink-0" />
                 <SelectValue placeholder="Filtrar por operação" />
               </SelectTrigger>
               <SelectContent>
@@ -222,8 +222,66 @@ export default function AuditLogs() {
           </div>
         </Card>
 
-        {/* Logs Table */}
-        <Card>
+        {/* Mobile Card View */}
+        <div className="block lg:hidden space-y-3">
+          {filteredLogs.length === 0 ? (
+            <Card className="p-6 text-center text-muted-foreground">
+              Nenhum log de auditoria encontrado
+            </Card>
+          ) : (
+            filteredLogs.map((log) => (
+              <Card key={log.id} className="p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-xs">
+                      {getTableLabel(log.table_name)}
+                    </Badge>
+                    <Badge variant={getOperationBadge(log.operation)} className="text-xs">
+                      {log.operation === "INSERT" && "Criação"}
+                      {log.operation === "UPDATE" && "Atualização"}
+                      {log.operation === "DELETE" && "Exclusão"}
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 h-8 px-2"
+                    onClick={() => setSelectedLog(log)}
+                  >
+                    Detalhes
+                  </Button>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">{log.user_name || "Sistema"}</span>
+                  {log.barbershops?.name && (
+                    <span className="text-muted-foreground"> • {log.barbershops.name}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(log.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                </div>
+                {log.changed_fields && log.changed_fields.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {log.changed_fields.slice(0, 2).map((field) => (
+                      <Badge key={field} variant="secondary" className="text-xs">
+                        {field}
+                      </Badge>
+                    ))}
+                    {log.changed_fields.length > 2 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{log.changed_fields.length - 2}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <Card className="hidden lg:block">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -283,13 +341,13 @@ export default function AuditLogs() {
                             {log.user_name || "Sistema"}
                           </div>
                           {log.user_email && (
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-muted-foreground truncate max-w-[200px]">
                               {log.user_email}
                             </div>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[150px] truncate">
                         {log.barbershops?.name || "-"}
                       </TableCell>
                       <TableCell>
@@ -330,44 +388,44 @@ export default function AuditLogs() {
 
       {/* Details Dialog */}
       <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg lg:max-w-3xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Detalhes do Log de Auditoria</DialogTitle>
-            <DialogDescription>
-              Informações completas sobre a alteração realizada
+            <DialogTitle className="text-lg sm:text-xl">Detalhes do Log</DialogTitle>
+            <DialogDescription className="text-sm">
+              Informações sobre a alteração
             </DialogDescription>
           </DialogHeader>
 
           {selectedLog && (
-            <ScrollArea className="max-h-[500px]">
-              <div className="space-y-4">
+            <ScrollArea className="max-h-[60vh] sm:max-h-[500px]">
+              <div className="space-y-4 pr-4">
                 {/* Metadata */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="text-sm font-medium">Data/Hora</label>
-                    <p className="text-sm text-muted-foreground">
+                    <label className="text-xs sm:text-sm font-medium">Data/Hora</label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {format(new Date(selectedLog.created_at), "dd/MM/yyyy HH:mm:ss", {
                         locale: ptBR,
                       })}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Operação</label>
-                    <p className="text-sm text-muted-foreground">
+                    <label className="text-xs sm:text-sm font-medium">Operação</label>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                       <Badge variant={getOperationBadge(selectedLog.operation)}>
                         {selectedLog.operation}
                       </Badge>
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Tabela</label>
-                    <p className="text-sm text-muted-foreground">
+                    <label className="text-xs sm:text-sm font-medium">Tabela</label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {getTableLabel(selectedLog.table_name)}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Usuário</label>
-                    <p className="text-sm text-muted-foreground">
+                    <label className="text-xs sm:text-sm font-medium">Usuário</label>
+                    <p className="text-xs sm:text-sm text-muted-foreground break-all">
                       {selectedLog.user_name || selectedLog.user_email || "Sistema"}
                     </p>
                   </div>
@@ -376,10 +434,10 @@ export default function AuditLogs() {
                 {/* Changed Fields */}
                 {selectedLog.changed_fields && selectedLog.changed_fields.length > 0 && (
                   <div>
-                    <label className="text-sm font-medium">Campos Alterados</label>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <label className="text-xs sm:text-sm font-medium">Campos Alterados</label>
+                    <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
                       {selectedLog.changed_fields.map((field) => (
-                        <Badge key={field} variant="secondary">
+                        <Badge key={field} variant="secondary" className="text-xs">
                           {field}
                         </Badge>
                       ))}
@@ -390,8 +448,8 @@ export default function AuditLogs() {
                 {/* Old Data */}
                 {selectedLog.old_data && (
                   <div>
-                    <label className="text-sm font-medium">Dados Anteriores</label>
-                    <pre className="mt-2 p-3 bg-muted rounded-lg text-xs overflow-x-auto">
+                    <label className="text-xs sm:text-sm font-medium">Dados Anteriores</label>
+                    <pre className="mt-2 p-2 sm:p-3 bg-muted rounded-lg text-[10px] sm:text-xs overflow-x-auto whitespace-pre-wrap break-all">
                       {JSON.stringify(selectedLog.old_data, null, 2)}
                     </pre>
                   </div>
@@ -400,8 +458,8 @@ export default function AuditLogs() {
                 {/* New Data */}
                 {selectedLog.new_data && (
                   <div>
-                    <label className="text-sm font-medium">Dados Novos</label>
-                    <pre className="mt-2 p-3 bg-muted rounded-lg text-xs overflow-x-auto">
+                    <label className="text-xs sm:text-sm font-medium">Dados Novos</label>
+                    <pre className="mt-2 p-2 sm:p-3 bg-muted rounded-lg text-[10px] sm:text-xs overflow-x-auto whitespace-pre-wrap break-all">
                       {JSON.stringify(selectedLog.new_data, null, 2)}
                     </pre>
                   </div>
