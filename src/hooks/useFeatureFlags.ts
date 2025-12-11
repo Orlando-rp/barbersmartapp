@@ -3,6 +3,42 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { PlanFeatures, defaultPlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 
+// All features enabled (for super admin)
+const allFeaturesEnabled: PlanFeatures = {
+  appointments: true,
+  clients: true,
+  services: true,
+  staff_basic: true,
+  finance_basic: true,
+  waitlist: true,
+  public_booking: true,
+  business_hours: true,
+  staff_advanced: true,
+  staff_earnings: true,
+  staff_multi_unit: true,
+  finance_advanced: true,
+  commissions: true,
+  export_data: true,
+  basic_reports: true,
+  advanced_reports: true,
+  predictive_analytics: true,
+  whatsapp_notifications: true,
+  whatsapp_chat: true,
+  whatsapp_chatbot: true,
+  marketing_campaigns: true,
+  marketing_coupons: true,
+  loyalty_program: true,
+  reviews: true,
+  client_history: true,
+  multi_unit: true,
+  multi_unit_reports: true,
+  white_label: true,
+  custom_domain: true,
+  audit_logs: true,
+  priority_support: true,
+  api_access: true,
+};
+
 interface UseFeatureFlagsReturn {
   features: PlanFeatures;
   loading: boolean;
@@ -20,17 +56,7 @@ export const useFeatureFlags = (): UseFeatureFlagsReturn => {
   const fetchFeatures = useCallback(async () => {
     // Super admins have access to all features
     if (userRole === 'super_admin') {
-      setFeatures({
-        whatsapp_notifications: true,
-        whatsapp_chatbot: true,
-        marketing_campaigns: true,
-        marketing_coupons: true,
-        advanced_reports: true,
-        predictive_analytics: true,
-        multi_unit: true,
-        white_label: true,
-        priority_support: true,
-      });
+      setFeatures(allFeaturesEnabled);
       setPlanName('Super Admin');
       setLoading(false);
       return;
