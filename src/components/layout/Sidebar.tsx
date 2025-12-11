@@ -73,7 +73,7 @@ const navigation: NavItem[] = [
 export const MobileSidebar = () => {
   const [open, setOpen] = useState(false);
   const { barbershops, userRole } = useAuth();
-  const { effectiveBranding } = useBranding();
+  const { effectiveBranding, currentLogoUrl } = useBranding();
   const { hasFeature } = useFeatureFlags();
   const { subscription, loading: subscriptionLoading } = useSubscription();
   const location = useLocation();
@@ -110,10 +110,10 @@ export const MobileSidebar = () => {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center space-x-2">
-              {effectiveBranding?.logo_url ? (
+              {currentLogoUrl ? (
                 <img 
-                  src={effectiveBranding.logo_url} 
-                  alt={effectiveBranding.system_name || 'Logo'} 
+                  src={currentLogoUrl} 
+                  alt={effectiveBranding?.system_name || 'Logo'} 
                   className="w-8 h-8 rounded-lg object-contain"
                 />
               ) : (
@@ -194,7 +194,7 @@ export const MobileSidebar = () => {
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { barbershops, userRole } = useAuth();
-  const { effectiveBranding } = useBranding();
+  const { effectiveBranding, currentLogoUrl } = useBranding();
   const { hasFeature } = useFeatureFlags();
   const { subscription, loading: subscriptionLoading } = useSubscription();
 
@@ -221,10 +221,10 @@ const Sidebar = () => {
       <div className="flex items-center justify-between p-4 border-b border-border">
         {!collapsed ? (
           <div className="flex items-center space-x-2 min-w-0">
-            {effectiveBranding?.logo_url ? (
+            {currentLogoUrl ? (
               <img 
-                src={effectiveBranding.logo_url} 
-                alt={effectiveBranding.system_name || 'Logo'} 
+                src={currentLogoUrl} 
+                alt={effectiveBranding?.system_name || 'Logo'} 
                 className="w-8 h-8 rounded-lg object-contain shrink-0"
               />
             ) : (
@@ -238,10 +238,10 @@ const Sidebar = () => {
           </div>
         ) : (
           <div className="flex items-center justify-center w-full">
-            {effectiveBranding?.logo_url ? (
+            {currentLogoUrl ? (
               <img 
-                src={effectiveBranding.logo_url} 
-                alt={effectiveBranding.system_name || 'Logo'} 
+                src={currentLogoUrl} 
+                alt={effectiveBranding?.system_name || 'Logo'} 
                 className="w-8 h-8 rounded-lg object-contain"
               />
             ) : (

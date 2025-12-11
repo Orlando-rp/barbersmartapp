@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTheme } from "next-themes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,8 @@ import {
   Check, 
   Trash2,
   Sparkles,
-  Eye
+  Sun,
+  Moon
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -26,6 +28,8 @@ interface CustomBranding {
   system_name?: string;
   tagline?: string;
   logo_url?: string;
+  logo_light_url?: string;
+  logo_dark_url?: string;
   favicon_url?: string;
   primary_color?: string;
   secondary_color?: string;
@@ -36,6 +40,8 @@ const defaultBranding: CustomBranding = {
   system_name: "",
   tagline: "",
   logo_url: "",
+  logo_light_url: "",
+  logo_dark_url: "",
   favicon_url: "",
   primary_color: "#d4a574",
   secondary_color: "#1a1a2e",
@@ -54,13 +60,16 @@ const presetColors = [
 const BarbershopBrandingConfig = () => {
   const { barbershopId } = useAuth();
   const { refreshBranding } = useBranding();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [branding, setBranding] = useState<CustomBranding>(defaultBranding);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingLogoLight, setUploadingLogoLight] = useState(false);
+  const [uploadingLogoDark, setUploadingLogoDark] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   
-  const logoInputRef = useRef<HTMLInputElement>(null);
+  const logoLightInputRef = useRef<HTMLInputElement>(null);
+  const logoDarkInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -116,7 +125,7 @@ const BarbershopBrandingConfig = () => {
 
   const handleImageUpload = async (
     file: File, 
-    type: 'logo' | 'favicon',
+    type: 'logo_light' | 'logo_dark' | 'favicon',
     setUploading: (v: boolean) => void
   ) => {
     if (!file || !barbershopId) return;
@@ -148,24 +157,42 @@ const BarbershopBrandingConfig = () => {
         .from('public-assets')
         .getPublicUrl(fileName);
 
+      const fieldMap: Record<string, string> = {
+        logo_light: 'logo_light_url',
+        logo_dark: 'logo_dark_url',
+        favicon: 'favicon_url',
+      };
+
       setBranding(prev => ({
         ...prev,
-        [type === 'logo' ? 'logo_url' : 'favicon_url']: publicUrl,
+        [fieldMap[type]]: publicUrl,
       }));
 
-      toast.success(`${type === 'logo' ? 'Logo' : 'Favicon'} enviado com sucesso!`);
+      const labelMap: Record<string, string> = {
+        logo_light: 'Logo (modo claro)',
+        logo_dark: 'Logo (modo escuro)',
+        favicon: 'Favicon',
+      };
+
+      toast.success(`${labelMap[type]} enviado com sucesso!`);
     } catch (error: any) {
       console.error('Erro no upload:', error);
-      toast.error(`Erro ao enviar ${type === 'logo' ? 'logo' : 'favicon'}`);
+      toast.error(`Erro ao enviar imagem`);
     } finally {
       setUploading(false);
     }
   };
 
-  const removeImage = (type: 'logo' | 'favicon') => {
+  const removeImage = (type: 'logo_light' | 'logo_dark' | 'favicon') => {
+    const fieldMap: Record<string, string> = {
+      logo_light: 'logo_light_url',
+      logo_dark: 'logo_dark_url',
+      favicon: 'favicon_url',
+    };
+    
     setBranding(prev => ({
       ...prev,
-      [type === 'logo' ? 'logo_url' : 'favicon_url']: '',
+      [fieldMap[type]]: '',
     }));
   };
 
@@ -283,56 +310,124 @@ const BarbershopBrandingConfig = () => {
 
           {/* Images Tab */}
           <TabsContent value="images" className="space-y-4 mt-0">
-            {/* Logo Upload */}
+            {/* Logo for Light Mode */}
             <div className="space-y-3">
-              <Label className="text-xs sm:text-sm">Logo do Sistema</Label>
+              <div className="flex items-center gap-2">
+                <Sun className="h-4 w-4 text-warning" />
+                <Label className="text-xs sm:text-sm">Logo para Modo Claro</Label>
+              </div>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 <div 
-                  className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors relative overflow-hidden"
-                  onClick={() => logoInputRef.current?.click()}
+                  className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors relative overflow-hidden bg-white"
+                  onClick={() => logoLightInputRef.current?.click()}
                 >
-                  {uploadingLogo ? (
+                  {uploadingLogoLight ? (
                     <LoadingSpinner size="sm" />
-                  ) : branding.logo_url ? (
+                  ) : branding.logo_light_url ? (
                     <img 
-                      src={branding.logo_url} 
-                      alt="Logo" 
+                      src={branding.logo_light_url} 
+                      alt="Logo Claro" 
                       className="w-full h-full object-contain p-2"
                     />
                   ) : (
-                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <Upload className="h-6 w-6 text-gray-400" />
                   )}
                   <input
-                    ref={logoInputRef}
+                    ref={logoLightInputRef}
                     type="file"
                     accept="image/*"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) handleImageUpload(file, 'logo', setUploadingLogo);
+                      if (file) handleImageUpload(file, 'logo_light', setUploadingLogoLight);
                     }}
                   />
                 </div>
                 <div className="flex-1 space-y-2">
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    Aparece no menu lateral e cabeçalho. Recomendado: 200x200px, PNG ou SVG.
+                    Logo exibido quando o tema claro está ativo. Use cores escuras para melhor contraste.
                   </p>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => logoInputRef.current?.click()}
-                      disabled={uploadingLogo}
+                      onClick={() => logoLightInputRef.current?.click()}
+                      disabled={uploadingLogoLight}
                       className="h-9"
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       Upload
                     </Button>
-                    {branding.logo_url && (
+                    {branding.logo_light_url && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeImage('logo')}
+                        onClick={() => removeImage('logo_light')}
+                        className="h-9 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Logo for Dark Mode */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Moon className="h-4 w-4 text-primary" />
+                <Label className="text-xs sm:text-sm">Logo para Modo Escuro</Label>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div 
+                  className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors relative overflow-hidden bg-slate-900"
+                  onClick={() => logoDarkInputRef.current?.click()}
+                >
+                  {uploadingLogoDark ? (
+                    <LoadingSpinner size="sm" />
+                  ) : branding.logo_dark_url ? (
+                    <img 
+                      src={branding.logo_dark_url} 
+                      alt="Logo Escuro" 
+                      className="w-full h-full object-contain p-2"
+                    />
+                  ) : (
+                    <Upload className="h-6 w-6 text-gray-500" />
+                  )}
+                  <input
+                    ref={logoDarkInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file, 'logo_dark', setUploadingLogoDark);
+                    }}
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Logo exibido quando o tema escuro está ativo. Use cores claras para melhor contraste.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => logoDarkInputRef.current?.click()}
+                      disabled={uploadingLogoDark}
+                      className="h-9"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload
+                    </Button>
+                    {branding.logo_dark_url && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeImage('logo_dark')}
                         className="h-9 text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
