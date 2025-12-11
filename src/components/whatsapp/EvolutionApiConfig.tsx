@@ -256,8 +256,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         setConnectionStatus('connected');
         // Buscar informações da instância incluindo número - retorna o telefone encontrado
         const phone = await fetchInstanceInfo();
-        // Verificar status do webhook
-        await checkWebhookStatus();
+        // Não verificar webhook automaticamente para evitar erro se ação não existir
+        // Usuário pode clicar em "Reconfigurar Webhook" manualmente
+        setWebhookStatus('unknown');
         if (phone) {
           toast.success(`WhatsApp conectado: +${phone}`);
         } else {
@@ -343,8 +344,8 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           setConnectionStatus('connected');
           setQrModalOpen(false);
           
-          // Verificar e configurar webhook automaticamente
-          await checkWebhookStatus();
+          // Não verificar webhook automaticamente - usuário pode clicar em "Reconfigurar Webhook"
+          setWebhookStatus('unknown');
           
           if (phone) {
             toast.success(`WhatsApp conectado: +${phone}`);
@@ -921,22 +922,22 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                   ) : webhookStatus === 'not_configured' ? (
                     <Badge variant="destructive" className="text-[10px] sm:text-xs h-5">
                       <XCircle className="h-3 w-3 mr-1" />
-                      Não configurado - Clique em "Reconfigurar Webhook"
+                      Não configurado
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-[10px] sm:text-xs h-5">
-                      Verificando...
+                    <Badge variant="outline" className="text-[10px] sm:text-xs h-5 bg-warning/10 text-warning border-warning/30">
+                      Clique em "Reconfigurar Webhook"
                     </Badge>
                   )}
                 </div>
               </div>
             </div>
             
-            {webhookStatus === 'not_configured' && connectionStatus === 'connected' && (
-              <div className="mt-2 p-2 sm:p-3 bg-destructive/10 border border-destructive/20 rounded text-xs sm:text-sm">
-                <p className="text-destructive font-medium text-xs">⚠️ Webhook não configurado!</p>
+            {(webhookStatus === 'not_configured' || webhookStatus === 'unknown') && connectionStatus === 'connected' && (
+              <div className="mt-2 p-2 sm:p-3 bg-warning/10 border border-warning/20 rounded text-xs sm:text-sm">
+                <p className="text-warning font-medium text-xs">⚠️ Configure o webhook para receber mensagens</p>
                 <p className="text-muted-foreground text-[10px] sm:text-xs mt-1">
-                  As mensagens recebidas não serão capturadas. Clique em "Reconfigurar Webhook" para ativar o recebimento de mensagens.
+                  Clique em "Reconfigurar Webhook" acima para ativar o recebimento de mensagens no chat.
                 </p>
               </div>
             )}
