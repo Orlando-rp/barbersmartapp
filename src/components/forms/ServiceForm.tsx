@@ -40,7 +40,7 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
   const [description, setDescription] = useState(editingService?.description || "");
   const [category, setCategory] = useState(editingService?.category || "");
   const [price, setPrice] = useState(editingService?.price?.toString() || "");
-  const [duration, setDuration] = useState(editingService?.duration?.toString() || "");
+  const [duration, setDuration] = useState(editingService?.duration ? (editingService.duration / 60).toString() : "");
   const [isActive, setIsActive] = useState(editingService?.active ?? true);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
@@ -84,7 +84,7 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
         description: validatedData.description || null,
         category: validatedData.category,
         price: validatedData.price,
-        duration: validatedData.duration,
+        duration: Math.round(validatedData.duration * 60), // Converte horas para minutos
         active: isActive,
       };
 
@@ -224,19 +224,21 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
               )}
             </div>
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="duration" className="text-xs sm:text-sm">Duração (minutos) *</Label>
+              <Label htmlFor="duration" className="text-xs sm:text-sm">Duração (horas) *</Label>
               <div className="relative">
                 <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                 <Input
                   id="duration"
                   type="number"
-                  min="1"
+                  step="0.25"
+                  min="0.25"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
-                  placeholder="30"
+                  placeholder="0.5"
                   className="pl-9 sm:pl-10 text-sm"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">Ex: 0.5 = 30min, 1 = 1h, 1.5 = 1h30</p>
               {errors.duration && (
                 <p className="text-xs text-destructive">{errors.duration}</p>
               )}
