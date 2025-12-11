@@ -23,6 +23,7 @@ interface SpecialHours {
 interface StaffScheduleDay {
   // Formato padrão usado pelo hook
   is_open?: boolean;
+  is_working?: boolean;
   open_time?: string;
   close_time?: string;
   break_start?: string | null;
@@ -31,6 +32,8 @@ interface StaffScheduleDay {
   enabled?: boolean;
   start?: string;
   end?: string;
+  // ID da unidade onde trabalha neste dia (para multi-unit)
+  unit_id?: string;
 }
 
 interface StaffSchedule {
@@ -53,18 +56,25 @@ const dayOfWeekMap: { [key: number]: string } = {
   6: 'saturday'
 };
 
-export const useBusinessHoursValidation = (barbershopId: string | null) => {
+export const useBusinessHoursValidation = (
+  barbershopId: string | null,
+  allRelatedBarbershopIds?: string[],
+  selectedUnitId?: string
+) => {
   const [businessHours, setBusinessHours] = useState<BusinessHours[]>([]);
   const [specialHours, setSpecialHours] = useState<SpecialHours[]>([]);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [staffSchedules, setStaffSchedules] = useState<Record<string, StaffSchedule | null>>({});
   const [loading, setLoading] = useState(true);
 
+  // A unidade efetiva para verificar horários
+  const effectiveUnitId = selectedUnitId || barbershopId;
+
   useEffect(() => {
     if (barbershopId) {
       loadValidationData();
     }
-  }, [barbershopId]);
+  }, [barbershopId, allRelatedBarbershopIds?.join(',')]);
 
   const loadValidationData = async () => {
     if (!barbershopId) return;
@@ -120,12 +130,16 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
         setBlockedDates([]);
       }
 
-      // Load staff schedules
+      // Load staff schedules from all related barbershops for multi-unit support
       try {
+        const searchIds = allRelatedBarbershopIds && allRelatedBarbershopIds.length > 0
+          ? allRelatedBarbershopIds
+          : [barbershopId];
+
         const { data: staffData, error: staffError } = await supabase
           .from('staff')
           .select('id, schedule')
-          .eq('barbershop_id', barbershopId)
+          .in('barbershop_id', searchIds)
           .eq('active', true);
 
         if (staffError && !staffError.message?.includes('does not exist')) {
@@ -148,7 +162,7 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     }
   };
 
-  // Get staff schedule for a specific day (supports both format variations)
+  // Get staff schedule for a specific day (supports both format variations and unit_id filtering)
   const getStaffScheduleForDay = (staffId: string | undefined, dayOfWeek: string): BusinessHours | null => {
     if (!staffId || !staffSchedules[staffId]) return null;
     
@@ -157,8 +171,21 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     
     const daySchedule = schedule[dayOfWeek];
     
-    // Normalize: support both is_open/enabled and open_time/start formats
-    const isOpen = daySchedule.is_open ?? daySchedule.enabled ?? false;
+    // Check if this day's schedule is for the selected unit
+    // If unit_id is defined in the schedule and doesn't match, the staff doesn't work this day at this unit
+    if (daySchedule.unit_id && effectiveUnitId && daySchedule.unit_id !== effectiveUnitId) {
+      return {
+        day_of_week: dayOfWeek,
+        is_open: false, // Not working at this unit on this day
+        open_time: '09:00',
+        close_time: '18:00',
+        break_start: null,
+        break_end: null,
+      };
+    }
+    
+    // Normalize: support both is_open/is_working/enabled and open_time/start formats
+    const isOpen = daySchedule.is_open ?? daySchedule.is_working ?? daySchedule.enabled ?? false;
     const openTime = daySchedule.open_time ?? daySchedule.start ?? '09:00';
     const closeTime = daySchedule.close_time ?? daySchedule.end ?? '18:00';
     

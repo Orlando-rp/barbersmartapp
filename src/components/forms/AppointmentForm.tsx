@@ -90,7 +90,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   const isFirstRender = useRef(true);
   const prevEffectiveBarbershopId = useRef<string | null>(null);
   
-  const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(effectiveBarbershopId);
+  const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(effectiveBarbershopId, allRelatedBarbershopIds, effectiveBarbershopId);
 
   // Busca serviços e clientes da matriz (dados compartilhados)
   useEffect(() => {
