@@ -20,14 +20,21 @@ interface SpecialHours {
   break_end: string | null;
 }
 
+interface StaffScheduleDay {
+  // Formato padrão usado pelo hook
+  is_open?: boolean;
+  open_time?: string;
+  close_time?: string;
+  break_start?: string | null;
+  break_end?: string | null;
+  // Formato alternativo salvo pelo MyStaffProfileForm
+  enabled?: boolean;
+  start?: string;
+  end?: string;
+}
+
 interface StaffSchedule {
-  [day: string]: {
-    is_open: boolean;
-    open_time: string;
-    close_time: string;
-    break_start: string | null;
-    break_end: string | null;
-  };
+  [day: string]: StaffScheduleDay;
 }
 
 interface ValidationResult {
@@ -141,7 +148,7 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     }
   };
 
-  // Get staff schedule for a specific day
+  // Get staff schedule for a specific day (supports both format variations)
   const getStaffScheduleForDay = (staffId: string | undefined, dayOfWeek: string): BusinessHours | null => {
     if (!staffId || !staffSchedules[staffId]) return null;
     
@@ -149,13 +156,19 @@ export const useBusinessHoursValidation = (barbershopId: string | null) => {
     if (!schedule || !schedule[dayOfWeek]) return null;
     
     const daySchedule = schedule[dayOfWeek];
+    
+    // Normalize: support both is_open/enabled and open_time/start formats
+    const isOpen = daySchedule.is_open ?? daySchedule.enabled ?? false;
+    const openTime = daySchedule.open_time ?? daySchedule.start ?? '09:00';
+    const closeTime = daySchedule.close_time ?? daySchedule.end ?? '18:00';
+    
     return {
       day_of_week: dayOfWeek,
-      is_open: daySchedule.is_open,
-      open_time: daySchedule.open_time,
-      close_time: daySchedule.close_time,
-      break_start: daySchedule.break_start,
-      break_end: daySchedule.break_end,
+      is_open: isOpen,
+      open_time: openTime,
+      close_time: closeTime,
+      break_start: daySchedule.break_start ?? null,
+      break_end: daySchedule.break_end ?? null,
     };
   };
 
