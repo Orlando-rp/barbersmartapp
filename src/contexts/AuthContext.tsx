@@ -94,6 +94,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserRole(roleData.role as UserRole);
       }
 
+      // Super admin gets access to ALL barbershops
+      if (roleData?.role === 'super_admin') {
+        const { data: allBarbershops, error: allBarbershopsError } = await supabase
+          .from('barbershops')
+          .select('id, name')
+          .eq('active', true)
+          .order('name');
+
+        if (allBarbershopsError) {
+          console.error('Error fetching all barbershops:', allBarbershopsError);
+        } else if (allBarbershops && allBarbershops.length > 0) {
+          const mappedBarbershops: Barbershop[] = allBarbershops.map((b: any) => ({
+            id: b.id,
+            name: b.name,
+            is_primary: false
+          }));
+          setBarbershops(mappedBarbershops);
+          // Super admin starts with "All" view (null)
+          setSelectedBarbershopId(null);
+          setBarbershopId(mappedBarbershops[0].id);
+        }
+        setNeedsProfileCompletion(false);
+        setLoading(false);
+        return;
+      }
+
       // Check if user has a profile with barbershop
       const { data: profileData } = await supabase
         .from('profiles')
