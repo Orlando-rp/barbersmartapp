@@ -257,27 +257,11 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
         return;
       }
 
-      // Filtrar staff que trabalha na unidade selecionada
-      // Um staff trabalha na unidade se:
-      // 1. Está registrado nessa unidade (barbershop_id === effectiveBarbershopId)
-      // 2. OU tem algum dia de schedule com unit_id === effectiveBarbershopId
-      const staffForSelectedUnit = staffData.filter(member => {
-        // Se está registrado nesta unidade
-        if (member.barbershop_id === effectiveBarbershopId) {
-          return true;
-        }
-        
-        // Se tem schedule com unit_id desta unidade
-        if (member.schedule) {
-          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-          return days.some(day => {
-            const daySchedule = member.schedule[day];
-            return daySchedule?.unit_id === effectiveBarbershopId && daySchedule?.is_working;
-          });
-        }
-        
-        return false;
-      });
+      // Filtrar staff que está registrado diretamente na unidade selecionada
+      // Cada registro de staff tem seu próprio barbershop_id
+      const staffForSelectedUnit = staffData.filter(member => 
+        member.barbershop_id === effectiveBarbershopId
+      );
 
       console.log('[AppointmentForm] fetchStaff: após filtro por unidade:', staffForSelectedUnit.length, 'profissionais');
 
