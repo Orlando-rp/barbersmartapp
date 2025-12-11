@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Scissors, Plus, Search, Clock, Edit, Trash2, FolderOpen, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -372,11 +373,19 @@ const Services = () => {
                       {filteredServices.map((service) => (
                         <TableRow key={service.id} className="hover:bg-muted/50">
                           <TableCell>
-                            <div>
-                              <p className="font-medium">{service.name}</p>
-                              {service.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-1">{service.description}</p>
-                              )}
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10 border border-border">
+                                <AvatarImage src={service.image_url || undefined} alt={service.name} className="object-cover" />
+                                <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                                  <Scissors className="h-4 w-4" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{service.name}</p>
+                                {service.description && (
+                                  <p className="text-sm text-muted-foreground line-clamp-1">{service.description}</p>
+                                )}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -429,12 +438,20 @@ const Services = () => {
                 <div className="md:hidden divide-y divide-border">
                   {filteredServices.map((service) => (
                     <div key={service.id} className="p-4 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{service.name}</p>
-                          {service.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">{service.description}</p>
-                          )}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Avatar className="h-12 w-12 shrink-0 border border-border">
+                            <AvatarImage src={service.image_url || undefined} alt={service.name} className="object-cover" />
+                            <AvatarFallback className="bg-muted text-muted-foreground">
+                              <Scissors className="h-5 w-5" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{service.name}</p>
+                            {service.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-1">{service.description}</p>
+                            )}
+                          </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
                           <Button 
