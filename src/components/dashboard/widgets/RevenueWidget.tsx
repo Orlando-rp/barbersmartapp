@@ -3,50 +3,56 @@ import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardWidget } from "../DashboardWidget";
-import { startOfDay, startOfMonth, subMonths, format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { startOfDay, startOfMonth, subMonths } from "date-fns";
+
 export const RevenueWidget = ({
   onRemove
 }: {
   onRemove?: () => void;
 }) => {
-  const {
-    user
-  } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [todayRevenue, setTodayRevenue] = useState(0);
   const [monthRevenue, setMonthRevenue] = useState(0);
   const [growth, setGrowth] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
+
   const fetchRevenue = async () => {
-    if (!user) return;
+    if (activeBarbershopIds.length === 0) return;
     setIsUpdating(true);
     try {
-      const {
-        data: profile
-      } = await supabase.from('profiles').select('barbershop_id').eq('id', user.id).single();
-      if (!profile?.barbershop_id) return;
       const today = startOfDay(new Date()).toISOString();
       const monthStart = startOfMonth(new Date()).toISOString();
       const lastMonthStart = startOfMonth(subMonths(new Date(), 1)).toISOString();
       const lastMonthEnd = startOfMonth(new Date()).toISOString();
 
       // Today's revenue
-      const {
-        data: todayData
-      } = await supabase.from('transactions').select('amount').eq('barbershop_id', profile.barbershop_id).eq('type', 'receita').gte('transaction_date', today);
-      const todayTotal = todayData?.reduce((sum, t) => sum + t.amount, 0) || 0;
+      const { data: todayData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .in('barbershop_id', activeBarbershopIds)
+        .eq('type', 'receita')
+        .gte('transaction_date', today);
+      const todayTotal = todayData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
 
       // This month's revenue
-      const {
-        data: monthData
-      } = await supabase.from('transactions').select('amount').eq('barbershop_id', profile.barbershop_id).eq('type', 'receita').gte('transaction_date', monthStart);
-      const monthTotal = monthData?.reduce((sum, t) => sum + t.amount, 0) || 0;
+      const { data: monthData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .in('barbershop_id', activeBarbershopIds)
+        .eq('type', 'receita')
+        .gte('transaction_date', monthStart);
+      const monthTotal = monthData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
 
       // Last month's revenue for comparison
-      const {
-        data: lastMonthData
-      } = await supabase.from('transactions').select('amount').eq('barbershop_id', profile.barbershop_id).eq('type', 'receita').gte('transaction_date', lastMonthStart).lt('transaction_date', lastMonthEnd);
-      const lastMonthTotal = lastMonthData?.reduce((sum, t) => sum + t.amount, 0) || 0;
+      const { data: lastMonthData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .in('barbershop_id', activeBarbershopIds)
+        .eq('type', 'receita')
+        .gte('transaction_date', lastMonthStart)
+        .lt('transaction_date', lastMonthEnd);
+      const lastMonthTotal = lastMonthData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
       const growthPercent = lastMonthTotal > 0 ? (monthTotal - lastMonthTotal) / lastMonthTotal * 100 : 0;
       setTodayRevenue(todayTotal);
       setMonthRevenue(monthTotal);
@@ -57,6 +63,7 @@ export const RevenueWidget = ({
       setIsUpdating(false);
     }
   };
+
   useEffect(() => {
     fetchRevenue();
 
@@ -71,11 +78,12 @@ export const RevenueWidget = ({
     }, () => {
       fetchRevenue();
     }).subscribe();
+
     return () => {
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [activeBarbershopIds]);
   return <DashboardWidget title="Receita" icon={<DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
       <div className="space-y-2 sm:space-y-4">
         <div>
