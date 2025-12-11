@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusinessHoursValidation } from "@/hooks/useBusinessHoursValidation";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
+import { useStaffServices } from "@/hooks/useStaffServices";
 import { toast as sonnerToast } from "sonner";
 import { DayProps, DayContent } from "react-day-picker";
 
@@ -41,6 +42,7 @@ type WizardStep = 'unit' | 'professional' | 'service' | 'datetime' | 'client' | 
 export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
   const { barbershopId, barbershops, user } = useAuth();
   const { sharedBarbershopId, allRelatedBarbershopIds } = useSharedBarbershopId();
+  const { staffProvidesService, staffHasServiceRestrictions } = useStaffServices(sharedBarbershopId);
   const { toast } = useToast();
   
   // Se o usuário tem múltiplas barbearias, começa na seleção de unidade
@@ -263,8 +265,8 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
         serviceDuration
       });
 
-      // Step 1: Validate if the date is allowed (check blocked dates, business hours, special hours)
-      const dateValidation = validateDateTime(date);
+      // Step 1: Validate if the date is allowed (check blocked dates, business hours, special hours, staff schedule)
+      const dateValidation = validateDateTime(date, undefined, selectedBarber);
       
       if (!dateValidation.isValid) {
         console.log('❌ Data inválida:', dateValidation.reason);
@@ -276,8 +278,8 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
 
       console.log('✅ Data válida:', dateValidation.availableHours);
 
-      // Step 2: Generate all possible time slots based on business hours AND service duration
-      const possibleSlots = generateTimeSlots(date, serviceDuration);
+      // Step 2: Generate all possible time slots based on business hours, staff schedule AND service duration
+      const possibleSlots = generateTimeSlots(date, serviceDuration, selectedBarber);
       console.log('⏰ Horários possíveis gerados (considerando duração do serviço):', possibleSlots);
 
       if (possibleSlots.length === 0) {
@@ -379,15 +381,15 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
           continue;
         }
         
-        // Check if date is valid (business hours)
-        const validation = validateDateTime(currentDate);
+        // Check if date is valid (business hours + staff schedule)
+        const validation = validateDateTime(currentDate, undefined, selectedBarber);
         
         if (!validation.isValid) {
           availability[dateStr] = 'closed';
           slotCounts[dateStr] = { available: 0, total: 0 };
         } else {
-          // Generate possible slots
-          const possibleSlots = generateTimeSlots(currentDate, serviceDuration);
+          // Generate possible slots based on staff schedule
+          const possibleSlots = generateTimeSlots(currentDate, serviceDuration, selectedBarber);
           
           if (possibleSlots.length === 0) {
             availability[dateStr] = 'closed';
@@ -1068,35 +1070,51 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 Selecione o Serviço
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {services.map((service) => (
-                  <button
-                    key={service.id}
-                    type="button"
-                    onClick={() => setSelectedService(service.id)}
-                    className={cn(
-                      "p-4 rounded-lg border-2 text-left transition-all",
-                      selectedService === service.id
-                        ? "border-primary bg-primary/5"
-                        : "border-muted hover:border-primary/50"
-                    )}
-                  >
-                    <div className="font-medium">{service.name}</div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{formatDuration(service.duration)}</span>
-                      <span>•</span>
-                      <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
+              {(() => {
+                // Filtra serviços baseado no profissional selecionado
+                const filteredServices = services.filter(service => {
+                  // Se o profissional não tem restrições de serviço configuradas, mostra todos
+                  if (!staffHasServiceRestrictions(selectedBarber)) {
+                    return true;
+                  }
+                  // Se tem restrições, mostra apenas os serviços que ele atende
+                  return staffProvidesService(selectedBarber, service.id);
+                });
+
+                return (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {filteredServices.map((service) => (
+                        <button
+                          key={service.id}
+                          type="button"
+                          onClick={() => setSelectedService(service.id)}
+                          className={cn(
+                            "p-4 rounded-lg border-2 text-left transition-all",
+                            selectedService === service.id
+                              ? "border-primary bg-primary/5"
+                              : "border-muted hover:border-primary/50"
+                          )}
+                        >
+                          <div className="font-medium">{service.name}</div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{formatDuration(service.duration)}</span>
+                            <span>•</span>
+                            <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                  </button>
-                ))}
-              </div>
-              
-              {services.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  Nenhum serviço disponível para esta unidade.
-                </div>
-              )}
+                    
+                    {filteredServices.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Nenhum serviço disponível para este profissional.
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
 
