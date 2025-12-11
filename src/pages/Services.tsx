@@ -30,6 +30,16 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+// Formata duração de minutos para formato de horas (ex: 90min -> 1h30)
+const formatDuration = (minutes: number): string => {
+  if (!minutes || minutes <= 0) return "0min";
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `${mins}min`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h${mins.toString().padStart(2, '0')}`;
+};
+
 const Services = () => {
   const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
@@ -196,7 +206,7 @@ const Services = () => {
           <Card className="barbershop-card">
             <CardContent className="p-3 sm:pt-6 sm:px-6">
               <div className="text-xl sm:text-2xl font-bold text-warning">
-                {services.length > 0 ? Math.round(services.reduce((sum, s) => sum + s.duration, 0) / services.length) : 0}min
+                {formatDuration(services.length > 0 ? Math.round(services.reduce((sum, s) => sum + s.duration, 0) / services.length) : 0)}
               </div>
               <p className="text-xs sm:text-sm text-muted-foreground truncate">Duração Média</p>
             </CardContent>
@@ -285,7 +295,7 @@ const Services = () => {
                     </div>
                     <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
                       <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-0.5 sm:mr-1" />
-                      <span>{service.duration}min</span>
+                      <span>{formatDuration(service.duration)}</span>
                     </div>
                   </div>
                   
