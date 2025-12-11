@@ -23,7 +23,8 @@ import {
   Receipt,
   Edit,
   Trash2,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Building2
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -39,6 +40,7 @@ interface Transaction {
   transaction_date: string;
   notes: string | null;
   created_at: string;
+  commission_amount?: number;
 }
 
 interface FinancialSummary {
@@ -49,7 +51,7 @@ interface FinancialSummary {
 }
 
 const Finance = () => {
-  const { activeBarbershopIds } = useAuth();
+  const { activeBarbershopIds, selectedBarbershopId, barbershops } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalRevenue: 0,
@@ -59,6 +61,8 @@ const Finance = () => {
   });
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+
+  const isConsolidatedView = barbershops.length > 1 && selectedBarbershopId === null;
 
   useEffect(() => {
     if (activeBarbershopIds.length === 0) {
@@ -97,10 +101,10 @@ const Finance = () => {
     try {
       setLoading(true);
       const firstDayOfMonth = `${selectedMonth}-01`;
-      const lastDay = new Date(selectedMonth + '-01');
-      lastDay.setMonth(lastDay.getMonth() + 1);
-      lastDay.setDate(0);
-      const lastDayOfMonth = lastDay.toISOString().split('T')[0];
+      // Usar o primeiro dia do próximo mês para capturar todas as transações do mês
+      const nextMonth = new Date(selectedMonth + '-01');
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const firstDayNextMonth = nextMonth.toISOString().split('T')[0];
 
       // Buscar transações do mês
       const { data: transactionsData, error } = await supabase
@@ -108,7 +112,7 @@ const Finance = () => {
         .select('*')
         .in('barbershop_id', activeBarbershopIds)
         .gte('transaction_date', firstDayOfMonth)
-        .lte('transaction_date', lastDayOfMonth)
+        .lt('transaction_date', firstDayNextMonth)
         .order('transaction_date', { ascending: false });
 
       if (error) throw error;
@@ -124,15 +128,16 @@ const Finance = () => {
         ?.filter(t => t.type === 'despesa')
         .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
 
-      const commissionExpenses = transactionsData
-        ?.filter(t => t.type === 'despesa' && t.category === 'salarios')
-        .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+      // Comissões: somar commission_amount de todas as transações que possuem
+      const totalCommissions = transactionsData
+        ?.filter(t => t.commission_amount && t.commission_amount > 0)
+        .reduce((sum, t) => sum + Number(t.commission_amount || 0), 0) || 0;
 
       setSummary({
         totalRevenue: revenue,
         totalExpenses: expenses,
         netProfit: revenue - expenses,
-        commissions: commissionExpenses
+        commissions: totalCommissions
       });
     } catch (error) {
       console.error('Erro ao buscar dados financeiros:', error);
@@ -212,12 +217,20 @@ const Finance = () => {
           <Card className="barbershop-card">
             <CardContent className="pt-4 lg:pt-6">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 text-success" />
-                <div>
-                  <div className="text-base lg:text-2xl font-bold text-foreground">
+                <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 text-success flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-base lg:text-2xl font-bold text-foreground truncate">
                     R$ {summary.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </div>
-                  <p className="text-xs lg:text-sm text-muted-foreground">Receita</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs lg:text-sm text-muted-foreground">Receita</p>
+                    {isConsolidatedView && (
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 flex items-center gap-0.5">
+                        <Building2 className="h-2 w-2" />
+                        <span>{barbershops.length}</span>
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -226,12 +239,20 @@ const Finance = () => {
           <Card className="barbershop-card">
             <CardContent className="pt-4 lg:pt-6">
               <div className="flex items-center space-x-2">
-                <TrendingDown className="h-4 w-4 lg:h-5 lg:w-5 text-destructive" />
-                <div>
-                  <div className="text-base lg:text-2xl font-bold text-foreground">
+                <TrendingDown className="h-4 w-4 lg:h-5 lg:w-5 text-destructive flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-base lg:text-2xl font-bold text-foreground truncate">
                     R$ {summary.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </div>
-                  <p className="text-xs lg:text-sm text-muted-foreground">Despesas</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs lg:text-sm text-muted-foreground">Despesas</p>
+                    {isConsolidatedView && (
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 flex items-center gap-0.5">
+                        <Building2 className="h-2 w-2" />
+                        <span>{barbershops.length}</span>
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -240,12 +261,20 @@ const Finance = () => {
           <Card className="barbershop-card">
             <CardContent className="pt-4 lg:pt-6">
               <div className="flex items-center space-x-2">
-                <PiggyBank className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
-                <div>
-                  <div className="text-base lg:text-2xl font-bold text-foreground">
+                <PiggyBank className="h-4 w-4 lg:h-5 lg:w-5 text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-base lg:text-2xl font-bold text-foreground truncate">
                     R$ {summary.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </div>
-                  <p className="text-xs lg:text-sm text-muted-foreground">Lucro</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs lg:text-sm text-muted-foreground">Lucro</p>
+                    {isConsolidatedView && (
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 flex items-center gap-0.5">
+                        <Building2 className="h-2 w-2" />
+                        <span>{barbershops.length}</span>
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -254,12 +283,20 @@ const Finance = () => {
           <Card className="barbershop-card">
             <CardContent className="pt-4 lg:pt-6">
               <div className="flex items-center space-x-2">
-                <Receipt className="h-4 w-4 lg:h-5 lg:w-5 text-warning" />
-                <div>
-                  <div className="text-base lg:text-2xl font-bold text-foreground">
+                <Receipt className="h-4 w-4 lg:h-5 lg:w-5 text-warning flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-base lg:text-2xl font-bold text-foreground truncate">
                     R$ {summary.commissions.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                   </div>
-                  <p className="text-xs lg:text-sm text-muted-foreground">Comissões</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs lg:text-sm text-muted-foreground">Comissões</p>
+                    {isConsolidatedView && (
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 flex items-center gap-0.5">
+                        <Building2 className="h-2 w-2" />
+                        <span>{barbershops.length}</span>
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
