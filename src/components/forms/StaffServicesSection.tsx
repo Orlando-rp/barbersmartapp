@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Scissors, Loader2, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { formatDuration } from "@/lib/utils";
 
 interface Service {
   id: string;
@@ -166,7 +167,7 @@ export const StaffServicesSection = ({
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{service.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {service.duration} min • R$ {service.price.toFixed(2)}
+                          {formatDuration(service.duration)} • R$ {service.price.toFixed(2)}
                         </p>
                       </div>
                     </button>

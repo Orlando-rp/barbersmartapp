@@ -12,7 +12,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1061,7 +1061,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                     <div className="font-medium">{service.name}</div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <Clock className="h-3 w-3" />
-                      <span>{service.duration}min</span>
+                      <span>{formatDuration(service.duration)}</span>
                       <span>•</span>
                       <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
                     </div>
@@ -1418,7 +1418,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                         <p className="text-sm text-muted-foreground">Serviço</p>
                         <p className="font-semibold">{selectedServiceData?.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {selectedServiceData?.duration}min - R$ {selectedServiceData?.price.toFixed(2)}
+                          {formatDuration(selectedServiceData?.duration || 0)} - R$ {selectedServiceData?.price.toFixed(2)}
                         </p>
                       </div>
                     </div>

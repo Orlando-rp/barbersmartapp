@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { formatDuration } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -503,7 +504,7 @@ const BarbershopLanding = () => {
                           )}
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Clock className="h-4 w-4" />
-                            <span>{service.duration} min</span>
+                            <span>{formatDuration(service.duration)}</span>
                           </div>
                         </CardContent>
                       </Card>
