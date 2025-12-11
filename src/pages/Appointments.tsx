@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit } from "lucide-react";
+import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -28,6 +28,7 @@ interface Appointment {
   staff_name: string | null;
   staff_avatar_url: string | null;
   barbershop_id: string;
+  barbershop_name: string | null;
   staff: {
     name: string;
     avatar_url: string | null;
@@ -42,7 +43,7 @@ const statusConfig = {
 };
 
 const Appointments = () => {
-  const { activeBarbershopIds } = useAuth();
+  const { activeBarbershopIds, barbershops } = useAuth();
   const { toast } = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
@@ -53,6 +54,9 @@ const Appointments = () => {
   const [staff, setStaff] = useState<any[]>([]);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Map barbershop IDs to names for quick lookup
+  const barbershopNamesMap = new Map(barbershops.map(b => [b.id, b.name]));
 
   useEffect(() => {
     if (activeBarbershopIds.length > 0) {
@@ -168,7 +172,13 @@ const Appointments = () => {
       const staffIds = [...new Set(appointmentsData.map(a => a.staff_id).filter(Boolean))];
 
       if (staffIds.length === 0) {
-        setAppointments(appointmentsData.map(apt => ({ ...apt, staff: null, staff_name: null, staff_avatar_url: null })));
+        setAppointments(appointmentsData.map(apt => ({ 
+          ...apt, 
+          staff: null, 
+          staff_name: null, 
+          staff_avatar_url: null,
+          barbershop_name: barbershopNamesMap.get(apt.barbershop_id) || null
+        })));
         return;
       }
 
@@ -201,7 +211,7 @@ const Appointments = () => {
         }
       });
 
-      // Transform appointments with staff names and avatars
+      // Transform appointments with staff names, avatars and barbershop names
       const transformedData = appointmentsData.map(apt => {
         const staffInfo = apt.staff_id ? staffLookupMap.get(apt.staff_id) : null;
         const staffName = staffInfo?.name || 'Nome não disponível';
@@ -210,7 +220,8 @@ const Appointments = () => {
           ...apt,
           staff_name: apt.staff_id ? staffName : null,
           staff_avatar_url: staffAvatarUrl,
-          staff: apt.staff_id ? { name: staffName, avatar_url: staffAvatarUrl } : null
+          staff: apt.staff_id ? { name: staffName, avatar_url: staffAvatarUrl } : null,
+          barbershop_name: barbershopNamesMap.get(apt.barbershop_id) || null
         };
       });
       
@@ -556,17 +567,25 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-xs md:text-sm">
-                        <Avatar className="h-6 w-6 md:h-8 md:w-8">
-                          <AvatarImage src={appointment.staff?.avatar_url || undefined} alt={appointment.staff?.name || ''} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-[10px] md:text-xs">
-                            {appointment.staff?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-3 w-3 md:h-4 md:w-4" />}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="truncate">
-                          <span className="hidden sm:inline">Barbeiro: </span>
-                          <span className="font-medium">{appointment.staff?.name || 'Não especificado'}</span>
-                        </span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs md:text-sm">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6 md:h-8 md:w-8">
+                            <AvatarImage src={appointment.staff?.avatar_url || undefined} alt={appointment.staff?.name || ''} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px] md:text-xs">
+                              {appointment.staff?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-3 w-3 md:h-4 md:w-4" />}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="truncate">
+                            <span className="hidden sm:inline">Barbeiro: </span>
+                            <span className="font-medium">{appointment.staff?.name || 'Não especificado'}</span>
+                          </span>
+                        </div>
+                        {activeBarbershopIds.length > 1 && appointment.barbershop_name && (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <MapPin className="h-3 w-3 md:h-4 md:w-4" />
+                            <span className="truncate max-w-[150px]">{appointment.barbershop_name}</span>
+                          </div>
+                        )}
                       </div>
 
                       {appointment.notes && (
