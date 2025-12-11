@@ -91,15 +91,23 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     if (!barbershopId) return;
 
     try {
-      // Primeiro buscar config global da tabela system_config
-      const { data: globalConfig } = await supabase
-        .from('system_config')
-        .select('*')
-        .eq('key', 'evolution_api')
-        .maybeSingle();
-
-      const globalApiUrl = globalConfig?.value?.api_url || '';
-      const globalApiKey = globalConfig?.value?.api_key || '';
+      // Buscar config global via edge function (bypass RLS)
+      let globalApiUrl = '';
+      let globalApiKey = '';
+      
+      try {
+        const { data: globalData, error: globalError } = await supabase.functions.invoke('get-evolution-config');
+        
+        if (!globalError && globalData?.success && globalData?.config) {
+          globalApiUrl = globalData.config.api_url || '';
+          globalApiKey = globalData.config.api_key || '';
+          console.log('[EvolutionApiConfig] Global config loaded:', { hasUrl: !!globalApiUrl, hasKey: !!globalApiKey });
+        } else {
+          console.log('[EvolutionApiConfig] No global config or error:', globalError);
+        }
+      } catch (globalErr) {
+        console.error('[EvolutionApiConfig] Error fetching global config:', globalErr);
+      }
 
       // Depois buscar configuração específica da barbearia
       const { data, error } = await supabase
