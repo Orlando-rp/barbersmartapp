@@ -21,6 +21,7 @@ interface Barbershop {
   name: string;
   address: string;
   phone: string;
+  parent_id: string | null;
 }
 
 interface Service {
@@ -89,6 +90,7 @@ export default function PublicBooking() {
   const [success, setSuccess] = useState(false);
 
   const [barbershop, setBarbershop] = useState<Barbershop | null>(null);
+  const [allRelatedBarbershopIds, setAllRelatedBarbershopIds] = useState<string[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [staffServices, setStaffServices] = useState<StaffService[]>([]);
@@ -155,7 +157,7 @@ export default function PublicBooking() {
       // Load barbershop info
       const { data: shop, error: shopError } = await supabase
         .from('barbershops')
-        .select('id, name, address, phone')
+        .select('id, name, address, phone, parent_id')
         .eq('id', barbershopId)
         .single();
 
@@ -165,16 +167,32 @@ export default function PublicBooking() {
       }
       setBarbershop(shop);
 
-      // Load active services
+      // Determine root barbershop ID for shared data (matriz)
+      const rootId = shop.parent_id || shop.id;
+      
+      // Get all related barbershops (parent + children)
+      const { data: relatedData } = await supabase
+        .from('barbershops')
+        .select('id')
+        .or(`id.eq.${rootId},parent_id.eq.${rootId}`);
+
+      const allIds = relatedData?.map(b => b.id) || [barbershopId!];
+      setAllRelatedBarbershopIds(allIds);
+      
+      console.log('[PublicBooking] Current unit:', barbershopId);
+      console.log('[PublicBooking] Root/matriz:', rootId);
+      console.log('[PublicBooking] All related IDs:', allIds);
+
+      // Load active services from ALL related units (shared data)
       const { data: servicesData } = await supabase
         .from('services')
         .select('id, name, price, duration, description')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', allIds)
         .eq('active', true)
         .order('name');
       setServices(servicesData || []);
 
-      // Load active staff with schedule and avatar
+      // Load active staff for THIS specific unit only
       const { data: staffData } = await supabase
         .from('staff')
         .select('id, user_id, schedule, profiles(full_name, avatar_url)')
@@ -182,13 +200,13 @@ export default function PublicBooking() {
         .eq('active', true);
       setStaffList(staffData || []);
 
-      // Load staff services relationships
+      // Load staff services relationships from all related units
       const { data: staffServicesData } = await supabase
         .from('staff_services')
         .select('staff_id, service_id');
       setStaffServices(staffServicesData || []);
 
-      // Load business hours
+      // Load business hours for THIS specific unit
       const { data: hoursData } = await supabase
         .from('business_hours')
         .select('*')
