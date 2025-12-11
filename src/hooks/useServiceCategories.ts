@@ -25,13 +25,13 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export const useServiceCategories = () => {
-  const { sharedBarbershopId, loading: loadingBarbershop } = useSharedBarbershopId();
+  const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = useCallback(async () => {
-    if (!sharedBarbershopId || loadingBarbershop) {
+    if (!sharedBarbershopId || loadingBarbershop || allRelatedBarbershopIds.length === 0) {
       setCategories([]);
       setLoading(false);
       return;
@@ -40,18 +40,10 @@ export const useServiceCategories = () => {
     try {
       setLoading(true);
       
-      // Buscar categorias da matriz E de todas as unidades filhas
-      const { data: childUnits } = await supabase
-        .from('barbershops')
-        .select('id')
-        .eq('parent_id', sharedBarbershopId);
-      
-      const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
-      
       const { data, error } = await supabase
         .from('service_categories')
         .select('*')
-        .in('barbershop_id', allBarbershopIds)
+        .in('barbershop_id', allRelatedBarbershopIds)
         .order('name', { ascending: true });
 
       if (error) {
@@ -74,7 +66,7 @@ export const useServiceCategories = () => {
     } finally {
       setLoading(false);
     }
-  }, [sharedBarbershopId, loadingBarbershop]);
+  }, [sharedBarbershopId, allRelatedBarbershopIds, loadingBarbershop]);
 
   const createDefaultCategories = async () => {
     if (!sharedBarbershopId) return;
@@ -163,22 +155,14 @@ export const useServiceCategories = () => {
   };
 
   const deleteCategory = async (id: string) => {
-    if (!sharedBarbershopId) return false;
+    if (!sharedBarbershopId || allRelatedBarbershopIds.length === 0) return false;
     
     try {
-      // Buscar todas as barbearias relacionadas
-      const { data: childUnits } = await supabase
-        .from('barbershops')
-        .select('id')
-        .eq('parent_id', sharedBarbershopId);
-      
-      const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
-      
       // Check if category is in use in any related barbershop
       const { data: services } = await supabase
         .from('services')
         .select('id')
-        .in('barbershop_id', allBarbershopIds)
+        .in('barbershop_id', allRelatedBarbershopIds)
         .eq('category', categories.find(c => c.id === id)?.name)
         .limit(1);
 
