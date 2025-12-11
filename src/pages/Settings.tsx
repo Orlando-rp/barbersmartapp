@@ -12,7 +12,9 @@ import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
 import DomainSettings from "@/components/settings/DomainSettings";
 import PortfolioGalleryManager from "@/components/settings/PortfolioGalleryManager";
 import NotificationSettings from "@/components/settings/NotificationSettings";
-import { Save, User, Bell, Clock, Globe, Image } from "lucide-react";
+import BarbershopBrandingConfig from "@/components/settings/BarbershopBrandingConfig";
+import { FeatureGate } from "@/components/FeatureGate";
+import { Save, User, Bell, Clock, Globe, Image, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -237,6 +239,16 @@ const SettingsPage = () => {
           {/* Portfolio Gallery */}
           <div className="lg:col-span-2">
             <PortfolioGalleryManager />
+          </div>
+
+          {/* White-Label Branding - Protected by FeatureGate */}
+          <div className="lg:col-span-2">
+            <FeatureGate 
+              feature="white_label"
+              upgradeMessage="O branding personalizado está disponível apenas para planos com White-Label. Faça upgrade para personalizar completamente a identidade visual do seu sistema."
+            >
+              <BarbershopBrandingConfig />
+            </FeatureGate>
           </div>
         </div>
       </div>

@@ -73,7 +73,7 @@ const navigation: NavItem[] = [
 export const MobileSidebar = () => {
   const [open, setOpen] = useState(false);
   const { barbershops, userRole } = useAuth();
-  const { branding } = useBranding();
+  const { effectiveBranding } = useBranding();
   const { hasFeature } = useFeatureFlags();
   const { subscription, loading: subscriptionLoading } = useSubscription();
   const location = useLocation();
@@ -110,20 +110,20 @@ export const MobileSidebar = () => {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center space-x-2">
-              {branding?.logo_url ? (
+              {effectiveBranding?.logo_url ? (
                 <img 
-                  src={branding.logo_url} 
-                  alt={branding.system_name || 'Logo'} 
+                  src={effectiveBranding.logo_url} 
+                  alt={effectiveBranding.system_name || 'Logo'} 
                   className="w-8 h-8 rounded-lg object-contain"
                 />
               ) : (
                 <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-sm">
-                    {branding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
+                    {effectiveBranding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
                   </span>
                 </div>
               )}
-              <span className="font-bold text-lg">{branding?.system_name || 'BarberSmart'}</span>
+              <span className="font-bold text-lg">{effectiveBranding?.system_name || 'BarberSmart'}</span>
             </div>
           </div>
 
