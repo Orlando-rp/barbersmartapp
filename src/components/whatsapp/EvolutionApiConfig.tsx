@@ -492,7 +492,15 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       
       if (error) {
         console.error('[checkWebhookStatus] Error:', error);
-        setWebhookStatus('unknown');
+        // Se a ação não existe ainda, assume webhook não configurado
+        setWebhookStatus('not_configured');
+        return;
+      }
+
+      // Se recebeu erro de ação desconhecida, assume não configurado
+      if (data?.error?.includes('desconhecida')) {
+        console.log('[checkWebhookStatus] Action not supported yet, assuming not configured');
+        setWebhookStatus('not_configured');
         return;
       }
 
@@ -511,7 +519,8 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       }
     } catch (error) {
       console.error('[checkWebhookStatus] Error:', error);
-      setWebhookStatus('unknown');
+      // Em caso de erro, assume não configurado (mais seguro)
+      setWebhookStatus('not_configured');
     }
   };
 
