@@ -23,6 +23,7 @@ import BusinessHours from "./pages/BusinessHours";
 import ClientHistory from "./pages/ClientHistory";
 import Reviews from "./pages/Reviews";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
+import WhatsAppChat from "./pages/WhatsAppChat";
 import Waitlist from "./pages/Waitlist";
 import PublicBooking from "./pages/PublicBooking";
 import BarbershopLanding from "./pages/BarbershopLanding";
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/client-history/:clientId" element={<ProtectedRoute><ClientHistory /></ProtectedRoute>} />
             <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
             <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppSettings /></ProtectedRoute>} />
+            <Route path="/whatsapp-chat" element={<ProtectedRoute><WhatsAppChat /></ProtectedRoute>} />
             <Route path="/chatbot" element={<ProtectedRoute><ChatbotSettings /></ProtectedRoute>} />
             <Route path="/waitlist" element={<ProtectedRoute><Waitlist /></ProtectedRoute>} />
             <Route path="/meus-ganhos" element={<ProtectedRoute><MyEarnings /></ProtectedRoute>} />
