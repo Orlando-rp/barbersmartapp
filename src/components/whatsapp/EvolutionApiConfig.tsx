@@ -66,6 +66,8 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
   const [isUsingGlobalConfig, setIsUsingGlobalConfig] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<'unknown' | 'configured' | 'not_configured'>('unknown');
+  const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
 
   const handleSelectTemplate = (template: MessageTemplate) => {
     setTestMessage(template.message);
@@ -254,6 +256,8 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         setConnectionStatus('connected');
         // Buscar informações da instância incluindo número - retorna o telefone encontrado
         const phone = await fetchInstanceInfo();
+        // Verificar status do webhook
+        await checkWebhookStatus();
         if (phone) {
           toast.success(`WhatsApp conectado: +${phone}`);
         } else {
@@ -338,6 +342,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           
           setConnectionStatus('connected');
           setQrModalOpen(false);
+          
+          // Verificar e configurar webhook automaticamente
+          await checkWebhookStatus();
           
           if (phone) {
             toast.success(`WhatsApp conectado: +${phone}`);
@@ -464,6 +471,47 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         });
     } catch (error) {
       console.error('Erro ao atualizar status no banco:', error);
+    }
+  };
+
+  const checkWebhookStatus = async () => {
+    if (!config.apiUrl || !config.apiKey || !config.instanceName) return;
+    
+    try {
+      console.log('[checkWebhookStatus] Checking webhook for:', config.instanceName);
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'getWebhook',
+          apiUrl: config.apiUrl,
+          apiKey: config.apiKey,
+          instanceName: config.instanceName
+        }
+      });
+
+      console.log('[checkWebhookStatus] Response:', data);
+      
+      if (error) {
+        console.error('[checkWebhookStatus] Error:', error);
+        setWebhookStatus('unknown');
+        return;
+      }
+
+      // Check if webhook is configured with our URL
+      const webhookConfig = data?.webhook || data;
+      const configuredUrl = webhookConfig?.url || webhookConfig?.webhookUrl;
+      
+      setWebhookUrl(configuredUrl || null);
+      
+      if (configuredUrl && configuredUrl.includes('evolution-webhook')) {
+        setWebhookStatus('configured');
+        console.log('[checkWebhookStatus] Webhook is configured:', configuredUrl);
+      } else {
+        setWebhookStatus('not_configured');
+        console.log('[checkWebhookStatus] Webhook NOT configured. URL:', configuredUrl);
+      }
+    } catch (error) {
+      console.error('[checkWebhookStatus] Error:', error);
+      setWebhookStatus('unknown');
     }
   };
 
@@ -618,10 +666,15 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         }
       });
 
+      console.log('[reconfigureWebhook] Response:', data);
+
       if (error) throw error;
 
-      if (data?.success || data?.url) {
+      if (data?.success || data?.url || data?.enabled) {
+        setWebhookStatus('configured');
         toast.success("Webhook reconfigurado com sucesso! Agora as mensagens serão recebidas.");
+        // Verificar novamente após um momento
+        setTimeout(() => checkWebhookStatus(), 2000);
       } else {
         throw new Error(data?.error || "Erro ao configurar webhook");
       }
@@ -848,7 +901,36 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                   {getConnectionBadge()}
                 </div>
               </div>
+              <div className="space-y-0.5 sm:space-y-1 col-span-1 sm:col-span-2">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Webhook (recebimento):</p>
+                <div className="text-[10px] sm:text-xs">
+                  {webhookStatus === 'configured' ? (
+                    <Badge className="bg-success/10 text-success text-[10px] sm:text-xs h-5">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Configurado
+                    </Badge>
+                  ) : webhookStatus === 'not_configured' ? (
+                    <Badge variant="destructive" className="text-[10px] sm:text-xs h-5">
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Não configurado - Clique em "Reconfigurar Webhook"
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] sm:text-xs h-5">
+                      Verificando...
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
+            
+            {webhookStatus === 'not_configured' && connectionStatus === 'connected' && (
+              <div className="mt-2 p-2 sm:p-3 bg-destructive/10 border border-destructive/20 rounded text-xs sm:text-sm">
+                <p className="text-destructive font-medium text-xs">⚠️ Webhook não configurado!</p>
+                <p className="text-muted-foreground text-[10px] sm:text-xs mt-1">
+                  As mensagens recebidas não serão capturadas. Clique em "Reconfigurar Webhook" para ativar o recebimento de mensagens.
+                </p>
+              </div>
+            )}
             
             {(!config.apiUrl || !config.apiKey) && (
               <div className="mt-2 p-2 sm:p-3 bg-warning/10 border border-warning/20 rounded text-xs sm:text-sm">
