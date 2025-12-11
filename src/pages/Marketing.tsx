@@ -59,7 +59,7 @@ interface LoyaltyStats {
 }
 
 const Marketing = () => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loyaltyStats, setLoyaltyStats] = useState<LoyaltyStats>({
@@ -71,10 +71,10 @@ const Marketing = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchMarketingData();
     }
-  }, [barbershopId]);
+  }, [activeBarbershopIds]);
 
   const fetchMarketingData = async () => {
     try {
@@ -84,7 +84,7 @@ const Marketing = () => {
       const { data: campaignsData, error: campaignsError } = await supabase
         .from('campaigns')
         .select('id, name, type, status, created_at')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .order('created_at', { ascending: false });
 
       if (campaignsError) throw campaignsError;
@@ -94,7 +94,7 @@ const Marketing = () => {
       const { data: couponsData, error: couponsError } = await supabase
         .from('coupons')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .order('created_at', { ascending: false });
 
       if (couponsError) throw couponsError;
@@ -104,14 +104,14 @@ const Marketing = () => {
       const { data: loyaltyData, error: loyaltyError } = await supabase
         .from('loyalty_points')
         .select('points, total_earned, total_redeemed')
-        .eq('barbershop_id', barbershopId);
+        .in('barbershop_id', activeBarbershopIds);
 
       if (loyaltyError) throw loyaltyError;
 
       const { count: totalClients } = await supabase
         .from('clients')
         .select('*', { count: 'exact', head: true })
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('active', true);
 
       const stats = {

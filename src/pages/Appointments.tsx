@@ -27,6 +27,7 @@ interface Appointment {
   staff_id: string | null;
   staff_name: string | null;
   staff_avatar_url: string | null;
+  barbershop_id: string;
   staff: {
     name: string;
     avatar_url: string | null;
@@ -41,7 +42,7 @@ const statusConfig = {
 };
 
 const Appointments = () => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const { toast } = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
@@ -54,15 +55,15 @@ const Appointments = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchStaff();
       fetchAppointments();
     }
-  }, [barbershopId]);
+  }, [activeBarbershopIds]);
 
   // Real-time updates for appointments list
   useEffect(() => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
 
     const channel = supabase
       .channel('appointments-list-realtime')
@@ -71,13 +72,15 @@ const Appointments = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'appointments',
-          filter: `barbershop_id=eq.${barbershopId}`
+          table: 'appointments'
         },
-        (payload) => {
-          console.log('Appointment list changed:', payload);
-          // Recarregar lista quando houver mudanças
-          fetchAppointments();
+        (payload: any) => {
+          // Only refetch if the change is for one of our barbershops
+          if (payload.new?.barbershop_id && activeBarbershopIds.includes(payload.new.barbershop_id)) {
+            fetchAppointments();
+          } else if (payload.old?.barbershop_id && activeBarbershopIds.includes(payload.old.barbershop_id)) {
+            fetchAppointments();
+          }
         }
       )
       .subscribe();
@@ -85,7 +88,7 @@ const Appointments = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [barbershopId]);
+  }, [activeBarbershopIds]);
 
   useEffect(() => {
     filterAppointments();
@@ -96,7 +99,7 @@ const Appointments = () => {
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select('id, user_id')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('active', true);
 
       if (staffError) throw staffError;
@@ -147,9 +150,10 @@ const Appointments = () => {
           client_phone,
           service_name,
           service_price,
-          staff_id
+          staff_id,
+          barbershop_id
         `)
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .order('appointment_date', { ascending: true })
         .order('appointment_time', { ascending: true });
 
@@ -256,7 +260,7 @@ const Appointments = () => {
       const { data: whatsappConfig, error: configError } = await supabase
         .from('whatsapp_config')
         .select('config, is_active')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', appointment.barbershop_id)
         .eq('provider', 'evolution')
         .maybeSingle();
 
@@ -314,7 +318,7 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
           instanceName: evolutionConfig.instance_name,
           to: appointment.client_phone,
           message: messages[type],
-          barbershopId,
+          barbershopId: appointment.barbershop_id,
           recipientName: appointment.client_name,
           appointmentId: appointment.id
         }
@@ -350,7 +354,7 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
       const { error } = await supabase
         .from('transactions')
         .insert({
-          barbershop_id: barbershopId,
+          barbershop_id: appointment.barbershop_id,
           appointment_id: appointment.id,
           type: 'receita',
           amount: appointment.service_price,

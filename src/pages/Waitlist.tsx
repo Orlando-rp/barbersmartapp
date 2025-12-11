@@ -64,6 +64,7 @@ interface WaitlistEntry {
   created_at: string;
   service_id: string | null;
   staff_id: string | null;
+  barbershop_id: string;
   service?: { name: string } | null;
   staff?: { 
     profiles: { full_name: string } | null 
@@ -80,7 +81,7 @@ const statusConfig = {
 };
 
 const Waitlist = () => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const { toast } = useToast();
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +97,7 @@ const Waitlist = () => {
   }>({ open: false, entry: null });
 
   const fetchEntries = async () => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
 
     setLoading(true);
     try {
@@ -108,7 +109,7 @@ const Waitlist = () => {
           staff:staff(profiles:profiles!staff_user_id_fkey(full_name)),
           client:clients(name, phone)
         `)
-        .eq("barbershop_id", barbershopId)
+        .in("barbershop_id", activeBarbershopIds)
         .order("preferred_date", { ascending: true })
         .order("created_at", { ascending: true });
 
@@ -134,11 +135,11 @@ const Waitlist = () => {
 
   useEffect(() => {
     fetchEntries();
-  }, [barbershopId, statusFilter]);
+  }, [activeBarbershopIds, statusFilter]);
 
   // Real-time subscription
   useEffect(() => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
 
     const channel = supabase
       .channel("waitlist-changes")
@@ -147,11 +148,12 @@ const Waitlist = () => {
         {
           event: "*",
           schema: "public",
-          table: "waitlist",
-          filter: `barbershop_id=eq.${barbershopId}`,
+          table: "waitlist"
         },
-        () => {
-          fetchEntries();
+        (payload: any) => {
+          if (payload.new?.barbershop_id && activeBarbershopIds.includes(payload.new.barbershop_id)) {
+            fetchEntries();
+          }
         }
       )
       .subscribe();
@@ -159,10 +161,10 @@ const Waitlist = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [barbershopId]);
+  }, [activeBarbershopIds]);
 
   const expireOldEntries = async () => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
     
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -170,7 +172,7 @@ const Waitlist = () => {
       const { data, error } = await supabase
         .from("waitlist")
         .update({ status: "expired" })
-        .eq("barbershop_id", barbershopId)
+        .in("barbershop_id", activeBarbershopIds)
         .lt("preferred_date", today)
         .in("status", ["waiting", "notified"])
         .select();
@@ -237,7 +239,7 @@ const Waitlist = () => {
     try {
       const { data, error } = await supabase.functions.invoke("notify-waitlist", {
         body: {
-          barbershopId,
+          barbershopId: entry.barbershop_id,
           availableDate: entry.preferred_date,
           availableTime: entry.preferred_time_start?.slice(0, 5),
           staffId: entry.staff_id,
