@@ -79,6 +79,12 @@ CREATE POLICY "Staff can update barbershop messages"
   TO authenticated
   USING (user_belongs_to_barbershop(barbershop_id));
 
+-- Política de DELETE: todos os funcionários da barbearia podem excluir mensagens
+CREATE POLICY "Staff can delete barbershop messages"
+  ON whatsapp_messages FOR DELETE
+  TO authenticated
+  USING (user_belongs_to_barbershop(barbershop_id));
+
 -- Service role pode fazer tudo (para webhooks)
 CREATE POLICY "Service role full access"
   ON whatsapp_messages FOR ALL
