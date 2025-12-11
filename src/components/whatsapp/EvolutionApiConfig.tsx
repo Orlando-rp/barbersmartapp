@@ -98,10 +98,16 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       try {
         const { data: globalData, error: globalError } = await supabase.functions.invoke('get-evolution-config');
         
+        console.log('[EvolutionApiConfig] Global config response:', { globalData, globalError });
+        
         if (!globalError && globalData?.success && globalData?.config) {
           globalApiUrl = globalData.config.api_url || '';
           globalApiKey = globalData.config.api_key || '';
-          console.log('[EvolutionApiConfig] Global config loaded:', { hasUrl: !!globalApiUrl, hasKey: !!globalApiKey });
+          console.log('[EvolutionApiConfig] Global config loaded:', { 
+            hasUrl: !!globalApiUrl, 
+            hasKey: !!globalApiKey,
+            url: globalApiUrl 
+          });
         } else {
           console.log('[EvolutionApiConfig] No global config or error:', globalError);
         }
@@ -117,16 +123,28 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         .eq('provider', 'evolution')
         .maybeSingle();
 
+      console.log('[EvolutionApiConfig] Local config:', { data, error });
+
       if (error && !error.message?.includes('whatsapp_config')) {
         console.error('Erro ao carregar config:', error);
       }
 
+      const finalApiUrl = data?.config?.api_url || globalApiUrl;
+      const finalApiKey = data?.config?.api_key || globalApiKey;
+      const finalInstanceName = data?.config?.instance_name || generatedInstanceName;
+
+      console.log('[EvolutionApiConfig] Final config:', { 
+        hasUrl: !!finalApiUrl, 
+        hasKey: !!finalApiKey, 
+        instanceName: finalInstanceName 
+      });
+
       if (data?.config) {
         // Usa config local, mas herda api_url e api_key da global se não existir local
         setConfig({
-          apiUrl: data.config.api_url || globalApiUrl,
-          apiKey: data.config.api_key || globalApiKey,
-          instanceName: data.config.instance_name || generatedInstanceName
+          apiUrl: finalApiUrl,
+          apiKey: finalApiKey,
+          instanceName: finalInstanceName
         });
         if (data.config.connection_status) {
           setConnectionStatus(data.config.connection_status);

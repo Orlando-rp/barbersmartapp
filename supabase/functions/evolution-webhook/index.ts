@@ -127,17 +127,23 @@ serve(async (req) => {
       console.log('[Evolution Webhook] Found barbershop from instance name pattern:', barbershopId);
     }
 
-    // Strategy 2: Look up by instance_name in whatsapp_config
+    // Strategy 2: Look up by instance_name in whatsapp_config (most reliable - handles bs-{shortId} pattern)
     if (!barbershopId && instanceName) {
-      const { data: configs } = await supabase
+      const { data: configs, error: configError } = await supabase
         .from('whatsapp_config')
         .select('barbershop_id, config')
         .eq('provider', 'evolution');
 
-      const matchingConfig = configs?.find(c => c.config?.instance_name === instanceName);
-      if (matchingConfig) {
-        barbershopId = matchingConfig.barbershop_id;
-        console.log('[Evolution Webhook] Found barbershop by instance_name config:', barbershopId);
+      if (configError) {
+        console.error('[Evolution Webhook] Error fetching configs:', configError);
+      } else {
+        console.log('[Evolution Webhook] Found configs:', configs?.length, 'Looking for instance:', instanceName);
+        
+        const matchingConfig = configs?.find(c => c.config?.instance_name === instanceName);
+        if (matchingConfig) {
+          barbershopId = matchingConfig.barbershop_id;
+          console.log('[Evolution Webhook] Found barbershop by instance_name config:', barbershopId);
+        }
       }
     }
 
