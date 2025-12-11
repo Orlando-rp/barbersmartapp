@@ -8,10 +8,11 @@ import { useAuth } from '@/contexts/AuthContext';
  * Em redes multi-unidade:
  * - Clientes, serviços e categorias são compartilhados entre todas as unidades
  * - Se a barbearia atual tem parent_id, usa o parent_id (matriz)
- * - Se não tem parent_id, usa o próprio barbershopId (é a matriz)
+ * - Se não tem parent_id, procura a matriz entre as barbearias do usuário
+ * - Se não encontrar matriz, usa o próprio barbershopId
  */
 export const useSharedBarbershopId = () => {
-  const { barbershopId, selectedBarbershopId } = useAuth();
+  const { barbershopId, selectedBarbershopId, barbershops } = useAuth();
   const [sharedBarbershopId, setSharedBarbershopId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -35,23 +36,68 @@ export const useSharedBarbershopId = () => {
       return;
     }
 
-    const fetchParentId = async () => {
+    const fetchRootBarbershopId = async () => {
       lastFetchedId.current = currentBarbershopId;
       
       try {
-        const { data, error } = await supabase
+        // Get current barbershop info
+        const { data: currentData, error: currentError } = await supabase
           .from('barbershops')
           .select('id, parent_id')
           .eq('id', currentBarbershopId)
           .single();
 
-        if (error) {
-          console.error('Erro ao buscar parent_id:', error);
+        if (currentError) {
+          console.error('Erro ao buscar barbershop atual:', currentError);
           setSharedBarbershopId(currentBarbershopId);
-        } else {
-          const newSharedId = data.parent_id || data.id;
-          setSharedBarbershopId(newSharedId);
+          setLoading(false);
+          return;
         }
+
+        // If current barbershop has a parent, use the parent
+        if (currentData.parent_id) {
+          console.log('[useSharedBarbershopId] Usando parent_id:', currentData.parent_id);
+          setSharedBarbershopId(currentData.parent_id);
+          setLoading(false);
+          return;
+        }
+
+        // If user has multiple barbershops, find the root (one without parent_id)
+        // This handles cases where parent_id is not set but user has access to both parent and child
+        if (barbershops.length > 1) {
+          const barbershopIds = barbershops.map(b => b.id);
+          
+          const { data: allBarbershops } = await supabase
+            .from('barbershops')
+            .select('id, parent_id')
+            .in('id', barbershopIds);
+
+          if (allBarbershops && allBarbershops.length > 0) {
+            // Find a barbershop that is referenced as parent by others
+            const parentIds = new Set(allBarbershops.filter(b => b.parent_id).map(b => b.parent_id));
+            const rootBarbershop = allBarbershops.find(b => parentIds.has(b.id));
+            
+            if (rootBarbershop) {
+              console.log('[useSharedBarbershopId] Matriz encontrada:', rootBarbershop.id);
+              setSharedBarbershopId(rootBarbershop.id);
+              setLoading(false);
+              return;
+            }
+
+            // If no parent found, find one that has NO parent_id (potential root)
+            const potentialRoot = allBarbershops.find(b => !b.parent_id);
+            if (potentialRoot && potentialRoot.id !== currentBarbershopId) {
+              console.log('[useSharedBarbershopId] Usando barbearia sem parent_id como matriz:', potentialRoot.id);
+              setSharedBarbershopId(potentialRoot.id);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
+        // Fallback: use current barbershop ID
+        console.log('[useSharedBarbershopId] Usando barbearia atual como matriz:', currentData.id);
+        setSharedBarbershopId(currentData.id);
       } catch (error) {
         console.error('Erro ao buscar barbershop:', error);
         setSharedBarbershopId(currentBarbershopId);
@@ -60,8 +106,8 @@ export const useSharedBarbershopId = () => {
       }
     };
 
-    fetchParentId();
-  }, [currentBarbershopId]);
+    fetchRootBarbershopId();
+  }, [currentBarbershopId, barbershops]);
 
   return {
     // ID compartilhado (matriz) - usar para clientes, serviços, categorias
