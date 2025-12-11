@@ -20,7 +20,7 @@ import { MobileSidebar } from "./Sidebar";
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
-  const { branding } = useBranding();
+  const { effectiveBranding } = useBranding();
   const navigate = useNavigate();
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileFullName, setProfileFullName] = useState<string | null>(null);
@@ -69,21 +69,21 @@ const Header = () => {
           <MobileSidebar />
           
           <div className="flex items-center space-x-2">
-            {branding?.logo_url ? (
+            {effectiveBranding?.logo_url ? (
               <img 
-                src={branding.logo_url} 
-                alt={branding.system_name || 'Logo'} 
+                src={effectiveBranding.logo_url} 
+                alt={effectiveBranding.system_name || 'Logo'} 
                 className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg object-contain"
               />
             ) : (
               <div className="w-7 h-7 lg:w-8 lg:h-8 gradient-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-xs lg:text-sm">
-                  {branding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
+                  {effectiveBranding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
                 </span>
               </div>
             )}
             <h1 className="text-base lg:text-xl font-bold text-foreground hidden sm:block">
-              {branding?.system_name || 'BarberSmart'}
+              {effectiveBranding?.system_name || 'BarberSmart'}
             </h1>
           </div>
           

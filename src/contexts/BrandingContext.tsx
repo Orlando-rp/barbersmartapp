@@ -13,10 +13,23 @@ export interface SystemBranding {
   allow_tenant_customization: boolean;
 }
 
+export interface CustomBranding {
+  system_name?: string;
+  tagline?: string;
+  logo_url?: string;
+  favicon_url?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  accent_color?: string;
+}
+
 interface BrandingContextType {
   branding: SystemBranding | null;
+  customBranding: CustomBranding | null;
+  effectiveBranding: SystemBranding | null;
   loading: boolean;
   refreshBranding: () => Promise<void>;
+  hasWhiteLabel: boolean;
 }
 
 const defaultBranding: SystemBranding = {
@@ -33,8 +46,11 @@ const defaultBranding: SystemBranding = {
 
 const BrandingContext = createContext<BrandingContextType>({
   branding: defaultBranding,
+  customBranding: null,
+  effectiveBranding: defaultBranding,
   loading: true,
   refreshBranding: async () => {},
+  hasWhiteLabel: false,
 });
 
 export const useBranding = () => useContext(BrandingContext);
@@ -120,9 +136,25 @@ interface BrandingProviderProps {
 
 export const BrandingProvider = ({ children }: BrandingProviderProps) => {
   const [branding, setBranding] = useState<SystemBranding | null>(defaultBranding);
+  const [customBranding, setCustomBranding] = useState<CustomBranding | null>(null);
+  const [hasWhiteLabel, setHasWhiteLabel] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchBranding = async () => {
+  // Calculate effective branding (custom overrides system if white-label)
+  const effectiveBranding: SystemBranding | null = branding ? {
+    ...branding,
+    ...(hasWhiteLabel && customBranding ? {
+      system_name: customBranding.system_name || branding.system_name,
+      tagline: customBranding.tagline || branding.tagline,
+      logo_url: customBranding.logo_url || branding.logo_url,
+      favicon_url: customBranding.favicon_url || branding.favicon_url,
+      primary_color: customBranding.primary_color || branding.primary_color,
+      secondary_color: customBranding.secondary_color || branding.secondary_color,
+      accent_color: customBranding.accent_color || branding.accent_color,
+    } : {})
+  } : null;
+
+  const fetchSystemBranding = async () => {
     try {
       const { data, error } = await supabase
         .from('system_branding')
@@ -135,16 +167,72 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
         setBranding(defaultBranding);
       } else if (data) {
         setBranding(data);
-        applyBrandingColors(data);
       } else {
         setBranding(defaultBranding);
       }
     } catch (err) {
       console.log('Error fetching branding:', err);
       setBranding(defaultBranding);
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const fetchBarbershopBranding = async () => {
+    try {
+      // Get current user's selected barbershop
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user's barbershop with subscription and custom branding
+      const { data: userBarbershop } = await supabase
+        .from('user_barbershops')
+        .select('barbershop_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!userBarbershop) return;
+
+      // Fetch barbershop with custom_branding
+      const { data: barbershop } = await supabase
+        .from('barbershops')
+        .select('custom_branding')
+        .eq('id', userBarbershop.barbershop_id)
+        .single();
+
+      if (barbershop?.custom_branding) {
+        setCustomBranding(barbershop.custom_branding);
+      }
+
+      // Check if barbershop has white_label feature
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select(`
+          status,
+          subscription_plans(feature_flags)
+        `)
+        .eq('barbershop_id', userBarbershop.barbershop_id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (subscription?.subscription_plans) {
+        const plan = subscription.subscription_plans as any;
+        const flags = typeof plan.feature_flags === 'string'
+          ? JSON.parse(plan.feature_flags)
+          : plan.feature_flags;
+        setHasWhiteLabel(flags?.white_label === true);
+      }
+    } catch (err) {
+      console.log('Error fetching barbershop branding:', err);
+    }
+  };
+
+  const fetchBranding = async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchSystemBranding(),
+      fetchBarbershopBranding(),
+    ]);
+    setLoading(false);
   };
 
   const refreshBranding = async () => {
@@ -155,15 +243,22 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
     fetchBranding();
   }, []);
 
-  // Apply branding when it changes
+  // Apply effective branding when it changes
   useEffect(() => {
-    if (branding) {
-      applyBrandingColors(branding);
+    if (effectiveBranding) {
+      applyBrandingColors(effectiveBranding);
     }
-  }, [branding]);
+  }, [effectiveBranding?.primary_color, effectiveBranding?.secondary_color, effectiveBranding?.accent_color, effectiveBranding?.favicon_url, effectiveBranding?.system_name]);
 
   return (
-    <BrandingContext.Provider value={{ branding, loading, refreshBranding }}>
+    <BrandingContext.Provider value={{ 
+      branding, 
+      customBranding,
+      effectiveBranding,
+      loading, 
+      refreshBranding,
+      hasWhiteLabel,
+    }}>
       {children}
     </BrandingContext.Provider>
   );
