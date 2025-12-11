@@ -512,6 +512,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     data: {
       clientName: string;
       clientPhone: string;
+      clientId?: string;
       date: Date;
       time: string;
       serviceName: string;
@@ -519,6 +520,27 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     }
   ) => {
     try {
+      // Verificar preferências de notificação do cliente (se cadastrado)
+      if (data.clientId) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('notification_enabled, notification_types')
+          .eq('id', data.clientId)
+          .maybeSingle();
+
+        if (clientData) {
+          if (!clientData.notification_enabled) {
+            console.log('Cliente optou por não receber notificações');
+            return;
+          }
+          const notificationTypes = clientData.notification_types as Record<string, boolean> | null;
+          if (notificationTypes && !notificationTypes.appointment_created) {
+            console.log('Cliente não deseja receber confirmações de agendamento');
+            return;
+          }
+        }
+      }
+
       // Buscar configuração do Evolution API
       const { data: whatsappConfig, error: configError } = await supabase
         .from('whatsapp_config')
@@ -587,6 +609,7 @@ Nos vemos em breve! 💈`;
     data: {
       clientName: string;
       clientPhone: string;
+      clientId?: string;
       date: Date;
       time: string;
       serviceName: string;
@@ -594,6 +617,27 @@ Nos vemos em breve! 💈`;
     }
   ) => {
     try {
+      // Verificar preferências de notificação do cliente (se cadastrado)
+      if (data.clientId) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('notification_enabled, notification_types')
+          .eq('id', data.clientId)
+          .maybeSingle();
+
+        if (clientData) {
+          if (!clientData.notification_enabled) {
+            console.log('Cliente optou por não receber notificações');
+            return;
+          }
+          const notificationTypes = clientData.notification_types as Record<string, boolean> | null;
+          if (notificationTypes && !notificationTypes.appointment_updated) {
+            console.log('Cliente não deseja receber notificações de alteração');
+            return;
+          }
+        }
+      }
+
       const { data: whatsappConfig, error: configError } = await supabase
         .from('whatsapp_config')
         .select('config, is_active')

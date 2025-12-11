@@ -20,6 +20,7 @@ interface Appointment {
   appointment_time: string;
   status: string;
   notes: string | null;
+  client_id: string | null;
   client_name: string;
   client_phone: string;
   service_name: string;
@@ -150,6 +151,7 @@ const Appointments = () => {
           appointment_time,
           status,
           notes,
+          client_id,
           client_name,
           client_phone,
           service_name,
@@ -268,6 +270,36 @@ const Appointments = () => {
 
   const sendWhatsAppNotification = async (appointment: Appointment, type: 'confirmed' | 'cancelled' | 'completed') => {
     try {
+      // Verificar preferências de notificação do cliente
+      if (appointment.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('notification_enabled, notification_types')
+          .eq('id', appointment.client_id)
+          .maybeSingle();
+
+        if (clientData) {
+          // Cliente não quer receber notificações
+          if (!clientData.notification_enabled) {
+            console.log('Cliente optou por não receber notificações');
+            return;
+          }
+
+          // Verificar se o tipo específico está habilitado
+          const notificationTypes = clientData.notification_types as Record<string, boolean> | null;
+          const typeMapping = {
+            confirmed: 'appointment_confirmed',
+            cancelled: 'appointment_cancelled',
+            completed: 'appointment_completed'
+          };
+          
+          if (notificationTypes && !notificationTypes[typeMapping[type]]) {
+            console.log(`Cliente não deseja receber notificações de ${type}`);
+            return;
+          }
+        }
+      }
+
       const { data: whatsappConfig, error: configError } = await supabase
         .from('whatsapp_config')
         .select('config, is_active')

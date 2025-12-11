@@ -19,23 +19,16 @@ serve(async (req) => {
 
     console.log('🔔 Iniciando envio de lembretes de agendamento...');
 
-    // Calculate time window: appointments between 23 and 25 hours from now
     const now = new Date();
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const windowStart = new Date(tomorrow.getTime() - 60 * 60 * 1000); // 23h from now
-    const windowEnd = new Date(tomorrow.getTime() + 60 * 60 * 1000); // 25h from now
-
-    const tomorrowDate = tomorrow.toISOString().split('T')[0];
     
-    console.log(`📅 Buscando agendamentos para: ${tomorrowDate}`);
-
-    // Get all appointments for tomorrow that haven't been reminded yet
+    // Buscar agendamentos que precisam de lembrete
+    // Vamos buscar agendamentos pendentes que ainda não receberam lembrete
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
-      .select('*')
-      .eq('appointment_date', tomorrowDate)
+      .select('*, client_id')
       .eq('status', 'pendente')
-      .is('reminder_sent', null);
+      .is('reminder_sent', null)
+      .gte('appointment_date', now.toISOString().split('T')[0]);
 
     if (appointmentsError) {
       console.error('Erro ao buscar agendamentos:', appointmentsError);
@@ -53,10 +46,76 @@ serve(async (req) => {
       });
     }
 
-    console.log(`📋 ${appointments.length} agendamentos encontrados`);
+    console.log(`📋 ${appointments.length} agendamentos encontrados para verificar`);
+
+    // Filtrar agendamentos que devem receber lembrete com base no horário de antecedência do cliente
+    const appointmentsToRemind: any[] = [];
+    
+    for (const appointment of appointments) {
+      // Calcular horário do agendamento
+      const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
+      const hoursUntilAppointment = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      
+      // Verificar preferências do cliente
+      let reminderHours = 24; // Padrão: 24 horas
+      let shouldSendReminder = true;
+      
+      if (appointment.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('notification_enabled, notification_types, reminder_hours')
+          .eq('id', appointment.client_id)
+          .maybeSingle();
+        
+        if (clientData) {
+          // Verificar se cliente deseja receber notificações
+          if (!clientData.notification_enabled) {
+            console.log(`⚠️ Cliente ${appointment.client_name} não deseja receber notificações`);
+            shouldSendReminder = false;
+            continue;
+          }
+          
+          // Verificar se quer receber lembretes
+          const notificationTypes = clientData.notification_types as Record<string, boolean> | null;
+          if (notificationTypes && !notificationTypes.appointment_reminder) {
+            console.log(`⚠️ Cliente ${appointment.client_name} não deseja receber lembretes`);
+            shouldSendReminder = false;
+            continue;
+          }
+          
+          // Usar o tempo de antecedência configurado pelo cliente
+          reminderHours = clientData.reminder_hours || 24;
+        }
+      }
+      
+      // Verificar se está no momento certo para enviar (dentro de 1 hora da janela configurada)
+      const shouldSendNow = hoursUntilAppointment <= reminderHours && hoursUntilAppointment >= (reminderHours - 1);
+      
+      // Também enviar se já passou do horário de lembrete mas ainda não foi enviado
+      const isOverdue = hoursUntilAppointment < reminderHours && hoursUntilAppointment > 0;
+      
+      if (shouldSendReminder && (shouldSendNow || isOverdue)) {
+        appointmentsToRemind.push({
+          ...appointment,
+          reminderHours
+        });
+      }
+    }
+
+    console.log(`📋 ${appointmentsToRemind.length} agendamentos elegíveis para lembrete agora`);
+
+    if (appointmentsToRemind.length === 0) {
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Nenhum agendamento no momento de envio de lembrete',
+        sent: 0 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Group appointments by barbershop
-    const appointmentsByBarbershop = appointments.reduce((acc: Record<string, any[]>, apt) => {
+    const appointmentsByBarbershop = appointmentsToRemind.reduce((acc: Record<string, any[]>, apt) => {
       if (!acc[apt.barbershop_id]) {
         acc[apt.barbershop_id] = [];
       }
@@ -107,10 +166,24 @@ serve(async (req) => {
             year: 'numeric'
           });
 
-          // Build reminder message
+          // Build reminder message based on time until appointment
+          const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
+          const hoursUntil = Math.round((appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60));
+          
+          let timeLabel = '';
+          if (hoursUntil <= 2) {
+            timeLabel = 'em breve';
+          } else if (hoursUntil <= 6) {
+            timeLabel = `em ${hoursUntil} horas`;
+          } else if (hoursUntil <= 24) {
+            timeLabel = 'amanhã';
+          } else {
+            timeLabel = `em ${Math.round(hoursUntil / 24)} dia(s)`;
+          }
+
           const message = `Olá ${appointment.client_name}! 👋
 
-🔔 Lembrete: Você tem um agendamento amanhã!
+🔔 Lembrete: Você tem um agendamento ${timeLabel}!
 
 📅 Data: ${formattedDate}
 ⏰ Horário: ${appointment.appointment_time}
@@ -143,7 +216,7 @@ Caso precise reagendar, entre em contato conosco.`;
           const responseData = await response.json();
 
           if (response.ok) {
-            console.log(`✅ Lembrete enviado para ${appointment.client_name}`);
+            console.log(`✅ Lembrete enviado para ${appointment.client_name} (${appointment.reminderHours}h de antecedência)`);
             
             // Mark appointment as reminded
             await supabase
@@ -195,7 +268,7 @@ Caso precise reagendar, entre em contato conosco.`;
       message: `Lembretes processados`,
       sent: totalSent,
       failed: totalFailed,
-      total: appointments.length
+      total: appointmentsToRemind.length
     };
 
     console.log('📊 Resultado:', result);
