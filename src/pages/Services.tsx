@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/sheet";
 
 const Services = () => {
-  const { sharedBarbershopId, loading: loadingBarbershop } = useSharedBarbershopId();
+  const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const { categories: dbCategories } = useServiceCategories();
   const [services, setServices] = useState<any[]>([]);
@@ -45,27 +45,20 @@ const Services = () => {
   const [categorySheetOpen, setCategorySheetOpen] = useState(false);
 
   useEffect(() => {
-    if (sharedBarbershopId && !loadingBarbershop) {
+    if (sharedBarbershopId && allRelatedBarbershopIds.length > 0 && !loadingBarbershop) {
       fetchServices();
     }
-  }, [sharedBarbershopId, loadingBarbershop]);
+  }, [sharedBarbershopId, allRelatedBarbershopIds, loadingBarbershop]);
 
   const fetchServices = async () => {
-    if (!sharedBarbershopId) return;
+    if (!sharedBarbershopId || allRelatedBarbershopIds.length === 0) return;
     
     try {
-      // Buscar serviços da matriz E de todas as unidades filhas
-      const { data: childUnits } = await supabase
-        .from('barbershops')
-        .select('id')
-        .eq('parent_id', sharedBarbershopId);
-      
-      const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
-      
+      // Buscar serviços de todas as barbearias relacionadas
       const { data, error } = await supabase
         .from('services')
         .select('*')
-        .in('barbershop_id', allBarbershopIds)
+        .in('barbershop_id', allRelatedBarbershopIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

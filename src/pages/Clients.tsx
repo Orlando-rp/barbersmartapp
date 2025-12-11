@@ -31,7 +31,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 
 const Clients = () => {
-  const { sharedBarbershopId, loading: loadingBarbershop } = useSharedBarbershopId();
+  const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
@@ -42,10 +42,10 @@ const Clients = () => {
   const [deletingClient, setDeletingClient] = useState<any>(null);
 
   useEffect(() => {
-    if (sharedBarbershopId && !loadingBarbershop) {
+    if (sharedBarbershopId && allRelatedBarbershopIds.length > 0 && !loadingBarbershop) {
       fetchClients();
     }
-  }, [sharedBarbershopId, loadingBarbershop]);
+  }, [sharedBarbershopId, allRelatedBarbershopIds, loadingBarbershop]);
 
   useEffect(() => {
     // Filter clients based on search term
@@ -62,23 +62,15 @@ const Clients = () => {
   }, [searchTerm, clients]);
 
   const fetchClients = async () => {
-    if (!sharedBarbershopId) return;
+    if (!sharedBarbershopId || allRelatedBarbershopIds.length === 0) return;
     
     try {
       setLoading(true);
       
-      // Buscar clientes da matriz E de todas as unidades filhas
-      const { data: childUnits } = await supabase
-        .from('barbershops')
-        .select('id')
-        .eq('parent_id', sharedBarbershopId);
-      
-      const allBarbershopIds = [sharedBarbershopId, ...(childUnits?.map(u => u.id) || [])];
-      
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .in('barbershop_id', allBarbershopIds)
+        .in('barbershop_id', allRelatedBarbershopIds)
         .eq('active', true)
         .order('created_at', { ascending: false });
 
