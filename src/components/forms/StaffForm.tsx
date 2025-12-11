@@ -42,7 +42,7 @@ const staffTableSchema = z.object({
 
 export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const { barbershopId, barbershops } = useAuth();
-  const { sharedBarbershopId } = useSharedBarbershopId();
+  const { sharedBarbershopId, loading: loadingSharedId } = useSharedBarbershopId();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
@@ -619,9 +619,9 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       )}
 
       {/* Services Selection Section - Uses shared barbershop ID for multi-unit */}
-      {role === 'barbeiro' && (sharedBarbershopId || barbershopId) && (
+      {role === 'barbeiro' && !loadingSharedId && sharedBarbershopId && (
         <StaffServicesSection
-          barbershopId={sharedBarbershopId || barbershopId || ''}
+          barbershopId={sharedBarbershopId}
           selectedServices={selectedServices}
           onServicesChange={handleServicesChange}
         />
