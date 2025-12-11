@@ -53,24 +53,28 @@ export const NotificationsDropdown = () => {
   const { barbershopId, user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stateLoaded, setStateLoaded] = useState(false);
   const [notifState, setNotifState] = useState<{ read: string[]; dismissed: string[] }>({ read: [], dismissed: [] });
   const { isSupported, permission, isSubscribed, requestPermission, loading: pushLoading } = usePushNotifications();
 
-  // Carregar estado salvo ao montar
+  // Carregar estado salvo ao montar (PRIMEIRO)
   useEffect(() => {
     if (barbershopId) {
       const savedState = getNotificationState(barbershopId);
+      console.log('[Notifications] Estado carregado do localStorage:', savedState);
       setNotifState(savedState);
+      setStateLoaded(true);
     }
   }, [barbershopId]);
 
+  // Buscar notificações APENAS após estado ser carregado
   useEffect(() => {
-    if (barbershopId) {
+    if (barbershopId && stateLoaded) {
       fetchNotifications();
       const unsubscribe = subscribeToNotifications();
       return unsubscribe;
     }
-  }, [barbershopId, notifState.dismissed]);
+  }, [barbershopId, stateLoaded, notifState.dismissed]);
 
   const fetchNotifications = async () => {
     try {
