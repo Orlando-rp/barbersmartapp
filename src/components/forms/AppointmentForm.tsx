@@ -1160,37 +1160,49 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 <span className="truncate">Selecione o Profissional</span>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:gap-3">
-                {staff.map((member) => (
-                  <button
-                    key={member.id}
-                    type="button"
-                    onClick={() => setSelectedBarber(member.id)}
-                    className={cn(
-                      "p-3 sm:p-4 rounded-lg border-2 text-left transition-all",
-                      selectedBarber === member.id
-                        ? "border-primary bg-primary/5"
-                        : "border-muted hover:border-primary/50"
+              <div className="space-y-4">
+                <Select value={selectedBarber} onValueChange={setSelectedBarber}>
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="Selecione um profissional..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-[9999]">
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.id} className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6 flex-shrink-0">
+                            <AvatarImage src={member.avatar_url} alt={member.name} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {member.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{member.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                    {staff.length === 0 && (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        Nenhum profissional disponível
+                      </div>
                     )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
-                        <AvatarImage src={member.avatar_url} alt={member.name} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                          {member.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-4 w-4 sm:h-5 sm:w-5" />}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="font-medium text-sm sm:text-base truncate">{member.name}</div>
+                  </SelectContent>
+                </Select>
+                
+                {/* Detalhes do profissional selecionado */}
+                {selectedBarberData && (
+                  <div className="p-3 sm:p-4 rounded-lg border bg-muted/30 flex items-center gap-3">
+                    <Avatar className="h-12 w-12 flex-shrink-0">
+                      <AvatarImage src={selectedBarberData.avatar_url} alt={selectedBarberData.name} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {selectedBarberData.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium text-sm sm:text-base">{selectedBarberData.name}</div>
+                      <div className="text-xs text-muted-foreground">Profissional selecionado</div>
                     </div>
-                  </button>
-                ))}
+                  </div>
+                )}
               </div>
-              
-              {staff.length === 0 && (
-                <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
-                  Nenhum profissional disponível para esta unidade.
-                </div>
-              )}
             </div>
           )}
 
