@@ -237,7 +237,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     try {
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
-        .select('id, user_id, schedule, avatar_url')
+        .select('id, user_id, schedule')
         .eq('barbershop_id', effectiveBarbershopId)
         .eq('active', true);
 
@@ -254,7 +254,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       const userIds = staffData.map(s => s.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, avatar_url')
         .in('id', userIds);
 
       if (profilesError) throw profilesError;
@@ -265,7 +265,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
           id: member.id,
           name: profile?.full_name || 'Nome não disponível',
           schedule: member.schedule,
-          avatar_url: member.avatar_url
+          avatar_url: profile?.avatar_url
         };
       });
       
