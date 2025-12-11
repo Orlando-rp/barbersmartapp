@@ -110,7 +110,7 @@ export default {
     		},
     		fontFamily: {
     			sans: [
-    				'Montserrat',
+    				'Outfit',
     				'ui-sans-serif',
     				'system-ui',
     				'sans-serif',
@@ -120,7 +120,7 @@ export default {
     				'Noto Color Emoji'
     			],
     			serif: [
-    				'Crimson Pro',
+    				'Playfair Display',
     				'ui-serif',
     				'Georgia',
     				'Cambria',
