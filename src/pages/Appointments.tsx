@@ -361,25 +361,59 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
 ✂️ Serviço: ${appointment.service_name}
 👤 Profissional: ${appointment.staff?.name || 'Não especificado'}
 
-⭐ Sua opinião é muito importante para nós!
-Que tal deixar uma avaliação sobre o serviço?
+⭐ Como foi seu atendimento? Por favor, responda com uma nota de 1 a 5:
 
-Agradecemos a preferência e esperamos vê-lo em breve! 💈`
+1 ⭐ - Muito ruim
+2 ⭐⭐ - Ruim  
+3 ⭐⭐⭐ - Regular
+4 ⭐⭐⭐⭐ - Bom
+5 ⭐⭐⭐⭐⭐ - Excelente`
       };
 
-      await supabase.functions.invoke('send-whatsapp-evolution', {
-        body: {
-          action: 'sendText',
-          apiUrl: evolutionConfig.api_url,
-          apiKey: evolutionConfig.api_key,
-          instanceName: evolutionConfig.instance_name,
-          to: appointment.client_phone,
-          message: messages[type],
-          barbershopId: appointment.barbershop_id,
-          recipientName: appointment.client_name,
-          appointmentId: appointment.id
-        }
-      });
+      // Para mensagem de conclusão, iniciar modo de avaliação via chatbot
+      if (type === 'completed') {
+        await supabase.functions.invoke('whatsapp-chatbot', {
+          body: {
+            message: 'iniciar_avaliacao',
+            from: appointment.client_phone,
+            barbershopId: appointment.barbershop_id,
+            instanceName: evolutionConfig.instance_name,
+            apiUrl: evolutionConfig.api_url,
+            apiKey: evolutionConfig.api_key,
+            appointmentId: appointment.id,
+            reviewMode: true
+          }
+        });
+
+        // Enviar mensagem de conclusão
+        await supabase.functions.invoke('send-whatsapp-evolution', {
+          body: {
+            action: 'sendText',
+            apiUrl: evolutionConfig.api_url,
+            apiKey: evolutionConfig.api_key,
+            instanceName: evolutionConfig.instance_name,
+            to: appointment.client_phone,
+            message: messages[type],
+            barbershopId: appointment.barbershop_id,
+            recipientName: appointment.client_name,
+            appointmentId: appointment.id
+          }
+        });
+      } else {
+        await supabase.functions.invoke('send-whatsapp-evolution', {
+          body: {
+            action: 'sendText',
+            apiUrl: evolutionConfig.api_url,
+            apiKey: evolutionConfig.api_key,
+            instanceName: evolutionConfig.instance_name,
+            to: appointment.client_phone,
+            message: messages[type],
+            barbershopId: appointment.barbershop_id,
+            recipientName: appointment.client_name,
+            appointmentId: appointment.id
+          }
+        });
+      }
 
       const typeLabels = { confirmed: 'confirmação', cancelled: 'cancelamento', completed: 'solicitação de avaliação' };
       console.log(`✅ Notificação de ${typeLabels[type]} enviada`);

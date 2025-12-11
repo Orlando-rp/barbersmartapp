@@ -17,6 +17,9 @@ interface ConversationContext {
     date?: string;
     time?: string;
     clientName?: string;
+    // Review data
+    reviewAppointmentId?: string;
+    reviewRating?: number;
   };
 }
 
@@ -33,15 +36,6 @@ serve(async (req) => {
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  // Check if OpenAI API key is configured
-  if (!openaiApiKey) {
-    console.error('[Chatbot] OPENAI_API_KEY not configured');
-    return new Response(
-      JSON.stringify({ error: 'OpenAI API key not configured' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
   try {
     const { 
       message, 
@@ -49,7 +43,10 @@ serve(async (req) => {
       barbershopId,
       instanceName,
       apiUrl,
-      apiKey
+      apiKey,
+      // For review flow - appointment ID to review
+      appointmentId,
+      reviewMode
     } = await req.json();
 
     console.log(`[Chatbot] Message from ${from}: ${message}`);
@@ -59,6 +56,22 @@ serve(async (req) => {
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Get or create conversation context
+    const conversationKey = `${barbershopId}:${from}`;
+    let context = conversations.get(conversationKey) || {
+      barbershopId,
+      clientPhone: from,
+      step: 'initial',
+      data: {}
+    };
+
+    // Initialize review mode if triggered
+    if (reviewMode && appointmentId) {
+      context.step = 'awaiting_rating';
+      context.data.reviewAppointmentId = appointmentId;
+      conversations.set(conversationKey, context);
     }
 
     // Get barbershop info
@@ -75,14 +88,34 @@ serve(async (req) => {
       );
     }
 
-    // Get or create conversation context
-    const conversationKey = `${barbershopId}:${from}`;
-    let context = conversations.get(conversationKey) || {
-      barbershopId,
-      clientPhone: from,
-      step: 'initial',
-      data: {}
-    };
+    // Handle review flow separately (simpler, no AI needed)
+    if (context.step === 'awaiting_rating' || context.step === 'awaiting_comment') {
+      const reviewResult = await handleReviewFlow(supabase, context, message, from, barbershopId, instanceName, apiUrl, apiKey);
+      if (reviewResult.handled) {
+        conversations.set(conversationKey, reviewResult.context);
+        
+        // Log the conversation
+        await logConversation(supabase, barbershopId, from, message, reviewResult.response);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            response: reviewResult.response,
+            context: reviewResult.context.step
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Check if OpenAI API key is configured (only needed for non-review flows)
+    if (!openaiApiKey) {
+      console.error('[Chatbot] OPENAI_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get available services
     const { data: services } = await supabase
@@ -155,6 +188,96 @@ serve(async (req) => {
     );
   }
 });
+
+// Handle review flow without AI
+async function handleReviewFlow(
+  supabase: any,
+  context: ConversationContext,
+  message: string,
+  from: string,
+  barbershopId: string,
+  instanceName: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<{ handled: boolean; response: string; context: ConversationContext }> {
+  const newContext = { ...context, data: { ...context.data } };
+  let response = '';
+  let handled = true;
+
+  if (context.step === 'awaiting_rating') {
+    // Try to parse rating from message
+    const ratingMatch = message.match(/[1-5]/);
+    
+    if (ratingMatch) {
+      const rating = parseInt(ratingMatch[0]);
+      newContext.data.reviewRating = rating;
+      newContext.step = 'awaiting_comment';
+      
+      const stars = '⭐'.repeat(rating);
+      response = `${stars} Obrigado pela nota ${rating}!\n\nDeseja deixar um comentário sobre o atendimento? (responda com seu comentário ou envie "não" para finalizar)`;
+    } else {
+      response = 'Por favor, responda com uma nota de 1 a 5:\n\n1 ⭐ - Muito ruim\n2 ⭐⭐ - Ruim\n3 ⭐⭐⭐ - Regular\n4 ⭐⭐⭐⭐ - Bom\n5 ⭐⭐⭐⭐⭐ - Excelente';
+    }
+  } else if (context.step === 'awaiting_comment') {
+    const rating = context.data.reviewRating || 5;
+    const appointmentId = context.data.reviewAppointmentId;
+    const comment = message.toLowerCase() === 'não' || message.toLowerCase() === 'nao' ? null : message;
+    
+    // Get appointment details to save review
+    const { data: appointment } = await supabase
+      .from('appointments')
+      .select('client_id, staff_id')
+      .eq('id', appointmentId)
+      .single();
+
+    if (appointment) {
+      // Get client name from phone
+      const { data: client } = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('barbershop_id', barbershopId)
+        .eq('phone', from)
+        .maybeSingle();
+
+      // Save review
+      const { error: reviewError } = await supabase
+        .from('reviews')
+        .insert({
+          barbershop_id: barbershopId,
+          appointment_id: appointmentId,
+          client_id: client?.id || appointment.client_id,
+          staff_id: appointment.staff_id,
+          rating,
+          comment,
+          client_name: client?.name || 'Cliente via WhatsApp'
+        });
+
+      if (reviewError) {
+        console.error('[Chatbot] Error saving review:', reviewError);
+        response = 'Desculpe, houve um erro ao salvar sua avaliação. Por favor, tente novamente mais tarde.';
+      } else {
+        response = `✅ Obrigado pela sua avaliação!\n\n${comment ? 'Seu comentário foi registrado. ' : ''}Agradecemos o feedback e esperamos vê-lo novamente em breve! 💈`;
+        
+        // Reset context
+        newContext.step = 'initial';
+        newContext.data = {};
+      }
+    } else {
+      response = 'Desculpe, não encontramos o agendamento para avaliar. Por favor, entre em contato com a barbearia.';
+      newContext.step = 'initial';
+      newContext.data = {};
+    }
+  } else {
+    handled = false;
+  }
+
+  // Send response if handled
+  if (handled && response && instanceName && apiUrl) {
+    await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
+  }
+
+  return { handled, response, context: newContext };
+}
 
 function buildSystemPrompt(
   barbershop: any, 
