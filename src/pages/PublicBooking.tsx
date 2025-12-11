@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { formatDuration } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isBefore, startOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -895,7 +896,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                           <div className="flex items-center gap-2 mt-2">
                             <Badge variant="secondary">
                               <Clock className="h-3 w-3 mr-1" />
-                              {service.duration} min
+                              {formatDuration(service.duration)}
                             </Badge>
                           </div>
                         </div>
