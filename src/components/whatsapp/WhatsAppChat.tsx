@@ -484,22 +484,59 @@ export const WhatsAppChat = () => {
       
       console.log('[WhatsApp Chat] Excluindo conversa:', { phoneNumber, normalizedPhone, barbershopId });
       
-      // Delete with both formats to ensure complete removal
-      const { data: deletedData, error } = await supabase
+      // First, try to delete with exact phone number
+      const { error: error1, count: count1 } = await supabase
         .from('whatsapp_messages')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('barbershop_id', barbershopId)
-        .or(`phone_number.eq.${phoneNumber},phone_number.eq.${normalizedPhone}`)
-        .select();
+        .eq('phone_number', phoneNumber);
 
-      console.log('[WhatsApp Chat] Resultado da exclusão:', { deletedData, error });
+      console.log('[WhatsApp Chat] Delete 1 (exact):', { error: error1, count: count1 });
 
-      if (error) throw error;
+      // If phone differs from normalized, also try normalized version
+      if (phoneNumber !== normalizedPhone) {
+        const { error: error2, count: count2 } = await supabase
+          .from('whatsapp_messages')
+          .delete({ count: 'exact' })
+          .eq('barbershop_id', barbershopId)
+          .eq('phone_number', normalizedPhone);
+        
+        console.log('[WhatsApp Chat] Delete 2 (normalized):', { error: error2, count: count2 });
+      }
 
-      // Remove from local state (check both formats)
+      // Also try with country code variations
+      const withCountryCode = normalizedPhone.startsWith('55') ? normalizedPhone : `55${normalizedPhone}`;
+      const withoutCountryCode = normalizedPhone.startsWith('55') ? normalizedPhone.substring(2) : normalizedPhone;
+      
+      if (withCountryCode !== phoneNumber && withCountryCode !== normalizedPhone) {
+        await supabase
+          .from('whatsapp_messages')
+          .delete({ count: 'exact' })
+          .eq('barbershop_id', barbershopId)
+          .eq('phone_number', withCountryCode);
+        console.log('[WhatsApp Chat] Delete 3 (with country code):', withCountryCode);
+      }
+      
+      if (withoutCountryCode !== phoneNumber && withoutCountryCode !== normalizedPhone) {
+        await supabase
+          .from('whatsapp_messages')
+          .delete({ count: 'exact' })
+          .eq('barbershop_id', barbershopId)
+          .eq('phone_number', withoutCountryCode);
+        console.log('[WhatsApp Chat] Delete 4 (without country code):', withoutCountryCode);
+      }
+
+      if (error1) throw error1;
+
+      // Remove from local state (check all formats)
       setConversations(prev => prev.filter(c => {
         const convPhone = c.phone_number.replace(/\D/g, '');
-        return convPhone !== normalizedPhone && c.phone_number !== phoneNumber;
+        const convWithCode = convPhone.startsWith('55') ? convPhone : `55${convPhone}`;
+        const convWithoutCode = convPhone.startsWith('55') ? convPhone.substring(2) : convPhone;
+        return convPhone !== normalizedPhone && 
+               c.phone_number !== phoneNumber &&
+               convWithCode !== withCountryCode &&
+               convWithoutCode !== withoutCountryCode;
       }));
       
       // Clear selection if deleted conversation was selected
