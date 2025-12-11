@@ -50,7 +50,14 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState(staff?.profiles?.phone || "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<string>(staff?.user_roles?.[0]?.role || "barbeiro");
+  // Determine primary role - admin takes precedence
+  const primaryRole = staff?.user_roles?.find((r: any) => r.role === 'admin')?.role 
+    || staff?.user_roles?.[0]?.role 
+    || "barbeiro";
+  const [role, setRole] = useState<string>(primaryRole);
+  const [isAlsoBarber, setIsAlsoBarber] = useState(
+    primaryRole === 'admin' && staff?.user_roles?.some((r: any) => r.role === 'barbeiro') || false
+  );
   const [commissionRate, setCommissionRate] = useState(staff?.commission_rate || 0);
   const [specialties] = useState<string[]>(staff?.specialties || []);
   
@@ -289,12 +296,16 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         // Atualizar staff_services
         await saveStaffServices(staff.id);
 
-        // Atualizar role se mudou (usar UPDATE ao invés de DELETE+INSERT para RLS)
-        if (staff.user_roles?.[0]?.role !== role) {
-          const existingRoleId = staff.user_roles?.[0]?.id;
+        // Gerenciar roles - admin pode também ser barbeiro
+        const existingRoles = staff.user_roles || [];
+        const existingAdminRole = existingRoles.find((r: any) => r.role === 'admin');
+        const existingBarberRole = existingRoles.find((r: any) => r.role === 'barbeiro');
+
+        // Atualizar role principal
+        if (existingRoles[0]?.role !== role) {
+          const existingRoleId = existingRoles[0]?.id;
           
           if (existingRoleId) {
-            // Atualizar role existente
             const { error: roleError } = await supabase
               .from('user_roles')
               .update({ role })
@@ -302,10 +313,8 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
             if (roleError) {
               console.warn('Erro ao atualizar role:', roleError);
-              // Não bloquear o fluxo se falhar a atualização de role
             }
           } else {
-            // Se não existe role, tentar inserir (pode falhar por RLS)
             const { error: roleError } = await supabase
               .from('user_roles')
               .insert({
@@ -316,8 +325,34 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
             if (roleError) {
               console.warn('Erro ao inserir role:', roleError);
-              // Não bloquear o fluxo se falhar a inserção de role
             }
+          }
+        }
+
+        // Se é admin e também barbeiro, garantir que tem a role de barbeiro
+        if (role === 'admin' && isAlsoBarber && !existingBarberRole) {
+          const { error: barberRoleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: staff.user_id,
+              role: 'barbeiro',
+              barbershop_id: barbershopId,
+            });
+
+          if (barberRoleError) {
+            console.warn('Erro ao adicionar role de barbeiro:', barberRoleError);
+          }
+        }
+
+        // Se é admin mas não é mais barbeiro, remover role de barbeiro
+        if (role === 'admin' && !isAlsoBarber && existingBarberRole) {
+          const { error: removeBarberError } = await supabase
+            .from('user_roles')
+            .delete()
+            .eq('id', existingBarberRole.id);
+
+          if (removeBarberError) {
+            console.warn('Erro ao remover role de barbeiro:', removeBarberError);
           }
         }
 
@@ -439,7 +474,21 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         if (roleError) {
           console.error('Erro ao atribuir role:', roleError);
-          // Não bloquear se falhar, mas logar
+        }
+
+        // Se é admin e também barbeiro, adicionar role de barbeiro
+        if (role === 'admin' && isAlsoBarber) {
+          const { error: barberRoleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: userId,
+              role: 'barbeiro',
+              barbershop_id: primaryBarbershopId,
+            });
+
+          if (barberRoleError) {
+            console.warn('Erro ao adicionar role de barbeiro:', barberRoleError);
+          }
         }
 
         // 5. Salvar staff_services para o primeiro staff criado
@@ -539,7 +588,13 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         <div className="space-y-2">
           <Label htmlFor="role" className="text-sm">Função *</Label>
-          <Select value={role} onValueChange={setRole}>
+          <Select value={role} onValueChange={(value) => {
+            setRole(value);
+            // Auto-enable isAlsoBarber when switching to admin if was previously barbeiro
+            if (value === 'admin' && role === 'barbeiro') {
+              setIsAlsoBarber(true);
+            }
+          }}>
             <SelectTrigger className="text-sm">
               <SelectValue placeholder="Selecione a função" />
             </SelectTrigger>
@@ -550,6 +605,21 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
             </SelectContent>
           </Select>
         </div>
+
+        {role === 'admin' && (
+          <div className="space-y-2 flex items-end">
+            <div className="flex items-center space-x-2 pb-2">
+              <Checkbox
+                id="isAlsoBarber"
+                checked={isAlsoBarber}
+                onCheckedChange={(checked) => setIsAlsoBarber(checked === true)}
+              />
+              <Label htmlFor="isAlsoBarber" className="text-sm font-normal cursor-pointer">
+                Também atua como barbeiro
+              </Label>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="commissionRate" className="text-sm">Comissão (%) *</Label>
@@ -599,8 +669,8 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         </div>
       )}
 
-      {/* Multi-Unit Schedule Section (shows when user has multiple units and role is barbeiro) */}
-      {role === 'barbeiro' && hasMultipleUnits && (
+      {/* Multi-Unit Schedule Section (shows when user has multiple units and role is barbeiro or admin+barber) */}
+      {(role === 'barbeiro' || (role === 'admin' && isAlsoBarber)) && hasMultipleUnits && (
         <StaffUnitsScheduleSection
           barbershopIds={barbershopIds}
           schedule={unitSchedule}
@@ -608,8 +678,8 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         />
       )}
 
-      {/* Individual Schedule Section (shows for barbeiro) */}
-      {role === 'barbeiro' && !hasMultipleUnits && (
+      {/* Individual Schedule Section (shows for barbeiro or admin+barber) */}
+      {(role === 'barbeiro' || (role === 'admin' && isAlsoBarber)) && !hasMultipleUnits && (
         <StaffScheduleSection
           schedule={schedule}
           onScheduleChange={handleScheduleChange}
@@ -619,7 +689,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       )}
 
       {/* Services Selection Section - Uses shared barbershop ID for multi-unit */}
-      {role === 'barbeiro' && !loadingSharedId && sharedBarbershopId && (
+      {(role === 'barbeiro' || (role === 'admin' && isAlsoBarber)) && !loadingSharedId && sharedBarbershopId && (
         <StaffServicesSection
           barbershopId={sharedBarbershopId}
           selectedServices={selectedServices}
