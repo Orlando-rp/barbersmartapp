@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
-import { PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
+import { PlanFeatures, getFeatureLabel } from "@/components/saas/PlanFeaturesSelector";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lock, Sparkles } from "lucide-react";
@@ -49,18 +49,8 @@ export const FeatureGate = ({
     return <>{fallback}</>;
   }
 
-  // Default upgrade prompt
-  const featureLabels: Record<keyof PlanFeatures, string> = {
-    whatsapp_notifications: 'Notificações WhatsApp',
-    whatsapp_chatbot: 'Chatbot IA',
-    marketing_campaigns: 'Campanhas de Marketing',
-    marketing_coupons: 'Cupons de Desconto',
-    advanced_reports: 'Relatórios Avançados',
-    predictive_analytics: 'Análises Preditivas',
-    multi_unit: 'Multi-unidade',
-    white_label: 'White Label',
-    priority_support: 'Suporte Prioritário',
-  };
+  // Get label from the centralized feature list
+  const featureLabel = getFeatureLabel(feature);
 
   return (
     <Card className="border-dashed border-warning/50 bg-warning/5">
@@ -69,7 +59,7 @@ export const FeatureGate = ({
           <Lock className="h-6 w-6 text-warning" />
         </div>
         <CardTitle className="text-lg">
-          {featureLabels[feature] || 'Funcionalidade Premium'}
+          {featureLabel}
         </CardTitle>
         <CardDescription>
           {upgradeMessage || `Esta funcionalidade não está disponível no seu plano atual (${planName || 'Free'}).`}
