@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusinessHoursValidation } from "@/hooks/useBusinessHoursValidation";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { toast as sonnerToast } from "sonner";
 import { DayProps, DayContent } from "react-day-picker";
 
@@ -39,6 +40,7 @@ type WizardStep = 'unit' | 'professional' | 'service' | 'datetime' | 'client' | 
 
 export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
   const { barbershopId, barbershops, user } = useAuth();
+  const { sharedBarbershopId, allRelatedBarbershopIds } = useSharedBarbershopId();
   const { toast } = useToast();
   
   // Se o usuário tem múltiplas barbearias, começa na seleção de unidade
@@ -81,11 +83,18 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   
   const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(effectiveBarbershopId);
 
+  // Busca serviços e clientes da matriz (dados compartilhados)
+  useEffect(() => {
+    if (sharedBarbershopId && allRelatedBarbershopIds.length > 0) {
+      fetchServices();
+      fetchClients();
+    }
+  }, [sharedBarbershopId, allRelatedBarbershopIds]);
+
+  // Busca staff da unidade específica
   useEffect(() => {
     if (effectiveBarbershopId) {
-      fetchServices();
       fetchStaff();
-      fetchClients();
     }
   }, [effectiveBarbershopId]);
 
@@ -147,11 +156,14 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   }, [effectiveBarbershopId, date, selectedBarber]);
 
   const fetchClients = async () => {
+    if (!sharedBarbershopId || allRelatedBarbershopIds.length === 0) return;
+    
     try {
+      // Busca clientes de todas as unidades relacionadas (dados compartilhados)
       const { data, error } = await supabase
         .from('clients')
         .select('id, name, phone, email')
-        .eq('barbershop_id', effectiveBarbershopId)
+        .in('barbershop_id', allRelatedBarbershopIds)
         .eq('active', true)
         .order('name');
 
@@ -163,11 +175,14 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   };
 
   const fetchServices = async () => {
+    if (!sharedBarbershopId || allRelatedBarbershopIds.length === 0) return;
+    
     try {
+      // Busca serviços de todas as unidades relacionadas (dados compartilhados)
       const { data, error } = await supabase
         .from('services')
         .select('*')
-        .eq('barbershop_id', effectiveBarbershopId)
+        .in('barbershop_id', allRelatedBarbershopIds)
         .eq('active', true);
 
       if (error) throw error;
