@@ -479,19 +479,32 @@ export const WhatsAppChat = () => {
     try {
       setDeletingConversation(phoneNumber);
       
-      const { error } = await supabase
+      // Normalize phone number (remove non-digits)
+      const normalizedPhone = phoneNumber.replace(/\D/g, '');
+      
+      console.log('[WhatsApp Chat] Excluindo conversa:', { phoneNumber, normalizedPhone, barbershopId });
+      
+      // Delete with both formats to ensure complete removal
+      const { data: deletedData, error } = await supabase
         .from('whatsapp_messages')
         .delete()
         .eq('barbershop_id', barbershopId)
-        .eq('phone_number', phoneNumber);
+        .or(`phone_number.eq.${phoneNumber},phone_number.eq.${normalizedPhone}`)
+        .select();
+
+      console.log('[WhatsApp Chat] Resultado da exclusão:', { deletedData, error });
 
       if (error) throw error;
 
-      // Remove from local state
-      setConversations(prev => prev.filter(c => c.phone_number !== phoneNumber));
+      // Remove from local state (check both formats)
+      setConversations(prev => prev.filter(c => {
+        const convPhone = c.phone_number.replace(/\D/g, '');
+        return convPhone !== normalizedPhone && c.phone_number !== phoneNumber;
+      }));
       
       // Clear selection if deleted conversation was selected
-      if (selectedPhone === phoneNumber) {
+      const selectedNormalized = selectedPhone?.replace(/\D/g, '');
+      if (selectedPhone === phoneNumber || selectedNormalized === normalizedPhone) {
         setSelectedPhone(null);
         setMessages([]);
       }
