@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Send, 
   Search,
@@ -20,7 +21,8 @@ import {
   Loader2,
   Plus,
   ArrowLeft,
-  Settings
+  Settings,
+  Users
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -28,6 +30,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 
 interface Message {
   id: string;
@@ -47,10 +50,20 @@ interface Conversation {
   last_message: string;
   last_message_time: string;
   unread_count: number;
+  is_client?: boolean;
+  avatar_url?: string | null;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  phone: string;
+  avatar_url?: string | null;
 }
 
 export const WhatsAppChat = () => {
   const { barbershopId, user } = useAuth();
+  const { sharedBarbershopId } = useSharedBarbershopId();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
@@ -65,6 +78,9 @@ export const WhatsAppChat = () => {
   const [newChatName, setNewChatName] = useState("");
   const [tableExists, setTableExists] = useState(true);
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientSearch, setClientSearch] = useState("");
+  const [newChatTab, setNewChatTab] = useState<string>("clients");
   
   // Ref para acessar o phone selecionado dentro do callback de realtime
   const selectedPhoneRef = useRef<string | null>(null);
@@ -79,8 +95,9 @@ export const WhatsAppChat = () => {
       loadEvolutionConfig();
       loadConversations();
       loadCurrentUserName();
+      loadClients();
     }
-  }, [barbershopId]);
+  }, [barbershopId, sharedBarbershopId]);
 
   // Setup realtime separadamente para poder usar a ref
   useEffect(() => {
@@ -226,17 +243,44 @@ export const WhatsAppChat = () => {
 
       setTableExists(true);
 
+      // Get clients to match phone numbers
+      const clientBarbershopId = sharedBarbershopId || barbershopId;
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, name, phone, avatar_url')
+        .eq('barbershop_id', clientBarbershopId);
+
+      // Create a map of phone to client for quick lookup
+      const clientMap = new Map<string, Client>();
+      clientsData?.forEach(client => {
+        if (client.phone) {
+          // Normalize phone number (remove non-digits)
+          const normalizedPhone = client.phone.replace(/\D/g, '');
+          clientMap.set(normalizedPhone, client);
+          // Also try without country code if it starts with 55
+          if (normalizedPhone.startsWith('55') && normalizedPhone.length > 10) {
+            clientMap.set(normalizedPhone.slice(2), client);
+          }
+        }
+      });
+
       // Group by phone number
       const conversationMap = new Map<string, Conversation>();
       
       data?.forEach(msg => {
         if (!conversationMap.has(msg.phone_number)) {
+          // Try to find matching client
+          const client = clientMap.get(msg.phone_number) || 
+                        clientMap.get(msg.phone_number.replace(/^55/, ''));
+          
           conversationMap.set(msg.phone_number, {
             phone_number: msg.phone_number,
-            contact_name: msg.contact_name,
+            contact_name: client?.name || msg.contact_name,
             last_message: msg.message,
             last_message_time: msg.created_at,
-            unread_count: 0
+            unread_count: 0,
+            is_client: !!client,
+            avatar_url: client?.avatar_url
           });
         }
       });
@@ -246,6 +290,25 @@ export const WhatsAppChat = () => {
       console.error('Erro ao carregar conversas:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadClients = async () => {
+    const clientBarbershopId = sharedBarbershopId || barbershopId;
+    if (!clientBarbershopId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name, phone, avatar_url')
+        .eq('barbershop_id', clientBarbershopId)
+        .eq('active', true)
+        .order('name');
+
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
     }
   };
 
@@ -369,7 +432,43 @@ export const WhatsAppChat = () => {
     setNewChatOpen(false);
     setNewChatPhone('');
     setNewChatName('');
+    setClientSearch('');
   };
+
+  const startChatWithClient = (client: Client) => {
+    if (!client.phone) {
+      toast.error('Cliente não possui telefone cadastrado');
+      return;
+    }
+    
+    const phone = client.phone.replace(/\D/g, '');
+    
+    // Add to conversations if not exists
+    if (!conversations.find(c => c.phone_number === phone)) {
+      setConversations(prev => [{
+        phone_number: phone,
+        contact_name: client.name,
+        last_message: '',
+        last_message_time: new Date().toISOString(),
+        unread_count: 0,
+        is_client: true,
+        avatar_url: client.avatar_url
+      }, ...prev]);
+    }
+    
+    setSelectedPhone(phone);
+    setNewChatOpen(false);
+    setNewChatPhone('');
+    setNewChatName('');
+    setClientSearch('');
+  };
+
+  const filteredClients = clients.filter(client =>
+    client.phone && (
+      client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+      client.phone.includes(clientSearch)
+    )
+  );
 
   const filteredConversations = conversations.filter(conv => 
     conv.phone_number.includes(searchTerm) || 
@@ -445,40 +544,103 @@ export const WhatsAppChat = () => {
               className="pl-9"
             />
           </div>
-          <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
+          <Dialog open={newChatOpen} onOpenChange={(open) => {
+            setNewChatOpen(open);
+            if (!open) {
+              setClientSearch('');
+              setNewChatPhone('');
+              setNewChatName('');
+            }
+          }}>
             <DialogTrigger asChild>
               <Button size="icon" variant="outline">
                 <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Nova Conversa</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label>Número de telefone</Label>
-                  <Input
-                    placeholder="5511999999999"
-                    value={newChatPhone}
-                    onChange={(e) => setNewChatPhone(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Digite o número com código do país (ex: 55 para Brasil)
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Nome do contato (opcional)</Label>
-                  <Input
-                    placeholder="João Silva"
-                    value={newChatName}
-                    onChange={(e) => setNewChatName(e.target.value)}
-                  />
-                </div>
-                <Button onClick={startNewChat} className="w-full">
-                  Iniciar Conversa
-                </Button>
-              </div>
+              <Tabs value={newChatTab} onValueChange={setNewChatTab} className="mt-2">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="clients" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Clientes
+                  </TabsTrigger>
+                  <TabsTrigger value="manual" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Digitar número
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="clients" className="space-y-4 mt-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar cliente por nome ou telefone..."
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <ScrollArea className="h-[300px]">
+                    {filteredClients.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">
+                          {clientSearch ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {filteredClients.map((client) => (
+                          <div
+                            key={client.id}
+                            onClick={() => startChatWithClient(client)}
+                            className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                          >
+                            <Avatar className="h-10 w-10">
+                              {client.avatar_url && <AvatarImage src={client.avatar_url} />}
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {getInitials(client.name, client.phone)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{client.name}</p>
+                              <p className="text-xs text-muted-foreground">{client.phone}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
+                
+                <TabsContent value="manual" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Número de telefone</Label>
+                    <Input
+                      placeholder="5511999999999"
+                      value={newChatPhone}
+                      onChange={(e) => setNewChatPhone(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Digite o número com código do país (ex: 55 para Brasil)
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nome do contato (opcional)</Label>
+                    <Input
+                      placeholder="João Silva"
+                      value={newChatName}
+                      onChange={(e) => setNewChatName(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={startNewChat} className="w-full">
+                    Iniciar Conversa
+                  </Button>
+                </TabsContent>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>
@@ -501,16 +663,24 @@ export const WhatsAppChat = () => {
                 )}
               >
                 <Avatar className="h-10 w-10">
+                  {conv.avatar_url && <AvatarImage src={conv.avatar_url} />}
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {getInitials(conv.contact_name, conv.phone_number)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-sm truncate">
-                      {conv.contact_name || `+${conv.phone_number}`}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-sm truncate">
+                        {conv.contact_name || `+${conv.phone_number}`}
+                      </span>
+                      {conv.is_client && (
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5 shrink-0">
+                          Cliente
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">
                       {formatConversationTime(conv.last_message_time)}
                     </span>
                   </div>
