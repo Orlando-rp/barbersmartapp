@@ -829,25 +829,25 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-              <Check className="h-8 w-8 text-green-600" />
+          <CardHeader className="text-center px-4 sm:px-6">
+            <div className="mx-auto mb-4 h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-green-100 flex items-center justify-center">
+              <Check className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
-            <CardTitle className="text-2xl text-green-600">Agendamento Confirmado!</CardTitle>
-            <CardDescription className="mt-4 space-y-3">
-              <p><strong>Data:</strong> {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+            <CardTitle className="text-xl sm:text-2xl text-green-600">Agendamento Confirmado!</CardTitle>
+            <CardDescription className="mt-4 space-y-2 sm:space-y-3 text-sm">
+              <p><strong>Data:</strong> {selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</p>
               <p><strong>Horário:</strong> {selectedTime}</p>
-              <p><strong>Serviço:</strong> {selectedService?.name}</p>
-              <div className="flex items-center justify-center gap-3 py-2">
-                <Avatar className="h-10 w-10">
+              <p className="truncate"><strong>Serviço:</strong> {selectedService?.name}</p>
+              <div className="flex items-center justify-center gap-2 sm:gap-3 py-2">
+                <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                   <AvatarImage src={getStaffAvatar(selectedStaff) || undefined} alt={getStaffName(selectedStaff)} />
-                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs sm:text-sm">
                     {getStaffInitials(selectedStaff)}
                   </AvatarFallback>
                 </Avatar>
-                <span><strong>Profissional:</strong> {getStaffName(selectedStaff)}</span>
+                <span className="truncate"><strong>Profissional:</strong> {getStaffName(selectedStaff)}</span>
               </div>
-              <p className="text-primary font-semibold mt-4">Você receberá uma confirmação por WhatsApp!</p>
+              <p className="text-primary font-semibold mt-4 text-xs sm:text-sm">Você receberá uma confirmação por WhatsApp!</p>
             </CardDescription>
           </CardHeader>
         </Card>
@@ -859,36 +859,36 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
     <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">{barbershop.name}</h1>
-          <p className="text-muted-foreground mt-2">Agende seu horário online</p>
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate px-2">{barbershop.name}</h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">Agende seu horário online</p>
         </div>
 
         {/* Progress Steps */}
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6 sm:mb-8">
           {[1, 2, 3, 4].map((s) => (
             <div
               key={s}
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
+              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-sm sm:text-base transition-colors ${
                 s === step ? 'bg-primary text-primary-foreground' : 
                 s < step ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
               }`}
             >
-              {s < step ? <Check className="h-5 w-5" /> : s}
+              {s < step ? <Check className="h-4 w-4 sm:h-5 sm:w-5" /> : s}
             </div>
           ))}
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {step === 1 && <><Scissors className="h-5 w-5" /> Escolha o Serviço</>}
-              {step === 2 && <><User className="h-5 w-5" /> Escolha o Profissional</>}
-              {step === 3 && <><CalendarIcon className="h-5 w-5" /> Escolha Data e Horário</>}
-              {step === 4 && <><Phone className="h-5 w-5" /> Seus Dados</>}
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              {step === 1 && <><Scissors className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" /> <span className="truncate">Escolha o Serviço</span></>}
+              {step === 2 && <><User className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" /> <span className="truncate">Escolha o Profissional</span></>}
+              {step === 3 && <><CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" /> <span className="truncate">Data e Horário</span></>}
+              {step === 4 && <><Phone className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" /> <span className="truncate">Seus Dados</span></>}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             {/* Step 1: Service Selection */}
             {step === 1 && (
               <div className="grid gap-3">
@@ -899,26 +899,26 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                     <div
                       key={service.id}
                       onClick={() => setSelectedService(service)}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      className={`p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         selectedService?.id === service.id
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:border-primary/50'
                       }`}
                     >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{service.name}</h3>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-sm sm:text-base truncate">{service.name}</h3>
                           {service.description && (
-                            <p className="text-sm text-muted-foreground">{service.description}</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{service.description}</p>
                           )}
                           <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="secondary">
+                            <Badge variant="secondary" className="text-xs">
                               <Clock className="h-3 w-3 mr-1" />
                               {formatDuration(service.duration)}
                             </Badge>
                           </div>
                         </div>
-                        <span className="text-lg font-bold text-primary">
+                        <span className="text-base sm:text-lg font-bold text-primary flex-shrink-0">
                           R$ {service.price.toFixed(2)}
                         </span>
                       </div>
@@ -933,13 +933,13 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
               <div className="grid gap-3">
                 {filteredStaffList.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-muted-foreground">
+                    <p className="text-muted-foreground text-sm sm:text-base">
                       Nenhum profissional disponível para o serviço selecionado
                     </p>
                     <Button 
                       variant="link" 
                       onClick={() => setStep(1)}
-                      className="mt-2"
+                      className="mt-2 text-sm"
                     >
                       Escolher outro serviço
                     </Button>
@@ -954,20 +954,20 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                         setSelectedDate(undefined);
                         setSelectedTime('');
                       }}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      className={`p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         selectedStaff?.id === staff.id
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:border-primary/50'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12">
+                        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
                           <AvatarImage src={getStaffAvatar(staff) || undefined} alt={getStaffName(staff)} />
-                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm sm:text-base">
                             {getStaffInitials(staff)}
                           </AvatarFallback>
                         </Avatar>
-                        <h3 className="font-semibold">{getStaffName(staff)}</h3>
+                        <h3 className="font-semibold text-sm sm:text-base truncate">{getStaffName(staff)}</h3>
                       </div>
                     </div>
                   ))
@@ -977,19 +977,19 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
 
             {/* Step 3: Date & Time Selection */}
             {step === 3 && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <Label className="text-base mb-3 block">Selecione a Data</Label>
+                  <Label className="text-sm sm:text-base mb-2 sm:mb-3 block">Selecione a Data</Label>
                   
                   {/* Legend */}
-                  <div className="flex items-center justify-center gap-4 mb-4 text-xs">
+                  <div className="flex items-center justify-center gap-2 sm:gap-4 mb-3 sm:mb-4 text-[10px] sm:text-xs flex-wrap">
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 rounded-full bg-green-500" />
                       <span>Disponível</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 rounded-full bg-amber-500" />
-                      <span>Poucos horários</span>
+                      <span>Poucos</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 rounded-full bg-red-500" />
@@ -1062,7 +1062,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
 
                 {selectedDate && (
                   <div>
-                    <Label className="text-base mb-3 block">Horários Disponíveis</Label>
+                    <Label className="text-sm sm:text-base mb-2 sm:mb-3 block">Horários Disponíveis</Label>
                     {availableSlots.length === 0 ? (
                       <div className="space-y-4">
                         {!showWaitlistForm && !waitlistSuccess ? (
@@ -1122,23 +1122,25 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                               />
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div className="space-y-2">
-                                <Label htmlFor="timeStart">Horário preferido (início)</Label>
+                                <Label htmlFor="timeStart" className="text-sm">Horário preferido (início)</Label>
                                 <Input
                                   id="timeStart"
                                   type="time"
                                   value={waitlistPreferredTimeStart}
                                   onChange={(e) => setWaitlistPreferredTimeStart(e.target.value)}
+                                  className="text-sm"
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor="timeEnd">Horário preferido (fim)</Label>
+                                <Label htmlFor="timeEnd" className="text-sm">Horário preferido (fim)</Label>
                                 <Input
                                   id="timeEnd"
                                   type="time"
                                   value={waitlistPreferredTimeEnd}
                                   onChange={(e) => setWaitlistPreferredTimeEnd(e.target.value)}
+                                  className="text-sm"
                                 />
                               </div>
                             </div>
@@ -1179,13 +1181,14 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                         )}
                       </div>
                     ) : (
-                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                         {availableSlots.map((slot) => (
                           <Button
                             key={slot}
                             variant={selectedTime === slot ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setSelectedTime(slot)}
+                            className="text-xs sm:text-sm px-2 sm:px-3"
                           >
                             {slot}
                           </Button>
@@ -1201,32 +1204,34 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
             {step === 4 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="clientName">Seu Nome</Label>
+                  <Label htmlFor="clientName" className="text-sm">Seu Nome</Label>
                   <Input
                     id="clientName"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
                     placeholder="Digite seu nome completo"
+                    className="text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="clientPhone">Seu WhatsApp</Label>
+                  <Label htmlFor="clientPhone" className="text-sm">Seu WhatsApp</Label>
                   <Input
                     id="clientPhone"
                     value={clientPhone}
                     onChange={(e) => setClientPhone(formatPhone(e.target.value))}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
+                    className="text-sm"
                   />
                 </div>
 
                 {/* Summary */}
-                <div className="mt-6 p-4 bg-muted rounded-lg">
-                  <h4 className="font-semibold mb-3">Resumo do Agendamento</h4>
-                  <div className="space-y-2 text-sm">
-                    <p><strong>Serviço:</strong> {selectedService?.name}</p>
-                    <p><strong>Profissional:</strong> {getStaffName(selectedStaff)}</p>
-                    <p><strong>Data:</strong> {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+                <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-muted rounded-lg">
+                  <h4 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Resumo do Agendamento</h4>
+                  <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                    <p className="truncate"><strong>Serviço:</strong> {selectedService?.name}</p>
+                    <p className="truncate"><strong>Profissional:</strong> {getStaffName(selectedStaff)}</p>
+                    <p><strong>Data:</strong> {selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</p>
                     <p><strong>Horário:</strong> {selectedTime}</p>
                     <p><strong>Valor:</strong> R$ {selectedService?.price.toFixed(2)}</p>
                   </div>
@@ -1235,14 +1240,16 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between mt-6 pt-4 border-t">
+            <div className="flex justify-between mt-4 sm:mt-6 pt-4 border-t gap-3">
               <Button
                 variant="outline"
                 onClick={() => setStep(step - 1)}
                 disabled={step === 1}
+                size="sm"
+                className="text-xs sm:text-sm"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
+                <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Voltar</span>
               </Button>
 
               {step < 4 ? (
@@ -1253,21 +1260,25 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                     (step === 2 && !selectedStaff) ||
                     (step === 3 && (!selectedDate || !selectedTime))
                   }
+                  size="sm"
+                  className="text-xs sm:text-sm"
                 >
-                  Próximo
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <span>Próximo</span>
+                  <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
                 </Button>
               ) : (
                 <Button
                   onClick={handleSubmit}
                   disabled={submitting || !clientName || !clientPhone}
+                  size="sm"
+                  className="text-xs sm:text-sm"
                 >
                   {submitting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
                   ) : (
-                    <Check className="h-4 w-4 mr-2" />
+                    <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   )}
-                  Confirmar Agendamento
+                  <span className="hidden xs:inline">Confirmar </span>Agendar
                 </Button>
               )}
             </div>
@@ -1275,9 +1286,10 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
         </Card>
 
         {/* Footer */}
-        <p className="text-center text-muted-foreground text-sm mt-6">
-          {barbershop.address && <span>{barbershop.address}</span>}
-          {barbershop.phone && <span> • {barbershop.phone}</span>}
+        <p className="text-center text-muted-foreground text-xs sm:text-sm mt-4 sm:mt-6 px-2">
+          {barbershop.address && <span className="block sm:inline truncate">{barbershop.address}</span>}
+          {barbershop.phone && <span className="hidden sm:inline"> • </span>}
+          {barbershop.phone && <span className="block sm:inline">{barbershop.phone}</span>}
         </p>
       </div>
     </div>
