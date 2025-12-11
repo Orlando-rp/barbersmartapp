@@ -232,26 +232,62 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       return;
     }
     
-    console.log('[AppointmentForm] fetchStaff: buscando para barbershop_id =', effectiveBarbershopId);
+    // Buscar de todas as unidades relacionadas para pegar staff que trabalham em múltiplas unidades
+    const searchBarbershopIds = allRelatedBarbershopIds.length > 0 
+      ? allRelatedBarbershopIds 
+      : [effectiveBarbershopId];
+    
+    console.log('[AppointmentForm] fetchStaff: buscando para barbershop_ids =', searchBarbershopIds);
+    console.log('[AppointmentForm] fetchStaff: filtrando para unidade selecionada =', effectiveBarbershopId);
     
     try {
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
-        .select('id, user_id, schedule')
-        .eq('barbershop_id', effectiveBarbershopId)
+        .select('id, user_id, schedule, barbershop_id')
+        .in('barbershop_id', searchBarbershopIds)
         .eq('active', true);
 
       if (staffError) throw staffError;
       
-      console.log('[AppointmentForm] fetchStaff: encontrados', staffData?.length || 0, 'profissionais ativos');
+      console.log('[AppointmentForm] fetchStaff: encontrados', staffData?.length || 0, 'profissionais ativos em todas unidades');
 
       if (!staffData || staffData.length === 0) {
-        console.log('[AppointmentForm] fetchStaff: nenhum profissional ativo nesta unidade');
+        console.log('[AppointmentForm] fetchStaff: nenhum profissional ativo');
         setStaff([]);
         return;
       }
 
-      const userIds = staffData.map(s => s.user_id);
+      // Filtrar staff que trabalha na unidade selecionada
+      // Um staff trabalha na unidade se:
+      // 1. Está registrado nessa unidade (barbershop_id === effectiveBarbershopId)
+      // 2. OU tem algum dia de schedule com unit_id === effectiveBarbershopId
+      const staffForSelectedUnit = staffData.filter(member => {
+        // Se está registrado nesta unidade
+        if (member.barbershop_id === effectiveBarbershopId) {
+          return true;
+        }
+        
+        // Se tem schedule com unit_id desta unidade
+        if (member.schedule) {
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          return days.some(day => {
+            const daySchedule = member.schedule[day];
+            return daySchedule?.unit_id === effectiveBarbershopId && daySchedule?.is_working;
+          });
+        }
+        
+        return false;
+      });
+
+      console.log('[AppointmentForm] fetchStaff: após filtro por unidade:', staffForSelectedUnit.length, 'profissionais');
+
+      if (staffForSelectedUnit.length === 0) {
+        console.log('[AppointmentForm] fetchStaff: nenhum profissional trabalha nesta unidade');
+        setStaff([]);
+        return;
+      }
+
+      const userIds = staffForSelectedUnit.map(s => s.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
@@ -259,7 +295,7 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
 
       if (profilesError) throw profilesError;
 
-      const transformedStaff = staffData.map((member) => {
+      const transformedStaff = staffForSelectedUnit.map((member) => {
         const profile = profilesData?.find(p => p.id === member.user_id);
         return {
           id: member.id,
