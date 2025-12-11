@@ -34,12 +34,13 @@ export const usePushNotifications = () => {
         return;
       }
 
-      // Registrar Service Worker
+      // Service Worker é registrado automaticamente pelo vite-plugin-pwa
+      // Aguardar o SW estar pronto
       try {
-        await navigator.serviceWorker.register('/sw.js');
-        console.log('[Push] Service Worker registrado');
+        await navigator.serviceWorker.ready;
+        console.log('[Push] Service Worker pronto');
       } catch (error) {
-        console.error('[Push] Erro ao registrar SW:', error);
+        console.error('[Push] Erro ao aguardar SW:', error);
       }
 
       const permission = Notification.permission;
