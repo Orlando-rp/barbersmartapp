@@ -49,7 +49,7 @@ interface FinancialSummary {
 }
 
 const Finance = () => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalRevenue: 0,
@@ -61,7 +61,7 @@ const Finance = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchFinancialData();
 
       // Realtime subscription
@@ -72,11 +72,14 @@ const Finance = () => {
           {
             event: '*',
             schema: 'public',
-            table: 'transactions',
-            filter: `barbershop_id=eq.${barbershopId}`
+            table: 'transactions'
           },
-          () => {
-            fetchFinancialData();
+          (payload: any) => {
+            if (payload.new?.barbershop_id && activeBarbershopIds.includes(payload.new.barbershop_id)) {
+              fetchFinancialData();
+            } else if (payload.old?.barbershop_id && activeBarbershopIds.includes(payload.old.barbershop_id)) {
+              fetchFinancialData();
+            }
           }
         )
         .subscribe();
@@ -85,7 +88,7 @@ const Finance = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [barbershopId, selectedMonth]);
+  }, [activeBarbershopIds, selectedMonth]);
 
   const fetchFinancialData = async () => {
     try {
@@ -100,7 +103,7 @@ const Finance = () => {
       const { data: transactionsData, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .gte('transaction_date', firstDayOfMonth)
         .lte('transaction_date', lastDayOfMonth)
         .order('transaction_date', { ascending: false });

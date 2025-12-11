@@ -22,7 +22,7 @@ interface Review {
 }
 
 const Reviews = () => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [averageRating, setAverageRating] = useState(0);
@@ -30,10 +30,10 @@ const Reviews = () => {
   const [ratingDistribution, setRatingDistribution] = useState<number[]>([0, 0, 0, 0, 0]);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       loadReviews();
     }
-  }, [barbershopId]);
+  }, [activeBarbershopIds]);
 
   const loadReviews = async () => {
     try {
@@ -50,7 +50,7 @@ const Reviews = () => {
           staff:staff(id),
           appointments:appointments(service_name)
         `)
-        .eq("barbershop_id", barbershopId)
+        .in("barbershop_id", activeBarbershopIds)
         .order("created_at", { ascending: false });
 
       // Handle table not existing gracefully

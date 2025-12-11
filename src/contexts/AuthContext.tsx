@@ -18,6 +18,7 @@ interface AuthContextType {
   barbershopId: string | null;
   barbershops: Barbershop[];
   selectedBarbershopId: string | null;
+  activeBarbershopIds: string[];
   loading: boolean;
   needsProfileCompletion: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -276,6 +277,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Compute activeBarbershopIds based on selection
+  const activeBarbershopIds = selectedBarbershopId === null 
+    ? barbershops.map(b => b.id)
+    : [selectedBarbershopId];
+
   return (
     <AuthContext.Provider
       value={{
@@ -285,6 +291,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         barbershopId,
         barbershops,
         selectedBarbershopId,
+        activeBarbershopIds,
         loading,
         needsProfileCompletion,
         signIn,
