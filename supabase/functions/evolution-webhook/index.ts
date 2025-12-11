@@ -1,5 +1,5 @@
-// Evolution API Webhook Handler v2.1 - Receives incoming WhatsApp messages
-// Updated: 2025-12-10 - Fixed instance extraction for string format
+// Evolution API Webhook Handler v2.2 - Receives incoming WhatsApp messages and stores them
+// Updated: 2025-12-11 - Added message storage for chat UI
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -90,6 +90,7 @@ serve(async (req) => {
 
     // Get message text - Evolution API can have different message types
     let messageText = '';
+    let messageType = 'text';
     const message = messageData?.message || messageData;
     
     if (message?.conversation) {
@@ -98,23 +99,24 @@ serve(async (req) => {
       messageText = message.extendedTextMessage.text;
     } else if (message?.imageMessage?.caption) {
       messageText = message.imageMessage.caption;
+      messageType = 'image';
     } else if (message?.videoMessage?.caption) {
       messageText = message.videoMessage.caption;
+      messageType = 'video';
     } else if (message?.documentMessage?.caption) {
       messageText = message.documentMessage.caption;
+      messageType = 'document';
+    } else if (message?.audioMessage) {
+      messageText = '[Áudio]';
+      messageType = 'audio';
     } else if (typeof message === 'string') {
       messageText = message;
     }
 
-    if (!messageText) {
-      console.log('[Evolution Webhook] No text message found, might be media only');
-      return new Response(
-        JSON.stringify({ success: true, message: 'No text content' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Get contact name if available
+    const contactName = data?.pushName || payload.pushName || null;
 
-    console.log(`[Evolution Webhook] Message from ${from}: ${messageText}`);
+    console.log(`[Evolution Webhook] Message from ${from} (${contactName}): ${messageText}`);
 
     // Find barbershop - try multiple strategies
     let barbershopId: string | null = null;
@@ -179,6 +181,32 @@ serve(async (req) => {
       );
     }
 
+    // Always store incoming message for chat UI (regardless of chatbot status)
+    if (messageText) {
+      console.log('[Evolution Webhook] Storing incoming message for chat UI');
+      const { error: msgError } = await supabase
+        .from('whatsapp_messages')
+        .insert({
+          barbershop_id: barbershopId,
+          phone_number: from,
+          contact_name: contactName,
+          message: messageText,
+          direction: 'incoming',
+          message_type: messageType,
+          status: 'sent',
+          metadata: {
+            instance_name: instanceName,
+            message_id: key?.id
+          }
+        });
+      
+      if (msgError) {
+        console.error('[Evolution Webhook] Error storing message:', msgError);
+      } else {
+        console.log('[Evolution Webhook] Message stored successfully');
+      }
+    }
+
     // Check if chatbot is enabled for this barbershop
     const { data: chatbotConfig } = await supabase
       .from('whatsapp_config')
@@ -192,7 +220,15 @@ serve(async (req) => {
     if (!chatbotConfig?.chatbot_enabled) {
       console.log('[Evolution Webhook] Chatbot not enabled for barbershop:', barbershopId);
       return new Response(
-        JSON.stringify({ success: true, message: 'Chatbot not enabled' }),
+        JSON.stringify({ success: true, message: 'Message stored, chatbot not enabled' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!messageText) {
+      console.log('[Evolution Webhook] No text message found, might be media only');
+      return new Response(
+        JSON.stringify({ success: true, message: 'No text content for chatbot' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

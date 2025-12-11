@@ -239,6 +239,7 @@ serve(async (req) => {
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+        // Log to whatsapp_logs (existing behavior)
         const logEntry = {
           barbershop_id: barbershopId,
           recipient_phone: to,
@@ -256,6 +257,31 @@ serve(async (req) => {
 
         if (logError) {
           console.error('[Evolution API] Error logging message:', logError);
+        }
+
+        // Also store in whatsapp_messages for chat UI
+        if (response.ok) {
+          const phoneNumber = to?.replace(/\D/g, '');
+          const { error: msgError } = await supabase
+            .from('whatsapp_messages')
+            .insert({
+              barbershop_id: barbershopId,
+              phone_number: phoneNumber,
+              contact_name: recipientName || null,
+              message: message,
+              direction: 'outgoing',
+              status: 'sent',
+              message_type: 'text',
+              metadata: {
+                message_id: data?.key?.id || data?.id
+              }
+            });
+
+          if (msgError) {
+            console.error('[Evolution API] Error storing message for chat:', msgError);
+          } else {
+            console.log('[Evolution API] Message stored for chat UI');
+          }
         }
       } catch (logErr) {
         console.error('[Evolution API] Failed to log message:', logErr);
