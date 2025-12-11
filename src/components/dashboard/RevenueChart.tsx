@@ -3,7 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { BarChart3 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BarChart3, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface DayRevenue {
@@ -12,11 +13,13 @@ interface DayRevenue {
 }
 
 const RevenueChart = () => {
-  const { activeBarbershopIds } = useAuth();
+  const { activeBarbershopIds, selectedBarbershopId, barbershops } = useAuth();
   const [revenueData, setRevenueData] = useState<DayRevenue[]>([]);
   const [loading, setLoading] = useState(true);
   const [maxRevenue, setMaxRevenue] = useState(0);
   const [totalWeek, setTotalWeek] = useState(0);
+
+  const isConsolidatedView = barbershops.length > 1 && selectedBarbershopId === null;
 
   useEffect(() => {
     if (activeBarbershopIds.length > 0) {
@@ -98,9 +101,16 @@ const RevenueChart = () => {
   return (
     <Card className="barbershop-card">
       <CardHeader className="p-4 sm:p-6">
-        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg flex-wrap">
           <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Receita da Semana
+          {isConsolidatedView && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 flex items-center gap-1 ml-auto">
+              <Building2 className="h-2.5 w-2.5" />
+              <span className="hidden sm:inline">{barbershops.length} unidades</span>
+              <span className="sm:hidden">{barbershops.length}</span>
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 pt-0">
