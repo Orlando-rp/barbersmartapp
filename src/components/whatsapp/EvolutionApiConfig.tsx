@@ -158,9 +158,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         }
         setIsUsingGlobalConfig(!data.config.api_url && !data.config.api_key && (!!globalApiUrl || !!globalApiKey));
         
-        // Se já está marcado como conectado, verificar status real
+        // Se já está marcado como conectado, verificar status real com o config carregado
         if (data.config.connection_status === 'connected') {
-          setTimeout(() => checkConnection(), 1000);
+          setTimeout(() => checkConnection({ apiUrl: finalApiUrl, apiKey: finalApiKey, instanceName: finalInstanceName }), 1000);
         }
       } else if (globalApiUrl || globalApiKey) {
         // Usar config global com instanceName local
@@ -224,9 +224,15 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     }
   };
 
-  const checkConnection = async () => {
-    if (!config.apiUrl || !config.instanceName) {
-      toast.error("Configure a URL e nome da instância primeiro");
+  const checkConnection = async (overrideConfig?: { apiUrl: string; apiKey: string; instanceName: string } | React.MouseEvent) => {
+    // Se for um evento de mouse (clique de botão), usar config do state
+    const checkConfig = (overrideConfig && 'apiUrl' in overrideConfig) ? overrideConfig : config;
+    
+    if (!checkConfig.apiUrl || !checkConfig.instanceName) {
+      // Não mostrar toast se config ainda está carregando
+      if (!loadingConfig) {
+        toast.error("Configure a URL e nome da instância primeiro");
+      }
       return;
     }
 
@@ -236,9 +242,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
           action: 'connectionState',
-          apiUrl: config.apiUrl,
-          apiKey: config.apiKey,
-          instanceName: config.instanceName
+          apiUrl: checkConfig.apiUrl,
+          apiKey: checkConfig.apiKey,
+          instanceName: checkConfig.instanceName
         }
       });
 
