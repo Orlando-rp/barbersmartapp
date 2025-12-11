@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,13 +42,19 @@ type WizardStep = 'unit' | 'professional' | 'service' | 'datetime' | 'client' | 
 export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
   const { barbershopId, barbershops, user } = useAuth();
   const { sharedBarbershopId, allRelatedBarbershopIds } = useSharedBarbershopId();
-  const { staffProvidesService, staffHasServiceRestrictions } = useStaffServices(sharedBarbershopId);
   const { toast } = useToast();
   
   // Se o usuário tem múltiplas barbearias, começa na seleção de unidade
   const hasMultipleUnits = barbershops && barbershops.length > 1;
   const [currentStep, setCurrentStep] = useState<WizardStep>(hasMultipleUnits ? 'unit' : 'professional');
   const [selectedUnitId, setSelectedUnitId] = useState<string>(barbershopId || "");
+  
+  // Usa a unidade selecionada no wizard ou o barbershopId do contexto
+  // Definido aqui para poder ser usado pelo useStaffServices
+  const effectiveBarbershopId = selectedUnitId || barbershopId;
+  
+  // Hook de serviços do staff - usa a unidade efetiva selecionada
+  const { staffProvidesService, staffHasServiceRestrictions } = useStaffServices(effectiveBarbershopId);
   
   const [clientId, setClientId] = useState(appointment?.client_id || "");
   const [clientName, setClientName] = useState(appointment?.client_name || waitlistPrefill?.clientName || "");
@@ -80,8 +86,9 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   const [waitlistNotes, setWaitlistNotes] = useState("");
   const [savingWaitlist, setSavingWaitlist] = useState(false);
   
-  // Usa a unidade selecionada no wizard ou o barbershopId do contexto
-  const effectiveBarbershopId = selectedUnitId || barbershopId;
+  // Refs para controlar quando resetar as seleções
+  const isFirstRender = useRef(true);
+  const prevEffectiveBarbershopId = useRef<string | null>(null);
   
   const { validateDateTime, generateTimeSlots, checkTimeOverlap, loading: validationLoading } = useBusinessHoursValidation(effectiveBarbershopId);
 
@@ -93,20 +100,32 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     }
   }, [sharedBarbershopId, allRelatedBarbershopIds]);
 
-  // Busca staff da unidade específica e reseta seleções quando unidade muda
+  // Reseta seleções quando unidade muda (não na montagem inicial)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      prevEffectiveBarbershopId.current = effectiveBarbershopId;
+      return;
+    }
+    
+    // Só reseta se a unidade realmente mudou
+    if (prevEffectiveBarbershopId.current !== effectiveBarbershopId && effectiveBarbershopId) {
+      console.log('[AppointmentForm] Unidade mudou de', prevEffectiveBarbershopId.current, 'para:', effectiveBarbershopId);
+      setSelectedBarber("");
+      setSelectedService("");
+      setDate(undefined);
+      setSelectedTime("");
+      prevEffectiveBarbershopId.current = effectiveBarbershopId;
+    }
+  }, [effectiveBarbershopId]);
+
+  // Busca staff da unidade específica
   useEffect(() => {
     if (effectiveBarbershopId) {
+      console.log('[AppointmentForm] Buscando staff para unidade:', effectiveBarbershopId);
       fetchStaff();
-      // Reseta profissional, serviço, data e horário quando a unidade muda
-      // para garantir que apenas profissionais da unidade selecionada apareçam
-      if (selectedUnitId && selectedUnitId !== barbershopId) {
-        setSelectedBarber("");
-        setSelectedService("");
-        setDate(undefined);
-        setSelectedTime("");
-      }
     }
-  }, [effectiveBarbershopId, selectedUnitId]);
+  }, [effectiveBarbershopId]);
 
   useEffect(() => {
     if (date && selectedBarber && selectedService) {
@@ -207,16 +226,27 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   };
 
   const fetchStaff = async () => {
+    if (!effectiveBarbershopId) {
+      console.log('[AppointmentForm] fetchStaff: sem effectiveBarbershopId');
+      setStaff([]);
+      return;
+    }
+    
+    console.log('[AppointmentForm] fetchStaff: buscando para barbershop_id =', effectiveBarbershopId);
+    
     try {
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
-        .select('id, user_id')
+        .select('id, user_id, schedule, avatar_url')
         .eq('barbershop_id', effectiveBarbershopId)
         .eq('active', true);
 
       if (staffError) throw staffError;
+      
+      console.log('[AppointmentForm] fetchStaff: encontrados', staffData?.length || 0, 'profissionais ativos');
 
       if (!staffData || staffData.length === 0) {
+        console.log('[AppointmentForm] fetchStaff: nenhum profissional ativo nesta unidade');
         setStaff([]);
         return;
       }
@@ -233,17 +263,22 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
         const profile = profilesData?.find(p => p.id === member.user_id);
         return {
           id: member.id,
-          name: profile?.full_name || 'Nome não disponível'
+          name: profile?.full_name || 'Nome não disponível',
+          schedule: member.schedule,
+          avatar_url: member.avatar_url
         };
       });
       
+      console.log('[AppointmentForm] fetchStaff: staff transformado:', transformedStaff);
       setStaff(transformedStaff);
     } catch (error: any) {
+      console.error('[AppointmentForm] fetchStaff: erro:', error);
       toast({
         title: 'Erro ao carregar equipe',
         description: error.message,
         variant: 'destructive',
       });
+      setStaff([]);
     }
   };
 
