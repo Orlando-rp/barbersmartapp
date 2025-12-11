@@ -34,7 +34,7 @@ interface Prediction {
 }
 
 export const PredictiveAnalytics = () => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [loading, setLoading] = useState(true);
   const [historicalData, setHistoricalData] = useState<MonthlyData[]>([]);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -50,10 +50,10 @@ export const PredictiveAnalytics = () => {
   });
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchHistoricalData();
     }
-  }, [barbershopId]);
+  }, [activeBarbershopIds]);
 
   const fetchHistoricalData = async () => {
     try {
@@ -70,7 +70,7 @@ export const PredictiveAnalytics = () => {
         const { data: transactions } = await supabase
           .from("transactions")
           .select("amount")
-          .eq("barbershop_id", barbershopId)
+          .in("barbershop_id", activeBarbershopIds)
           .eq("type", "receita")
           .gte("transaction_date", format(monthStart, "yyyy-MM-dd"))
           .lte("transaction_date", format(monthEnd, "yyyy-MM-dd"));
@@ -81,7 +81,7 @@ export const PredictiveAnalytics = () => {
         const { data: appointments } = await supabase
           .from("appointments")
           .select("status")
-          .eq("barbershop_id", barbershopId)
+          .in("barbershop_id", activeBarbershopIds)
           .gte("appointment_date", format(monthStart, "yyyy-MM-dd"))
           .lte("appointment_date", format(monthEnd, "yyyy-MM-dd"));
 

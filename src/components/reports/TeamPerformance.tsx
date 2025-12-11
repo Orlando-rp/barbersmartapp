@@ -33,7 +33,7 @@ interface Props {
 }
 
 export const TeamPerformance = ({ period }: Props) => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [performance, setPerformance] = useState<StaffPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalStats, setTotalStats] = useState({
@@ -43,10 +43,10 @@ export const TeamPerformance = ({ period }: Props) => {
   });
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchTeamPerformance();
     }
-  }, [barbershopId, period]);
+  }, [activeBarbershopIds, period]);
 
   const fetchTeamPerformance = async () => {
     try {
@@ -62,7 +62,7 @@ export const TeamPerformance = ({ period }: Props) => {
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select('id, user_id, commission_rate')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('active', true);
 
       if (staffError) throw staffError;
@@ -94,7 +94,7 @@ export const TeamPerformance = ({ period }: Props) => {
       const { data: appointments, error: aptError } = await supabase
         .from('appointments')
         .select('staff_id, status, service_price')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .in('staff_id', staffIds)
         .gte('appointment_date', startDate);
 

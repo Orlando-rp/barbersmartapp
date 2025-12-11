@@ -34,15 +34,15 @@ interface Props {
 }
 
 export const ClientsMetrics = ({ period }: Props) => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [metrics, setMetrics] = useState<ClientMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchClientMetrics();
     }
-  }, [barbershopId, period]);
+  }, [activeBarbershopIds, period]);
 
   const fetchClientMetrics = async () => {
     try {
@@ -60,27 +60,27 @@ export const ClientsMetrics = ({ period }: Props) => {
       const { count: totalCount } = await supabase
         .from('clients')
         .select('*', { count: 'exact', head: true })
-        .eq('barbershop_id', barbershopId);
+        .in('barbershop_id', activeBarbershopIds);
 
       // Clientes ativos
       const { count: activeCount } = await supabase
         .from('clients')
         .select('*', { count: 'exact', head: true })
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('active', true);
 
       // Novos clientes este mês
       const { count: newClientsCount } = await supabase
         .from('clients')
         .select('*', { count: 'exact', head: true })
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .gte('created_at', firstDayOfMonth);
 
       // Top clientes (mais agendamentos)
       const { data: appointments } = await supabase
         .from('appointments')
         .select('client_name, service_price, appointment_date')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .gte('appointment_date', startDate)
         .in('status', ['confirmado', 'concluido']);
 

@@ -31,58 +31,28 @@ import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Reports = () => {
-  const { user } = useAuth();
+  const { user, activeBarbershopIds, barbershops, selectedBarbershopId } = useAuth();
   const [period, setPeriod] = useState<string>("month");
   const [isExporting, setIsExporting] = useState(false);
   const [barbershopName, setBarbershopName] = useState<string>("");
 
   useEffect(() => {
-    const fetchBarbershopName = async () => {
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('barbershop_id')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.barbershop_id) {
-        const { data: barbershop } = await supabase
-          .from('barbershops')
-          .select('name')
-          .eq('id', profile.barbershop_id)
-          .single();
-
-        if (barbershop) {
-          setBarbershopName(barbershop.name);
-        }
-      }
-    };
-
-    fetchBarbershopName();
-  }, [user]);
+    if (selectedBarbershopId === null && barbershops.length > 1) {
+      setBarbershopName("Todas as Unidades");
+    } else {
+      const selected = barbershops.find(b => b.id === selectedBarbershopId);
+      setBarbershopName(selected?.name || "");
+    }
+  }, [selectedBarbershopId, barbershops]);
 
   const handleExportReport = async (exportFormat: 'pdf' | 'excel') => {
-    if (!user) {
-      toast.error("Usuário não autenticado");
+    if (!user || activeBarbershopIds.length === 0) {
+      toast.error("Usuário não autenticado ou barbearia não selecionada");
       return;
     }
 
     setIsExporting(true);
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('barbershop_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile?.barbershop_id) {
-        toast.error("Barbearia não encontrada");
-        return;
-      }
-
-      const barbershopId = profile.barbershop_id;
-
       // Calculate date range based on period
       const now = new Date();
       let startDate: Date;
@@ -102,27 +72,27 @@ const Reports = () => {
         supabase
           .from('appointments')
           .select('*')
-          .eq('barbershop_id', barbershopId)
+          .in('barbershop_id', activeBarbershopIds)
           .gte('appointment_time', startDate.toISOString())
           .order('appointment_time', { ascending: true }),
         supabase
           .from('transactions')
           .select('*')
-          .eq('barbershop_id', barbershopId)
+          .in('barbershop_id', activeBarbershopIds)
           .gte('transaction_date', startDate.toISOString())
           .order('transaction_date', { ascending: true }),
         supabase
           .from('clients')
           .select('*')
-          .eq('barbershop_id', barbershopId),
+          .in('barbershop_id', activeBarbershopIds),
         supabase
           .from('services')
           .select('*')
-          .eq('barbershop_id', barbershopId),
+          .in('barbershop_id', activeBarbershopIds),
         supabase
           .from('staff')
           .select('*, profiles!staff_user_id_fkey(*)')
-          .eq('barbershop_id', barbershopId)
+          .in('barbershop_id', activeBarbershopIds)
           .eq('active', true)
       ]);
 
