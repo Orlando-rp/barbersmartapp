@@ -152,23 +152,41 @@ export const WhatsAppChat = () => {
     if (!barbershopId) return;
 
     try {
+      console.log('[WhatsAppChat] Loading Evolution config for:', barbershopId);
+      
       // Get global config
-      const { data: globalData } = await supabase.functions.invoke('get-evolution-config');
+      const { data: globalData, error: globalError } = await supabase.functions.invoke('get-evolution-config');
+      console.log('[WhatsAppChat] Global config:', { globalData, globalError });
       
       // Get barbershop config
-      const { data: localConfig } = await supabase
+      const { data: localConfig, error: localError } = await supabase
         .from('whatsapp_config')
         .select('*')
         .eq('barbershop_id', barbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
 
-      if (localConfig?.config || globalData?.config) {
-        setEvolutionConfig({
-          apiUrl: localConfig?.config?.api_url || globalData?.config?.api_url,
-          apiKey: localConfig?.config?.api_key || globalData?.config?.api_key,
-          instanceName: localConfig?.config?.instance_name
-        });
+      console.log('[WhatsAppChat] Local config:', { localConfig, localError });
+
+      // Generate instanceName if not in local config
+      const generatedInstanceName = `bs-${barbershopId.split('-')[0]}`;
+      
+      const finalConfig = {
+        apiUrl: localConfig?.config?.api_url || globalData?.config?.api_url || '',
+        apiKey: localConfig?.config?.api_key || globalData?.config?.api_key || '',
+        instanceName: localConfig?.config?.instance_name || generatedInstanceName
+      };
+      
+      console.log('[WhatsAppChat] Final config:', { 
+        hasUrl: !!finalConfig.apiUrl, 
+        hasKey: !!finalConfig.apiKey, 
+        instanceName: finalConfig.instanceName 
+      });
+
+      if (finalConfig.apiUrl && finalConfig.instanceName) {
+        setEvolutionConfig(finalConfig);
+      } else {
+        console.log('[WhatsAppChat] Config incomplete:', finalConfig);
       }
     } catch (error) {
       console.error('Erro ao carregar config Evolution:', error);
