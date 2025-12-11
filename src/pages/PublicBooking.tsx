@@ -5,6 +5,7 @@ import { formatDuration } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isBefore, startOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,28 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Animation variants for step transitions
+const stepVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 50 : -50,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 50 : -50,
+    opacity: 0,
+  }),
+};
+
+const stepTransition = {
+  type: 'spring' as const,
+  stiffness: 300,
+  damping: 30,
+};
 
 interface Barbershop {
   id: string;
@@ -122,6 +145,7 @@ export default function PublicBooking() {
   const { toast } = useToast();
 
   const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState(0); // -1 for back, 1 for forward
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -951,61 +975,86 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
             </CardTitle>
           </CardHeader>
           
-          <CardContent className="px-4 sm:px-6">
-            {/* Step 0: Unit Selection */}
-            {step === 0 && hasMultipleUnits && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Selecione a unidade mais próxima de você
-                </p>
-                <div className="grid gap-3">
-                  {availableUnits.map((unit) => (
-                    <div
-                      key={unit.id}
-                      onClick={() => handleUnitSelect(unit.id)}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
-                        selectedUnit?.id === unit.id
-                          ? 'border-accent bg-accent/5 shadow-md'
-                          : 'border-border hover:border-accent/50'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`p-2.5 rounded-lg ${
-                          selectedUnit?.id === unit.id ? 'bg-accent text-accent-foreground' : 'bg-muted'
-                        }`}>
-                          <Building2 className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-base">{unit.name}</h3>
-                          {unit.address && (
-                            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                              <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span className="truncate">{unit.address}</span>
-                            </p>
+          <CardContent className="px-4 sm:px-6 overflow-hidden">
+            <AnimatePresence mode="wait" custom={direction}>
+              {/* Step 0: Unit Selection */}
+              {step === 0 && hasMultipleUnits && (
+                <motion.div
+                  key="step-0"
+                  custom={direction}
+                  variants={stepVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={stepTransition}
+                  className="space-y-4"
+                >
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Selecione a unidade mais próxima de você
+                  </p>
+                  <div className="grid gap-3">
+                    {availableUnits.map((unit, index) => (
+                      <motion.div
+                        key={unit.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        onClick={() => handleUnitSelect(unit.id)}
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                          selectedUnit?.id === unit.id
+                            ? 'border-accent bg-accent/5 shadow-md'
+                            : 'border-border hover:border-accent/50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2.5 rounded-lg ${
+                            selectedUnit?.id === unit.id ? 'bg-accent text-accent-foreground' : 'bg-muted'
+                          }`}>
+                            <Building2 className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-base">{unit.name}</h3>
+                            {unit.address && (
+                              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                                <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                                <span className="truncate">{unit.address}</span>
+                              </p>
+                            )}
+                          </div>
+                          {selectedUnit?.id === unit.id && (
+                            <Check className="h-5 w-5 text-accent flex-shrink-0" />
                           )}
                         </div>
-                        {selectedUnit?.id === unit.id && (
-                          <Check className="h-5 w-5 text-accent flex-shrink-0" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
 
             {/* Step 1: Service Selection */}
             {step === 1 && (
-              <div className="grid gap-3">
+              <motion.div
+                key="step-1"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="grid gap-3"
+              >
                 {services.length === 0 ? (
                   <div className="text-center py-12">
                     <Scissors className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
                     <p className="text-muted-foreground">Nenhum serviço disponível</p>
                   </div>
                 ) : (
-                  services.map((service) => (
-                    <div
+                  services.map((service, index) => (
+                    <motion.div
                       key={service.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
                       onClick={() => setSelectedService(service)}
                       className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
                         selectedService?.id === service.id
@@ -1039,27 +1088,39 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                           </Badge>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
-              </div>
+              </motion.div>
             )}
 
             {/* Step 2: Staff Selection */}
             {step === 2 && (
-              <div className="grid gap-3">
+              <motion.div
+                key="step-2"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="grid gap-3"
+              >
                 {filteredStaffList.length === 0 ? (
                   <div className="text-center py-12">
                     <User className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
                     <p className="text-muted-foreground">Nenhum profissional disponível</p>
-                    <Button variant="link" onClick={() => setStep(1)} className="mt-2">
+                    <Button variant="link" onClick={() => { setDirection(-1); setStep(1); }} className="mt-2">
                       Escolher outro serviço
                     </Button>
                   </div>
                 ) : (
-                  filteredStaffList.map((staff) => (
-                    <div
+                  filteredStaffList.map((staff, index) => (
+                    <motion.div
                       key={staff.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
                       onClick={() => {
                         setSelectedStaff(staff);
                         setSelectedDate(undefined);
@@ -1089,15 +1150,24 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                           <Check className="h-5 w-5 text-accent" />
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
-              </div>
+              </motion.div>
             )}
 
             {/* Step 3: Date & Time Selection */}
             {step === 3 && (
-              <div className="space-y-6">
+              <motion.div
+                key="step-3"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="space-y-6"
+              >
                 <div>
                   <Label className="text-sm font-medium mb-3 block">Selecione a Data</Label>
                   
@@ -1310,12 +1380,21 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                     )}
                   </div>
                 )}
-              </div>
+              </motion.div>
             )}
 
             {/* Step 4: Client Info */}
             {step === 4 && (
-              <div className="space-y-5">
+              <motion.div
+                key="step-4"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="space-y-5"
+              >
                 <div className="space-y-1.5">
                   <Label htmlFor="clientName" className="text-sm font-medium">Seu Nome</Label>
                   <Input
@@ -1339,7 +1418,12 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 </div>
 
                 {/* Summary Card */}
-                <div className="mt-6 p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-xl border">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="mt-6 p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-xl border"
+                >
                   <h4 className="font-semibold mb-4 flex items-center gap-2">
                     <CalendarIcon className="h-4 w-4 text-accent" />
                     Resumo do Agendamento
@@ -1372,15 +1456,17 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                       <span className="text-xl font-bold text-accent">R$ {selectedService?.price.toFixed(2)}</span>
                     </div>
                   </div>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             )}
+            </AnimatePresence>
 
             {/* Navigation Buttons */}
             <div className="flex justify-between mt-6 pt-4 border-t border-border/50 gap-3">
               <Button
                 variant="outline"
                 onClick={() => {
+                  setDirection(-1);
                   if (step === 1 && hasMultipleUnits) {
                     setSelectedService(null);
                     setSelectedStaff(null);
@@ -1400,7 +1486,10 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
 
               {step < 4 ? (
                 <Button
-                  onClick={() => setStep(step + 1)}
+                  onClick={() => {
+                    setDirection(1);
+                    setStep(step + 1);
+                  }}
                   disabled={
                     (step === 0 && !selectedUnit) ||
                     (step === 1 && !selectedService) ||
