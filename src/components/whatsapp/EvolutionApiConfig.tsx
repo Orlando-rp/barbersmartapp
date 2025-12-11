@@ -379,7 +379,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
             if (barbershopId) {
               await supabase
                 .from('whatsapp_config')
-                .update({
+                .upsert({
+                  barbershop_id: barbershopId,
+                  provider: 'evolution',
                   config: {
                     api_url: config.apiUrl,
                     api_key: config.apiKey,
@@ -389,9 +391,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                   },
                   is_active: instanceData.connectionStatus === 'open',
                   updated_at: new Date().toISOString()
-                })
-                .eq('barbershop_id', barbershopId)
-                .eq('provider', 'evolution');
+                }, {
+                  onConflict: 'barbershop_id,provider'
+                });
             }
             
             return phoneNumber;
@@ -415,7 +417,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     try {
       await supabase
         .from('whatsapp_config')
-        .update({
+        .upsert({
+          barbershop_id: barbershopId,
+          provider: 'evolution',
           config: {
             api_url: config.apiUrl,
             api_key: config.apiKey,
@@ -425,9 +429,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           },
           is_active: status === 'connected',
           updated_at: new Date().toISOString()
-        })
-        .eq('barbershop_id', barbershopId)
-        .eq('provider', 'evolution');
+        }, {
+          onConflict: 'barbershop_id,provider'
+        });
     } catch (error) {
       console.error('Erro ao atualizar status no banco:', error);
     }
@@ -466,7 +470,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       // Atualiza status no banco de dados
       await supabase
         .from('whatsapp_config')
-        .update({
+        .upsert({
+          barbershop_id: barbershopId,
+          provider: 'evolution',
           config: {
             api_url: config.apiUrl,
             api_key: config.apiKey,
@@ -475,9 +481,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           },
           is_active: false,
           updated_at: new Date().toISOString()
-        })
-        .eq('barbershop_id', barbershopId)
-        .eq('provider', 'evolution');
+        }, {
+          onConflict: 'barbershop_id,provider'
+        });
 
       setConnectionStatus('disconnected');
       toast.success("WhatsApp desconectado e instância excluída");
