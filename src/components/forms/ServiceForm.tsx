@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Scissors, DollarSign, Clock, Tag } from "lucide-react";
+import { Scissors, DollarSign, Clock, Tag, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useServiceCategories } from "@/hooks/useServiceCategories";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
+import { ServiceImageUpload } from "@/components/services/ServiceImageUpload";
 import { z } from "zod";
 
 interface ServiceFormProps {
@@ -42,6 +43,7 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
   const [price, setPrice] = useState(editingService?.price?.toString() || "");
   const [duration, setDuration] = useState(editingService?.duration ? (editingService.duration / 60).toString() : "");
   const [isActive, setIsActive] = useState(editingService?.active ?? true);
+  const [imageUrl, setImageUrl] = useState<string | null>(editingService?.image_url || null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   
@@ -86,6 +88,7 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
         price: validatedData.price,
         duration: Math.round(validatedData.duration * 60), // Converte horas para minutos
         active: isActive,
+        image_url: imageUrl,
       };
 
       if (editingService?.id) {
@@ -145,6 +148,20 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
         </h2>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Image */}
+        <div className="space-y-3 sm:space-y-4">
+          <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
+            <ImageIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Imagem do Serviço
+          </h3>
+          <ServiceImageUpload
+            imageUrl={imageUrl}
+            serviceName={name}
+            onImageChange={setImageUrl}
+            disabled={loading}
+          />
+        </div>
+
         {/* Basic Information */}
         <div className="space-y-3 sm:space-y-4">
           <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
