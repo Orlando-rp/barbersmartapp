@@ -172,13 +172,12 @@ const Staff = () => {
       // Buscar roles e serviços para cada membro único
       const staffWithRolesAndServices = await Promise.all(
         Array.from(userStaffMap.values()).map(async (member) => {
-          // Buscar roles de qualquer barbearia
+          // Buscar TODAS as roles do usuário (pode ter admin + barbeiro)
           const { data: rolesData } = await supabase
             .from('user_roles')
             .select('id, role')
             .eq('user_id', member.user_id)
-            .in('barbershop_id', allBarbershopIds)
-            .limit(1);
+            .in('barbershop_id', allBarbershopIds);
           
           // Buscar serviços do staff
           let serviceNames: string[] = [];
