@@ -22,8 +22,12 @@ interface AppointmentDialogProps {
 
 export const AppointmentDialog = ({ children, appointment, open, onOpenChange, onSuccess, waitlistPrefill }: AppointmentDialogProps) => {
   const handleClose = () => {
-    onSuccess?.();
+    // Primeiro fecha o dialog, depois chama onSuccess
     onOpenChange?.(false);
+    // Pequeno delay para garantir que o dialog feche antes de outras operações
+    setTimeout(() => {
+      onSuccess?.();
+    }, 100);
   };
 
   return (
