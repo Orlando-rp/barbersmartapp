@@ -102,7 +102,15 @@ export const WhatsAppChat = () => {
           
           // Usar ref para pegar o valor atual
           if (selectedPhoneRef.current === newMsg.phone_number) {
-            setMessages(prev => [...prev, newMsg]);
+            // Evitar duplicatas verificando se a mensagem já existe
+            setMessages(prev => {
+              const exists = prev.some(m => m.id === newMsg.id);
+              if (exists) {
+                console.log('[WhatsApp Chat] Mensagem já existe, ignorando duplicata:', newMsg.id);
+                return prev;
+              }
+              return [...prev, newMsg];
+            });
           }
           
           // Atualizar lista de conversas
