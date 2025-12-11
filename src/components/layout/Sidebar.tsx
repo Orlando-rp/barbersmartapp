@@ -194,6 +194,7 @@ export const MobileSidebar = () => {
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { barbershops, userRole } = useAuth();
+  const { effectiveBranding } = useBranding();
   const { hasFeature } = useFeatureFlags();
   const { subscription, loading: subscriptionLoading } = useSubscription();
 
@@ -216,24 +217,68 @@ const Sidebar = () => {
       "h-screen bg-card border-r border-border transition-all duration-300 flex-col hidden lg:flex",
       collapsed ? "w-16" : "w-64"
     )}>
-      {/* Toggle Button */}
-      <div className="flex justify-end p-4">
+      {/* Logo + Toggle */}
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        {!collapsed ? (
+          <div className="flex items-center space-x-2 min-w-0">
+            {effectiveBranding?.logo_url ? (
+              <img 
+                src={effectiveBranding.logo_url} 
+                alt={effectiveBranding.system_name || 'Logo'} 
+                className="w-8 h-8 rounded-lg object-contain shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center shrink-0">
+                <span className="text-primary-foreground font-bold text-sm">
+                  {effectiveBranding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
+                </span>
+              </div>
+            )}
+            <span className="font-bold text-lg truncate">{effectiveBranding?.system_name || 'BarberSmart'}</span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center w-full">
+            {effectiveBranding?.logo_url ? (
+              <img 
+                src={effectiveBranding.logo_url} 
+                alt={effectiveBranding.system_name || 'Logo'} 
+                className="w-8 h-8 rounded-lg object-contain"
+              />
+            ) : (
+              <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">
+                  {effectiveBranding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8"
+          className={cn("h-8 w-8 shrink-0", collapsed && "hidden")}
         >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+          <ChevronLeft className="h-4 w-4" />
         </Button>
       </div>
 
+      {/* Expand button when collapsed */}
+      {collapsed && (
+        <div className="flex justify-center py-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(false)}
+            className="h-8 w-8"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-2 overflow-y-auto">
+      <nav className="flex-1 px-3 space-y-2 overflow-y-auto py-2">
         {filteredNavigation.map((item) => (
           <NavLink
             key={item.name}
