@@ -127,7 +127,7 @@ serve(async (req) => {
       console.log('[Evolution Webhook] Found barbershop from instance name pattern:', barbershopId);
     }
 
-    // Strategy 2: Look up by instance_name in whatsapp_config (most reliable - handles bs-{shortId} pattern)
+    // Strategy 2: Look up by instance_name in whatsapp_config (handles bs-{shortId} pattern)
     if (!barbershopId && instanceName) {
       const { data: configs, error: configError } = await supabase
         .from('whatsapp_config')
@@ -139,10 +139,21 @@ serve(async (req) => {
       } else {
         console.log('[Evolution Webhook] Found configs:', configs?.length, 'Looking for instance:', instanceName);
         
-        const matchingConfig = configs?.find(c => c.config?.instance_name === instanceName);
+        // Try exact match first
+        let matchingConfig = configs?.find(c => c.config?.instance_name === instanceName);
+        
+        // If no exact match and instanceName is bs-{shortId}, try to find by shortId prefix
+        if (!matchingConfig && instanceName.startsWith('bs-')) {
+          const shortId = instanceName.replace('bs-', '');
+          matchingConfig = configs?.find(c => c.barbershop_id?.startsWith(shortId));
+          if (matchingConfig) {
+            console.log('[Evolution Webhook] Found barbershop by shortId prefix:', shortId);
+          }
+        }
+        
         if (matchingConfig) {
           barbershopId = matchingConfig.barbershop_id;
-          console.log('[Evolution Webhook] Found barbershop by instance_name config:', barbershopId);
+          console.log('[Evolution Webhook] Found barbershop by config:', barbershopId);
         }
       }
     }
