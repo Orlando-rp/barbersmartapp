@@ -13,8 +13,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Barbershop {
   id: string;
@@ -84,10 +85,15 @@ export default function PublicBooking() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0); // Start at 0 for unit selection
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Unit selection state
+  const [availableUnits, setAvailableUnits] = useState<Barbershop[]>([]);
+  const [selectedUnit, setSelectedUnit] = useState<Barbershop | null>(null);
+  const [hasMultipleUnits, setHasMultipleUnits] = useState(false);
 
   const [barbershop, setBarbershop] = useState<Barbershop | null>(null);
   const [allRelatedBarbershopIds, setAllRelatedBarbershopIds] = useState<string[]>([]);
@@ -116,10 +122,72 @@ export default function PublicBooking() {
 
   useEffect(() => {
     if (barbershopId) {
-      loadBarbershopData();
+      checkForMultipleUnits();
       trackVisit();
     }
   }, [barbershopId]);
+
+  // Check if this is a parent barbershop with multiple units
+  const checkForMultipleUnits = async () => {
+    try {
+      setLoading(true);
+
+      // First load the barbershop info
+      const { data: shop, error: shopError } = await supabase
+        .from('barbershops')
+        .select('id, name, address, phone, parent_id')
+        .eq('id', barbershopId)
+        .single();
+
+      if (shopError || !shop) {
+        toast({ title: 'Barbearia não encontrada', variant: 'destructive' });
+        setLoading(false);
+        return;
+      }
+      setBarbershop(shop);
+
+      // Determine root barbershop ID
+      const rootId = shop.parent_id || shop.id;
+
+      // Check if there are child units
+      const { data: childUnits, error: childError } = await supabase
+        .from('barbershops')
+        .select('id, name, address, phone, parent_id')
+        .eq('parent_id', rootId)
+        .eq('active', true);
+
+      // If this is a parent and has children, or if this is the root with children
+      if (!shop.parent_id && childUnits && childUnits.length > 0) {
+        // This is a parent with units - show unit selection
+        const allUnits = [shop, ...childUnits];
+        setAvailableUnits(allUnits);
+        setHasMultipleUnits(true);
+        setStep(0); // Start with unit selection
+        setLoading(false);
+      } else {
+        // Single unit or this is already a child unit - skip unit selection
+        setHasMultipleUnits(false);
+        setSelectedUnit(shop);
+        setStep(1); // Start with service selection
+        await loadBarbershopData(shop.id);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar unidades:', error);
+      toast({ title: 'Erro ao carregar dados', variant: 'destructive' });
+      setLoading(false);
+    }
+  };
+
+  // Handle unit selection
+  const handleUnitSelect = async (unitId: string) => {
+    const unit = availableUnits.find(u => u.id === unitId);
+    if (unit) {
+      setSelectedUnit(unit);
+      setLoading(true);
+      await loadBarbershopData(unit.id);
+      setStep(1);
+    }
+  };
 
   // Track page visit for analytics
   const trackVisit = async () => {
@@ -150,21 +218,23 @@ export default function PublicBooking() {
     }
   }, [selectedStaff, selectedService, businessHours]);
 
-  const loadBarbershopData = async () => {
+  const loadBarbershopData = async (unitId: string) => {
     try {
       setLoading(true);
 
-      // Load barbershop info
+      // Load barbershop info for the selected unit
       const { data: shop, error: shopError } = await supabase
         .from('barbershops')
         .select('id, name, address, phone, parent_id')
-        .eq('id', barbershopId)
+        .eq('id', unitId)
         .single();
 
       if (shopError || !shop) {
         toast({ title: 'Barbearia não encontrada', variant: 'destructive' });
         return;
       }
+      
+      // Update barbershop to selected unit
       setBarbershop(shop);
 
       // Determine root barbershop ID for shared data (matriz)
@@ -176,10 +246,10 @@ export default function PublicBooking() {
         .select('id')
         .or(`id.eq.${rootId},parent_id.eq.${rootId}`);
 
-      const allIds = relatedData?.map(b => b.id) || [barbershopId!];
+      const allIds = relatedData?.map(b => b.id) || [unitId];
       setAllRelatedBarbershopIds(allIds);
       
-      console.log('[PublicBooking] Current unit:', barbershopId);
+      console.log('[PublicBooking] Selected unit:', unitId);
       console.log('[PublicBooking] Root/matriz:', rootId);
       console.log('[PublicBooking] All related IDs:', allIds);
 
@@ -196,7 +266,7 @@ export default function PublicBooking() {
       const { data: staffData } = await supabase
         .from('staff')
         .select('id, user_id, schedule, profiles(full_name, avatar_url)')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', unitId)
         .eq('active', true);
       setStaffList(staffData || []);
 
@@ -210,7 +280,7 @@ export default function PublicBooking() {
       const { data: hoursData } = await supabase
         .from('business_hours')
         .select('*')
-        .eq('barbershop_id', barbershopId);
+        .eq('barbershop_id', unitId);
       setBusinessHours(hoursData || []);
 
     } catch (error) {
@@ -855,18 +925,23 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
     );
   }
 
+  const totalSteps = hasMultipleUnits ? 5 : 4;
+  const displayStep = hasMultipleUnits ? step : step; // step 0 is unit, steps 1-4 are normal
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate px-2">{barbershop.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate px-2">
+            {step === 0 ? barbershop?.name : selectedUnit?.name || barbershop?.name}
+          </h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base">Agende seu horário online</p>
         </div>
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6 sm:mb-8">
-          {[1, 2, 3, 4].map((s) => (
+          {(hasMultipleUnits ? [0, 1, 2, 3, 4] : [1, 2, 3, 4]).map((s, index) => (
             <div
               key={s}
               className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-sm sm:text-base transition-colors ${
@@ -874,7 +949,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 s < step ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
               }`}
             >
-              {s < step ? <Check className="h-4 w-4 sm:h-5 sm:w-5" /> : s}
+              {s < step ? <Check className="h-4 w-4 sm:h-5 sm:w-5" /> : (hasMultipleUnits ? index + 1 : s)}
             </div>
           ))}
         </div>
@@ -882,6 +957,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
         <Card>
           <CardHeader className="px-4 sm:px-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              {step === 0 && <><Building2 className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" /> <span className="truncate">Escolha a Unidade</span></>}
               {step === 1 && <><Scissors className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" /> <span className="truncate">Escolha o Serviço</span></>}
               {step === 2 && <><User className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" /> <span className="truncate">Escolha o Profissional</span></>}
               {step === 3 && <><CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" /> <span className="truncate">Data e Horário</span></>}
@@ -889,6 +965,41 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
+            {/* Step 0: Unit Selection */}
+            {step === 0 && hasMultipleUnits && (
+              <div className="space-y-4">
+                <Select value={selectedUnit?.id || ''} onValueChange={handleUnitSelect}>
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="Selecione uma unidade..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-[9999]">
+                    {availableUnits.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id} className="text-sm">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{unit.name}</span>
+                          {unit.address && <span className="text-xs text-muted-foreground">{unit.address}</span>}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {selectedUnit && (
+                  <div className="p-3 sm:p-4 rounded-lg border bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-8 w-8 text-primary" />
+                      <div>
+                        <div className="font-medium text-sm sm:text-base">{selectedUnit.name}</div>
+                        {selectedUnit.address && (
+                          <div className="text-xs text-muted-foreground">{selectedUnit.address}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Step 1: Service Selection */}
             {step === 1 && (
               <div className="grid gap-3">
@@ -1229,6 +1340,9 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-muted rounded-lg">
                   <h4 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Resumo do Agendamento</h4>
                   <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                    {hasMultipleUnits && selectedUnit && (
+                      <p className="truncate"><strong>Unidade:</strong> {selectedUnit.name}</p>
+                    )}
                     <p className="truncate"><strong>Serviço:</strong> {selectedService?.name}</p>
                     <p className="truncate"><strong>Profissional:</strong> {getStaffName(selectedStaff)}</p>
                     <p><strong>Data:</strong> {selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</p>
@@ -1243,19 +1357,31 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
             <div className="flex justify-between mt-4 sm:mt-6 pt-4 border-t gap-3">
               <Button
                 variant="outline"
-                onClick={() => setStep(step - 1)}
-                disabled={step === 1}
+                onClick={() => {
+                  if (step === 1 && hasMultipleUnits) {
+                    // Reset selections when going back to unit selection
+                    setSelectedService(null);
+                    setSelectedStaff(null);
+                    setSelectedDate(undefined);
+                    setSelectedTime('');
+                    setStep(0);
+                  } else {
+                    setStep(step - 1);
+                  }
+                }}
+                disabled={step === 0 || (step === 1 && !hasMultipleUnits)}
                 size="sm"
                 className="text-xs sm:text-sm"
               >
                 <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline">Voltar</span>
+                <span>Voltar</span>
               </Button>
 
               {step < 4 ? (
                 <Button
                   onClick={() => setStep(step + 1)}
                   disabled={
+                    (step === 0 && !selectedUnit) ||
                     (step === 1 && !selectedService) ||
                     (step === 2 && !selectedStaff) ||
                     (step === 3 && (!selectedDate || !selectedTime))
@@ -1287,9 +1413,9 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
 
         {/* Footer */}
         <p className="text-center text-muted-foreground text-xs sm:text-sm mt-4 sm:mt-6 px-2">
-          {barbershop.address && <span className="block sm:inline truncate">{barbershop.address}</span>}
-          {barbershop.phone && <span className="hidden sm:inline"> • </span>}
-          {barbershop.phone && <span className="block sm:inline">{barbershop.phone}</span>}
+          {(selectedUnit || barbershop)?.address && <span className="block sm:inline truncate">{(selectedUnit || barbershop)?.address}</span>}
+          {(selectedUnit || barbershop)?.phone && <span className="hidden sm:inline"> • </span>}
+          {(selectedUnit || barbershop)?.phone && <span className="block sm:inline">{(selectedUnit || barbershop)?.phone}</span>}
         </p>
       </div>
     </div>
