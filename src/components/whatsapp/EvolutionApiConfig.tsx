@@ -578,6 +578,39 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     }
   };
 
+  const reconfigureWebhook = async () => {
+    if (!config.apiUrl || !config.apiKey || !config.instanceName) {
+      toast.error("Configure a instância primeiro");
+      return;
+    }
+
+    try {
+      setCheckingConnection(true);
+      
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'setWebhook',
+          apiUrl: config.apiUrl,
+          apiKey: config.apiKey,
+          instanceName: config.instanceName
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success || data?.url) {
+        toast.success("Webhook reconfigurado com sucesso! Agora as mensagens serão recebidas.");
+      } else {
+        throw new Error(data?.error || "Erro ao configurar webhook");
+      }
+    } catch (error) {
+      console.error('Erro ao reconfigurar webhook:', error);
+      toast.error(error instanceof Error ? error.message : "Erro ao reconfigurar webhook");
+    } finally {
+      setCheckingConnection(false);
+    }
+  };
+
   const getConnectionBadge = () => {
     switch (connectionStatus) {
       case 'connected':
@@ -699,16 +732,28 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                 Conectar WhatsApp
               </Button>
             ) : (
-              <Button
-                variant="destructive"
-                onClick={disconnectInstance}
-                disabled={checkingConnection}
-                className="text-xs sm:text-sm"
-                size="sm"
-              >
-                <WifiOff className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Desconectar
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={reconfigureWebhook}
+                  disabled={checkingConnection}
+                  className="text-xs sm:text-sm"
+                  size="sm"
+                >
+                  <Settings className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Reconfigurar Webhook
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={disconnectInstance}
+                  disabled={checkingConnection}
+                  className="text-xs sm:text-sm"
+                  size="sm"
+                >
+                  <WifiOff className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Desconectar
+                </Button>
+              </>
             )}
           </div>
 

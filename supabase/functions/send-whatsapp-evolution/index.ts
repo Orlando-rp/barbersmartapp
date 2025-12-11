@@ -80,26 +80,40 @@ serve(async (req) => {
           instanceName,
           qrcode: true,
           integration: 'WHATSAPP-BAILEYS',
+          // Webhook configuration with ALL necessary events
           webhook: {
             url: webhookUrl,
-            byEvents: false,
+            byEvents: false, // Receive all events at same URL
             base64: false,
             headers: {},
-            events: ['MESSAGES_UPSERT']
-          }
+            events: [
+              'MESSAGES_UPSERT',      // Incoming and outgoing messages
+              'MESSAGES_UPDATE',      // Message status updates (delivered, read)
+              'MESSAGES_DELETE',      // Deleted messages
+              'SEND_MESSAGE',         // Sent message confirmation
+              'CONNECTION_UPDATE',    // Connection status changes
+              'QRCODE_UPDATED'        // QR code updates
+            ]
+          },
+          // Settings for proper message handling
+          websocket: false,
+          rabbitmq: false,
+          sqs: false,
+          chatwoot: false
         };
         
-        // Adicionar token se fornecido
+        // Add token if provided
         if (instanceToken) {
           createPayload.token = instanceToken;
         }
         
-        // Adicionar número se fornecido (para pairing code)
+        // Add phone number if provided (for pairing code)
         if (phoneNumber) {
           createPayload.number = phoneNumber;
         }
         
         body = JSON.stringify(createPayload);
+        console.log('[Evolution API] Create payload:', body);
         break;
       }
 
@@ -110,7 +124,7 @@ serve(async (req) => {
         const supabaseUrlConnect = Deno.env.get('SUPABASE_URL') || '';
         const webhookUrlConnect = `${supabaseUrlConnect}/functions/v1/evolution-webhook`;
         
-        // Preparar payload de criação
+        // Create instance payload with comprehensive webhook config
         const connectPayload: any = {
           instanceName,
           qrcode: true,
@@ -120,22 +134,34 @@ serve(async (req) => {
             byEvents: false,
             base64: false,
             headers: {},
-            events: ['MESSAGES_UPSERT']
-          }
+            events: [
+              'MESSAGES_UPSERT',
+              'MESSAGES_UPDATE',
+              'MESSAGES_DELETE',
+              'SEND_MESSAGE',
+              'CONNECTION_UPDATE',
+              'QRCODE_UPDATED'
+            ]
+          },
+          websocket: false,
+          rabbitmq: false,
+          sqs: false,
+          chatwoot: false
         };
         
-        // Adicionar token se fornecido
+        // Add token if provided
         if (instanceToken) {
           connectPayload.token = instanceToken;
         }
         
-        // Adicionar número se fornecido
+        // Add phone number if provided
         if (phoneNumber) {
           connectPayload.number = phoneNumber;
         }
         
         // Try to create instance first with webhook (will fail if exists, that's ok)
         try {
+          console.log('[Evolution API] Attempting to create/update instance with webhook config');
           const createRes = await fetch(`${baseUrl}/instance/create`, {
             method: 'POST',
             headers,
@@ -189,6 +215,31 @@ serve(async (req) => {
         endpoint = `/instance/restart/${instanceName}`;
         method = 'PUT';
         break;
+
+      case 'setWebhook': {
+        // Update webhook configuration for existing instance
+        endpoint = `/webhook/set/${instanceName}`;
+        method = 'POST';
+        const supabaseUrlWebhook = Deno.env.get('SUPABASE_URL') || '';
+        const webhookUrlSet = `${supabaseUrlWebhook}/functions/v1/evolution-webhook`;
+        
+        body = JSON.stringify({
+          url: webhookUrlSet,
+          byEvents: false,
+          base64: false,
+          headers: {},
+          events: [
+            'MESSAGES_UPSERT',
+            'MESSAGES_UPDATE',
+            'MESSAGES_DELETE',
+            'SEND_MESSAGE',
+            'CONNECTION_UPDATE',
+            'QRCODE_UPDATED'
+          ]
+        });
+        console.log('[Evolution API] Setting webhook:', body);
+        break;
+      }
 
       case 'sendText':
         // Send text message
