@@ -84,7 +84,7 @@ const CHART_COLORS = [
 ];
 
 export const CommissionReport = ({ period }: Props) => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [loading, setLoading] = useState(true);
   const [staffCommissions, setStaffCommissions] = useState<StaffCommission[]>([]);
   const [transactions, setTransactions] = useState<CommissionTransaction[]>([]);
@@ -104,7 +104,7 @@ export const CommissionReport = ({ period }: Props) => {
   });
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       // Update date range based on period
       const now = new Date();
       let from: Date;
@@ -120,13 +120,13 @@ export const CommissionReport = ({ period }: Props) => {
       }
       setDateRange({ from, to: now });
     }
-  }, [period, barbershopId]);
+  }, [period, activeBarbershopIds]);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchCommissionData();
     }
-  }, [barbershopId, dateRange, selectedStaff]);
+  }, [activeBarbershopIds, dateRange, selectedStaff]);
 
   const fetchCommissionData = async () => {
     try {
@@ -136,7 +136,7 @@ export const CommissionReport = ({ period }: Props) => {
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select('id, user_id, commission_rate')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('active', true);
 
       if (staffError) throw staffError;
@@ -163,7 +163,7 @@ export const CommissionReport = ({ period }: Props) => {
       let query = supabase
         .from('transactions')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('type', 'receita')
         .gte('transaction_date', dateRange.from.toISOString().split('T')[0])
         .lte('transaction_date', dateRange.to.toISOString().split('T')[0])

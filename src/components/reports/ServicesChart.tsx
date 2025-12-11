@@ -35,17 +35,17 @@ const COLORS = [
 ];
 
 export const ServicesChart = ({ period }: Props) => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [services, setServices] = useState<ServiceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalAppointments, setTotalAppointments] = useState(0);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchServicesData();
     }
-  }, [barbershopId, period]);
+  }, [activeBarbershopIds, period]);
 
   const fetchServicesData = async () => {
     try {
@@ -61,7 +61,7 @@ export const ServicesChart = ({ period }: Props) => {
       const { data: appointments, error } = await supabase
         .from('appointments')
         .select('service_name, service_price')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .gte('appointment_date', startDate)
         .in('status', ['confirmado', 'concluido']);
 

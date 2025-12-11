@@ -32,7 +32,7 @@ interface Props {
 }
 
 export const SalesChart = ({ period }: Props) => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [data, setData] = useState<SalesData[]>([]);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({
@@ -43,10 +43,10 @@ export const SalesChart = ({ period }: Props) => {
   });
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchSalesData();
     }
-  }, [barbershopId, period]);
+  }, [activeBarbershopIds, period]);
 
   const getDaysForPeriod = () => {
     const days = period === 'week' ? 7 : period === 'month' ? 30 : 365;
@@ -74,7 +74,7 @@ export const SalesChart = ({ period }: Props) => {
       const { data: transactions, error } = await supabase
         .from('transactions')
         .select('type, amount, transaction_date')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .gte('transaction_date', startDate)
         .order('transaction_date', { ascending: true });
 
