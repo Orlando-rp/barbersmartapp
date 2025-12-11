@@ -65,24 +65,25 @@ const Header = () => {
     <header className="h-14 lg:h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex items-center justify-between h-full px-3 lg:px-6">
         {/* Mobile Menu + Logo */}
-        <div className="flex items-center gap-2 lg:gap-6">
+          <div className="flex items-center gap-2 lg:gap-6">
           <MobileSidebar />
           
-          <div className="flex items-center space-x-2">
+          {/* Logo - Only visible on mobile/tablet, hidden on desktop where it's in sidebar */}
+          <div className="flex items-center space-x-2 lg:hidden">
             {effectiveBranding?.logo_url ? (
               <img 
                 src={effectiveBranding.logo_url} 
                 alt={effectiveBranding.system_name || 'Logo'} 
-                className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg object-contain"
+                className="w-7 h-7 rounded-lg object-contain"
               />
             ) : (
-              <div className="w-7 h-7 lg:w-8 lg:h-8 gradient-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-xs lg:text-sm">
+              <div className="w-7 h-7 gradient-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-xs">
                   {effectiveBranding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
                 </span>
               </div>
             )}
-            <h1 className="text-base lg:text-xl font-bold text-foreground hidden sm:block">
+            <h1 className="text-base font-bold text-foreground hidden sm:block">
               {effectiveBranding?.system_name || 'BarberSmart'}
             </h1>
           </div>
