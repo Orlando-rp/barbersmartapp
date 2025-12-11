@@ -432,7 +432,7 @@ Agradecemos a preferência e esperamos vê-lo em breve! 💈`
             onSuccess={() => {
               fetchAppointments();
               setEditingAppointment(null);
-              setIsDialogOpen(false);
+              // Não precisa setar isDialogOpen aqui pois o handleClose já faz isso
             }}
           >
             <Button 
