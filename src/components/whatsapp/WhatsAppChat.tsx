@@ -65,15 +65,56 @@ export const WhatsAppChat = () => {
   const [newChatName, setNewChatName] = useState("");
   const [tableExists, setTableExists] = useState(true);
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
+  
+  // Ref para acessar o phone selecionado dentro do callback de realtime
+  const selectedPhoneRef = useRef<string | null>(null);
+  
+  // Manter ref sincronizada com state
+  useEffect(() => {
+    selectedPhoneRef.current = selectedPhone;
+  }, [selectedPhone]);
 
   useEffect(() => {
     if (barbershopId) {
       loadEvolutionConfig();
       loadConversations();
       loadCurrentUserName();
-      setupRealtimeSubscription();
     }
   }, [barbershopId]);
+
+  // Setup realtime separadamente para poder usar a ref
+  useEffect(() => {
+    if (!barbershopId || !tableExists) return;
+    
+    const channel = supabase
+      .channel('whatsapp-messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'whatsapp_messages',
+          filter: `barbershop_id=eq.${barbershopId}`
+        },
+        (payload) => {
+          const newMsg = payload.new as Message;
+          console.log('[WhatsApp Chat] Nova mensagem recebida:', newMsg);
+          
+          // Usar ref para pegar o valor atual
+          if (selectedPhoneRef.current === newMsg.phone_number) {
+            setMessages(prev => [...prev, newMsg]);
+          }
+          
+          // Atualizar lista de conversas
+          loadConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [barbershopId, tableExists]);
 
   useEffect(() => {
     if (selectedPhone) {
@@ -201,37 +242,7 @@ export const WhatsAppChat = () => {
     }
   };
 
-  const setupRealtimeSubscription = () => {
-    if (!tableExists) return () => {};
-    
-    const channel = supabase
-      .channel('whatsapp-messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'whatsapp_messages',
-          filter: `barbershop_id=eq.${barbershopId}`
-        },
-        (payload) => {
-          const newMsg = payload.new as Message;
-          
-          // Update messages if conversation is selected
-          if (selectedPhone === newMsg.phone_number) {
-            setMessages(prev => [...prev, newMsg]);
-          }
-          
-          // Update conversations list
-          loadConversations();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
+  // setupRealtimeSubscription movido para o useEffect acima
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedPhone || !barbershopId || !evolutionConfig) {
