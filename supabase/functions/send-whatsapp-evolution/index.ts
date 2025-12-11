@@ -224,19 +224,22 @@ serve(async (req) => {
         const supabaseUrlWebhook = Deno.env.get('SUPABASE_URL') || '';
         const webhookUrlSet = `${supabaseUrlWebhook}/functions/v1/evolution-webhook`;
         
+        // Evolution API 2.0 requires webhook config inside 'webhook' property
         body = JSON.stringify({
-          url: webhookUrlSet,
-          byEvents: false,
-          base64: false,
-          headers: {},
-          events: [
-            'MESSAGES_UPSERT',
-            'MESSAGES_UPDATE',
-            'MESSAGES_DELETE',
-            'SEND_MESSAGE',
-            'CONNECTION_UPDATE',
-            'QRCODE_UPDATED'
-          ]
+          webhook: {
+            url: webhookUrlSet,
+            byEvents: false,
+            base64: false,
+            headers: {},
+            events: [
+              'MESSAGES_UPSERT',
+              'MESSAGES_UPDATE',
+              'MESSAGES_DELETE',
+              'SEND_MESSAGE',
+              'CONNECTION_UPDATE',
+              'QRCODE_UPDATED'
+            ]
+          }
         });
         console.log('[Evolution API] Setting webhook:', body);
         break;
