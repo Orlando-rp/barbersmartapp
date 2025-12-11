@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 interface DashboardWidgetProps {
-  title: string;
+  title: ReactNode;
   icon?: ReactNode;
   children: ReactNode;
   onRemove?: () => void;

@@ -1,20 +1,23 @@
 import { useState, useEffect } from "react";
-import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Building2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardWidget } from "../DashboardWidget";
 import { startOfDay, startOfMonth, subMonths } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 export const RevenueWidget = ({
   onRemove
 }: {
   onRemove?: () => void;
 }) => {
-  const { activeBarbershopIds } = useAuth();
+  const { activeBarbershopIds, selectedBarbershopId, barbershops } = useAuth();
   const [todayRevenue, setTodayRevenue] = useState(0);
   const [monthRevenue, setMonthRevenue] = useState(0);
   const [growth, setGrowth] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  const isConsolidatedView = barbershops.length > 1 && selectedBarbershopId === null;
 
   const fetchRevenue = async () => {
     if (activeBarbershopIds.length === 0) return;
@@ -84,7 +87,20 @@ export const RevenueWidget = ({
       supabase.removeChannel(channel);
     };
   }, [activeBarbershopIds]);
-  return <DashboardWidget title="Receita" icon={<DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
+  const title = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span>Receita</span>
+      {isConsolidatedView && (
+        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 flex items-center gap-1">
+          <Building2 className="h-2.5 w-2.5" />
+          <span className="hidden sm:inline">{barbershops.length} unidades</span>
+          <span className="sm:hidden">{barbershops.length}</span>
+        </Badge>
+      )}
+    </div>
+  );
+
+  return <DashboardWidget title={title} icon={<DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} onRemove={onRemove} isUpdating={isUpdating}>
       <div className="space-y-2 sm:space-y-4">
         <div>
           <p className="text-xs sm:text-sm text-muted-foreground">Hoje</p>
