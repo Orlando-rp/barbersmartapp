@@ -12,17 +12,19 @@ interface DayRevenue {
 }
 
 const RevenueChart = () => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [revenueData, setRevenueData] = useState<DayRevenue[]>([]);
   const [loading, setLoading] = useState(true);
   const [maxRevenue, setMaxRevenue] = useState(0);
   const [totalWeek, setTotalWeek] = useState(0);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchWeekRevenue();
+    } else {
+      setLoading(false);
     }
-  }, [barbershopId]);
+  }, [activeBarbershopIds]);
 
   const fetchWeekRevenue = async () => {
     try {
@@ -41,14 +43,19 @@ const RevenueChart = () => {
         days.push({ date: dateStr, day: dayName });
       }
 
-      // Buscar receitas de cada dia
+      // Buscar receitas de cada dia - usando range de data para suportar TIMESTAMP
       const revenuePromises = days.map(async ({ date, day }) => {
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+        const nextDateStr = nextDate.toISOString().split('T')[0];
+
         const { data, error } = await supabase
           .from('transactions')
           .select('amount')
-          .eq('barbershop_id', barbershopId)
+          .in('barbershop_id', activeBarbershopIds)
           .eq('type', 'receita')
-          .eq('transaction_date', date);
+          .gte('transaction_date', date)
+          .lt('transaction_date', nextDateStr);
 
         if (error) throw error;
 
@@ -58,7 +65,7 @@ const RevenueChart = () => {
 
       const results = await Promise.all(revenuePromises);
       
-      const max = Math.max(...results.map(d => d.revenue), 100); // Mínimo 100 para evitar divisão por zero
+      const max = Math.max(...results.map(d => d.revenue), 100);
       const total = results.reduce((sum, d) => sum + d.revenue, 0);
 
       setRevenueData(results);
