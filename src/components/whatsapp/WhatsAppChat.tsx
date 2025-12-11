@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -22,7 +23,8 @@ import {
   Plus,
   ArrowLeft,
   Settings,
-  Users
+  Users,
+  Trash2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -81,6 +83,7 @@ export const WhatsAppChat = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientSearch, setClientSearch] = useState("");
   const [newChatTab, setNewChatTab] = useState<string>("clients");
+  const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
   
   // Ref para acessar o phone selecionado dentro do callback de realtime
   const selectedPhoneRef = useRef<string | null>(null);
@@ -470,6 +473,38 @@ export const WhatsAppChat = () => {
     )
   );
 
+  const deleteConversation = async (phoneNumber: string) => {
+    if (!barbershopId) return;
+    
+    try {
+      setDeletingConversation(phoneNumber);
+      
+      const { error } = await supabase
+        .from('whatsapp_messages')
+        .delete()
+        .eq('barbershop_id', barbershopId)
+        .eq('phone_number', phoneNumber);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setConversations(prev => prev.filter(c => c.phone_number !== phoneNumber));
+      
+      // Clear selection if deleted conversation was selected
+      if (selectedPhone === phoneNumber) {
+        setSelectedPhone(null);
+        setMessages([]);
+      }
+      
+      toast.success('Conversa excluída');
+    } catch (error) {
+      console.error('Erro ao excluir conversa:', error);
+      toast.error('Erro ao excluir conversa');
+    } finally {
+      setDeletingConversation(null);
+    }
+  };
+
   const filteredConversations = conversations.filter(conv => 
     conv.phone_number.includes(searchTerm) || 
     conv.contact_name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -656,43 +691,80 @@ export const WhatsAppChat = () => {
             filteredConversations.map((conv) => (
               <div
                 key={conv.phone_number}
-                onClick={() => setSelectedPhone(conv.phone_number)}
                 className={cn(
-                  "flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 border-b transition-colors",
+                  "flex items-center gap-3 p-3 hover:bg-muted/50 border-b transition-colors group",
                   selectedPhone === conv.phone_number && "bg-muted"
                 )}
               >
-                <Avatar className="h-10 w-10">
-                  {conv.avatar_url && <AvatarImage src={conv.avatar_url} />}
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {getInitials(conv.contact_name, conv.phone_number)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-medium text-sm truncate">
-                        {conv.contact_name || `+${conv.phone_number}`}
+                <div 
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                  onClick={() => setSelectedPhone(conv.phone_number)}
+                >
+                  <Avatar className="h-10 w-10 shrink-0">
+                    {conv.avatar_url && <AvatarImage src={conv.avatar_url} />}
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {getInitials(conv.contact_name, conv.phone_number)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium text-sm truncate">
+                          {conv.contact_name || `+${conv.phone_number}`}
+                        </span>
+                        {conv.is_client && (
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5 shrink-0">
+                            Cliente
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {formatConversationTime(conv.last_message_time)}
                       </span>
-                      {conv.is_client && (
-                        <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5 shrink-0">
-                          Cliente
-                        </Badge>
-                      )}
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {formatConversationTime(conv.last_message_time)}
-                    </span>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {conv.last_message}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {conv.last_message}
-                  </p>
                 </div>
                 {conv.unread_count > 0 && (
-                  <Badge variant="default" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                  <Badge variant="default" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs shrink-0">
                     {conv.unread_count}
                   </Badge>
                 )}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Todas as mensagens desta conversa serão excluídas permanentemente. Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteConversation(conv.phone_number)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {deletingConversation === conv.phone_number ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'Excluir'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             ))
           )}
