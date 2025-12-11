@@ -91,12 +91,20 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     }
   }, [sharedBarbershopId, allRelatedBarbershopIds]);
 
-  // Busca staff da unidade específica
+  // Busca staff da unidade específica e reseta seleções quando unidade muda
   useEffect(() => {
     if (effectiveBarbershopId) {
       fetchStaff();
+      // Reseta profissional, serviço, data e horário quando a unidade muda
+      // para garantir que apenas profissionais da unidade selecionada apareçam
+      if (selectedUnitId && selectedUnitId !== barbershopId) {
+        setSelectedBarber("");
+        setSelectedService("");
+        setDate(undefined);
+        setSelectedTime("");
+      }
     }
-  }, [effectiveBarbershopId]);
+  }, [effectiveBarbershopId, selectedUnitId]);
 
   useEffect(() => {
     if (date && selectedBarber && selectedService) {
