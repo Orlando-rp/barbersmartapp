@@ -237,6 +237,9 @@ serve(async (req) => {
 
     // If sending message, log to database
     if (action === 'sendText' && barbershopId) {
+      console.log('[Evolution API] Attempting to log message. BarbershopId:', barbershopId, 'To:', to);
+      console.log('[Evolution API] Response OK:', response.ok, 'Status:', response.status);
+      
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -254,39 +257,48 @@ serve(async (req) => {
           created_by: createdBy || null
         };
 
+        console.log('[Evolution API] Log entry:', JSON.stringify(logEntry, null, 2));
+
         const { error: logError } = await supabase
           .from('whatsapp_logs')
           .insert(logEntry);
 
         if (logError) {
           console.error('[Evolution API] Error logging message:', logError);
+        } else {
+          console.log('[Evolution API] Message logged to whatsapp_logs');
         }
 
-        // Also store in whatsapp_messages for chat UI
-        if (response.ok) {
-          const phoneNumber = to?.replace(/\D/g, '');
-          const { error: msgError } = await supabase
-            .from('whatsapp_messages')
-            .insert({
-              barbershop_id: barbershopId,
-              phone_number: phoneNumber,
-              contact_name: recipientName || null,
-              message: originalMessage || message, // Use original message if provided
-              direction: 'outgoing',
-              status: 'sent',
-              message_type: 'text',
-              sent_by_user_id: sentByUserId || null,
-              sent_by_name: sentByName || null,
-              metadata: {
-                message_id: data?.key?.id || data?.id
-              }
-            });
-
-          if (msgError) {
-            console.error('[Evolution API] Error storing message for chat:', msgError);
-          } else {
-            console.log('[Evolution API] Message stored for chat UI');
+        // Also store in whatsapp_messages for chat UI - ALWAYS store, even if API failed
+        const phoneNumber = to?.replace(/\D/g, '');
+        const chatMessage = {
+          barbershop_id: barbershopId,
+          phone_number: phoneNumber,
+          contact_name: recipientName || null,
+          message: originalMessage || message,
+          direction: 'outgoing',
+          status: response.ok ? 'sent' : 'failed',
+          message_type: 'text',
+          sent_by_user_id: sentByUserId || null,
+          sent_by_name: sentByName || null,
+          metadata: {
+            message_id: data?.key?.id || data?.id,
+            api_response_ok: response.ok
           }
+        };
+
+        console.log('[Evolution API] Chat message entry:', JSON.stringify(chatMessage, null, 2));
+
+        const { data: insertedMsg, error: msgError } = await supabase
+          .from('whatsapp_messages')
+          .insert(chatMessage)
+          .select()
+          .single();
+
+        if (msgError) {
+          console.error('[Evolution API] Error storing message for chat:', JSON.stringify(msgError, null, 2));
+        } else {
+          console.log('[Evolution API] Message stored for chat UI:', insertedMsg?.id);
         }
       } catch (logErr) {
         console.error('[Evolution API] Failed to log message:', logErr);
