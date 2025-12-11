@@ -941,7 +941,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
           description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
         });
 
-        // Enviar confirmação via WhatsApp
+        // Enviar confirmação via WhatsApp (não bloqueia o fechamento)
         if (insertedData?.id) {
           sendWhatsAppConfirmation(insertedData.id, {
             clientName,
@@ -954,14 +954,17 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
         }
       }
 
-      onClose?.();
+      // Fecha o modal após sucesso
+      setLoading(false);
+      setTimeout(() => {
+        onClose?.();
+      }, 100);
     } catch (error: any) {
       toast({
         title: appointment ? 'Erro ao atualizar agendamento' : 'Erro ao criar agendamento',
         description: error.message,
         variant: 'destructive',
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -1211,39 +1214,47 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 });
 
                 return (
-                  <>
-                    <div className="grid grid-cols-1 gap-2 sm:gap-3">
-                      {filteredServices.map((service) => (
-                        <button
-                          key={service.id}
-                          type="button"
-                          onClick={() => setSelectedService(service.id)}
-                          className={cn(
-                            "p-3 sm:p-4 rounded-lg border-2 text-left transition-all",
-                            selectedService === service.id
-                              ? "border-primary bg-primary/5"
-                              : "border-muted hover:border-primary/50"
-                          )}
-                        >
-                          <div className="font-medium text-sm sm:text-base truncate">{service.name}</div>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mt-1 flex-wrap">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDuration(service.duration)}
-                            </span>
-                            <span>•</span>
-                            <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
+                  <div className="space-y-4">
+                    <Select value={selectedService} onValueChange={setSelectedService}>
+                      <SelectTrigger className="w-full text-sm">
+                        <SelectValue placeholder="Selecione um serviço..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-[9999]">
+                        {filteredServices.map((service) => (
+                          <SelectItem key={service.id} value={service.id} className="text-sm">
+                            <div className="flex items-center justify-between gap-4 w-full">
+                              <span>{service.name}</span>
+                              <span className="text-muted-foreground text-xs">
+                                {formatDuration(service.duration)} • R$ {service.price.toFixed(2)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {filteredServices.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            Nenhum serviço disponível
                           </div>
-                        </button>
-                      ))}
-                    </div>
+                        )}
+                      </SelectContent>
+                    </Select>
                     
-                    {filteredServices.length === 0 && (
-                      <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
-                        Nenhum serviço disponível para este profissional.
+                    {/* Detalhes do serviço selecionado */}
+                    {selectedServiceData && (
+                      <div className="p-3 sm:p-4 rounded-lg border bg-muted/30">
+                        <div className="font-medium text-sm sm:text-base">{selectedServiceData.name}</div>
+                        {selectedServiceData.description && (
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{selectedServiceData.description}</p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 text-xs sm:text-sm">
+                          <Badge variant="secondary" className="text-xs">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {formatDuration(selectedServiceData.duration)}
+                          </Badge>
+                          <span className="font-semibold text-primary">R$ {selectedServiceData.price.toFixed(2)}</span>
+                        </div>
                       </div>
                     )}
-                  </>
+                  </div>
                 );
               })()}
             </div>
