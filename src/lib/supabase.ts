@@ -60,6 +60,16 @@ export type Database = {
           notes: string | null;
           tags: string[];
           active: boolean;
+          notification_enabled: boolean;
+          notification_types: {
+            appointment_created: boolean;
+            appointment_updated: boolean;
+            appointment_confirmed: boolean;
+            appointment_cancelled: boolean;
+            appointment_completed: boolean;
+            appointment_reminder: boolean;
+          } | null;
+          reminder_hours: number;
           created_at: string;
           updated_at: string;
         };

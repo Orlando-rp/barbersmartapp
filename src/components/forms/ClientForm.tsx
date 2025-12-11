@@ -7,7 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, User, Mail, Phone, MapPin, X, Tag } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CalendarIcon, User, Mail, Phone, MapPin, X, Tag, Bell, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +23,24 @@ interface ClientFormProps {
   onClose?: () => void;
   editingClient?: any;
 }
+
+interface NotificationTypes {
+  appointment_created: boolean;
+  appointment_updated: boolean;
+  appointment_confirmed: boolean;
+  appointment_cancelled: boolean;
+  appointment_completed: boolean;
+  appointment_reminder: boolean;
+}
+
+const defaultNotificationTypes: NotificationTypes = {
+  appointment_created: true,
+  appointment_updated: true,
+  appointment_confirmed: true,
+  appointment_cancelled: true,
+  appointment_completed: true,
+  appointment_reminder: true,
+};
 
 const clientSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
@@ -44,6 +65,17 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   
+  // Notification preferences
+  const [notificationEnabled, setNotificationEnabled] = useState(
+    editingClient?.notification_enabled ?? true
+  );
+  const [notificationTypes, setNotificationTypes] = useState<NotificationTypes>(
+    editingClient?.notification_types || defaultNotificationTypes
+  );
+  const [reminderHours, setReminderHours] = useState<string>(
+    String(editingClient?.reminder_hours || 24)
+  );
+  
   const { toast } = useToast();
   const { sharedBarbershopId } = useSharedBarbershopId();
 
@@ -64,6 +96,13 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
       e.preventDefault();
       addTag();
     }
+  };
+
+  const toggleNotificationType = (type: keyof NotificationTypes) => {
+    setNotificationTypes(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,6 +139,9 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
         notes: validatedData.notes || null,
         tags: tags.length > 0 ? tags : null,
         active: true,
+        notification_enabled: notificationEnabled,
+        notification_types: notificationTypes,
+        reminder_hours: parseInt(reminderHours),
       };
 
       if (editingClient?.id) {
@@ -328,6 +370,116 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Notification Preferences */}
+          <div className="space-y-3 sm:space-y-4 border-t pt-4">
+            <h3 className="text-sm sm:text-base font-semibold flex items-center gap-2">
+              <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Preferências de Notificação
+            </h3>
+            
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Receber Notificações via WhatsApp</Label>
+                <p className="text-xs text-muted-foreground">
+                  Ative para enviar mensagens automáticas
+                </p>
+              </div>
+              <Switch
+                checked={notificationEnabled}
+                onCheckedChange={setNotificationEnabled}
+              />
+            </div>
+
+            {notificationEnabled && (
+              <>
+                {/* Reminder Time */}
+                <div className="space-y-2">
+                  <Label className="text-xs sm:text-sm">Antecedência do Lembrete</Label>
+                  <Select value={reminderHours} onValueChange={setReminderHours}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o tempo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 hora antes</SelectItem>
+                      <SelectItem value="2">2 horas antes</SelectItem>
+                      <SelectItem value="6">6 horas antes</SelectItem>
+                      <SelectItem value="12">12 horas antes</SelectItem>
+                      <SelectItem value="24">24 horas antes</SelectItem>
+                      <SelectItem value="48">48 horas antes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Notification Types */}
+                <div className="space-y-2">
+                  <Label className="text-xs sm:text-sm">Tipos de Notificação</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex items-center space-x-2 p-2 rounded border">
+                      <Checkbox
+                        id="notification_created"
+                        checked={notificationTypes.appointment_created}
+                        onCheckedChange={() => toggleNotificationType('appointment_created')}
+                      />
+                      <Label htmlFor="notification_created" className="text-xs sm:text-sm cursor-pointer">
+                        Confirmação de agendamento
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 p-2 rounded border">
+                      <Checkbox
+                        id="notification_updated"
+                        checked={notificationTypes.appointment_updated}
+                        onCheckedChange={() => toggleNotificationType('appointment_updated')}
+                      />
+                      <Label htmlFor="notification_updated" className="text-xs sm:text-sm cursor-pointer">
+                        Alteração de agendamento
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 p-2 rounded border">
+                      <Checkbox
+                        id="notification_confirmed"
+                        checked={notificationTypes.appointment_confirmed}
+                        onCheckedChange={() => toggleNotificationType('appointment_confirmed')}
+                      />
+                      <Label htmlFor="notification_confirmed" className="text-xs sm:text-sm cursor-pointer">
+                        Confirmado pelo barbeiro
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 p-2 rounded border">
+                      <Checkbox
+                        id="notification_cancelled"
+                        checked={notificationTypes.appointment_cancelled}
+                        onCheckedChange={() => toggleNotificationType('appointment_cancelled')}
+                      />
+                      <Label htmlFor="notification_cancelled" className="text-xs sm:text-sm cursor-pointer">
+                        Cancelamento
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 p-2 rounded border">
+                      <Checkbox
+                        id="notification_completed"
+                        checked={notificationTypes.appointment_completed}
+                        onCheckedChange={() => toggleNotificationType('appointment_completed')}
+                      />
+                      <Label htmlFor="notification_completed" className="text-xs sm:text-sm cursor-pointer">
+                        Pesquisa de satisfação
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 p-2 rounded border">
+                      <Checkbox
+                        id="notification_reminder"
+                        checked={notificationTypes.appointment_reminder}
+                        onCheckedChange={() => toggleNotificationType('appointment_reminder')}
+                      />
+                      <Label htmlFor="notification_reminder" className="text-xs sm:text-sm cursor-pointer">
+                        Lembrete de agendamento
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Actions */}
