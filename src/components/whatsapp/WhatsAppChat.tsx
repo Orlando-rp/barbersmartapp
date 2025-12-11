@@ -37,6 +37,8 @@ interface Message {
   direction: 'incoming' | 'outgoing';
   status: string;
   created_at: string;
+  sent_by_name: string | null;
+  sent_by_user_id: string | null;
 }
 
 interface Conversation {
@@ -48,7 +50,7 @@ interface Conversation {
 }
 
 export const WhatsAppChat = () => {
-  const { barbershopId } = useAuth();
+  const { barbershopId, user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
@@ -62,11 +64,13 @@ export const WhatsAppChat = () => {
   const [newChatPhone, setNewChatPhone] = useState("");
   const [newChatName, setNewChatName] = useState("");
   const [tableExists, setTableExists] = useState(true);
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
   useEffect(() => {
     if (barbershopId) {
       loadEvolutionConfig();
       loadConversations();
+      loadCurrentUserName();
       setupRealtimeSubscription();
     }
   }, [barbershopId]);
@@ -83,6 +87,24 @@ export const WhatsAppChat = () => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const loadCurrentUserName = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (data?.full_name) {
+        setCurrentUserName(data.full_name);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar nome do usuário:', error);
+    }
   };
 
   const loadEvolutionConfig = async () => {
@@ -222,7 +244,12 @@ export const WhatsAppChat = () => {
     try {
       setSending(true);
 
-      // Send via Evolution API
+      // Format message with staff name for client visibility
+      const formattedMessage = currentUserName 
+        ? `*${currentUserName}:*\n${newMessage}`
+        : newMessage;
+
+      // Send via Evolution API - the edge function will store the message
       const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
           action: 'sendText',
@@ -230,26 +257,19 @@ export const WhatsAppChat = () => {
           apiKey: evolutionConfig.apiKey,
           instanceName: evolutionConfig.instanceName,
           to: selectedPhone,
-          message: newMessage,
-          barbershopId: barbershopId
+          message: formattedMessage,
+          originalMessage: newMessage, // Store original without staff name prefix
+          barbershopId: barbershopId,
+          sentByUserId: user?.id,
+          sentByName: currentUserName
         }
       });
 
       if (error) throw error;
 
-      // Save message to database
-      const { error: dbError } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          barbershop_id: barbershopId,
-          phone_number: selectedPhone,
-          message: newMessage,
-          direction: 'outgoing',
-          status: 'sent'
-        });
-
-      if (dbError) throw dbError;
-
+      // Reload messages to get the stored message from the database
+      await loadMessages(selectedPhone);
+      
       setNewMessage("");
       toast.success('Mensagem enviada');
     } catch (error) {
@@ -524,6 +544,12 @@ export const WhatsAppChat = () => {
                           : "bg-muted rounded-bl-none"
                       )}
                     >
+                      {/* Show staff name for outgoing messages */}
+                      {msg.direction === 'outgoing' && msg.sent_by_name && (
+                        <p className="text-[10px] font-semibold mb-1 opacity-80">
+                          {msg.sent_by_name}
+                        </p>
+                      )}
                       <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                       <div className={cn(
                         "flex items-center justify-end gap-1 mt-1",

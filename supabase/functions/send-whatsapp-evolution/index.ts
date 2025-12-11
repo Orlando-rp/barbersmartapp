@@ -22,10 +22,13 @@ serve(async (req) => {
       instanceToken, // Token específico para a instância
       phoneNumber,   // Número do telefone (opcional)
       to, 
-      message, 
+      message,
+      originalMessage, // Mensagem original sem formatação (para armazenamento)
       barbershopId, 
       recipientName, 
-      createdBy 
+      createdBy,
+      sentByUserId,
+      sentByName
     } = await req.json();
 
     console.log(`[Evolution API] Action: ${action}, Instance: ${instanceName || 'N/A'}`);
@@ -268,10 +271,12 @@ serve(async (req) => {
               barbershop_id: barbershopId,
               phone_number: phoneNumber,
               contact_name: recipientName || null,
-              message: message,
+              message: originalMessage || message, // Use original message if provided
               direction: 'outgoing',
               status: 'sent',
               message_type: 'text',
+              sent_by_user_id: sentByUserId || null,
+              sent_by_name: sentByName || null,
               metadata: {
                 message_id: data?.key?.id || data?.id
               }
