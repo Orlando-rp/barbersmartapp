@@ -986,14 +986,14 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
   return (
     <div className="w-full">
       <Card className="barbershop-card w-full border-0 shadow-none">
-        <CardHeader className="space-y-4 px-6 pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <CalendarIcon className="h-6 w-6 text-primary" />
-                {appointment ? 'Editar Agendamento' : 'Novo Agendamento'}
+        <CardHeader className="space-y-3 sm:space-y-4 px-3 sm:px-6 pt-4 sm:pt-6">
+          <div className="flex items-start sm:items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-2xl">
+                <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
+                <span className="truncate">{appointment ? 'Editar Agendamento' : 'Novo Agendamento'}</span>
               </CardTitle>
-              <CardDescription className="mt-2">
+              <CardDescription className="mt-1 sm:mt-2 text-xs sm:text-sm line-clamp-2">
                 {currentStep === 'unit' && 'Selecione a unidade para o agendamento'}
                 {currentStep === 'professional' && 'Escolha o profissional'}
                 {currentStep === 'service' && 'Escolha o serviço desejado'}
@@ -1002,29 +1002,29 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 {currentStep === 'confirm' && 'Revise e confirme o agendamento'}
               </CardDescription>
             </div>
-            <Badge variant="outline" className="text-sm">
+            <Badge variant="outline" className="text-xs sm:text-sm flex-shrink-0 whitespace-nowrap">
               Passo {getStepNumber(currentStep)} de {totalSteps}
             </Badge>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-1">
             {wizardSteps.map((step, index) => (
-              <div key={step} className="flex items-center flex-1">
+              <div key={step} className="flex items-center flex-1 min-w-0">
                 <div className={cn(
-                  "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all",
+                  "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 transition-all flex-shrink-0",
                   currentStep === step ? "border-primary bg-primary text-primary-foreground" :
                   getStepNumber(currentStep) > getStepNumber(step) ? "border-primary bg-primary/10 text-primary" :
                   "border-muted-foreground/30 text-muted-foreground"
                 )}>
                   {getStepNumber(currentStep) > getStepNumber(step) ? (
-                    <CheckCircle2 className="h-4 w-4" />
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
                   ) : (
-                    <span className="text-xs font-semibold">{index + 1}</span>
+                    <span className="text-[10px] sm:text-xs font-semibold">{index + 1}</span>
                   )}
                 </div>
                 {index < wizardSteps.length - 1 && (
                   <div className={cn(
-                    "flex-1 h-0.5 mx-2 transition-all",
+                    "flex-1 h-0.5 mx-0.5 sm:mx-2 transition-all min-w-2",
                     getStepNumber(currentStep) > getStepNumber(step) ? "bg-primary" : "bg-muted-foreground/30"
                   )} />
                 )}
@@ -1033,16 +1033,16 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6 px-6 pb-6">
+        <CardContent className="space-y-4 sm:space-y-6 px-3 sm:px-6 pb-4 sm:pb-6">
           {/* Step 1: Unit Selection (only for multi-unit users) */}
           {currentStep === 'unit' && hasMultipleUnits && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-lg font-semibold">
-                <Building2 className="h-5 w-5 text-primary" />
-                Selecione a Unidade
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                <span className="truncate">Selecione a Unidade</span>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:gap-3">
                 {barbershops?.map((unit) => (
                   <button
                     key={unit.id}
@@ -1056,13 +1056,13 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                       setSelectedTime("");
                     }}
                     className={cn(
-                      "p-4 rounded-lg border-2 text-left transition-all",
+                      "p-3 sm:p-4 rounded-lg border-2 text-left transition-all",
                       selectedUnitId === unit.id
                         ? "border-primary bg-primary/5"
                         : "border-muted hover:border-primary/50"
                     )}
                   >
-                    <div className="font-medium">{unit.name}</div>
+                    <div className="font-medium text-sm sm:text-base truncate">{unit.name}</div>
                     {unit.is_primary && (
                       <Badge variant="secondary" className="mt-1 text-xs">
                         Unidade Principal
@@ -1076,20 +1076,20 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
           
           {/* Step 5: Client Selection */}
           {currentStep === 'client' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-lg font-semibold">
-                <User className="h-5 w-5 text-primary" />
-                Informações do Cliente
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                <span className="truncate">Informações do Cliente</span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                   <Input
                     placeholder="Buscar cliente existente..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-sm"
                   />
                 </div>
 
@@ -1105,8 +1105,8 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                         }}
                         className="w-full p-3 text-left hover:bg-muted/50 transition-colors border-b last:border-b-0"
                       >
-                        <div className="font-medium">{client.name}</div>
-                        <div className="text-sm text-muted-foreground">{client.phone}</div>
+                        <div className="font-medium text-sm">{client.name}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">{client.phone}</div>
                       </button>
                     ))}
                   </div>
@@ -1118,28 +1118,30 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                      ou cadastre novo cliente
+                      ou cadastre novo
                     </span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="client-name">Nome Completo *</Label>
+                    <Label htmlFor="client-name" className="text-sm">Nome Completo *</Label>
                     <Input
                       id="client-name"
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="Nome do cliente"
+                      className="text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="client-phone">Telefone *</Label>
+                    <Label htmlFor="client-phone" className="text-sm">Telefone *</Label>
                     <Input
                       id="client-phone"
                       value={clientPhone}
                       onChange={(e) => setClientPhone(e.target.value)}
                       placeholder="(11) 99999-9999"
+                      className="text-sm"
                     />
                   </div>
                 </div>
@@ -1149,40 +1151,40 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
 
           {/* Step 2: Professional Selection */}
           {currentStep === 'professional' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-lg font-semibold">
-                <User className="h-5 w-5 text-primary" />
-                Selecione o Profissional
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                <span className="truncate">Selecione o Profissional</span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:gap-3">
                 {staff.map((member) => (
                   <button
                     key={member.id}
                     type="button"
                     onClick={() => setSelectedBarber(member.id)}
                     className={cn(
-                      "p-4 rounded-lg border-2 text-left transition-all",
+                      "p-3 sm:p-4 rounded-lg border-2 text-left transition-all",
                       selectedBarber === member.id
                         ? "border-primary bg-primary/5"
                         : "border-muted hover:border-primary/50"
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
+                      <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
                         <AvatarImage src={member.avatar_url} alt={member.name} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {member.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-5 w-5" />}
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                          {member.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-4 w-4 sm:h-5 sm:w-5" />}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="font-medium">{member.name}</div>
+                      <div className="font-medium text-sm sm:text-base truncate">{member.name}</div>
                     </div>
                   </button>
                 ))}
               </div>
               
               {staff.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
                   Nenhum profissional disponível para esta unidade.
                 </div>
               )}
@@ -1191,10 +1193,10 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
 
           {/* Step 3: Service Selection */}
           {currentStep === 'service' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-lg font-semibold">
-                <Scissors className="h-5 w-5 text-primary" />
-                Selecione o Serviço
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                <span className="truncate">Selecione o Serviço</span>
               </div>
 
               {(() => {
@@ -1210,23 +1212,25 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
 
                 return (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-2 sm:gap-3">
                       {filteredServices.map((service) => (
                         <button
                           key={service.id}
                           type="button"
                           onClick={() => setSelectedService(service.id)}
                           className={cn(
-                            "p-4 rounded-lg border-2 text-left transition-all",
+                            "p-3 sm:p-4 rounded-lg border-2 text-left transition-all",
                             selectedService === service.id
                               ? "border-primary bg-primary/5"
                               : "border-muted hover:border-primary/50"
                           )}
                         >
-                          <div className="font-medium">{service.name}</div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                            <Clock className="h-3 w-3" />
-                            <span>{formatDuration(service.duration)}</span>
+                          <div className="font-medium text-sm sm:text-base truncate">{service.name}</div>
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mt-1 flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDuration(service.duration)}
+                            </span>
                             <span>•</span>
                             <span className="font-semibold text-primary">R$ {service.price.toFixed(2)}</span>
                           </div>
@@ -1235,7 +1239,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                     </div>
                     
                     {filteredServices.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
+                      <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
                         Nenhum serviço disponível para este profissional.
                       </div>
                     )}
@@ -1247,16 +1251,16 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
 
           {/* Step 4: Date & Time Selection */}
           {currentStep === 'datetime' && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 text-lg font-semibold">
-                <Clock className="h-5 w-5 text-primary" />
-                Data e Horário
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                <span className="truncate">Data e Horário</span>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:gap-6">
                 <div className="space-y-2">
-                  <Label>Selecione a Data *</Label>
-                  <div className="border rounded-lg p-4 bg-card">
+                  <Label className="text-sm">Selecione a Data *</Label>
+                  <div className="border rounded-lg p-2 sm:p-4 bg-card overflow-x-auto">
                     <TooltipProvider delayDuration={200}>
                       <Calendar
                         mode="single"
@@ -1375,17 +1379,17 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                   
                   {/* Legend */}
                   {selectedBarber && selectedService && (
-                    <div className="flex flex-wrap gap-3 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-chart-2/30 border border-chart-2/50" />
+                    <div className="flex flex-wrap gap-2 sm:gap-3 text-[10px] sm:text-xs mt-2">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-chart-2/30 border border-chart-2/50" />
                         <span className="text-muted-foreground">Disponível</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-chart-4/40 border border-chart-4/60" />
-                        <span className="text-muted-foreground">Poucos horários</span>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-chart-4/40 border border-chart-4/60" />
+                        <span className="text-muted-foreground">Poucos</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-destructive/20 border border-destructive/40" />
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-destructive/20 border border-destructive/40" />
                         <span className="text-muted-foreground">Lotado</span>
                       </div>
                     </div>
@@ -1420,19 +1424,19 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Horários Disponíveis *</Label>
+                  <Label className="text-sm">Horários Disponíveis *</Label>
                   {!date || !selectedBarber ? (
-                    <div className="border rounded-lg p-8 text-center text-muted-foreground">
+                    <div className="border rounded-lg p-6 sm:p-8 text-center text-muted-foreground text-sm">
                       {!selectedBarber ? 'Selecione um profissional primeiro' : 'Selecione uma data'}
                     </div>
                   ) : availableSlots.length === 0 ? (
-                    <div className="border rounded-lg p-6 text-center space-y-4">
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-                        <Clock className="h-6 w-6 text-muted-foreground" />
+                    <div className="border rounded-lg p-4 sm:p-6 text-center space-y-3 sm:space-y-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                        <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                       </div>
                       <div>
-                        <p className="font-medium text-foreground mb-1">Dia lotado</p>
-                        <p className="text-sm text-muted-foreground">Todos os horários estão ocupados para esta data</p>
+                        <p className="font-medium text-foreground mb-1 text-sm sm:text-base">Dia lotado</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Todos os horários ocupados</p>
                       </div>
                       
                       {!showWaitlistForm ? (
@@ -1551,75 +1555,76 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
 
           {/* Step 6: Confirmation */}
           {currentStep === 'confirm' && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 text-lg font-semibold">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                Confirmar Agendamento
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                <span className="truncate">Confirmar Agendamento</span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <Card className="barbershop-card">
-                  <CardContent className="pt-6 space-y-4">
+                  <CardContent className="pt-4 sm:pt-6 space-y-3 sm:space-y-4 px-3 sm:px-6">
                     {/* Mostrar unidade selecionada se multi-unidade */}
                     {hasMultipleUnits && selectedUnitData && (
-                      <div className="flex items-start gap-3">
-                        <Scissors className="h-5 w-5 text-primary mt-0.5" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Unidade</p>
-                          <p className="font-semibold">{selectedUnitData.name}</p>
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm text-muted-foreground">Unidade</p>
+                          <p className="font-semibold text-sm sm:text-base truncate">{selectedUnitData.name}</p>
                         </div>
                       </div>
                     )}
                     
-                    <div className="flex items-start gap-3">
-                      <User className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Cliente</p>
-                        <p className="font-semibold">{clientName}</p>
-                        <p className="text-sm text-muted-foreground">{clientPhone}</p>
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Cliente</p>
+                        <p className="font-semibold text-sm sm:text-base truncate">{clientName}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{clientPhone}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <Scissors className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Serviço</p>
-                        <p className="font-semibold">{selectedServiceData?.name}</p>
-                        <p className="text-sm text-muted-foreground">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Serviço</p>
+                        <p className="font-semibold text-sm sm:text-base truncate">{selectedServiceData?.name}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {formatDuration(selectedServiceData?.duration || 0)} - R$ {selectedServiceData?.price.toFixed(2)}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <User className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Profissional</p>
-                        <p className="font-semibold">{selectedBarberData?.name}</p>
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Profissional</p>
+                        <p className="font-semibold text-sm sm:text-base truncate">{selectedBarberData?.name}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <CalendarIcon className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Data e Horário</p>
-                        <p className="font-semibold">
-                          {date && format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Data e Horário</p>
+                        <p className="font-semibold text-sm sm:text-base">
+                          {date && format(date, "dd/MM/yyyy", { locale: ptBR })}
                         </p>
-                        <p className="text-sm text-muted-foreground">{selectedTime}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{selectedTime}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Observações</Label>
+                  <Label htmlFor="notes" className="text-sm">Observações</Label>
                   <Textarea
                     id="notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Adicione observações sobre o agendamento..."
-                    rows={3}
+                    rows={2}
+                    className="text-sm"
                   />
                 </div>
               </div>
@@ -1627,31 +1632,38 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between pt-6 border-t">
+          <div className="flex justify-between pt-4 sm:pt-6 border-t gap-3">
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={currentStep === 'unit' || (currentStep === 'professional' && !hasMultipleUnits) ? onClose : handleBack}
               disabled={loading}
+              className="text-xs sm:text-sm"
             >
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              {currentStep === 'unit' || (currentStep === 'professional' && !hasMultipleUnits) ? 'Cancelar' : 'Voltar'}
+              <ChevronLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">{currentStep === 'unit' || (currentStep === 'professional' && !hasMultipleUnits) ? 'Cancelar' : 'Voltar'}</span>
+              <span className="xs:hidden">{currentStep === 'unit' || (currentStep === 'professional' && !hasMultipleUnits) ? 'Cancelar' : 'Voltar'}</span>
             </Button>
 
             {currentStep === 'confirm' ? (
               <Button
                 type="button"
                 variant="premium"
+                size="sm"
                 onClick={handleSubmit}
                 disabled={loading}
+                className="text-xs sm:text-sm"
               >
-                {loading ? 'Salvando...' : (appointment ? 'Atualizar Agendamento' : 'Confirmar Agendamento')}
-                <CheckCircle2 className="ml-2 h-4 w-4" />
+                <span className="hidden sm:inline">{loading ? 'Salvando...' : (appointment ? 'Atualizar Agendamento' : 'Confirmar Agendamento')}</span>
+                <span className="sm:hidden">{loading ? 'Salvando...' : 'Confirmar'}</span>
+                <CheckCircle2 className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             ) : (
               <Button
                 type="button"
                 variant="premium"
+                size="sm"
                 onClick={handleNext}
                 disabled={
                   (currentStep === 'unit' && !canProceedFromUnit) ||
@@ -1660,9 +1672,10 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                   (currentStep === 'datetime' && !canProceedFromDateTime) ||
                   (currentStep === 'client' && !canProceedFromClient)
                 }
+                className="text-xs sm:text-sm"
               >
                 Próximo
-                <ChevronRight className="ml-2 h-4 w-4" />
+                <ChevronRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             )}
           </div>
