@@ -1,4 +1,4 @@
-// Evolution API WhatsApp integration - v2.3 - Correct webhook payload per official docs
+// Evolution API WhatsApp integration - v2.4 - Fixed webhook field names (byEvents, base64)
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -85,8 +85,8 @@ serve(async (req) => {
           webhook: {
             enabled: true,
             url: webhookUrl,
-            webhookByEvents: false, // Receive all events at same URL
-            webhookBase64: false,
+            byEvents: false, // Receive all events at same URL
+            base64: false,
             events: [
               'MESSAGES_UPSERT',      // Incoming and outgoing messages
               'MESSAGES_UPDATE',      // Message status updates (delivered, read)
@@ -133,8 +133,8 @@ serve(async (req) => {
           webhook: {
             enabled: true,
             url: webhookUrlConnect,
-            webhookByEvents: false,
-            webhookBase64: false,
+            byEvents: false,
+            base64: false,
             events: [
               'MESSAGES_UPSERT',
               'MESSAGES_UPDATE',
@@ -219,26 +219,27 @@ serve(async (req) => {
 
       case 'setWebhook': {
         // Update webhook configuration for existing instance
-        // Per Evolution API 2.0 docs: POST /webhook/set/{instance}
         endpoint = `/webhook/set/${instanceName}`;
         method = 'POST';
         const supabaseUrlWebhook = Deno.env.get('SUPABASE_URL') || '';
         const webhookUrlSet = `${supabaseUrlWebhook}/functions/v1/evolution-webhook`;
         
-        // Evolution API 2.0 correct payload structure (NOT wrapped in 'webhook')
+        // Evolution API expects 'webhook' wrapper with these field names
         body = JSON.stringify({
-          enabled: true,
-          url: webhookUrlSet,
-          webhookByEvents: false,
-          webhookBase64: false,
-          events: [
-            'MESSAGES_UPSERT',
-            'MESSAGES_UPDATE',
-            'MESSAGES_DELETE',
-            'SEND_MESSAGE',
-            'CONNECTION_UPDATE',
-            'QRCODE_UPDATED'
-          ]
+          webhook: {
+            enabled: true,
+            url: webhookUrlSet,
+            byEvents: false,
+            base64: false,
+            events: [
+              'MESSAGES_UPSERT',
+              'MESSAGES_UPDATE',
+              'MESSAGES_DELETE',
+              'SEND_MESSAGE',
+              'CONNECTION_UPDATE',
+              'QRCODE_UPDATED'
+            ]
+          }
         });
         console.log('[Evolution API] Setting webhook:', body);
         break;
