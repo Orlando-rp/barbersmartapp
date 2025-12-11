@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useTheme } from "next-themes";
 import { supabase } from "@/lib/supabase";
 
 export interface SystemBranding {
@@ -6,6 +7,8 @@ export interface SystemBranding {
   system_name: string;
   tagline: string;
   logo_url: string | null;
+  logo_light_url?: string | null;
+  logo_dark_url?: string | null;
   favicon_url: string | null;
   primary_color: string;
   secondary_color: string;
@@ -17,6 +20,8 @@ export interface CustomBranding {
   system_name?: string;
   tagline?: string;
   logo_url?: string;
+  logo_light_url?: string;
+  logo_dark_url?: string;
   favicon_url?: string;
   primary_color?: string;
   secondary_color?: string;
@@ -27,6 +32,7 @@ interface BrandingContextType {
   branding: SystemBranding | null;
   customBranding: CustomBranding | null;
   effectiveBranding: SystemBranding | null;
+  currentLogoUrl: string | null;
   loading: boolean;
   refreshBranding: () => Promise<void>;
   hasWhiteLabel: boolean;
@@ -48,6 +54,7 @@ const BrandingContext = createContext<BrandingContextType>({
   branding: defaultBranding,
   customBranding: null,
   effectiveBranding: defaultBranding,
+  currentLogoUrl: null,
   loading: true,
   refreshBranding: async () => {},
   hasWhiteLabel: false,
@@ -135,6 +142,7 @@ interface BrandingProviderProps {
 }
 
 export const BrandingProvider = ({ children }: BrandingProviderProps) => {
+  const { resolvedTheme } = useTheme();
   const [branding, setBranding] = useState<SystemBranding | null>(defaultBranding);
   const [customBranding, setCustomBranding] = useState<CustomBranding | null>(null);
   const [hasWhiteLabel, setHasWhiteLabel] = useState(false);
@@ -147,12 +155,31 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
       system_name: customBranding.system_name || branding.system_name,
       tagline: customBranding.tagline || branding.tagline,
       logo_url: customBranding.logo_url || branding.logo_url,
+      logo_light_url: customBranding.logo_light_url || branding.logo_light_url,
+      logo_dark_url: customBranding.logo_dark_url || branding.logo_dark_url,
       favicon_url: customBranding.favicon_url || branding.favicon_url,
       primary_color: customBranding.primary_color || branding.primary_color,
       secondary_color: customBranding.secondary_color || branding.secondary_color,
       accent_color: customBranding.accent_color || branding.accent_color,
     } : {})
   } : null;
+
+  // Calculate current logo based on theme
+  const currentLogoUrl = (() => {
+    if (!effectiveBranding) return null;
+    
+    const isDark = resolvedTheme === 'dark';
+    
+    // Priority: theme-specific logo > generic logo > null
+    if (isDark && effectiveBranding.logo_dark_url) {
+      return effectiveBranding.logo_dark_url;
+    }
+    if (!isDark && effectiveBranding.logo_light_url) {
+      return effectiveBranding.logo_light_url;
+    }
+    // Fallback to generic logo
+    return effectiveBranding.logo_url;
+  })();
 
   const fetchSystemBranding = async () => {
     try {
@@ -255,6 +282,7 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
       branding, 
       customBranding,
       effectiveBranding,
+      currentLogoUrl,
       loading, 
       refreshBranding,
       hasWhiteLabel,

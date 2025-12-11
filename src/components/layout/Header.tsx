@@ -20,7 +20,7 @@ import { MobileSidebar } from "./Sidebar";
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
-  const { effectiveBranding } = useBranding();
+  const { effectiveBranding, currentLogoUrl } = useBranding();
   const navigate = useNavigate();
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileFullName, setProfileFullName] = useState<string | null>(null);
@@ -70,10 +70,10 @@ const Header = () => {
           
           {/* Logo - Only visible on mobile/tablet, hidden on desktop where it's in sidebar */}
           <div className="flex items-center space-x-2 lg:hidden">
-            {effectiveBranding?.logo_url ? (
+            {currentLogoUrl ? (
               <img 
-                src={effectiveBranding.logo_url} 
-                alt={effectiveBranding.system_name || 'Logo'} 
+                src={currentLogoUrl} 
+                alt={effectiveBranding?.system_name || 'Logo'} 
                 className="w-7 h-7 rounded-lg object-contain"
               />
             ) : (
