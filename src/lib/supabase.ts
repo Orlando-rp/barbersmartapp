@@ -69,7 +69,7 @@ export type Database = {
             appointment_completed: boolean;
             appointment_reminder: boolean;
           } | null;
-          reminder_hours: number;
+          avatar_url: string | null;
           created_at: string;
           updated_at: string;
         };
