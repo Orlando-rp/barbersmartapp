@@ -53,6 +53,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     instanceName: generatedInstanceName
   });
   const [saving, setSaving] = useState(false);
+  const [loadingConfig, setLoadingConfig] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [checkingConnection, setCheckingConnection] = useState(false);
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -90,6 +91,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
   const loadConfig = async () => {
     if (!barbershopId) return;
 
+    setLoadingConfig(true);
     try {
       // Buscar config global via edge function (bypass RLS)
       let globalApiUrl = '';
@@ -173,6 +175,8 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
+    } finally {
+      setLoadingConfig(false);
     }
   };
 
@@ -727,26 +731,33 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={checkConnection}
-              disabled={checkingConnection || !config.apiUrl || !config.instanceName}
-              className="text-xs sm:text-sm"
-              size="sm"
-            >
-              <RefreshCw className={`mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 ${checkingConnection ? 'animate-spin' : ''}`} />
-              Verificar Status
-            </Button>
+          {loadingConfig ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Carregando configuração...</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  onClick={checkConnection}
+                  disabled={checkingConnection || !config.apiUrl || !config.instanceName}
+                  className="text-xs sm:text-sm"
+                  size="sm"
+                >
+                  <RefreshCw className={`mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 ${checkingConnection ? 'animate-spin' : ''}`} />
+                  Verificar Status
+                </Button>
 
-            {connectionStatus !== 'connected' ? (
-              <Button
-                onClick={connectInstance}
-                disabled={!config.apiUrl || !config.apiKey || !config.instanceName}
-                className="text-xs sm:text-sm"
-                size="sm"
-              >
-                <QrCode className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                {connectionStatus !== 'connected' ? (
+                  <Button
+                    onClick={connectInstance}
+                    disabled={!config.apiUrl || !config.apiKey || !config.instanceName}
+                    className="text-xs sm:text-sm"
+                    size="sm"
+                  >
+                    <QrCode className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Conectar WhatsApp
               </Button>
             ) : (
@@ -863,6 +874,8 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
               </div>
             )}
           </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
