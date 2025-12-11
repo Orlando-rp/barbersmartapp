@@ -22,13 +22,16 @@ export const TransactionDialog = ({
   transaction,
   onSuccess 
 }: TransactionDialogProps) => {
-  const { barbershopId, user } = useAuth();
+  const { selectedBarbershopId, barbershops, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Se tiver apenas uma barbearia, usa ela. Senão, usa a selecionada ou a primeira disponível
+  const effectiveBarbershopId = selectedBarbershopId || (barbershops.length === 1 ? barbershops[0].id : barbershops[0]?.id);
+
   const handleSubmit = async (data: TransactionFormData) => {
-    if (!barbershopId || !user) {
-      toast.error("Erro de autenticação");
+    if (!effectiveBarbershopId || !user) {
+      toast.error("Selecione uma unidade para registrar a transação");
       return;
     }
 
@@ -36,7 +39,7 @@ export const TransactionDialog = ({
       setIsLoading(true);
 
       const transactionData = {
-        barbershop_id: barbershopId,
+        barbershop_id: effectiveBarbershopId,
         type: data.type,
         amount: parseFloat(data.amount),
         description: data.description,

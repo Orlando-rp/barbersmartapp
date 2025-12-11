@@ -61,33 +61,36 @@ const Finance = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
-    if (activeBarbershopIds.length > 0) {
-      fetchFinancialData();
-
-      // Realtime subscription
-      const channel = supabase
-        .channel('finance-transactions')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'transactions'
-          },
-          (payload: any) => {
-            if (payload.new?.barbershop_id && activeBarbershopIds.includes(payload.new.barbershop_id)) {
-              fetchFinancialData();
-            } else if (payload.old?.barbershop_id && activeBarbershopIds.includes(payload.old.barbershop_id)) {
-              fetchFinancialData();
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+    if (activeBarbershopIds.length === 0) {
+      setLoading(false);
+      return;
     }
+    
+    fetchFinancialData();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('finance-transactions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions'
+        },
+        (payload: any) => {
+          if (payload.new?.barbershop_id && activeBarbershopIds.includes(payload.new.barbershop_id)) {
+            fetchFinancialData();
+          } else if (payload.old?.barbershop_id && activeBarbershopIds.includes(payload.old.barbershop_id)) {
+            fetchFinancialData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [activeBarbershopIds, selectedMonth]);
 
   const fetchFinancialData = async () => {
