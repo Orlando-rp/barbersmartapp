@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { ServiceDialog } from "@/components/dialogs/ServiceDialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Scissors, Plus, Search, Clock, Edit, Trash2, FolderOpen } from "lucide-react";
+import { Scissors, Plus, Search, Clock, Edit, Trash2, FolderOpen, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -30,6 +30,24 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type SortField = "name" | "price" | "duration" | "category";
+type SortDirection = "asc" | "desc";
 
 const Services = () => {
   const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
@@ -44,6 +62,8 @@ const Services = () => {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categorySheetOpen, setCategorySheetOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   useEffect(() => {
     if (sharedBarbershopId && allRelatedBarbershopIds.length > 0 && !loadingBarbershop) {
@@ -55,7 +75,6 @@ const Services = () => {
     if (!sharedBarbershopId || allRelatedBarbershopIds.length === 0) return;
     
     try {
-      // Buscar serviços de todas as barbearias relacionadas
       const { data, error } = await supabase
         .from('services')
         .select('*')
@@ -114,18 +133,53 @@ const Services = () => {
     }
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    return sortDirection === "asc" 
+      ? <ArrowUp className="h-4 w-4 ml-1" /> 
+      : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
   // Combine DB categories with existing service categories (fallback)
   const categoryNames = ["Todos", ...dbCategories.map(c => c.name)];
   const serviceCategoryNames = Array.from(new Set(services.map(s => s.category).filter(Boolean)));
   const allCategories = [...new Set([...categoryNames, ...serviceCategoryNames])];
   
-  const filteredServices = services.filter(s => {
-    const matchesCategory = selectedCategory === "Todos" || s.category === selectedCategory;
-    const matchesSearch = !searchQuery || 
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredServices = services
+    .filter(s => {
+      const matchesCategory = selectedCategory === "Todos" || s.category === selectedCategory;
+      const matchesSearch = !searchQuery || 
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "price":
+          comparison = a.price - b.price;
+          break;
+        case "duration":
+          comparison = a.duration - b.duration;
+          break;
+        case "category":
+          comparison = (a.category || "").localeCompare(b.category || "");
+          break;
+      }
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
 
   if (loading) {
     return (
@@ -208,14 +262,35 @@ const Services = () => {
         <Card className="barbershop-card">
           <CardContent className="p-3 sm:pt-6 sm:px-6">
             <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between gap-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Buscar serviços..." 
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+              <div className="flex-1 flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Buscar serviços..." 
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Nome</SelectItem>
+                    <SelectItem value="price">Preço</SelectItem>
+                    <SelectItem value="duration">Duração</SelectItem>
+                    <SelectItem value="category">Categoria</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setSortDirection(sortDirection === "asc" ? "desc" : "asc")}
+                  title={sortDirection === "asc" ? "Crescente" : "Decrescente"}
+                >
+                  {sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                </Button>
               </div>
               <div className="flex gap-1.5 sm:gap-2 flex-wrap">
                 {allCategories.map((category) => (
@@ -234,74 +309,177 @@ const Services = () => {
           </CardContent>
         </Card>
 
-        {/* Services Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          {filteredServices.length === 0 ? (
-            <div className="col-span-full text-center py-6 sm:py-8 px-4">
-              <Scissors className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                {services.length === 0 
-                  ? 'Nenhum serviço cadastrado ainda. Clique em "Novo Serviço" para começar.'
-                  : 'Nenhum serviço encontrado para esta categoria.'}
-              </p>
-            </div>
-          ) : (
-            filteredServices.map((service) => (
-            <Card key={service.id} className="barbershop-card hover:shadow-medium">
-              <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="text-base sm:text-lg truncate">{service.name}</CardTitle>
-                    <div className="flex items-center gap-2 mt-1.5 sm:mt-2">
-                      <Badge variant="outline" className="text-xs truncate max-w-[120px]">{service.category}</Badge>
-                    </div>
-                  </div>
-                  <div className="flex gap-0.5 sm:gap-1 shrink-0">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 sm:h-8 sm:w-8"
-                      onClick={() => handleEdit(service)}
-                    >
-                      <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 sm:h-8 sm:w-8 text-destructive"
-                      onClick={() => handleDeleteClick(service.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </Button>
-                  </div>
+        {/* Services List */}
+        <Card className="barbershop-card">
+          <CardContent className="p-0">
+            {filteredServices.length === 0 ? (
+              <div className="text-center py-8 px-4">
+                <Scissors className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  {services.length === 0 
+                    ? 'Nenhum serviço cadastrado ainda. Clique em "Novo Serviço" para começar.'
+                    : 'Nenhum serviço encontrado para esta categoria.'}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort("name")}
+                        >
+                          <div className="flex items-center">
+                            Serviço
+                            {getSortIcon("name")}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleSort("category")}
+                        >
+                          <div className="flex items-center">
+                            Categoria
+                            {getSortIcon("category")}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 text-right"
+                          onClick={() => handleSort("price")}
+                        >
+                          <div className="flex items-center justify-end">
+                            Preço
+                            {getSortIcon("price")}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 text-right"
+                          onClick={() => handleSort("duration")}
+                        >
+                          <div className="flex items-center justify-end">
+                            Duração
+                            {getSortIcon("duration")}
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredServices.map((service) => (
+                        <TableRow key={service.id} className="hover:bg-muted/50">
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{service.name}</p>
+                              {service.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-1">{service.description}</p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{service.category}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-success">
+                            R$ {service.price}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end text-muted-foreground">
+                              <Clock className="h-4 w-4 mr-1" />
+                              {formatDuration(service.duration)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge 
+                              variant={service.active ? "default" : "secondary"}
+                              className={service.active ? "bg-success text-success-foreground" : ""}
+                            >
+                              {service.active ? "Ativo" : "Inativo"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEdit(service)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={() => handleDeleteClick(service.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-                <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">{service.description}</p>
-                
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2 sm:space-x-4">
-                    <div className="flex items-center text-xs sm:text-sm">
-                      <span className="font-semibold text-success">R$ {service.price}</span>
+
+                {/* Mobile List */}
+                <div className="md:hidden divide-y divide-border">
+                  {filteredServices.map((service) => (
+                    <div key={service.id} className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{service.name}</p>
+                          {service.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-1">{service.description}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(service)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => handleDeleteClick(service.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">{service.category}</Badge>
+                          <Badge 
+                            variant={service.active ? "default" : "secondary"}
+                            className={`text-xs ${service.active ? "bg-success text-success-foreground" : ""}`}
+                          >
+                            {service.active ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="font-semibold text-success">R$ {service.price}</span>
+                          <span className="flex items-center text-muted-foreground">
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            {formatDuration(service.duration)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-0.5 sm:mr-1" />
-                      <span>{formatDuration(service.duration)}</span>
-                    </div>
-                  </div>
-                  
-                  <Badge 
-                    variant={service.active ? "default" : "secondary"}
-                    className={`text-xs shrink-0 ${service.active ? "bg-success text-success-foreground" : ""}`}
-                  >
-                    {service.active ? "Ativo" : "Inativo"}
-                  </Badge>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))
-          )}
-        </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Edit Dialog */}
         <ServiceDialog 
