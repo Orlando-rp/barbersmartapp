@@ -11,6 +11,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
 import DomainSettings from "@/components/settings/DomainSettings";
 import PortfolioGalleryManager from "@/components/settings/PortfolioGalleryManager";
+import NotificationSettings from "@/components/settings/NotificationSettings";
 import { Save, User, Bell, Clock, Globe, Image } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -206,83 +207,8 @@ const SettingsPage = () => {
             </CardContent>
           </Card>
 
-          {/* Notification Settings */}
-          <Card className="barbershop-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
-                Notificações
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 border rounded-lg">
-                <div className="min-w-0">
-                  <Label htmlFor="whatsapp-notifications" className="text-xs sm:text-sm">WhatsApp</Label>
-                  <p className="text-xs text-muted-foreground line-clamp-1">Receber via WhatsApp</p>
-                </div>
-                <Switch 
-                  id="whatsapp-notifications"
-                  checked={settings.settings.notifications.whatsapp}
-                  onCheckedChange={(checked) => 
-                    setSettings({
-                      ...settings,
-                      settings: {
-                        ...settings.settings,
-                        notifications: {
-                          ...settings.settings.notifications,
-                          whatsapp: checked
-                        }
-                      }
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 border rounded-lg">
-                <div className="min-w-0">
-                  <Label htmlFor="email-notifications" className="text-xs sm:text-sm">Email</Label>
-                  <p className="text-xs text-muted-foreground line-clamp-1">Receber por email</p>
-                </div>
-                <Switch 
-                  id="email-notifications"
-                  checked={settings.settings.notifications.email}
-                  onCheckedChange={(checked) => 
-                    setSettings({
-                      ...settings,
-                      settings: {
-                        ...settings.settings,
-                        notifications: {
-                          ...settings.settings.notifications,
-                          email: checked
-                        }
-                      }
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 border rounded-lg">
-                <div className="min-w-0">
-                  <Label htmlFor="marketing-emails" className="text-xs sm:text-sm">Marketing</Label>
-                  <p className="text-xs text-muted-foreground line-clamp-1">Emails promocionais</p>
-                </div>
-                <Switch 
-                  id="marketing-emails"
-                  checked={settings.settings.notifications.marketing}
-                  onCheckedChange={(checked) => 
-                    setSettings({
-                      ...settings,
-                      settings: {
-                        ...settings.settings,
-                        notifications: {
-                          ...settings.settings.notifications,
-                          marketing: checked
-                        }
-                      }
-                    })
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Notification Settings - Full Component */}
+          <NotificationSettings />
 
           {/* Business Hours Link */}
           <Card className="barbershop-card lg:col-span-2">

@@ -8,7 +8,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarIcon, User, Mail, Phone, MapPin, X, Tag, Bell, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
@@ -71,9 +70,6 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
   );
   const [notificationTypes, setNotificationTypes] = useState<NotificationTypes>(
     editingClient?.notification_types || defaultNotificationTypes
-  );
-  const [reminderHours, setReminderHours] = useState<string>(
-    String(editingClient?.reminder_hours || 24)
   );
   
   const { toast } = useToast();
@@ -141,7 +137,6 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
         active: true,
         notification_enabled: notificationEnabled,
         notification_types: notificationTypes,
-        reminder_hours: parseInt(reminderHours),
       };
 
       if (editingClient?.id) {
@@ -394,24 +389,6 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
 
             {notificationEnabled && (
               <>
-                {/* Reminder Time */}
-                <div className="space-y-2">
-                  <Label className="text-xs sm:text-sm">Antecedência do Lembrete</Label>
-                  <Select value={reminderHours} onValueChange={setReminderHours}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione o tempo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 hora antes</SelectItem>
-                      <SelectItem value="2">2 horas antes</SelectItem>
-                      <SelectItem value="6">6 horas antes</SelectItem>
-                      <SelectItem value="12">12 horas antes</SelectItem>
-                      <SelectItem value="24">24 horas antes</SelectItem>
-                      <SelectItem value="48">48 horas antes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Notification Types */}
                 <div className="space-y-2">
                   <Label className="text-xs sm:text-sm">Tipos de Notificação</Label>

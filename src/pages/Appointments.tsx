@@ -270,6 +270,26 @@ const Appointments = () => {
 
   const sendWhatsAppNotification = async (appointment: Appointment, type: 'confirmed' | 'cancelled' | 'completed') => {
     try {
+      // Verificar configurações de notificação da barbearia
+      const { data: barbershopData } = await supabase
+        .from('barbershops')
+        .select('settings')
+        .eq('id', appointment.barbershop_id)
+        .single();
+
+      const notificationConfig = barbershopData?.settings?.notification_config || {};
+      const typeMapping = {
+        confirmed: 'appointment_confirmed',
+        cancelled: 'appointment_cancelled',
+        completed: 'appointment_completed'
+      };
+      
+      const barbershopNotificationSetting = notificationConfig[typeMapping[type]];
+      if (barbershopNotificationSetting && !barbershopNotificationSetting.enabled) {
+        console.log(`Notificações de ${type} desabilitadas nas configurações da barbearia`);
+        return;
+      }
+
       // Verificar preferências de notificação do cliente
       if (appointment.client_id) {
         const { data: clientData } = await supabase
@@ -287,12 +307,6 @@ const Appointments = () => {
 
           // Verificar se o tipo específico está habilitado
           const notificationTypes = clientData.notification_types as Record<string, boolean> | null;
-          const typeMapping = {
-            confirmed: 'appointment_confirmed',
-            cancelled: 'appointment_cancelled',
-            completed: 'appointment_completed'
-          };
-          
           if (notificationTypes && !notificationTypes[typeMapping[type]]) {
             console.log(`Cliente não deseja receber notificações de ${type}`);
             return;

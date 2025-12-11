@@ -520,6 +520,20 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
     }
   ) => {
     try {
+      // Verificar configurações de notificação da barbearia
+      const { data: barbershopData } = await supabase
+        .from('barbershops')
+        .select('settings')
+        .eq('id', effectiveBarbershopId)
+        .single();
+
+      const notificationConfig = barbershopData?.settings?.notification_config || {};
+      const barbershopSetting = notificationConfig.appointment_created;
+      if (barbershopSetting && !barbershopSetting.enabled) {
+        console.log('Notificações de criação desabilitadas nas configurações da barbearia');
+        return;
+      }
+
       // Verificar preferências de notificação do cliente (se cadastrado)
       if (data.clientId) {
         const { data: clientData } = await supabase
@@ -617,6 +631,20 @@ Nos vemos em breve! 💈`;
     }
   ) => {
     try {
+      // Verificar configurações de notificação da barbearia
+      const { data: barbershopData } = await supabase
+        .from('barbershops')
+        .select('settings')
+        .eq('id', effectiveBarbershopId)
+        .single();
+
+      const notificationConfig = barbershopData?.settings?.notification_config || {};
+      const barbershopSetting = notificationConfig.appointment_updated;
+      if (barbershopSetting && !barbershopSetting.enabled) {
+        console.log('Notificações de alteração desabilitadas nas configurações da barbearia');
+        return;
+      }
+
       // Verificar preferências de notificação do cliente (se cadastrado)
       if (data.clientId) {
         const { data: clientData } = await supabase
