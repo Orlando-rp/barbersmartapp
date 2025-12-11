@@ -2,12 +2,10 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
-import { Checkbox } from "@/components/ui/checkbox";
 import { z } from "zod";
 import { StaffScheduleSection, StaffSchedule } from "./StaffScheduleSection";
 import { StaffServicesSection } from "./StaffServicesSection";
@@ -588,31 +586,34 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         <div className="space-y-2">
           <Label htmlFor="role" className="text-sm">Função *</Label>
-          <Select value={role} onValueChange={(value) => {
-            setRole(value);
-            // Auto-enable isAlsoBarber when switching to admin if was previously barbeiro
-            if (value === 'admin' && role === 'barbeiro') {
-              setIsAlsoBarber(true);
-            }
-          }}>
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="Selecione a função" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="barbeiro">Barbeiro</SelectItem>
-              <SelectItem value="recepcionista">Recepcionista</SelectItem>
-              <SelectItem value="admin">Administrador</SelectItem>
-            </SelectContent>
-          </Select>
+          <select
+            id="role"
+            value={role}
+            onChange={(e) => {
+              const newRole = e.target.value;
+              setRole(newRole);
+              // Auto-enable isAlsoBarber when switching to admin from barbeiro
+              if (newRole === 'admin' && role === 'barbeiro') {
+                setIsAlsoBarber(true);
+              }
+            }}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value="barbeiro">Barbeiro</option>
+            <option value="recepcionista">Recepcionista</option>
+            <option value="admin">Administrador</option>
+          </select>
         </div>
 
         {role === 'admin' && (
           <div className="space-y-2 flex items-end">
             <div className="flex items-center space-x-2 pb-2">
-              <Checkbox
+              <input
+                type="checkbox"
                 id="isAlsoBarber"
                 checked={isAlsoBarber}
-                onCheckedChange={(checked) => setIsAlsoBarber(checked === true)}
+                onChange={(e) => setIsAlsoBarber(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <Label htmlFor="isAlsoBarber" className="text-sm font-normal cursor-pointer">
                 Também atua como barbeiro
@@ -653,9 +654,11 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
                 }`}
                 onClick={() => toggleBarbershopSelection(shop.id)}
               >
-                <Checkbox
+                <input
+                  type="checkbox"
                   checked={selectedBarbershopIds.includes(shop.id)}
-                  onCheckedChange={() => toggleBarbershopSelection(shop.id)}
+                  onChange={() => toggleBarbershopSelection(shop.id)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                 />
                 <span className="text-sm font-medium">{shop.name}</span>
               </div>
