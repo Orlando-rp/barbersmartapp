@@ -574,7 +574,6 @@ const CompleteProfile = () => {
                       className="cursor-pointer flex items-center gap-1"
                       onClick={() => setCurrentUnitIndex(index)}
                     >
-                      {unit.isMatriz && <Star className="h-3 w-3" />}
                       <Building2 className="h-3 w-3" />
                       {unit.name || (unit.isMatriz ? 'Barbearia' : `Unidade ${index}`)}
                       {/* Não pode remover a matriz (index 0) */}
