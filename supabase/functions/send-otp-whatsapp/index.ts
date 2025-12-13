@@ -99,31 +99,51 @@ serve(async (req) => {
     if (!evolutionConfig?.value?.api_url || !evolutionConfig?.value?.api_key) {
       console.error('[Send OTP] Evolution API não configurada globalmente');
       return new Response(
-        JSON.stringify({ success: false, error: 'WhatsApp não configurado no sistema' }),
+        JSON.stringify({ success: false, error: 'WhatsApp não configurado no sistema. Configure o servidor Evolution API no painel SaaS Admin.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Buscar qualquer instância conectada para enviar OTP
-    // Precisamos de uma instância "global" ou usar a primeira disponível
-    const { data: configs } = await supabase
-      .from('whatsapp_config')
-      .select('instance_name, status')
-      .eq('provider', 'evolution')
-      .eq('status', 'connected')
-      .limit(1);
-
-    if (!configs || configs.length === 0) {
-      console.error('[Send OTP] Nenhuma instância WhatsApp conectada');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Nenhuma instância WhatsApp disponível' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const instanceName = configs[0].instance_name;
     const apiUrl = evolutionConfig.value.api_url;
     const apiKey = evolutionConfig.value.api_key;
+
+    // Buscar configuração da instância OTP global
+    const { data: otpConfig } = await supabase
+      .from('system_config')
+      .select('value')
+      .eq('key', 'otp_whatsapp')
+      .maybeSingle();
+
+    let instanceName = otpConfig?.value?.instance_name;
+    const otpStatus = otpConfig?.value?.status;
+
+    // Se não há instância OTP configurada ou não está conectada, tentar usar instância de barbearia
+    if (!instanceName || otpStatus !== 'connected') {
+      console.log('[Send OTP] Instância OTP global não disponível, buscando instância alternativa...');
+      
+      const { data: configs } = await supabase
+        .from('whatsapp_config')
+        .select('instance_name, status')
+        .eq('provider', 'evolution')
+        .eq('status', 'connected')
+        .limit(1);
+
+      if (!configs || configs.length === 0) {
+        console.error('[Send OTP] Nenhuma instância WhatsApp conectada');
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Nenhuma instância WhatsApp disponível. Configure a instância OTP global no painel SaaS Admin.' 
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      instanceName = configs[0].instance_name;
+      console.log(`[Send OTP] Usando instância alternativa: ${instanceName}`);
+    } else {
+      console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
+    }
 
     // Mensagem do código OTP
     const message = `🔐 *Código de Verificação*\n\nSeu código de acesso é: *${code}*\n\nEste código expira em 5 minutos.\n\n_Se você não solicitou este código, ignore esta mensagem._`;
