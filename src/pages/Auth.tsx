@@ -75,6 +75,17 @@ const Auth = () => {
   // Signup wizard step
   const [signupStep, setSignupStep] = useState(1);
 
+  // Signup method (email or whatsapp)
+  const [signupMethod, setSignupMethod] = useState<'email' | 'whatsapp'>('email');
+  
+  // WhatsApp signup OTP state (separate from login)
+  const [signupWhatsappPhone, setSignupWhatsappPhone] = useState('');
+  const [signupOtpCode, setSignupOtpCode] = useState('');
+  const [signupOtpStep, setSignupOtpStep] = useState<'phone' | 'code' | 'details' | 'processing'>('phone');
+  const [signupOtpExpiresAt, setSignupOtpExpiresAt] = useState<Date | null>(null);
+  const [signupResendCooldown, setSignupResendCooldown] = useState(0);
+  const [signupVerifiedPhone, setSignupVerifiedPhone] = useState<string | null>(null);
+
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -105,13 +116,36 @@ const Auth = () => {
     loadSocialProviders();
   }, []);
 
-  // Resend cooldown timer
+  // Resend cooldown timer (login)
   useEffect(() => {
     if (resendCooldown > 0) {
       const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
+
+  // Resend cooldown timer (signup)
+  useEffect(() => {
+    if (signupResendCooldown > 0) {
+      const timer = setTimeout(() => setSignupResendCooldown(signupResendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [signupResendCooldown]);
+
+  // Signup OTP expiration timer
+  useEffect(() => {
+    if (signupOtpExpiresAt) {
+      const interval = setInterval(() => {
+        if (new Date() > signupOtpExpiresAt) {
+          setSignupOtpStep('phone');
+          setSignupOtpCode('');
+          setSignupOtpExpiresAt(null);
+          toast.error('Código expirado', { description: 'Solicite um novo código' });
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [signupOtpExpiresAt]);
 
   // OTP expiration timer
   useEffect(() => {
@@ -259,6 +293,93 @@ const Auth = () => {
   const handleResendOTP = async () => {
     if (resendCooldown > 0) return;
     await handleSendOTP();
+  };
+
+  // WhatsApp Signup OTP functions
+  const getSignupTimeRemaining = () => {
+    if (!signupOtpExpiresAt) return '';
+    const diff = Math.max(0, Math.floor((signupOtpExpiresAt.getTime() - Date.now()) / 1000));
+    const minutes = Math.floor(diff / 60);
+    const seconds = diff % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleSignupSendOTP = async () => {
+    setErrors({});
+    
+    try {
+      phoneSchema.parse(signupWhatsappPhone);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setErrors({ signupPhone: error.errors[0].message });
+        return;
+      }
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp-whatsapp', {
+        body: { phone: signupWhatsappPhone }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      setSignupOtpStep('code');
+      setSignupOtpExpiresAt(new Date(data.expiresAt));
+      setSignupResendCooldown(60);
+      
+      toast.success('Código enviado!', {
+        description: 'Verifique seu WhatsApp para o código de verificação'
+      });
+    } catch (error: any) {
+      console.error('Erro ao enviar OTP:', error);
+      toast.error('Erro ao enviar código', {
+        description: error.message || 'Tente novamente em alguns instantes'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignupVerifyOTP = async () => {
+    if (signupOtpCode.length !== 6) {
+      setErrors({ signupOtp: 'Digite o código completo de 6 dígitos' });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-otp-whatsapp', {
+        body: { phone: signupWhatsappPhone, code: signupOtpCode }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      // Phone verified - proceed to details form
+      setSignupVerifiedPhone(signupWhatsappPhone);
+      setSignupPhone(signupWhatsappPhone); // Pre-fill the phone field
+      setSignupOtpStep('details');
+      
+      toast.success('Telefone verificado!', {
+        description: 'Complete seus dados para continuar'
+      });
+    } catch (error: any) {
+      console.error('Erro ao verificar OTP:', error);
+      toast.error('Código inválido', {
+        description: error.message || 'Verifique o código e tente novamente'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignupResendOTP = async () => {
+    if (signupResendCooldown > 0) return;
+    await handleSignupSendOTP();
   };
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
@@ -706,6 +827,292 @@ const Auth = () => {
     </div>
   );
 
+  const renderWhatsAppSignup = () => (
+    <div className="space-y-4">
+      {signupOtpStep === 'phone' && (
+        <>
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
+              <MessageCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="font-medium">Cadastro via WhatsApp</h3>
+            <p className="text-sm text-muted-foreground">
+              Verifique seu número para criar sua conta
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="signup-whatsapp-phone">Número do WhatsApp</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="signup-whatsapp-phone"
+                type="tel"
+                placeholder="(00) 00000-0000"
+                value={signupWhatsappPhone}
+                onChange={(e) => setSignupWhatsappPhone(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            {errors.signupPhone && (
+              <p className="text-sm text-destructive">{errors.signupPhone}</p>
+            )}
+          </div>
+
+          <Button 
+            type="button" 
+            className="w-full bg-green-600 hover:bg-green-700" 
+            onClick={handleSignupSendOTP}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Enviar código via WhatsApp
+              </>
+            )}
+          </Button>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <Separator className="w-full" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">
+                ou use outro método
+              </span>
+            </div>
+          </div>
+
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full"
+            onClick={() => setSignupMethod('email')}
+          >
+            Cadastrar com Email e Senha
+          </Button>
+        </>
+      )}
+
+      {signupOtpStep === 'code' && (
+        <>
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
+              <MessageCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="font-medium">Digite o código</h3>
+            <p className="text-sm text-muted-foreground">
+              Enviamos um código de 6 dígitos para
+            </p>
+            <p className="font-medium text-green-600">
+              {formatPhoneForDisplay(signupWhatsappPhone)}
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center space-y-4">
+            <InputOTP
+              value={signupOtpCode}
+              onChange={setSignupOtpCode}
+              maxLength={6}
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+
+            {errors.signupOtp && (
+              <p className="text-sm text-destructive">{errors.signupOtp}</p>
+            )}
+
+            {signupOtpExpiresAt && (
+              <p className="text-sm text-muted-foreground">
+                Código expira em: <span className="font-mono font-medium">{getSignupTimeRemaining()}</span>
+              </p>
+            )}
+          </div>
+
+          <Button 
+            type="button" 
+            className="w-full bg-green-600 hover:bg-green-700" 
+            onClick={handleSignupVerifyOTP}
+            disabled={loading || signupOtpCode.length !== 6}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              'Verificar Código'
+            )}
+          </Button>
+
+          <div className="flex items-center justify-between">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                setSignupOtpStep('phone');
+                setSignupOtpCode('');
+              }}
+            >
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              Voltar
+            </Button>
+
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={handleSignupResendOTP}
+              disabled={signupResendCooldown > 0 || loading}
+            >
+              <RefreshCw className={`mr-1 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              {signupResendCooldown > 0 ? `Reenviar (${signupResendCooldown}s)` : 'Reenviar código'}
+            </Button>
+          </div>
+        </>
+      )}
+
+      {signupOtpStep === 'details' && (
+        <div className="space-y-4">
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="font-medium">Telefone verificado!</h3>
+            <p className="text-sm text-muted-foreground">
+              Complete seus dados para finalizar o cadastro
+            </p>
+            <Badge variant="outline" className="mt-2 text-green-600 border-green-600">
+              <Phone className="h-3 w-3 mr-1" />
+              {formatPhoneForDisplay(signupVerifiedPhone || '')}
+            </Badge>
+          </div>
+
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-medium">
+              1
+            </div>
+            <span className="font-medium">Seus dados</span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-sm font-medium">
+              2
+            </div>
+            <span className="text-muted-foreground">Barbearias</span>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="signup-name-wp">Nome Completo *</Label>
+            <Input
+              id="signup-name-wp"
+              type="text"
+              placeholder="Seu nome completo"
+              value={signupFullName}
+              onChange={(e) => setSignupFullName(e.target.value)}
+              required
+            />
+            {errors.fullName && (
+              <p className="text-sm text-destructive">{errors.fullName}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="signup-email-wp">Email *</Label>
+            <Input
+              id="signup-email-wp"
+              type="email"
+              placeholder="seu@email.com"
+              value={signupEmail}
+              onChange={(e) => setSignupEmail(e.target.value)}
+              required
+            />
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="signup-password-wp">Senha *</Label>
+              <Input
+                id="signup-password-wp"
+                type="password"
+                placeholder="••••••••"
+                value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)}
+                required
+              />
+              {errors.password && (
+                <p className="text-xs sm:text-sm text-destructive">{errors.password}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="signup-confirm-wp">Confirmar *</Label>
+              <Input
+                id="signup-confirm-wp"
+                type="password"
+                placeholder="••••••••"
+                value={signupConfirmPassword}
+                onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                required
+              />
+              {errors.confirmPassword && (
+                <p className="text-xs sm:text-sm text-destructive">{errors.confirmPassword}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-start space-x-3 p-4 bg-muted rounded-lg">
+            <Checkbox
+              id="signup-is-barber-wp"
+              checked={signupIsAlsoBarber}
+              onCheckedChange={(checked) => setSignupIsAlsoBarber(checked === true)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label htmlFor="signup-is-barber-wp" className="cursor-pointer font-medium">
+                Também atendo clientes como barbeiro
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Marque se você realiza atendimentos
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => {
+                setSignupOtpStep('phone');
+                setSignupVerifiedPhone(null);
+              }}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+            <Button type="button" className="flex-1" onClick={handleStep1Next}>
+              Próximo <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const renderSignupStep1 = () => (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-4">
@@ -817,75 +1224,84 @@ const Auth = () => {
         Próximo <ArrowRight className="ml-2 h-4 w-4" />
       </Button>
 
+      {/* WhatsApp Signup Option */}
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <Separator className="w-full" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">
+            ou cadastre-se com
+          </span>
+        </div>
+      </div>
+
+      <Button 
+        type="button" 
+        variant="outline" 
+        className="w-full border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+        onClick={() => setSignupMethod('whatsapp')}
+      >
+        <MessageCircle className="mr-2 h-4 w-4" />
+        Cadastrar com WhatsApp
+      </Button>
+
       {/* Social Login Options */}
       {(socialProviders.google.enabled || socialProviders.facebook.enabled) && (
-        <>
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                ou cadastre-se com
-              </span>
-            </div>
-          </div>
+        <div className="grid gap-2">
+          {socialProviders.google.enabled && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleSocialLogin('google')}
+              disabled={socialLoading !== null}
+              className="w-full"
+            >
+              {socialLoading === 'google' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+              )}
+              Continuar com Google
+            </Button>
+          )}
 
-          <div className="grid gap-2">
-            {socialProviders.google.enabled && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleSocialLogin('google')}
-                disabled={socialLoading !== null}
-                className="w-full"
-              >
-                {socialLoading === 'google' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                    <path
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      fill="#4285F4"
-                    />
-                    <path
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      fill="#34A853"
-                    />
-                    <path
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      fill="#FBBC05"
-                    />
-                    <path
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      fill="#EA4335"
-                    />
-                  </svg>
-                )}
-                Continuar com Google
-              </Button>
-            )}
-
-            {socialProviders.facebook.enabled && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleSocialLogin('facebook')}
-                disabled={socialLoading !== null}
-                className="w-full"
-              >
-                {socialLoading === 'facebook' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="#1877F2">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                )}
-                Continuar com Facebook
-              </Button>
-            )}
-          </div>
-        </>
+          {socialProviders.facebook.enabled && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleSocialLogin('facebook')}
+              disabled={socialLoading !== null}
+              className="w-full"
+            >
+              {socialLoading === 'facebook' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="#1877F2">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                </svg>
+              )}
+              Continuar com Facebook
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -1075,7 +1491,7 @@ const Auth = () => {
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="signup" onClick={() => setSignupStep(1)}>Cadastrar</TabsTrigger>
+              <TabsTrigger value="signup" onClick={() => { setSignupStep(1); setSignupMethod('email'); setSignupOtpStep('phone'); }}>Cadastrar</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -1189,7 +1605,13 @@ const Auth = () => {
             </TabsContent>
 
             <TabsContent value="signup">
-              {signupStep === 1 ? renderSignupStep1() : renderSignupStep2()}
+              {signupMethod === 'whatsapp' && signupOtpStep !== 'details' ? (
+                renderWhatsAppSignup()
+              ) : signupStep === 1 ? (
+                signupMethod === 'whatsapp' && signupOtpStep === 'details' ? renderWhatsAppSignup() : renderSignupStep1()
+              ) : (
+                renderSignupStep2()
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
