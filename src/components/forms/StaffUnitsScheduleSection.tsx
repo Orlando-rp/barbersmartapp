@@ -6,19 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Building2, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import {
+  StandardDaySchedule,
+  DAY_LABELS,
+  DAY_NAMES,
+  DayName,
+} from "@/types/schedule";
 
 interface Barbershop {
   id: string;
   name: string;
 }
 
-interface DayUnitSchedule {
-  is_working: boolean;
+// Extended day schedule with unit_id for multi-unit assignment
+interface DayUnitSchedule extends StandardDaySchedule {
   unit_id: string | null;
-  open_time: string;
-  close_time: string;
-  break_start: string | null;
-  break_end: string | null;
 }
 
 export interface StaffUnitSchedule {
@@ -38,10 +40,10 @@ interface StaffUnitsScheduleSectionProps {
 }
 
 const defaultDaySchedule: DayUnitSchedule = {
-  is_working: true,
+  enabled: true,
   unit_id: null,
-  open_time: "09:00",
-  close_time: "18:00",
+  start: "09:00",
+  end: "18:00",
   break_start: null,
   break_end: null,
 };
@@ -52,19 +54,9 @@ const createDefaultSchedule = (defaultUnitId: string | null): StaffUnitSchedule 
   wednesday: { ...defaultDaySchedule, unit_id: defaultUnitId },
   thursday: { ...defaultDaySchedule, unit_id: defaultUnitId },
   friday: { ...defaultDaySchedule, unit_id: defaultUnitId },
-  saturday: { ...defaultDaySchedule, unit_id: defaultUnitId, close_time: "14:00" },
-  sunday: { ...defaultDaySchedule, is_working: false, unit_id: defaultUnitId },
+  saturday: { ...defaultDaySchedule, unit_id: defaultUnitId, end: "14:00" },
+  sunday: { ...defaultDaySchedule, enabled: false, unit_id: defaultUnitId },
 });
-
-const dayNames: { [key: string]: string } = {
-  monday: "Segunda-feira",
-  tuesday: "Terça-feira",
-  wednesday: "Quarta-feira",
-  thursday: "Quinta-feira",
-  friday: "Sexta-feira",
-  saturday: "Sábado",
-  sunday: "Domingo",
-};
 
 const timeOptions = Array.from({ length: 48 }, (_, i) => {
   const hour = Math.floor(i / 2);
@@ -102,27 +94,27 @@ NativeTimeSelect.displayName = 'NativeTimeSelect';
 
 // Isolated day row component to prevent cascading re-renders
 interface DayScheduleRowProps {
-  day: keyof StaffUnitSchedule;
+  day: DayName;
   daySchedule: DayUnitSchedule;
   barbershops: Barbershop[];
-  onUpdate: (day: keyof StaffUnitSchedule, field: keyof DayUnitSchedule, value: any) => void;
+  onUpdate: (day: DayName, field: keyof DayUnitSchedule, value: any) => void;
 }
 
 const DayScheduleRow = memo(({ day, daySchedule, barbershops, onUpdate }: DayScheduleRowProps) => {
-  const handleWorkingChange = useCallback((checked: boolean) => {
-    onUpdate(day, "is_working", checked);
+  const handleEnabledChange = useCallback((checked: boolean) => {
+    onUpdate(day, "enabled", checked);
   }, [day, onUpdate]);
 
   const handleUnitChange = useCallback((value: string) => {
     onUpdate(day, "unit_id", value);
   }, [day, onUpdate]);
 
-  const handleOpenTimeChange = useCallback((value: string) => {
-    onUpdate(day, "open_time", value);
+  const handleStartChange = useCallback((value: string) => {
+    onUpdate(day, "start", value);
   }, [day, onUpdate]);
 
-  const handleCloseTimeChange = useCallback((value: string) => {
-    onUpdate(day, "close_time", value);
+  const handleEndChange = useCallback((value: string) => {
+    onUpdate(day, "end", value);
   }, [day, onUpdate]);
 
   const handleBreakStartChange = useCallback((value: string) => {
@@ -136,22 +128,22 @@ const DayScheduleRow = memo(({ day, daySchedule, barbershops, onUpdate }: DaySch
   return (
     <div
       className={`p-3 rounded-lg border ${
-        daySchedule.is_working ? "bg-background" : "bg-muted/50"
+        daySchedule.enabled ? "bg-background" : "bg-muted/50"
       }`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
           <Switch
-            checked={daySchedule.is_working}
-            onCheckedChange={handleWorkingChange}
+            checked={daySchedule.enabled}
+            onCheckedChange={handleEnabledChange}
           />
-          <span className={`font-medium ${!daySchedule.is_working && "text-muted-foreground"}`}>
-            {dayNames[day]}
+          <span className={`font-medium ${!daySchedule.enabled && "text-muted-foreground"}`}>
+            {DAY_LABELS[day]}
           </span>
         </div>
       </div>
 
-      {daySchedule.is_working && (
+      {daySchedule.enabled && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mt-3">
           {/* Unit Selection - Keep Radix Select only for this */}
           <div className="md:col-span-1">
@@ -177,16 +169,16 @@ const DayScheduleRow = memo(({ day, daySchedule, barbershops, onUpdate }: DaySch
           <div>
             <Label className="text-xs text-muted-foreground">Entrada</Label>
             <NativeTimeSelect
-              value={daySchedule.open_time}
-              onChange={handleOpenTimeChange}
+              value={daySchedule.start}
+              onChange={handleStartChange}
             />
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">Saída</Label>
             <NativeTimeSelect
-              value={daySchedule.close_time}
-              onChange={handleCloseTimeChange}
+              value={daySchedule.end}
+              onChange={handleEndChange}
             />
           </div>
 
@@ -281,7 +273,7 @@ export const StaffUnitsScheduleSection = ({
 
   // Memoized update handler
   const updateDaySchedule = useCallback((
-    day: keyof StaffUnitSchedule, 
+    day: DayName, 
     field: keyof DayUnitSchedule, 
     value: any
   ) => {
@@ -300,7 +292,7 @@ export const StaffUnitsScheduleSection = ({
   const unitSummary = useMemo(() => {
     const summary: Record<string, number> = {};
     Object.values(currentSchedule).forEach((day) => {
-      if (day.is_working && day.unit_id) {
+      if (day.enabled && day.unit_id) {
         summary[day.unit_id] = (summary[day.unit_id] || 0) + 1;
       }
     });
@@ -320,8 +312,6 @@ export const StaffUnitsScheduleSection = ({
   if (barbershops.length <= 1) {
     return null;
   }
-
-  const days = Object.keys(dayNames) as Array<keyof StaffUnitSchedule>;
 
   return (
     <Card>
@@ -349,7 +339,7 @@ export const StaffUnitsScheduleSection = ({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {days.map((day) => {
+        {DAY_NAMES.map((day) => {
           const daySchedule = currentSchedule[day] || defaultDaySchedule;
           return (
             <DayScheduleRow
