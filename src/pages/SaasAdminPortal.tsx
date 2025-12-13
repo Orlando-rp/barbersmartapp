@@ -72,6 +72,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { GlobalEvolutionConfig } from "@/components/saas/GlobalEvolutionConfig";
+import { GlobalOtpWhatsAppConfig } from "@/components/saas/GlobalOtpWhatsAppConfig";
 import { GlobalChatbotConfig } from "@/components/saas/GlobalChatbotConfig";
 import { WhatsAppStatusPanel } from "@/components/saas/WhatsAppStatusPanel";
 import { SocialAuthConfig } from "@/components/saas/SocialAuthConfig";
@@ -1276,6 +1277,14 @@ const SaasAdminPortal = () => {
                 WhatsApp Evolution API
               </h2>
               <GlobalEvolutionConfig />
+              
+              <div className="border-t border-border pt-6 sm:pt-8">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                  🔐 WhatsApp para Autenticação OTP
+                </h3>
+                <GlobalOtpWhatsAppConfig />
+              </div>
+              
               <WhatsAppStatusPanel />
               
               <div className="border-t border-border pt-6 sm:pt-8">
