@@ -17,6 +17,13 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  DAY_OF_WEEK_MAP, 
+  DayName,
+  getScheduleForDay,
+  businessHoursToStandard,
+  DEFAULT_DAY_SCHEDULE
+} from '@/types/schedule';
 
 // Animation variants for step transitions
 const stepVariants = {
@@ -86,11 +93,6 @@ interface BusinessHours {
   break_start: string | null;
   break_end: string | null;
 }
-
-const dayOfWeekMap: { [key: number]: string } = {
-  0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
-  4: 'thursday', 5: 'friday', 6: 'saturday'
-};
 
 const getStaffName = (staff: Staff | null): string => {
   if (!staff?.profiles) return 'Profissional';
@@ -380,40 +382,44 @@ export default function PublicBooking() {
       })
     : staffList;
 
+  // Use standardized schedule functions
   const staffWorksOnDate = (staff: Staff, date: Date): boolean => {
     if (!staff.schedule) return true;
-    const dayOfWeek = dayOfWeekMap[date.getDay()];
+    const dayOfWeek = DAY_OF_WEEK_MAP[date.getDay()];
     
-    if (staff.schedule.units) {
-      for (const unitSchedule of Object.values(staff.schedule.units) as any[]) {
-        if (unitSchedule[dayOfWeek]?.enabled) {
-          return true;
-        }
-      }
-      return false;
-    }
+    // Use centralized function to get schedule
+    const daySchedule = getScheduleForDay(
+      staff.schedule, 
+      dayOfWeek, 
+      selectedUnit?.id || barbershopId || undefined
+    );
     
-    const daySchedule = staff.schedule[dayOfWeek];
-    return daySchedule?.enabled === true;
+    return daySchedule?.enabled ?? true;
   };
 
-  const getStaffScheduleForDay = (staff: Staff, date: Date): { start: string; end: string } | null => {
+  const getStaffScheduleForDayInternal = (staff: Staff, date: Date): { 
+    start: string; 
+    end: string; 
+    break_start?: string | null; 
+    break_end?: string | null;
+  } | null => {
     if (!staff.schedule) return null;
-    const dayOfWeek = dayOfWeekMap[date.getDay()];
+    const dayOfWeek = DAY_OF_WEEK_MAP[date.getDay()];
     
-    if (staff.schedule.units) {
-      if (staff.schedule.units[barbershopId]) {
-        const daySchedule = staff.schedule.units[barbershopId][dayOfWeek];
-        if (daySchedule?.enabled) {
-          return { start: daySchedule.start, end: daySchedule.end };
-        }
-      }
-      return null;
-    }
+    // Use centralized function
+    const daySchedule = getScheduleForDay(
+      staff.schedule, 
+      dayOfWeek, 
+      selectedUnit?.id || barbershopId || undefined
+    );
     
-    const daySchedule = staff.schedule[dayOfWeek];
     if (daySchedule?.enabled) {
-      return { start: daySchedule.start, end: daySchedule.end };
+      return { 
+        start: daySchedule.start, 
+        end: daySchedule.end,
+        break_start: daySchedule.break_start,
+        break_end: daySchedule.break_end
+      };
     }
     return null;
   };
@@ -422,14 +428,14 @@ export default function PublicBooking() {
     if (!selectedDate || !selectedStaff || !selectedService) return;
 
     const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-    const dayOfWeek = dayOfWeekMap[selectedDate.getDay()];
+    const dayOfWeek = DAY_OF_WEEK_MAP[selectedDate.getDay()];
 
     if (!staffWorksOnDate(selectedStaff, selectedDate)) {
       setAvailableSlots([]);
       return;
     }
 
-    const staffDaySchedule = getStaffScheduleForDay(selectedStaff, selectedDate);
+    const staffDaySchedule = getStaffScheduleForDayInternal(selectedStaff, selectedDate);
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
     if (!dayHours || !dayHours.is_open) {
       setAvailableSlots([]);
@@ -522,7 +528,7 @@ export default function PublicBooking() {
   const isDateDisabledForStaff = (date: Date) => {
     if (isBefore(date, startOfDay(new Date()))) return true;
     
-    const dayOfWeek = dayOfWeekMap[date.getDay()];
+    const dayOfWeek = DAY_OF_WEEK_MAP[date.getDay()];
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
     
     if (!dayHours || !dayHours.is_open) return true;
@@ -536,7 +542,7 @@ export default function PublicBooking() {
 
   const isDateDisabled = (date: Date) => {
     if (isBefore(date, startOfDay(new Date()))) return true;
-    const dayOfWeek = dayOfWeekMap[date.getDay()];
+    const dayOfWeek = DAY_OF_WEEK_MAP[date.getDay()];
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
     return !dayHours || !dayHours.is_open;
   };
@@ -556,8 +562,8 @@ export default function PublicBooking() {
         continue;
       }
 
-      const dayOfWeek = dayOfWeekMap[day.getDay()];
-      const staffDaySchedule = getStaffScheduleForDay(selectedStaff, day);
+      const dayOfWeek = DAY_OF_WEEK_MAP[day.getDay()];
+      const staffDaySchedule = getStaffScheduleForDayInternal(selectedStaff, day);
       const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
       
       if (!dayHours || !dayHours.is_open) {
