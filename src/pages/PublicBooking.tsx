@@ -236,24 +236,52 @@ export default function PublicBooking() {
       // Determine root barbershop ID (matriz)
       const rootId = shop.parent_id || shop.id;
 
-      // Load matriz branding
+      // Load matriz branding - sempre buscar da matriz (barbearia principal)
+      let matrizData: { name: string; custom_branding: any } | null = null;
+      
       if (shop.parent_id) {
+        // Esta é uma unidade, buscar branding da matriz
         const { data: matriz } = await supabase
           .from('barbershops')
           .select('name, custom_branding')
           .eq('id', rootId)
           .single();
-        if (matriz) {
-          setMatrizBranding(matriz.custom_branding);
-          setMatrizName(matriz.name);
-        }
+        matrizData = matriz;
       } else {
-        setMatrizBranding(shop.custom_branding);
-        setMatrizName(shop.name);
+        // Esta é a matriz
+        matrizData = { name: shop.name, custom_branding: shop.custom_branding };
+      }
+
+      if (matrizData) {
+        setMatrizName(matrizData.name);
+        
+        // Se a matriz tem custom_branding, usar
+        if (matrizData.custom_branding) {
+          setMatrizBranding(matrizData.custom_branding);
+        } else {
+          // Caso contrário, buscar system_branding global como fallback
+          const { data: systemBranding } = await supabase
+            .from('system_branding')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+          
+          if (systemBranding) {
+            setMatrizBranding({
+              logo_url: systemBranding.logo_url,
+              logo_url_dark: systemBranding.logo_dark_url,
+              primary_color: systemBranding.primary_color,
+              secondary_color: systemBranding.secondary_color,
+              accent_color: systemBranding.accent_color,
+              system_name: matrizData.name, // Manter nome da barbearia
+              tagline: systemBranding.tagline,
+            });
+          }
+        }
       }
 
       // Check if there are child units
-      const { data: childUnits, error: childError } = await supabase
+      const { data: childUnits } = await supabase
         .from('barbershops')
         .select('id, name, address, phone, parent_id, custom_branding')
         .eq('parent_id', rootId)
