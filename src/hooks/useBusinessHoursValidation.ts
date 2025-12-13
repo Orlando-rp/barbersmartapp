@@ -1,8 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
+import { 
+  StandardDaySchedule, 
+  DAY_OF_WEEK_MAP, 
+  DayName,
+  getScheduleForDay,
+  businessHoursToStandard,
+  DEFAULT_DAY_SCHEDULE
+} from '@/types/schedule';
 
-interface BusinessHours {
+interface BusinessHoursDB {
   day_of_week: string;
   is_open: boolean;
   open_time: string;
@@ -11,7 +19,7 @@ interface BusinessHours {
   break_end: string | null;
 }
 
-interface SpecialHours {
+interface SpecialHoursDB {
   special_date: string;
   is_open: boolean;
   open_time: string | null;
@@ -20,54 +28,24 @@ interface SpecialHours {
   break_end: string | null;
 }
 
-interface StaffScheduleDay {
-  // Formato padrão usado pelo hook
-  is_open?: boolean;
-  is_working?: boolean;
-  open_time?: string;
-  close_time?: string;
-  break_start?: string | null;
-  break_end?: string | null;
-  // Formato alternativo salvo pelo MyStaffProfileForm
-  enabled?: boolean;
-  start?: string;
-  end?: string;
-  // ID da unidade onde trabalha neste dia (para multi-unit)
-  unit_id?: string;
-}
-
-interface StaffSchedule {
-  [day: string]: StaffScheduleDay;
-}
-
 interface ValidationResult {
   isValid: boolean;
   reason?: string;
   availableHours?: { start: string; end: string; breakStart?: string; breakEnd?: string };
 }
 
-const dayOfWeekMap: { [key: number]: string } = {
-  0: 'sunday',
-  1: 'monday',
-  2: 'tuesday',
-  3: 'wednesday',
-  4: 'thursday',
-  5: 'friday',
-  6: 'saturday'
-};
-
 export const useBusinessHoursValidation = (
   barbershopId: string | null,
   allRelatedBarbershopIds?: string[],
   selectedUnitId?: string
 ) => {
-  const [businessHours, setBusinessHours] = useState<BusinessHours[]>([]);
-  const [specialHours, setSpecialHours] = useState<SpecialHours[]>([]);
+  const [businessHours, setBusinessHours] = useState<BusinessHoursDB[]>([]);
+  const [specialHours, setSpecialHours] = useState<SpecialHoursDB[]>([]);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
-  const [staffSchedules, setStaffSchedules] = useState<Record<string, StaffSchedule | null>>({});
+  const [staffSchedules, setStaffSchedules] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
-  // A unidade efetiva para verificar horários
+  // Effective unit for schedule checking
   const effectiveUnitId = selectedUnitId || barbershopId;
 
   useEffect(() => {
@@ -83,127 +61,92 @@ export const useBusinessHoursValidation = (
       setLoading(true);
 
       // Load business hours
-      try {
-        const { data: hoursData, error: hoursError } = await supabase
-          .from('business_hours')
-          .select('*')
-          .eq('barbershop_id', barbershopId);
+      const { data: hoursData } = await supabase
+        .from('business_hours')
+        .select('*')
+        .eq('barbershop_id', barbershopId);
+      setBusinessHours(hoursData || []);
 
-        if (hoursError && !hoursError.message?.includes('does not exist')) {
-          console.warn('Erro ao carregar business_hours:', hoursError);
-        }
-        setBusinessHours(hoursData || []);
-      } catch (err) {
-        console.warn('Tabela business_hours não disponível');
-        setBusinessHours([]);
-      }
+      // Load special hours
+      const { data: specialData } = await supabase
+        .from('special_hours')
+        .select('*')
+        .eq('barbershop_id', barbershopId);
+      setSpecialHours(specialData || []);
 
-      // Load special hours (table may not exist)
-      try {
-        const { data: specialData, error: specialError } = await supabase
-          .from('special_hours')
-          .select('*')
-          .eq('barbershop_id', barbershopId);
+      // Load blocked dates
+      const { data: blockedData } = await supabase
+        .from('blocked_dates')
+        .select('blocked_date')
+        .eq('barbershop_id', barbershopId);
+      setBlockedDates((blockedData || []).map(b => b.blocked_date));
 
-        if (specialError && !specialError.message?.includes('does not exist')) {
-          console.warn('Erro ao carregar special_hours:', specialError);
-        }
-        setSpecialHours(specialData || []);
-      } catch (err) {
-        console.warn('Tabela special_hours não disponível');
-        setSpecialHours([]);
-      }
+      // Load staff schedules
+      const searchIds = allRelatedBarbershopIds?.length 
+        ? allRelatedBarbershopIds 
+        : [barbershopId];
 
-      // Load blocked dates (table may not exist)
-      try {
-        const { data: blockedData, error: blockedError } = await supabase
-          .from('blocked_dates')
-          .select('blocked_date')
-          .eq('barbershop_id', barbershopId);
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('id, schedule')
+        .in('barbershop_id', searchIds)
+        .eq('active', true);
+      
+      const schedules: Record<string, any> = {};
+      (staffData || []).forEach(staff => {
+        schedules[staff.id] = staff.schedule;
+      });
+      setStaffSchedules(schedules);
 
-        if (blockedError && !blockedError.message?.includes('does not exist')) {
-          console.warn('Erro ao carregar blocked_dates:', blockedError);
-        }
-        setBlockedDates((blockedData || []).map(b => b.blocked_date));
-      } catch (err) {
-        console.warn('Tabela blocked_dates não disponível');
-        setBlockedDates([]);
-      }
-
-      // Load staff schedules from all related barbershops for multi-unit support
-      try {
-        const searchIds = allRelatedBarbershopIds && allRelatedBarbershopIds.length > 0
-          ? allRelatedBarbershopIds
-          : [barbershopId];
-
-        const { data: staffData, error: staffError } = await supabase
-          .from('staff')
-          .select('id, schedule')
-          .in('barbershop_id', searchIds)
-          .eq('active', true);
-
-        if (staffError && !staffError.message?.includes('does not exist')) {
-          console.warn('Erro ao carregar staff schedules:', staffError);
-        }
-        
-        const schedules: Record<string, StaffSchedule | null> = {};
-        (staffData || []).forEach(staff => {
-          schedules[staff.id] = staff.schedule as StaffSchedule | null;
-        });
-        setStaffSchedules(schedules);
-      } catch (err) {
-        console.warn('Erro ao carregar horários do staff');
-        setStaffSchedules({});
-      }
     } catch (error) {
-      console.error('Erro ao carregar dados de validação:', error);
+      console.error('Error loading validation data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Get staff schedule for a specific day (supports both format variations and unit_id filtering)
-  const getStaffScheduleForDay = (staffId: string | undefined, dayOfWeek: string): BusinessHours | null => {
+  /**
+   * Get staff schedule for a specific day using the standardized format
+   */
+  const getStaffDaySchedule = useCallback((
+    staffId: string | undefined, 
+    dayOfWeek: DayName
+  ): StandardDaySchedule | null => {
     if (!staffId || !staffSchedules[staffId]) return null;
     
     const schedule = staffSchedules[staffId];
-    if (!schedule || !schedule[dayOfWeek]) return null;
-    
-    const daySchedule = schedule[dayOfWeek];
-    
-    // Check if this day's schedule is for the selected unit
-    // If unit_id is defined in the schedule and doesn't match, the staff doesn't work this day at this unit
-    if (daySchedule.unit_id && effectiveUnitId && daySchedule.unit_id !== effectiveUnitId) {
-      return {
-        day_of_week: dayOfWeek,
-        is_open: false, // Not working at this unit on this day
-        open_time: '09:00',
-        close_time: '18:00',
-        break_start: null,
-        break_end: null,
-      };
-    }
-    
-    // Normalize: support both is_open/is_working/enabled and open_time/start formats
-    const isOpen = daySchedule.is_open ?? daySchedule.is_working ?? daySchedule.enabled ?? false;
-    const openTime = daySchedule.open_time ?? daySchedule.start ?? '09:00';
-    const closeTime = daySchedule.close_time ?? daySchedule.end ?? '18:00';
-    
-    return {
-      day_of_week: dayOfWeek,
-      is_open: isOpen,
-      open_time: openTime,
-      close_time: closeTime,
-      break_start: daySchedule.break_start ?? null,
-      break_end: daySchedule.break_end ?? null,
-    };
-  };
+    return getScheduleForDay(schedule, dayOfWeek, effectiveUnitId || undefined);
+  }, [staffSchedules, effectiveUnitId]);
 
-  const validateDateTime = (date: Date, time?: string, staffId?: string): ValidationResult => {
+  /**
+   * Get business hours for a specific day
+   */
+  const getBusinessHoursForDay = useCallback((dayOfWeek: DayName): StandardDaySchedule | null => {
+    const hours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
+    if (!hours) return null;
+    return businessHoursToStandard(hours);
+  }, [businessHours]);
+
+  /**
+   * Check if a time is within a range
+   */
+  const isTimeInRange = useCallback((time: string, start: string, end: string): boolean => {
+    return time >= start && time < end;
+  }, []);
+
+  /**
+   * Validate a date/time for appointment scheduling
+   * Priority: Blocked dates > Special hours > Staff schedule > Business hours > Default
+   */
+  const validateDateTime = useCallback((
+    date: Date, 
+    time?: string, 
+    staffId?: string
+  ): ValidationResult => {
     const formattedDate = format(date, 'yyyy-MM-dd');
-    const dayOfWeek = dayOfWeekMap[date.getDay()];
+    const dayOfWeek = DAY_OF_WEEK_MAP[date.getDay()];
 
-    // Check if date is blocked
+    // PRIORITY 1: Check blocked dates
     if (blockedDates.includes(formattedDate)) {
       return {
         isValid: false,
@@ -211,7 +154,7 @@ export const useBusinessHoursValidation = (
       };
     }
 
-    // Check for special hours first (overrides regular hours)
+    // PRIORITY 2: Check special hours (overrides everything)
     const specialHour = specialHours.find(sh => sh.special_date === formattedDate);
     if (specialHour) {
       if (!specialHour.is_open) {
@@ -228,12 +171,10 @@ export const useBusinessHoursValidation = (
         breakEnd: specialHour.break_end || undefined
       };
 
-      // If no specific time provided, just return the hours
       if (!time) {
         return { isValid: true, availableHours };
       }
 
-      // Validate specific time against special hours
       if (!isTimeInRange(time, availableHours.start, availableHours.end)) {
         return {
           isValid: false,
@@ -241,7 +182,6 @@ export const useBusinessHoursValidation = (
         };
       }
 
-      // Check if time is during break
       if (availableHours.breakStart && availableHours.breakEnd) {
         if (isTimeInRange(time, availableHours.breakStart, availableHours.breakEnd)) {
           return {
@@ -254,47 +194,51 @@ export const useBusinessHoursValidation = (
       return { isValid: true, availableHours };
     }
 
-    // Check for individual staff schedule first (if staffId provided)
-    const staffSchedule = getStaffScheduleForDay(staffId, dayOfWeek);
+    // PRIORITY 3: Check staff individual schedule
+    const staffSchedule = getStaffDaySchedule(staffId, dayOfWeek);
     
-    // Use staff schedule if available, otherwise fall back to barbershop hours
-    let effectiveHours = staffSchedule || businessHours.find(bh => bh.day_of_week === dayOfWeek);
+    // PRIORITY 4: Fall back to business hours
+    const businessHoursSchedule = getBusinessHoursForDay(dayOfWeek);
     
-    // If no hours configured, use default business hours (9:00-18:00, closed on Sunday)
-    if (!effectiveHours) {
-      const defaultHours: BusinessHours = {
-        day_of_week: dayOfWeek,
-        is_open: dayOfWeek !== 'sunday',
-        open_time: '09:00',
-        close_time: '18:00',
-        break_start: null,
-        break_end: null,
+    // Determine effective schedule (staff > business > default)
+    let effectiveSchedule: StandardDaySchedule;
+    let isStaffSchedule = false;
+    
+    if (staffSchedule) {
+      effectiveSchedule = staffSchedule;
+      isStaffSchedule = true;
+    } else if (businessHoursSchedule) {
+      effectiveSchedule = businessHoursSchedule;
+    } else {
+      // Default: open M-S, closed Sunday
+      effectiveSchedule = {
+        ...DEFAULT_DAY_SCHEDULE,
+        enabled: dayOfWeek !== 'sunday',
       };
-      effectiveHours = defaultHours;
     }
 
-    if (!effectiveHours.is_open) {
+    // Check if working on this day
+    if (!effectiveSchedule.enabled) {
       return {
         isValid: false,
-        reason: staffSchedule 
+        reason: isStaffSchedule 
           ? 'Este profissional não trabalha neste dia' 
           : 'Barbearia fechada neste dia da semana'
       };
     }
 
     const availableHours = {
-      start: effectiveHours.open_time,
-      end: effectiveHours.close_time,
-      breakStart: effectiveHours.break_start || undefined,
-      breakEnd: effectiveHours.break_end || undefined
+      start: effectiveSchedule.start,
+      end: effectiveSchedule.end,
+      breakStart: effectiveSchedule.break_start || undefined,
+      breakEnd: effectiveSchedule.break_end || undefined
     };
 
-    // If no specific time provided, just return the hours
     if (!time) {
       return { isValid: true, availableHours };
     }
 
-    // Validate specific time against business hours
+    // Validate specific time
     if (!isTimeInRange(time, availableHours.start, availableHours.end)) {
       return {
         isValid: false,
@@ -313,9 +257,16 @@ export const useBusinessHoursValidation = (
     }
 
     return { isValid: true, availableHours };
-  };
+  }, [blockedDates, specialHours, getStaffDaySchedule, getBusinessHoursForDay, isTimeInRange]);
 
-  const generateTimeSlots = (date: Date, serviceDurationMinutes: number = 30, staffId?: string): string[] => {
+  /**
+   * Generate available time slots for a date
+   */
+  const generateTimeSlots = useCallback((
+    date: Date, 
+    serviceDurationMinutes: number = 30, 
+    staffId?: string
+  ): string[] => {
     const validation = validateDateTime(date, undefined, staffId);
     
     if (!validation.isValid || !validation.availableHours) {
@@ -325,41 +276,36 @@ export const useBusinessHoursValidation = (
     const slots: string[] = [];
     const { start, end, breakStart, breakEnd } = validation.availableHours;
 
-    // Parse times
     const [startHour, startMinute] = start.split(':').map(Number);
     const [endHour, endMinute] = end.split(':').map(Number);
     
     let currentHour = startHour;
     let currentMinute = startMinute;
-
-    // Calculate end time in minutes for comparison
     const endTimeInMinutes = endHour * 60 + endMinute;
 
-    // Generate slots in 30-minute intervals
     while (currentHour < endHour || (currentHour === endHour && currentMinute < endMinute)) {
       const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
       const slotStartMinutes = currentHour * 60 + currentMinute;
       const slotEndMinutes = slotStartMinutes + serviceDurationMinutes;
       
-      // Check if service would end after business hours
+      // Check if service fits within schedule
       const serviceFitsInSchedule = slotEndMinutes <= endTimeInMinutes;
       
-      // Check if slot is during break
+      // Check if slot is during break or would overlap with break
       let isInBreak = false;
       if (breakStart && breakEnd) {
-        isInBreak = isTimeInRange(timeString, breakStart, breakEnd);
+        const [breakStartHour, breakStartMinute] = breakStart.split(':').map(Number);
+        const [breakEndHour, breakEndMinute] = breakEnd.split(':').map(Number);
+        const breakStartMinutes = breakStartHour * 60 + breakStartMinute;
+        const breakEndMinutes = breakEndHour * 60 + breakEndMinute;
         
-        // Also check if service would overlap with break
-        if (!isInBreak && serviceFitsInSchedule) {
-          const [breakStartHour, breakStartMinute] = breakStart.split(':').map(Number);
-          const [breakEndHour, breakEndMinute] = breakEnd.split(':').map(Number);
-          const breakStartMinutes = breakStartHour * 60 + breakStartMinute;
-          const breakEndMinutes = breakEndHour * 60 + breakEndMinute;
-          
-          // Service would overlap with break if it starts before break and ends during/after break start
-          if (slotStartMinutes < breakStartMinutes && slotEndMinutes > breakStartMinutes) {
-            isInBreak = true;
-          }
+        // Slot starts during break
+        if (slotStartMinutes >= breakStartMinutes && slotStartMinutes < breakEndMinutes) {
+          isInBreak = true;
+        }
+        // Service would overlap with break
+        else if (slotStartMinutes < breakStartMinutes && slotEndMinutes > breakStartMinutes) {
+          isInBreak = true;
         }
       }
       
@@ -376,13 +322,12 @@ export const useBusinessHoursValidation = (
     }
 
     return slots;
-  };
+  }, [validateDateTime]);
 
-  const isTimeInRange = (time: string, start: string, end: string): boolean => {
-    return time >= start && time < end;
-  };
-
-  const checkTimeOverlap = (
+  /**
+   * Check if a proposed time slot overlaps with existing appointments
+   */
+  const checkTimeOverlap = useCallback((
     startTime: string,
     durationMinutes: number,
     bookedAppointments: { time: string; duration: number }[]
@@ -398,12 +343,12 @@ export const useBusinessHoursValidation = (
 
       // Check for any overlap
       if (slotStart < bookedEnd && slotEnd > bookedStart) {
-        return true; // There is an overlap
+        return true;
       }
     }
 
-    return false; // No overlap
-  };
+    return false;
+  }, []);
 
   return {
     validateDateTime,

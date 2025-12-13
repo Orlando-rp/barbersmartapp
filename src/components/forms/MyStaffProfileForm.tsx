@@ -33,34 +33,23 @@ import {
   Copy, RefreshCw, ArrowRight, Check, MoreVertical 
 } from "lucide-react";
 
+import { 
+  StandardDaySchedule, 
+  StandardWeeklySchedule, 
+  DEFAULT_WEEKLY_SCHEDULE, 
+  DAY_LABELS, 
+  DAY_NAMES,
+  DayName 
+} from '@/types/schedule';
+
 interface StaffUnit {
   id: string;
   barbershop_id: string;
   barbershop_name: string;
   commission_rate: number;
-  schedule: Record<string, { start: string; end: string; enabled: boolean }> | null;
+  schedule: StandardWeeklySchedule | null;
   active: boolean;
 }
-
-const DEFAULT_SCHEDULE = {
-  monday: { start: '09:00', end: '18:00', enabled: true },
-  tuesday: { start: '09:00', end: '18:00', enabled: true },
-  wednesday: { start: '09:00', end: '18:00', enabled: true },
-  thursday: { start: '09:00', end: '18:00', enabled: true },
-  friday: { start: '09:00', end: '18:00', enabled: true },
-  saturday: { start: '09:00', end: '14:00', enabled: true },
-  sunday: { start: '09:00', end: '14:00', enabled: false },
-};
-
-const DAY_LABELS: Record<string, string> = {
-  monday: 'Segunda',
-  tuesday: 'Terça',
-  wednesday: 'Quarta',
-  thursday: 'Quinta',
-  friday: 'Sexta',
-  saturday: 'Sábado',
-  sunday: 'Domingo',
-};
 
 export const MyStaffProfileForm = () => {
   const { user, barbershopId, barbershops } = useAuth();
@@ -119,7 +108,7 @@ export const MyStaffProfileForm = () => {
           barbershop_id: s.barbershop_id,
           barbershop_name: s.barbershops?.name || 'Barbearia',
           commission_rate: s.commission_rate || 0,
-          schedule: s.schedule || DEFAULT_SCHEDULE,
+          schedule: s.schedule || DEFAULT_WEEKLY_SCHEDULE,
           active: s.active,
         }));
 
@@ -154,19 +143,20 @@ export const MyStaffProfileForm = () => {
   const handleScheduleChange = (
     barbershopId: string,
     day: string,
-    field: 'start' | 'end' | 'enabled',
-    value: string | boolean
+    field: 'start' | 'end' | 'enabled' | 'break_start' | 'break_end',
+    value: string | boolean | null
   ) => {
     setStaffUnits(prev => prev.map(unit => {
       if (unit.barbershop_id !== barbershopId) return unit;
       
-      const currentSchedule = unit.schedule || DEFAULT_SCHEDULE;
+      const currentSchedule = unit.schedule || DEFAULT_WEEKLY_SCHEDULE;
+      const dayKey = day as DayName;
       return {
         ...unit,
         schedule: {
           ...currentSchedule,
-          [day]: {
-            ...currentSchedule[day],
+          [dayKey]: {
+            ...currentSchedule[dayKey],
             [field]: value,
           },
         },
@@ -332,7 +322,7 @@ export const MyStaffProfileForm = () => {
   // Single unit view
   if (staffUnits.length === 1) {
     const unit = staffUnits[0];
-    const schedule = unit.schedule || DEFAULT_SCHEDULE;
+    const schedule = unit.schedule || DEFAULT_WEEKLY_SCHEDULE;
 
     return (
       <div className="space-y-6">
@@ -348,7 +338,7 @@ export const MyStaffProfileForm = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             {Object.entries(DAY_LABELS).map(([day, label]) => {
-              const daySchedule = schedule[day] || DEFAULT_SCHEDULE[day as keyof typeof DEFAULT_SCHEDULE];
+              const daySchedule = schedule[day as DayName] || DEFAULT_WEEKLY_SCHEDULE[day as DayName];
 
               return (
                 <div
@@ -366,20 +356,41 @@ export const MyStaffProfileForm = () => {
                   </div>
 
                   {daySchedule.enabled && (
-                    <div className="flex items-center gap-2 flex-1">
-                      <Input
-                        type="time"
-                        value={daySchedule.start}
-                        onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'start', e.target.value)}
-                        className="w-28 text-sm"
-                      />
-                      <span className="text-muted-foreground text-sm">até</span>
-                      <Input
-                        type="time"
-                        value={daySchedule.end}
-                        onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'end', e.target.value)}
-                        className="w-28 text-sm"
-                      />
+                    <div className="flex flex-col gap-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-16">Horário:</span>
+                        <Input
+                          type="time"
+                          value={daySchedule.start}
+                          onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'start', e.target.value)}
+                          className="w-28 text-sm"
+                        />
+                        <span className="text-muted-foreground text-sm">até</span>
+                        <Input
+                          type="time"
+                          value={daySchedule.end}
+                          onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'end', e.target.value)}
+                          className="w-28 text-sm"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-16">Intervalo:</span>
+                        <Input
+                          type="time"
+                          value={daySchedule.break_start || ''}
+                          onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'break_start', e.target.value || null)}
+                          className="w-28 text-sm"
+                          placeholder="--:--"
+                        />
+                        <span className="text-muted-foreground text-sm">até</span>
+                        <Input
+                          type="time"
+                          value={daySchedule.break_end || ''}
+                          onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'break_end', e.target.value || null)}
+                          className="w-28 text-sm"
+                          placeholder="--:--"
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -448,8 +459,8 @@ export const MyStaffProfileForm = () => {
         </TabsList>
 
         {staffUnits.map((unit) => {
-          const schedule = unit.schedule || DEFAULT_SCHEDULE;
-          const enabledDays = Object.values(schedule).filter(d => d.enabled).length;
+          const schedule = unit.schedule || DEFAULT_WEEKLY_SCHEDULE;
+          const enabledDays = Object.values(schedule).filter((d: StandardDaySchedule) => d.enabled).length;
 
           return (
             <TabsContent key={unit.barbershop_id} value={unit.barbershop_id} className="space-y-6">
@@ -508,7 +519,7 @@ export const MyStaffProfileForm = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {Object.entries(DAY_LABELS).map(([day, label]) => {
-                    const daySchedule = schedule[day] || DEFAULT_SCHEDULE[day as keyof typeof DEFAULT_SCHEDULE];
+                    const daySchedule = schedule[day as DayName] || DEFAULT_WEEKLY_SCHEDULE[day as DayName];
 
                     return (
                       <div
@@ -526,20 +537,41 @@ export const MyStaffProfileForm = () => {
                         </div>
 
                         {daySchedule.enabled && (
-                          <div className="flex items-center gap-2 flex-1">
-                            <Input
-                              type="time"
-                              value={daySchedule.start}
-                              onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'start', e.target.value)}
-                              className="w-28 text-sm"
-                            />
-                            <span className="text-muted-foreground text-sm">até</span>
-                            <Input
-                              type="time"
-                              value={daySchedule.end}
-                              onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'end', e.target.value)}
-                              className="w-28 text-sm"
-                            />
+                          <div className="flex flex-col gap-2 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground w-16">Horário:</span>
+                              <Input
+                                type="time"
+                                value={daySchedule.start}
+                                onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'start', e.target.value)}
+                                className="w-28 text-sm"
+                              />
+                              <span className="text-muted-foreground text-sm">até</span>
+                              <Input
+                                type="time"
+                                value={daySchedule.end}
+                                onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'end', e.target.value)}
+                                className="w-28 text-sm"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground w-16">Intervalo:</span>
+                              <Input
+                                type="time"
+                                value={daySchedule.break_start || ''}
+                                onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'break_start', e.target.value || null)}
+                                className="w-28 text-sm"
+                                placeholder="--:--"
+                              />
+                              <span className="text-muted-foreground text-sm">até</span>
+                              <Input
+                                type="time"
+                                value={daySchedule.break_end || ''}
+                                onChange={(e) => handleScheduleChange(unit.barbershop_id, day, 'break_end', e.target.value || null)}
+                                className="w-28 text-sm"
+                                placeholder="--:--"
+                              />
+                            </div>
                           </div>
                         )}
 
