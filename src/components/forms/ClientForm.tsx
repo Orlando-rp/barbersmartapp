@@ -73,7 +73,8 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
   );
   
   const { toast } = useToast();
-  const { sharedBarbershopId } = useSharedBarbershopId();
+  // Usar matrizBarbershopId para associar cliente à matriz
+  const { matrizBarbershopId } = useSharedBarbershopId();
 
   const addTag = () => {
     const trimmedTag = newTag.trim().toLowerCase();
@@ -105,7 +106,7 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
     e.preventDefault();
     setErrors({});
     
-    if (!sharedBarbershopId) {
+    if (!matrizBarbershopId) {
       toast({
         title: "Erro",
         description: "Barbearia não encontrada. Por favor, faça login novamente.",
@@ -125,8 +126,9 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
 
       setLoading(true);
 
+      // Cliente sempre associado à MATRIZ
       const clientData = {
-        barbershop_id: sharedBarbershopId,
+        barbershop_id: matrizBarbershopId,
         name: validatedData.name,
         email: validatedData.email || null,
         phone: validatedData.phone,

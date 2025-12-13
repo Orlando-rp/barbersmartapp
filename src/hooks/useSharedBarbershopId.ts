@@ -3,15 +3,20 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
 /**
- * Hook para obter IDs de barbearias para dados compartilhados.
+ * Hook para obter IDs de barbearias seguindo a hierarquia correta:
  * 
- * Em redes multi-unidade:
- * - Para INSERT/UPDATE: usa o barbershop_id do usuário (onde tem permissão RLS)
- * - Para SELECT: usa todos os barbershops relacionados (matriz + unidades)
+ * HIERARQUIA:
+ * - BARBEARIA (Matriz): Entidade principal, onde ficam Clientes, Serviços, Categorias
+ * - UNIDADES: Locais físicos (parent_id aponta para Matriz), onde ficam Agendamentos
+ * 
+ * Retornos:
+ * - matrizBarbershopId: ID da matriz - usar para INSERT de Clientes, Serviços, Categorias
+ * - currentBarbershopId: ID da unidade selecionada - usar para INSERT de Agendamentos
+ * - allRelatedBarbershopIds: Todos os IDs (matriz + unidades) - usar para SELECT
  */
 export const useSharedBarbershopId = () => {
   const { barbershopId, selectedBarbershopId, barbershops } = useAuth();
-  const [sharedBarbershopId, setSharedBarbershopId] = useState<string | null>(null);
+  const [matrizBarbershopId, setMatrizBarbershopId] = useState<string | null>(null);
   const [allRelatedBarbershopIds, setAllRelatedBarbershopIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -24,7 +29,7 @@ export const useSharedBarbershopId = () => {
   useEffect(() => {
     // Skip if no barbershop ID
     if (!currentBarbershopId) {
-      setSharedBarbershopId(null);
+      setMatrizBarbershopId(null);
       setAllRelatedBarbershopIds([]);
       setLoading(false);
       return;
@@ -49,16 +54,17 @@ export const useSharedBarbershopId = () => {
 
         if (currentError) {
           console.error('Erro ao buscar barbershop atual:', currentError);
-          setSharedBarbershopId(currentBarbershopId);
+          setMatrizBarbershopId(currentBarbershopId);
           setAllRelatedBarbershopIds([currentBarbershopId]);
           setLoading(false);
           return;
         }
 
-        // Determine the root barbershop ID for finding all related
+        // Determine the matriz (root) barbershop ID
+        // Se tem parent_id, o parent é a matriz; senão, o próprio é a matriz
         const rootId = currentData.parent_id || currentData.id;
         
-        // Get all related barbershops (parent + children)
+        // Get all related barbershops (matriz + todas as unidades)
         const { data: relatedData } = await supabase
           .from('barbershops')
           .select('id')
@@ -67,16 +73,16 @@ export const useSharedBarbershopId = () => {
         const allIds = relatedData?.map(b => b.id) || [currentBarbershopId];
         setAllRelatedBarbershopIds(allIds);
 
-        // For INSERT/UPDATE operations, use the user's current barbershop
-        // (where they have RLS permissions)
-        // This is the barbershop from the user's profile or selected barbershop
-        setSharedBarbershopId(currentBarbershopId);
+        // matrizBarbershopId é SEMPRE o rootId (matriz)
+        // Usado para INSERT de Clientes, Serviços, Categorias
+        setMatrizBarbershopId(rootId);
         
+        console.log('[useSharedBarbershopId] matrizBarbershopId:', rootId);
         console.log('[useSharedBarbershopId] currentBarbershopId:', currentBarbershopId);
         console.log('[useSharedBarbershopId] allRelatedBarbershopIds:', allIds);
       } catch (error) {
         console.error('Erro ao buscar barbershops:', error);
-        setSharedBarbershopId(currentBarbershopId);
+        setMatrizBarbershopId(currentBarbershopId);
         setAllRelatedBarbershopIds([currentBarbershopId]);
       } finally {
         setLoading(false);
@@ -87,14 +93,18 @@ export const useSharedBarbershopId = () => {
   }, [currentBarbershopId]);
 
   return {
-    // ID para INSERT/UPDATE - usa o barbershop do usuário atual
-    sharedBarbershopId,
-    // IDs para SELECT - inclui todos os barbershops relacionados
-    allRelatedBarbershopIds,
-    // ID atual da unidade selecionada
+    // ID da MATRIZ - usar para INSERT de Clientes, Serviços, Categorias
+    matrizBarbershopId,
+    // ID da unidade selecionada - usar para INSERT de Agendamentos
     currentBarbershopId,
+    // IDs para SELECT - inclui matriz + todas unidades
+    allRelatedBarbershopIds,
+    // Legacy alias para compatibilidade (aponta para matriz)
+    sharedBarbershopId: matrizBarbershopId,
     loading,
-    // Indica se a barbearia atual é uma unidade (tem matriz)
-    isUnit: allRelatedBarbershopIds.length > 1,
+    // Indica se tem múltiplas unidades
+    isMultiUnit: allRelatedBarbershopIds.length > 1,
+    // Indica se a unidade atual é uma unidade (não é a matriz)
+    isUnit: currentBarbershopId !== matrizBarbershopId,
   };
 };

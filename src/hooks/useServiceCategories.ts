@@ -25,13 +25,14 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export const useServiceCategories = () => {
-  const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
+  // Usar matrizBarbershopId para INSERT de categorias (pertencem à matriz)
+  const { matrizBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = useCallback(async () => {
-    if (!sharedBarbershopId || loadingBarbershop || allRelatedBarbershopIds.length === 0) {
+    if (!matrizBarbershopId || loadingBarbershop || allRelatedBarbershopIds.length === 0) {
       setCategories([]);
       setLoading(false);
       return;
@@ -66,14 +67,15 @@ export const useServiceCategories = () => {
     } finally {
       setLoading(false);
     }
-  }, [sharedBarbershopId, allRelatedBarbershopIds, loadingBarbershop]);
+  }, [matrizBarbershopId, allRelatedBarbershopIds, loadingBarbershop]);
 
   const createDefaultCategories = async () => {
-    if (!sharedBarbershopId) return;
+    if (!matrizBarbershopId) return;
 
     try {
+      // Categorias sempre criadas na MATRIZ
       const categoriesToInsert = DEFAULT_CATEGORIES.map(cat => ({
-        barbershop_id: sharedBarbershopId,
+        barbershop_id: matrizBarbershopId,
         name: cat.name,
         description: cat.description,
         color: cat.color,
@@ -94,13 +96,14 @@ export const useServiceCategories = () => {
   };
 
   const createCategory = async (category: { name: string; description?: string; color?: string }) => {
-    if (!sharedBarbershopId) return null;
+    if (!matrizBarbershopId) return null;
 
     try {
+      // Categoria sempre criada na MATRIZ
       const { data, error } = await supabase
         .from('service_categories')
         .insert([{
-          barbershop_id: sharedBarbershopId,
+          barbershop_id: matrizBarbershopId,
           name: category.name,
           description: category.description || null,
           color: category.color || '#6b7280',
@@ -155,7 +158,7 @@ export const useServiceCategories = () => {
   };
 
   const deleteCategory = async (id: string) => {
-    if (!sharedBarbershopId || allRelatedBarbershopIds.length === 0) return false;
+    if (!matrizBarbershopId || allRelatedBarbershopIds.length === 0) return false;
     
     try {
       // Check if category is in use in any related barbershop

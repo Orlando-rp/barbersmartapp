@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Building2, ChevronDown, Check, Eye } from "lucide-react";
+import { Building2, ChevronDown, Check, Eye, Home, GitBranch } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMemo } from "react";
+
+interface BarbershopWithHierarchy {
+  id: string;
+  name: string;
+  is_primary?: boolean;
+  parent_id?: string | null;
+  isMatriz: boolean;
+  children: string[];
+}
 
 const BarbershopSelector = () => {
   const { barbershops, selectedBarbershopId, setSelectedBarbershop, userRole } = useAuth();
@@ -23,6 +33,53 @@ const BarbershopSelector = () => {
   if (!isSuperAdmin && barbershops.length <= 1) {
     return null;
   }
+
+  // Organizar barbearias em hierarquia: Matrizes e Unidades
+  const organizedBarbershops = useMemo(() => {
+    const matrizes: BarbershopWithHierarchy[] = [];
+    const unidadesByParent: Record<string, BarbershopWithHierarchy[]> = {};
+    
+    // Primeiro passo: identificar matrizes (sem parent_id) e agrupar unidades
+    barbershops.forEach((b: any) => {
+      const item: BarbershopWithHierarchy = {
+        ...b,
+        isMatriz: !b.parent_id,
+        children: [],
+      };
+      
+      if (!b.parent_id) {
+        matrizes.push(item);
+      } else {
+        if (!unidadesByParent[b.parent_id]) {
+          unidadesByParent[b.parent_id] = [];
+        }
+        unidadesByParent[b.parent_id].push(item);
+      }
+    });
+    
+    // Segundo passo: associar unidades às matrizes
+    matrizes.forEach(matriz => {
+      matriz.children = unidadesByParent[matriz.id]?.map(u => u.id) || [];
+    });
+    
+    // Resultado: lista ordenada com matrizes e suas unidades logo abaixo
+    const result: BarbershopWithHierarchy[] = [];
+    matrizes.forEach(matriz => {
+      result.push(matriz);
+      if (unidadesByParent[matriz.id]) {
+        result.push(...unidadesByParent[matriz.id]);
+      }
+    });
+    
+    // Incluir unidades órfãs (sem matriz visível)
+    Object.keys(unidadesByParent).forEach(parentId => {
+      if (!matrizes.find(m => m.id === parentId)) {
+        result.push(...unidadesByParent[parentId]);
+      }
+    });
+    
+    return result;
+  }, [barbershops]);
 
   const selectedBarbershop = barbershops.find(b => b.id === selectedBarbershopId);
 
@@ -48,7 +105,7 @@ const BarbershopSelector = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[280px] sm:w-[320px]" align="start">
         <DropdownMenuLabel>
-          {isSuperAdmin ? 'Visualizar como Cliente' : 'Suas Unidades'}
+          {isSuperAdmin ? 'Visualizar como Cliente' : 'Barbearia / Unidades'}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
@@ -71,21 +128,33 @@ const BarbershopSelector = () => {
         
         <DropdownMenuSeparator />
         
-        {/* Barbershop list - with scroll for super admin who may have many */}
+        {/* Barbershop list with hierarchy */}
         <ScrollArea className={cn(isSuperAdmin && barbershops.length > 8 ? "h-[300px]" : "")}>
-          {barbershops.map((barbershop) => (
+          {organizedBarbershops.map((barbershop) => (
             <DropdownMenuItem
               key={barbershop.id}
               onClick={() => setSelectedBarbershop(barbershop.id)}
               className={cn(
                 "flex items-center justify-between cursor-pointer",
-                selectedBarbershopId === barbershop.id && "bg-primary/10"
+                selectedBarbershopId === barbershop.id && "bg-primary/10",
+                !barbershop.isMatriz && "pl-6" // Indent units
               )}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <Building2 className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate flex-1">{barbershop.name}</span>
-                {barbershop.is_primary && (
+                {barbershop.isMatriz ? (
+                  <Home className="h-4 w-4 flex-shrink-0 text-primary" />
+                ) : (
+                  <GitBranch className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                )}
+                <span className={cn("truncate flex-1", !barbershop.isMatriz && "text-sm")}>
+                  {barbershop.name}
+                </span>
+                {barbershop.isMatriz && (
+                  <Badge variant="outline" className="text-xs flex-shrink-0 border-primary/50 text-primary">
+                    Matriz
+                  </Badge>
+                )}
+                {barbershop.is_primary && !barbershop.isMatriz && (
                   <Badge variant="secondary" className="text-xs flex-shrink-0">
                     Principal
                   </Badge>

@@ -48,7 +48,8 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
   const [errors, setErrors] = useState<any>({});
   
   const { toast } = useToast();
-  const { sharedBarbershopId } = useSharedBarbershopId();
+  // Usar matrizBarbershopId para associar serviço à matriz
+  const { matrizBarbershopId } = useSharedBarbershopId();
   const { activeCategories, loading: categoriesLoading } = useServiceCategories();
 
   // Use DB categories or fallback to defaults
@@ -60,7 +61,7 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
     e.preventDefault();
     setErrors({});
 
-    if (!sharedBarbershopId) {
+    if (!matrizBarbershopId) {
       toast({
         title: "Erro",
         description: "Barbearia não encontrada. Por favor, faça login novamente.",
@@ -80,8 +81,9 @@ export const ServiceForm = ({ onClose, editingService }: ServiceFormProps) => {
 
       setLoading(true);
 
+      // Serviço sempre associado à MATRIZ
       const serviceData = {
-        barbershop_id: sharedBarbershopId,
+        barbershop_id: matrizBarbershopId,
         name: validatedData.name,
         description: validatedData.description || null,
         category: validatedData.category,
