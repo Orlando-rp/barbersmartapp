@@ -421,11 +421,6 @@ const Barbershops = () => {
                               <GitBranch className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                             )}
                             <span className="font-medium text-sm truncate">{barbershop.name}</span>
-                            {barbershop.isMatriz && (
-                              <Badge variant="outline" className="text-xs border-primary/50 text-primary">
-                                Matriz
-                              </Badge>
-                            )}
                             {barbershop.is_primary && (
                               <Badge variant="outline" className="text-xs border-warning text-warning">
                                 Principal
@@ -517,7 +512,11 @@ const Barbershops = () => {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            {barbershop.isMatriz ? (
+                              <Home className="h-4 w-4 text-primary" />
+                            ) : (
+                              <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
                             <span className="font-medium">{barbershop.name}</span>
                             {barbershop.is_primary && (
                               <Badge variant="outline" className="text-xs border-warning text-warning">
