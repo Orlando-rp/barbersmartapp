@@ -22,7 +22,7 @@ interface BarbershopUnit {
   address: string;
   phone: string;
   email: string;
-  isPrimary: boolean;
+  isMatriz: boolean; // Indica se é a matriz (primeira sempre é)
 }
 
 interface ExistingAccount {
@@ -47,9 +47,9 @@ const CompleteProfile = () => {
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.user_metadata?.name || '');
   const [isAlsoBarber, setIsAlsoBarber] = useState(false);
 
-  // Step 2: Barbershop data
+  // Step 2: Barbershop data - Primeira é sempre a MATRIZ
   const [barbershopUnits, setBarbershopUnits] = useState<BarbershopUnit[]>([
-    { id: '1', name: '', address: '', phone: '', email: '', isPrimary: true }
+    { id: '1', name: '', address: '', phone: '', email: '', isMatriz: true }
   ]);
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
 
@@ -163,47 +163,51 @@ const CompleteProfile = () => {
   };
 
   const addNewUnit = () => {
+    // Novas unidades nunca são matriz
     const newUnit: BarbershopUnit = {
       id: Date.now().toString(),
       name: '',
       address: '',
       phone: '',
       email: '',
-      isPrimary: false,
+      isMatriz: false,
     };
     setBarbershopUnits(prev => [...prev, newUnit]);
     setCurrentUnitIndex(barbershopUnits.length);
   };
 
   const removeUnit = (index: number) => {
-    if (barbershopUnits.length === 1) {
-      toast.error('Você precisa ter pelo menos uma unidade');
+    // Não pode remover a matriz (primeira)
+    if (index === 0) {
+      toast.error('A barbearia principal não pode ser removida');
       return;
     }
     
-    const unitToRemove = barbershopUnits[index];
-    const newUnits = barbershopUnits.filter((_, idx) => idx !== index);
-    
-    if (unitToRemove.isPrimary && newUnits.length > 0) {
-      newUnits[0].isPrimary = true;
+    if (barbershopUnits.length === 1) {
+      toast.error('Você precisa ter pelo menos uma barbearia');
+      return;
     }
     
+    const newUnits = barbershopUnits.filter((_, idx) => idx !== index);
     setBarbershopUnits(newUnits);
     setCurrentUnitIndex(Math.min(currentUnitIndex, newUnits.length - 1));
   };
 
-  const setPrimaryUnit = (index: number) => {
-    setBarbershopUnits(prev => prev.map((unit, idx) => ({
-      ...unit,
-      isPrimary: idx === index
-    })));
-  };
+  // Não precisa mais de setPrimaryUnit - a matriz é sempre a primeira
 
   const validateUnits = (): boolean => {
-    for (let i = 0; i < barbershopUnits.length; i++) {
+    // Validar matriz (primeira)
+    if (!barbershopUnits[0].name || barbershopUnits[0].name.length < 3) {
+      setCurrentUnitIndex(0);
+      setErrors({ barbershopName: 'Nome da barbearia deve ter no mínimo 3 caracteres' });
+      return false;
+    }
+    
+    // Validar unidades (demais)
+    for (let i = 1; i < barbershopUnits.length; i++) {
       if (!barbershopUnits[i].name || barbershopUnits[i].name.length < 3) {
         setCurrentUnitIndex(i);
-        setErrors({ barbershopName: 'Nome da barbearia deve ter no mínimo 3 caracteres' });
+        setErrors({ barbershopName: 'Nome da unidade deve ter no mínimo 3 caracteres' });
         return false;
       }
     }
@@ -224,85 +228,117 @@ const CompleteProfile = () => {
 
     try {
       const userId = user.id;
-      let primaryBarbershopId: string | null = null;
+      let matrizId: string | null = null;
 
-      // 1. Create all barbershops
-      const createdBarbershops: { id: string; isPrimary: boolean }[] = [];
-      
-      for (const unit of barbershopUnits) {
-        const { data: barbershopData, error: barbershopError } = await supabase
+      // 1. Criar MATRIZ primeiro (primeira da lista)
+      const matrizData = barbershopUnits[0];
+      const { data: matrizResult, error: matrizError } = await supabase
+        .from('barbershops')
+        .insert({
+          name: matrizData.name,
+          address: matrizData.address || null,
+          phone: matrizData.phone || phone,
+          email: matrizData.email || user.email,
+          parent_id: null, // É a matriz, sem parent
+          active: true,
+        })
+        .select()
+        .single();
+
+      if (matrizError) throw matrizError;
+      matrizId = matrizResult.id;
+
+      // 2. Criar UNIDADES com parent_id apontando para matriz
+      const unitIds: string[] = [];
+      for (let i = 1; i < barbershopUnits.length; i++) {
+        const unit = barbershopUnits[i];
+        const { data: unitResult, error: unitError } = await supabase
           .from('barbershops')
           .insert({
             name: unit.name,
             address: unit.address || null,
             phone: unit.phone || phone,
             email: unit.email || user.email,
+            parent_id: matrizId, // Aponta para a matriz
             active: true,
           })
           .select()
           .single();
 
-        if (barbershopError) throw barbershopError;
-
-        const barbershopId = barbershopData.id;
-        createdBarbershops.push({ id: barbershopId, isPrimary: unit.isPrimary });
-
-        if (unit.isPrimary) {
-          primaryBarbershopId = barbershopId;
+        if (unitError) {
+          console.error('Erro ao criar unidade:', unitError);
+        } else {
+          unitIds.push(unitResult.id);
         }
       }
 
-      // 2. Create or update profile FIRST (staff needs this to exist)
-      if (primaryBarbershopId) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: userId,
-            barbershop_id: primaryBarbershopId,
-            full_name: fullName,
-            phone: phone,
-          });
+      // 3. Criar profile associado à MATRIZ
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          barbershop_id: matrizId,
+          full_name: fullName,
+          phone: phone,
+        });
 
-        if (profileError) {
-          console.error('Erro ao criar profile:', profileError);
-          throw profileError;
-        }
+      if (profileError) {
+        console.error('Erro ao criar profile:', profileError);
+        throw profileError;
       }
 
-      // 3. Create user_barbershops, roles, and staff for each barbershop
-      for (const barbershop of createdBarbershops) {
-        // Create user_barbershops entry
-        const { error: ubError } = await supabase
+      // 4. Criar user_barbershops e roles para MATRIZ
+      const { error: ubMatrizError } = await supabase
+        .from('user_barbershops')
+        .insert({
+          user_id: userId,
+          barbershop_id: matrizId,
+          is_primary: true,
+        });
+      if (ubMatrizError) console.error('Erro ao criar user_barbershops matriz:', ubMatrizError);
+
+      const { error: roleMatrizError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'admin',
+          barbershop_id: matrizId,
+        });
+      if (roleMatrizError) console.error('Erro ao criar role matriz:', roleMatrizError);
+
+      // 5. Criar user_barbershops e roles para UNIDADES
+      for (const unitId of unitIds) {
+        const { error: ubUnitError } = await supabase
           .from('user_barbershops')
           .insert({
             user_id: userId,
-            barbershop_id: barbershop.id,
-            is_primary: barbershop.isPrimary,
+            barbershop_id: unitId,
+            is_primary: false,
           });
+        if (ubUnitError) console.error('Erro ao criar user_barbershops unidade:', ubUnitError);
 
-        if (ubError) console.error('Erro ao criar user_barbershops:', ubError);
-
-        // Create admin role for each barbershop
-        const { error: roleError } = await supabase
+        const { error: roleUnitError } = await supabase
           .from('user_roles')
           .insert({
             user_id: userId,
             role: 'admin',
-            barbershop_id: barbershop.id,
+            barbershop_id: unitId,
           });
+        if (roleUnitError) console.error('Erro ao criar role unidade:', roleUnitError);
+      }
 
-        if (roleError) console.error('Erro ao criar user_role:', roleError);
-
-        // If also barber, create staff entry
-        if (isAlsoBarber) {
-          // Small delay to ensure profile is propagated
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
+      // 6. Se também é barbeiro, criar staff na MATRIZ e em todas as UNIDADES
+      if (isAlsoBarber) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const allBarbershopIds = [matrizId, ...unitIds];
+        
+        for (const bsId of allBarbershopIds) {
           const { error: staffError } = await supabase
             .from('staff')
             .insert({
               user_id: userId,
-              barbershop_id: barbershop.id,
+              barbershop_id: bsId,
               specialties: ['Corte', 'Barba'],
               commission_rate: 50,
               active: true,
@@ -319,40 +355,23 @@ const CompleteProfile = () => {
 
           if (staffError) {
             console.error('Erro ao criar staff:', staffError);
-            // Try without schedule if there's an error
-            const { error: staffRetryError } = await supabase
-              .from('staff')
-              .insert({
-                user_id: userId,
-                barbershop_id: barbershop.id,
-                specialties: ['Corte', 'Barba'],
-                commission_rate: 50,
-                active: true,
-              });
-            
-            if (staffRetryError) {
-              console.error('Erro ao criar staff (retry):', staffRetryError);
-              toast.error('Aviso: Seu perfil de barbeiro não foi criado automaticamente', {
-                description: 'Você pode adicionar manualmente na tela de Equipe'
-              });
-            }
           }
-          
-          // Also add barbeiro role
+
+          // Adicionar role barbeiro
           const { error: barberRoleError } = await supabase
             .from('user_roles')
             .insert({
               user_id: userId,
               role: 'barbeiro',
-              barbershop_id: barbershop.id,
+              barbershop_id: bsId,
             });
-
           if (barberRoleError) console.error('Erro ao criar role barbeiro:', barberRoleError);
         }
       }
 
+      const unidadesCount = unitIds.length;
       toast.success('Perfil completo!', {
-        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Bem-vindo ao ${branding?.system_name || 'BarberSmart'}!`,
+        description: `Barbearia${unidadesCount > 0 ? ` + ${unidadesCount} unidade(s)` : ''} cadastrada(s). Bem-vindo ao ${branding?.system_name || 'BarberSmart'}!`,
       });
 
       await refreshBarbershops();
@@ -555,10 +574,11 @@ const CompleteProfile = () => {
                       className="cursor-pointer flex items-center gap-1"
                       onClick={() => setCurrentUnitIndex(index)}
                     >
-                      {unit.isPrimary && <Star className="h-3 w-3" />}
+                      {unit.isMatriz && <Star className="h-3 w-3" />}
                       <Building2 className="h-3 w-3" />
-                      {unit.name || `Unidade ${index + 1}`}
-                      {barbershopUnits.length > 1 && (
+                      {unit.name || (unit.isMatriz ? 'Barbearia' : `Unidade ${index}`)}
+                      {/* Não pode remover a matriz (index 0) */}
+                      {index > 0 && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -584,17 +604,24 @@ const CompleteProfile = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="barbershop-name">Nome da Barbearia *</Label>
+                <Label htmlFor="barbershop-name">
+                  {currentUnit?.isMatriz ? 'Nome da Barbearia *' : 'Nome da Unidade *'}
+                </Label>
                 <Input
                   id="barbershop-name"
                   type="text"
-                  placeholder="Minha Barbearia"
+                  placeholder={currentUnit?.isMatriz ? 'Minha Barbearia' : 'Unidade Centro'}
                   value={currentUnit?.name || ''}
                   onChange={(e) => updateCurrentUnit('name', e.target.value)}
                   required
                 />
                 {errors.barbershopName && (
                   <p className="text-sm text-destructive">{errors.barbershopName}</p>
+                )}
+                {currentUnit?.isMatriz && (
+                  <p className="text-xs text-muted-foreground">
+                    Esta é sua barbearia principal. Clientes e serviços ficarão vinculados a ela.
+                  </p>
                 )}
               </div>
 
@@ -631,19 +658,6 @@ const CompleteProfile = () => {
                   />
                 </div>
               </div>
-
-              {barbershopUnits.length > 1 && !currentUnit?.isPrimary && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPrimaryUnit(currentUnitIndex)}
-                  className="w-full"
-                >
-                  <Star className="h-4 w-4 mr-2" />
-                  Definir como unidade principal
-                </Button>
-              )}
 
               <div className="flex gap-2">
                 <Button type="button" variant="outline" onClick={() => setStep(1)}>

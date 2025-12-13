@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, Plus, Pencil, MapPin, Phone, Mail, Star } from "lucide-react";
+import { Building2, Plus, Pencil, MapPin, Phone, Mail, Star, Home, GitBranch } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -38,6 +38,8 @@ interface Barbershop {
   active: boolean;
   created_at: string;
   is_primary?: boolean;
+  parent_id?: string | null;
+  isMatriz?: boolean;
 }
 
 interface BarbershopFormData {
@@ -83,19 +85,27 @@ const Barbershops = () => {
 
       const { data, error } = await supabase
         .from('barbershops')
-        .select('*')
+        .select('*, parent_id')
         .in('id', barbershopIds)
         .order('name');
 
       if (error) throw error;
       
-      // Adicionar is_primary do contexto do usuário
-      const barbershopsWithPrimary = (data || []).map(b => ({
+      // Adicionar is_primary e identificar matrizes
+      const barbershopsWithInfo = (data || []).map(b => ({
         ...b,
-        is_primary: userBarbershops.find(ub => ub.id === b.id)?.is_primary || false
+        is_primary: userBarbershops.find(ub => ub.id === b.id)?.is_primary || false,
+        isMatriz: !b.parent_id, // É matriz se não tem parent_id
       }));
       
-      setBarbershops(barbershopsWithPrimary);
+      // Ordenar: matrizes primeiro, depois unidades
+      barbershopsWithInfo.sort((a, b) => {
+        if (a.isMatriz && !b.isMatriz) return -1;
+        if (!a.isMatriz && b.isMatriz) return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      setBarbershops(barbershopsWithInfo);
     } catch (error) {
       console.error('Erro ao carregar barbearias:', error);
       toast.error('Erro ao carregar barbearias');
@@ -147,7 +157,11 @@ const Barbershops = () => {
         if (error) throw error;
         toast.success('Barbearia atualizada com sucesso!');
       } else {
-        // Criar nova barbearia
+        // Criar nova unidade - sempre vinculada à matriz do usuário
+        // Encontrar a matriz do usuário (barbershop sem parent_id)
+        const matriz = barbershops.find(b => b.isMatriz);
+        const parentId = matriz?.id || null;
+        
         const { data: newBarbershop, error: insertError } = await supabase
           .from('barbershops')
           .insert({
@@ -156,6 +170,7 @@ const Barbershops = () => {
             phone: formData.phone.trim() || null,
             email: formData.email.trim() || null,
             active: formData.active,
+            parent_id: parentId, // Vincula à matriz
           })
           .select()
           .single();
@@ -321,16 +336,19 @@ const Barbershops = () => {
       <div className="space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Minhas Unidades</h1>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Barbearia e Unidades</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Gerencie as unidades da sua barbearia
+              Gerencie sua barbearia e suas unidades
             </p>
           </div>
-          <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto">
-            <Plus className="h-4 w-4" />
-            <span className="sm:hidden">Nova</span>
-            <span className="hidden sm:inline">Nova Unidade</span>
-          </Button>
+          {/* Só pode adicionar unidade se já tem uma matriz */}
+          {barbershops.some(b => b.isMatriz) && (
+            <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto">
+              <Plus className="h-4 w-4" />
+              <span className="sm:hidden">Nova</span>
+              <span className="hidden sm:inline">Nova Unidade</span>
+            </Button>
+          )}
         </div>
 
         {barbershops.length === 0 ? (
@@ -352,16 +370,23 @@ const Barbershops = () => {
         ) : (
           <Card>
             <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-base sm:text-lg">Unidades Cadastradas</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Estrutura Organizacional</CardTitle>
               <CardDescription className="text-xs sm:text-sm">
-                {barbershops.length} unidade{barbershops.length !== 1 ? 's' : ''} encontrada{barbershops.length !== 1 ? 's' : ''}
+                {barbershops.filter(b => b.isMatriz).length} barbearia(s), {barbershops.filter(b => !b.isMatriz).length} unidade(s)
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
               {/* Mobile Cards View */}
               <div className="block lg:hidden space-y-3">
                 {barbershops.map((barbershop) => (
-                  <div key={barbershop.id} className="border border-border rounded-lg p-3 sm:p-4 space-y-3">
+                  <div 
+                    key={barbershop.id} 
+                    className={`border rounded-lg p-3 sm:p-4 space-y-3 ${
+                      barbershop.isMatriz 
+                        ? 'border-primary/50 bg-primary/5' 
+                        : 'border-border ml-4'
+                    }`}
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <TooltipProvider>
@@ -390,7 +415,17 @@ const Barbershops = () => {
                         </TooltipProvider>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
+                            {barbershop.isMatriz ? (
+                              <Home className="h-4 w-4 text-primary flex-shrink-0" />
+                            ) : (
+                              <GitBranch className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            )}
                             <span className="font-medium text-sm truncate">{barbershop.name}</span>
+                            {barbershop.isMatriz && (
+                              <Badge variant="outline" className="text-xs border-primary/50 text-primary">
+                                Matriz
+                              </Badge>
+                            )}
                             {barbershop.is_primary && (
                               <Badge variant="outline" className="text-xs border-warning text-warning">
                                 Principal
