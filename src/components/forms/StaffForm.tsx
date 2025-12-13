@@ -790,6 +790,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           onScheduleChange={handleScheduleChange}
           useCustomSchedule={useCustomSchedule}
           onUseCustomScheduleChange={handleUseCustomScheduleChange}
+          barbershopId={barbershopId}
         />
       )}
 
