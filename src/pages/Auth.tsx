@@ -10,10 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Scissors, Building2, Check, ArrowRight, ArrowLeft, Plus, Trash2, Star, Loader2 } from 'lucide-react';
+import { Scissors, Building2, Check, ArrowRight, ArrowLeft, Plus, Trash2, Star, Loader2, MessageCircle, Phone, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 interface SocialProviders {
   google: { enabled: boolean };
@@ -36,6 +37,8 @@ const step1Schema = z.object({
   path: ['confirmPassword'],
 });
 
+const phoneSchema = z.string().min(10, { message: 'Telefone inválido' }).max(15);
+
 interface BarbershopUnit {
   id: string;
   name: string;
@@ -56,6 +59,18 @@ const Auth = () => {
     google: { enabled: false },
     facebook: { enabled: false }
   });
+
+  // Login method tabs
+  const [loginMethod, setLoginMethod] = useState<'email' | 'whatsapp'>('email');
+
+  // WhatsApp OTP state
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpStep, setOtpStep] = useState<'phone' | 'code' | 'processing'>('phone');
+  const [otpExpiresAt, setOtpExpiresAt] = useState<Date | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   // Signup wizard step
   const [signupStep, setSignupStep] = useState(1);
@@ -90,6 +105,29 @@ const Auth = () => {
     loadSocialProviders();
   }, []);
 
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // OTP expiration timer
+  useEffect(() => {
+    if (otpExpiresAt) {
+      const interval = setInterval(() => {
+        if (new Date() > otpExpiresAt) {
+          setOtpStep('phone');
+          setOtpCode('');
+          setOtpExpiresAt(null);
+          toast.error('Código expirado', { description: 'Solicite um novo código' });
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [otpExpiresAt]);
+
   const loadSocialProviders = async () => {
     try {
       const { data } = await supabase
@@ -107,6 +145,120 @@ const Auth = () => {
     } catch (error) {
       console.error('Erro ao carregar provedores sociais:', error);
     }
+  };
+
+  const formatPhoneForDisplay = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    }
+    return phone;
+  };
+
+  const getTimeRemaining = () => {
+    if (!otpExpiresAt) return '';
+    const diff = Math.max(0, Math.floor((otpExpiresAt.getTime() - Date.now()) / 1000));
+    const minutes = Math.floor(diff / 60);
+    const seconds = diff % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleSendOTP = async () => {
+    setErrors({});
+    
+    try {
+      phoneSchema.parse(whatsappPhone);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setErrors({ phone: error.errors[0].message });
+        return;
+      }
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp-whatsapp', {
+        body: { phone: whatsappPhone }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      setOtpStep('code');
+      setOtpExpiresAt(new Date(data.expiresAt));
+      setResendCooldown(60);
+      
+      toast.success('Código enviado!', {
+        description: 'Verifique seu WhatsApp para o código de verificação'
+      });
+    } catch (error: any) {
+      console.error('Erro ao enviar OTP:', error);
+      toast.error('Erro ao enviar código', {
+        description: error.message || 'Tente novamente em alguns instantes'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (otpCode.length !== 6) {
+      setErrors({ otp: 'Digite o código completo de 6 dígitos' });
+      return;
+    }
+
+    setLoading(true);
+    setOtpStep('processing');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-otp-whatsapp', {
+        body: { phone: whatsappPhone, code: otpCode }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      setSessionToken(data.sessionToken);
+      setIsNewUser(data.isNewUser);
+
+      // Finalizar login
+      const { data: loginData, error: loginError } = await supabase.functions.invoke('login-with-token', {
+        body: { phone: whatsappPhone, sessionToken: data.sessionToken }
+      });
+
+      if (loginError) throw loginError;
+      if (!loginData.success) throw new Error(loginData.error);
+
+      if (loginData.loginUrl) {
+        // Redirecionar para o magic link
+        window.location.href = loginData.loginUrl;
+      } else if (data.isNewUser) {
+        // Novo usuário - redirecionar para completar perfil
+        toast.success('Conta criada!', {
+          description: 'Complete seu cadastro para continuar'
+        });
+        navigate('/complete-profile');
+      } else {
+        // Usuário existente
+        toast.success('Login realizado!');
+        await refreshBarbershops();
+        navigate('/');
+      }
+    } catch (error: any) {
+      console.error('Erro ao verificar OTP:', error);
+      setOtpStep('code');
+      toast.error('Código inválido', {
+        description: error.message || 'Verifique o código e tente novamente'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (resendCooldown > 0) return;
+    await handleSendOTP();
   };
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
@@ -382,6 +534,177 @@ const Auth = () => {
   };
 
   const currentUnit = barbershopUnits[currentUnitIndex];
+
+  const renderWhatsAppLogin = () => (
+    <div className="space-y-4">
+      {otpStep === 'phone' && (
+        <>
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
+              <MessageCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="font-medium">Login via WhatsApp</h3>
+            <p className="text-sm text-muted-foreground">
+              Receba um código de verificação no seu WhatsApp
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="whatsapp-phone">Número do WhatsApp</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="whatsapp-phone"
+                type="tel"
+                placeholder="(00) 00000-0000"
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            {errors.phone && (
+              <p className="text-sm text-destructive">{errors.phone}</p>
+            )}
+          </div>
+
+          <Button 
+            type="button" 
+            className="w-full bg-green-600 hover:bg-green-700" 
+            onClick={handleSendOTP}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Enviar código via WhatsApp
+              </>
+            )}
+          </Button>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <Separator className="w-full" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">
+                ou use outro método
+              </span>
+            </div>
+          </div>
+
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full"
+            onClick={() => setLoginMethod('email')}
+          >
+            Entrar com Email e Senha
+          </Button>
+        </>
+      )}
+
+      {otpStep === 'code' && (
+        <>
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
+              <MessageCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="font-medium">Digite o código</h3>
+            <p className="text-sm text-muted-foreground">
+              Enviamos um código de 6 dígitos para
+            </p>
+            <p className="font-medium text-green-600">
+              {formatPhoneForDisplay(whatsappPhone)}
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center space-y-4">
+            <InputOTP
+              value={otpCode}
+              onChange={setOtpCode}
+              maxLength={6}
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+
+            {errors.otp && (
+              <p className="text-sm text-destructive">{errors.otp}</p>
+            )}
+
+            {otpExpiresAt && (
+              <p className="text-sm text-muted-foreground">
+                Código expira em: <span className="font-mono font-medium">{getTimeRemaining()}</span>
+              </p>
+            )}
+          </div>
+
+          <Button 
+            type="button" 
+            className="w-full bg-green-600 hover:bg-green-700" 
+            onClick={handleVerifyOTP}
+            disabled={loading || otpCode.length !== 6}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              'Verificar e Entrar'
+            )}
+          </Button>
+
+          <div className="flex items-center justify-between">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                setOtpStep('phone');
+                setOtpCode('');
+              }}
+            >
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              Voltar
+            </Button>
+
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={handleResendOTP}
+              disabled={resendCooldown > 0 || loading}
+            >
+              <RefreshCw className={`mr-1 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              {resendCooldown > 0 ? `Reenviar (${resendCooldown}s)` : 'Reenviar código'}
+            </Button>
+          </div>
+        </>
+      )}
+
+      {otpStep === 'processing' && (
+        <div className="text-center py-8">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <h3 className="font-medium">Autenticando...</h3>
+          <p className="text-sm text-muted-foreground">
+            Aguarde enquanto verificamos seu código
+          </p>
+        </div>
+      )}
+    </div>
+  );
 
   const renderSignupStep1 = () => (
     <div className="space-y-4">
@@ -756,55 +1079,68 @@ const Auth = () => {
             </TabsList>
 
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
-                </div>
+              {loginMethod === 'whatsapp' ? (
+                renderWhatsAppLogin()
+              ) : (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      required
+                    />
+                    {errors.email && (
+                      <p className="text-sm text-destructive">{errors.email}</p>
+                    )}
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Senha</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                  />
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Senha</Label>
+                    <Input
+                      id="login-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      required
+                    />
+                    {errors.password && (
+                      <p className="text-sm text-destructive">{errors.password}</p>
+                    )}
+                  </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Entrando...' : 'Entrar'}
-                </Button>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Entrando...' : 'Entrar'}
+                  </Button>
 
-                {/* Social Login Buttons */}
-                {(socialProviders.google.enabled || socialProviders.facebook.enabled) && (
-                  <>
-                    <div className="relative my-4">
-                      <div className="absolute inset-0 flex items-center">
-                        <Separator className="w-full" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">
-                          ou continue com
-                        </span>
-                      </div>
+                  {/* WhatsApp Login Option */}
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <Separator className="w-full" />
                     </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">
+                        ou continue com
+                      </span>
+                    </div>
+                  </div>
 
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                    onClick={() => setLoginMethod('whatsapp')}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Entrar com WhatsApp
+                  </Button>
+
+                  {/* Social Login Buttons */}
+                  {(socialProviders.google.enabled || socialProviders.facebook.enabled) && (
                     <div className="grid gap-2">
                       {socialProviders.google.enabled && (
                         <Button
@@ -847,9 +1183,9 @@ const Auth = () => {
                         </Button>
                       )}
                     </div>
-                  </>
-                )}
-              </form>
+                  )}
+                </form>
+              )}
             </TabsContent>
 
             <TabsContent value="signup">
