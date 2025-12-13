@@ -155,6 +155,29 @@ export default function PublicBooking() {
   // Branding state
   const [matrizBranding, setMatrizBranding] = useState<Barbershop['custom_branding']>(null);
   const [matrizName, setMatrizName] = useState<string>('');
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+
+  // Detect dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark') ||
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDarkMode(isDark);
+    };
+    
+    checkDarkMode();
+    
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', checkDarkMode);
+    
+    return () => {
+      observer.disconnect();
+      mediaQuery.removeEventListener('change', checkDarkMode);
+    };
+  }, []);
 
   // Unit selection state
   const [availableUnits, setAvailableUnits] = useState<Barbershop[]>([]);
@@ -934,19 +957,30 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
         <div className="relative max-w-2xl mx-auto px-4 pt-8 pb-6">
           {/* Logo and Branding */}
           <div className="text-center mb-6">
-            {matrizBranding?.logo_url ? (
-              <div className="mb-4">
-                <img 
-                  src={matrizBranding.logo_url} 
-                  alt={matrizName}
-                  className="h-16 sm:h-20 mx-auto object-contain"
-                />
-              </div>
-            ) : (
-              <div className="mb-4 mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg shadow-accent/25">
-                <Scissors className="h-8 w-8 sm:h-10 sm:w-10 text-accent-foreground" />
-              </div>
-            )}
+            {(() => {
+              // Determine which logo to use based on dark mode
+              const logoUrl = isDarkMode && matrizBranding?.logo_url_dark 
+                ? matrizBranding.logo_url_dark 
+                : matrizBranding?.logo_url;
+              
+              return logoUrl ? (
+                <div className="mb-4">
+                  <img 
+                    src={logoUrl} 
+                    alt={matrizName}
+                    className="h-16 sm:h-20 mx-auto object-contain"
+                    onError={(e) => {
+                      // Fallback if image fails to load
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="mb-4 mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg shadow-accent/25">
+                  <Scissors className="h-8 w-8 sm:h-10 sm:w-10 text-accent-foreground" />
+                </div>
+              );
+            })()}
             
             <h1 className="text-2xl sm:text-3xl font-serif font-semibold text-foreground">
               {matrizBranding?.system_name || matrizName || barbershop?.name}
