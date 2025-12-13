@@ -219,25 +219,46 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
 
       if (!userBarbershop) return;
 
-      // Fetch barbershop with custom_branding
+      // Fetch barbershop with parent info for hierarchy
       const { data: barbershop } = await supabase
         .from('barbershops')
-        .select('custom_branding')
+        .select('id, parent_id, custom_branding')
         .eq('id', userBarbershop.barbershop_id)
         .single();
 
-      if (barbershop?.custom_branding) {
-        setCustomBranding(barbershop.custom_branding);
+      if (!barbershop) return;
+
+      // Determine root barbershop (matriz) for branding
+      const rootId = barbershop.parent_id || barbershop.id;
+      
+      // Se é uma unidade, buscar branding da matriz
+      let effectiveCustomBranding = barbershop.custom_branding;
+      
+      if (barbershop.parent_id) {
+        // Buscar branding da matriz (barbearia principal)
+        const { data: matriz } = await supabase
+          .from('barbershops')
+          .select('custom_branding')
+          .eq('id', rootId)
+          .single();
+        
+        if (matriz?.custom_branding) {
+          effectiveCustomBranding = matriz.custom_branding;
+        }
       }
 
-      // Check if barbershop has white_label feature
+      if (effectiveCustomBranding) {
+        setCustomBranding(effectiveCustomBranding);
+      }
+
+      // Check if barbershop (ou matriz) has white_label feature
       const { data: subscription } = await supabase
         .from('subscriptions')
         .select(`
           status,
           subscription_plans(feature_flags)
         `)
-        .eq('barbershop_id', userBarbershop.barbershop_id)
+        .eq('barbershop_id', rootId) // Verificar na matriz
         .eq('status', 'active')
         .maybeSingle();
 
