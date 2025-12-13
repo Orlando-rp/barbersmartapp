@@ -86,6 +86,17 @@ const Auth = () => {
   const [signupResendCooldown, setSignupResendCooldown] = useState(0);
   const [signupVerifiedPhone, setSignupVerifiedPhone] = useState<string | null>(null);
 
+  // Password recovery state
+  const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
+  const [recoveryPhone, setRecoveryPhone] = useState('');
+  const [recoveryOtpCode, setRecoveryOtpCode] = useState('');
+  const [recoveryStep, setRecoveryStep] = useState<'phone' | 'code' | 'newPassword' | 'processing'>('phone');
+  const [recoveryOtpExpiresAt, setRecoveryOtpExpiresAt] = useState<Date | null>(null);
+  const [recoveryResendCooldown, setRecoveryResendCooldown] = useState(0);
+  const [recoverySessionToken, setRecoverySessionToken] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -146,6 +157,29 @@ const Auth = () => {
       return () => clearInterval(interval);
     }
   }, [signupOtpExpiresAt]);
+
+  // Recovery OTP cooldown timer
+  useEffect(() => {
+    if (recoveryResendCooldown > 0) {
+      const timer = setTimeout(() => setRecoveryResendCooldown(recoveryResendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [recoveryResendCooldown]);
+
+  // Recovery OTP expiration timer
+  useEffect(() => {
+    if (recoveryOtpExpiresAt) {
+      const interval = setInterval(() => {
+        if (new Date() > recoveryOtpExpiresAt) {
+          setRecoveryStep('phone');
+          setRecoveryOtpCode('');
+          setRecoveryOtpExpiresAt(null);
+          toast.error('Código expirado', { description: 'Solicite um novo código' });
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [recoveryOtpExpiresAt]);
 
   // OTP expiration timer
   useEffect(() => {
@@ -380,6 +414,149 @@ const Auth = () => {
   const handleSignupResendOTP = async () => {
     if (signupResendCooldown > 0) return;
     await handleSignupSendOTP();
+  };
+
+  // Password Recovery OTP functions
+  const getRecoveryTimeRemaining = () => {
+    if (!recoveryOtpExpiresAt) return '';
+    const diff = Math.max(0, Math.floor((recoveryOtpExpiresAt.getTime() - Date.now()) / 1000));
+    const minutes = Math.floor(diff / 60);
+    const seconds = diff % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleRecoverySendOTP = async () => {
+    setErrors({});
+    
+    try {
+      phoneSchema.parse(recoveryPhone);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setErrors({ recoveryPhone: error.errors[0].message });
+        return;
+      }
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp-whatsapp', {
+        body: { phone: recoveryPhone }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      setRecoveryStep('code');
+      setRecoveryOtpExpiresAt(new Date(data.expiresAt));
+      setRecoveryResendCooldown(60);
+      
+      toast.success('Código enviado!', {
+        description: 'Verifique seu WhatsApp para o código de verificação'
+      });
+    } catch (error: any) {
+      console.error('Erro ao enviar OTP de recuperação:', error);
+      toast.error('Erro ao enviar código', {
+        description: error.message || 'Tente novamente em alguns instantes'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecoveryVerifyOTP = async () => {
+    if (recoveryOtpCode.length !== 6) {
+      setErrors({ recoveryOtp: 'Digite o código completo de 6 dígitos' });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-otp-whatsapp', {
+        body: { phone: recoveryPhone, code: recoveryOtpCode }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      // Save session token for password reset
+      setRecoverySessionToken(data.sessionToken);
+      setRecoveryStep('newPassword');
+      
+      toast.success('Telefone verificado!', {
+        description: 'Defina sua nova senha'
+      });
+    } catch (error: any) {
+      console.error('Erro ao verificar OTP de recuperação:', error);
+      toast.error('Código inválido', {
+        description: error.message || 'Verifique o código e tente novamente'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setErrors({});
+
+    if (newPassword.length < 6) {
+      setErrors({ newPassword: 'Senha deve ter no mínimo 6 caracteres' });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setErrors({ confirmNewPassword: 'As senhas não coincidem' });
+      return;
+    }
+
+    setLoading(true);
+    setRecoveryStep('processing');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-password-whatsapp', {
+        body: { 
+          phone: recoveryPhone, 
+          sessionToken: recoverySessionToken,
+          newPassword 
+        }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      toast.success('Senha alterada com sucesso!', {
+        description: 'Faça login com sua nova senha'
+      });
+
+      // Reset recovery state and go back to login
+      setShowPasswordRecovery(false);
+      setRecoveryStep('phone');
+      setRecoveryPhone('');
+      setRecoveryOtpCode('');
+      setRecoverySessionToken(null);
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setLoginMethod('email');
+
+      // Pre-fill email if available
+      if (data.email) {
+        setLoginEmail(data.email);
+      }
+    } catch (error: any) {
+      console.error('Erro ao resetar senha:', error);
+      setRecoveryStep('newPassword');
+      toast.error('Erro ao alterar senha', {
+        description: error.message || 'Tente novamente'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecoveryResendOTP = async () => {
+    if (recoveryResendCooldown > 0) return;
+    await handleRecoverySendOTP();
   };
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
@@ -821,6 +998,241 @@ const Auth = () => {
           <h3 className="font-medium">Autenticando...</h3>
           <p className="text-sm text-muted-foreground">
             Aguarde enquanto verificamos seu código
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPasswordRecovery = () => (
+    <div className="space-y-4">
+      {recoveryStep === 'phone' && (
+        <>
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
+              <Phone className="h-8 w-8 text-amber-600" />
+            </div>
+            <h3 className="font-medium">Recuperar Senha</h3>
+            <p className="text-sm text-muted-foreground">
+              Digite seu número de WhatsApp cadastrado
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="recovery-phone">Número do WhatsApp</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="recovery-phone"
+                type="tel"
+                placeholder="(00) 00000-0000"
+                value={recoveryPhone}
+                onChange={(e) => setRecoveryPhone(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            {errors.recoveryPhone && (
+              <p className="text-sm text-destructive">{errors.recoveryPhone}</p>
+            )}
+          </div>
+
+          <Button 
+            type="button" 
+            className="w-full" 
+            onClick={handleRecoverySendOTP}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Enviar código de verificação
+              </>
+            )}
+          </Button>
+
+          <Button 
+            type="button" 
+            variant="ghost" 
+            className="w-full"
+            onClick={() => {
+              setShowPasswordRecovery(false);
+              setRecoveryStep('phone');
+              setRecoveryPhone('');
+            }}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar ao Login
+          </Button>
+        </>
+      )}
+
+      {recoveryStep === 'code' && (
+        <>
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
+              <MessageCircle className="h-8 w-8 text-amber-600" />
+            </div>
+            <h3 className="font-medium">Digite o código</h3>
+            <p className="text-sm text-muted-foreground">
+              Enviamos um código de 6 dígitos para
+            </p>
+            <p className="font-medium text-amber-600">
+              {formatPhoneForDisplay(recoveryPhone)}
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center space-y-4">
+            <InputOTP
+              value={recoveryOtpCode}
+              onChange={setRecoveryOtpCode}
+              maxLength={6}
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+
+            {errors.recoveryOtp && (
+              <p className="text-sm text-destructive">{errors.recoveryOtp}</p>
+            )}
+
+            {recoveryOtpExpiresAt && (
+              <p className="text-sm text-muted-foreground">
+                Código expira em: <span className="font-mono font-medium">{getRecoveryTimeRemaining()}</span>
+              </p>
+            )}
+          </div>
+
+          <Button 
+            type="button" 
+            className="w-full" 
+            onClick={handleRecoveryVerifyOTP}
+            disabled={loading || recoveryOtpCode.length !== 6}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              'Verificar Código'
+            )}
+          </Button>
+
+          <div className="flex items-center justify-between">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                setRecoveryStep('phone');
+                setRecoveryOtpCode('');
+              }}
+            >
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              Voltar
+            </Button>
+
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={handleRecoveryResendOTP}
+              disabled={recoveryResendCooldown > 0 || loading}
+            >
+              <RefreshCw className={`mr-1 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              {recoveryResendCooldown > 0 ? `Reenviar (${recoveryResendCooldown}s)` : 'Reenviar código'}
+            </Button>
+          </div>
+        </>
+      )}
+
+      {recoveryStep === 'newPassword' && (
+        <>
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="font-medium">Defina sua nova senha</h3>
+            <p className="text-sm text-muted-foreground">
+              Telefone verificado! Crie uma nova senha
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nova Senha</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              {errors.newPassword && (
+                <p className="text-sm text-destructive">{errors.newPassword}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-new-password">Confirmar Nova Senha</Label>
+              <Input
+                id="confirm-new-password"
+                type="password"
+                placeholder="••••••••"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+              />
+              {errors.confirmNewPassword && (
+                <p className="text-sm text-destructive">{errors.confirmNewPassword}</p>
+              )}
+            </div>
+          </div>
+
+          <Button 
+            type="button" 
+            className="w-full" 
+            onClick={handleResetPassword}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar Nova Senha'
+            )}
+          </Button>
+
+          <Button 
+            type="button" 
+            variant="ghost" 
+            className="w-full"
+            onClick={() => setRecoveryStep('code')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+        </>
+      )}
+
+      {recoveryStep === 'processing' && (
+        <div className="text-center py-8">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <h3 className="font-medium">Alterando senha...</h3>
+          <p className="text-sm text-muted-foreground">
+            Aguarde enquanto salvamos sua nova senha
           </p>
         </div>
       )}
@@ -1495,7 +1907,9 @@ const Auth = () => {
             </TabsList>
 
             <TabsContent value="login">
-              {loginMethod === 'whatsapp' ? (
+              {showPasswordRecovery ? (
+                renderPasswordRecovery()
+              ) : loginMethod === 'whatsapp' ? (
                 renderWhatsAppLogin()
               ) : (
                 <form onSubmit={handleLogin} className="space-y-4">
@@ -1515,7 +1929,18 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Senha</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="login-password">Senha</Label>
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-xs text-muted-foreground hover:text-primary"
+                        onClick={() => setShowPasswordRecovery(true)}
+                      >
+                        Esqueci minha senha
+                      </Button>
+                    </div>
                     <Input
                       id="login-password"
                       type="password"

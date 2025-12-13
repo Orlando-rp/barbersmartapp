@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.login-with-token]
 verify_jwt = false
+
+[functions.reset-password-whatsapp]
+verify_jwt = false
