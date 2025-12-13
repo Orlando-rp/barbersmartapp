@@ -3,59 +3,21 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "lucide-react";
-
-interface DaySchedule {
-  is_open: boolean;
-  open_time: string;
-  close_time: string;
-  break_start: string | null;
-  break_end: string | null;
-}
-
-export interface StaffSchedule {
-  monday: DaySchedule;
-  tuesday: DaySchedule;
-  wednesday: DaySchedule;
-  thursday: DaySchedule;
-  friday: DaySchedule;
-  saturday: DaySchedule;
-  sunday: DaySchedule;
-}
+import {
+  StandardDaySchedule,
+  StandardWeeklySchedule,
+  DEFAULT_WEEKLY_SCHEDULE,
+  DAY_LABELS,
+  DAY_NAMES,
+  DayName,
+} from "@/types/schedule";
 
 interface StaffScheduleSectionProps {
-  schedule: StaffSchedule | null;
-  onScheduleChange: (schedule: StaffSchedule | null) => void;
+  schedule: StandardWeeklySchedule | null;
+  onScheduleChange: (schedule: StandardWeeklySchedule | null) => void;
   useCustomSchedule: boolean;
   onUseCustomScheduleChange: (value: boolean) => void;
 }
-
-const defaultDaySchedule: DaySchedule = {
-  is_open: true,
-  open_time: "09:00",
-  close_time: "18:00",
-  break_start: null,
-  break_end: null,
-};
-
-const defaultSchedule: StaffSchedule = {
-  monday: { ...defaultDaySchedule },
-  tuesday: { ...defaultDaySchedule },
-  wednesday: { ...defaultDaySchedule },
-  thursday: { ...defaultDaySchedule },
-  friday: { ...defaultDaySchedule },
-  saturday: { ...defaultDaySchedule, close_time: "14:00" },
-  sunday: { ...defaultDaySchedule, is_open: false },
-};
-
-const dayNames: { [key: string]: string } = {
-  monday: "Segunda-feira",
-  tuesday: "Terça-feira",
-  wednesday: "Quarta-feira",
-  thursday: "Quinta-feira",
-  friday: "Sexta-feira",
-  saturday: "Sábado",
-  sunday: "Domingo",
-};
 
 const timeOptions = Array.from({ length: 48 }, (_, i) => {
   const hour = Math.floor(i / 2);
@@ -93,22 +55,22 @@ NativeTimeSelect.displayName = 'NativeTimeSelect';
 
 // Isolated day row component to prevent cascading re-renders
 interface DayScheduleRowProps {
-  day: keyof StaffSchedule;
-  daySchedule: DaySchedule;
-  onUpdate: (day: keyof StaffSchedule, field: keyof DaySchedule, value: any) => void;
+  day: DayName;
+  daySchedule: StandardDaySchedule;
+  onUpdate: (day: DayName, field: keyof StandardDaySchedule, value: any) => void;
 }
 
 const DayScheduleRow = memo(({ day, daySchedule, onUpdate }: DayScheduleRowProps) => {
-  const handleOpenChange = useCallback((checked: boolean) => {
-    onUpdate(day, "is_open", checked);
+  const handleEnabledChange = useCallback((checked: boolean) => {
+    onUpdate(day, "enabled", checked);
   }, [day, onUpdate]);
 
-  const handleOpenTimeChange = useCallback((value: string) => {
-    onUpdate(day, "open_time", value);
+  const handleStartChange = useCallback((value: string) => {
+    onUpdate(day, "start", value);
   }, [day, onUpdate]);
 
-  const handleCloseTimeChange = useCallback((value: string) => {
-    onUpdate(day, "close_time", value);
+  const handleEndChange = useCallback((value: string) => {
+    onUpdate(day, "end", value);
   }, [day, onUpdate]);
 
   const handleBreakStartChange = useCallback((value: string) => {
@@ -122,35 +84,35 @@ const DayScheduleRow = memo(({ day, daySchedule, onUpdate }: DayScheduleRowProps
   return (
     <div
       className={`p-3 rounded-lg border ${
-        daySchedule.is_open ? "bg-background" : "bg-muted/50"
+        daySchedule.enabled ? "bg-background" : "bg-muted/50"
       }`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Switch
-            checked={daySchedule.is_open}
-            onCheckedChange={handleOpenChange}
+            checked={daySchedule.enabled}
+            onCheckedChange={handleEnabledChange}
           />
-          <span className={`font-medium ${!daySchedule.is_open && "text-muted-foreground"}`}>
-            {dayNames[day]}
+          <span className={`font-medium ${!daySchedule.enabled && "text-muted-foreground"}`}>
+            {DAY_LABELS[day]}
           </span>
         </div>
       </div>
 
-      {daySchedule.is_open && (
+      {daySchedule.enabled && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
           <div>
             <Label className="text-xs text-muted-foreground">Entrada</Label>
             <NativeTimeSelect
-              value={daySchedule.open_time}
-              onChange={handleOpenTimeChange}
+              value={daySchedule.start}
+              onChange={handleStartChange}
             />
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Saída</Label>
             <NativeTimeSelect
-              value={daySchedule.close_time}
-              onChange={handleCloseTimeChange}
+              value={daySchedule.end}
+              onChange={handleEndChange}
             />
           </div>
           <div>
@@ -185,34 +147,34 @@ export const StaffScheduleSection = ({
 }: StaffScheduleSectionProps) => {
   // Memoized current schedule to ensure stability
   const currentSchedule = useMemo(() => {
-    if (!schedule) return defaultSchedule;
+    if (!schedule) return DEFAULT_WEEKLY_SCHEDULE;
     
     return {
-      monday: schedule.monday || defaultSchedule.monday,
-      tuesday: schedule.tuesday || defaultSchedule.tuesday,
-      wednesday: schedule.wednesday || defaultSchedule.wednesday,
-      thursday: schedule.thursday || defaultSchedule.thursday,
-      friday: schedule.friday || defaultSchedule.friday,
-      saturday: schedule.saturday || defaultSchedule.saturday,
-      sunday: schedule.sunday || defaultSchedule.sunday,
+      monday: schedule.monday || DEFAULT_WEEKLY_SCHEDULE.monday,
+      tuesday: schedule.tuesday || DEFAULT_WEEKLY_SCHEDULE.tuesday,
+      wednesday: schedule.wednesday || DEFAULT_WEEKLY_SCHEDULE.wednesday,
+      thursday: schedule.thursday || DEFAULT_WEEKLY_SCHEDULE.thursday,
+      friday: schedule.friday || DEFAULT_WEEKLY_SCHEDULE.friday,
+      saturday: schedule.saturday || DEFAULT_WEEKLY_SCHEDULE.saturday,
+      sunday: schedule.sunday || DEFAULT_WEEKLY_SCHEDULE.sunday,
     };
   }, [schedule]);
 
   const handleToggleCustom = useCallback((checked: boolean) => {
     onUseCustomScheduleChange(checked);
     if (checked && !schedule) {
-      onScheduleChange(defaultSchedule);
+      onScheduleChange({ ...DEFAULT_WEEKLY_SCHEDULE });
     } else if (!checked) {
       onScheduleChange(null);
     }
   }, [onUseCustomScheduleChange, schedule, onScheduleChange]);
 
   const updateDaySchedule = useCallback((
-    day: keyof StaffSchedule, 
-    field: keyof DaySchedule, 
+    day: DayName, 
+    field: keyof StandardDaySchedule, 
     value: any
   ) => {
-    const daySchedule = currentSchedule[day] || defaultDaySchedule;
+    const daySchedule = currentSchedule[day] || DEFAULT_WEEKLY_SCHEDULE[day];
     const newSchedule = {
       ...currentSchedule,
       [day]: {
@@ -222,8 +184,6 @@ export const StaffScheduleSection = ({
     };
     onScheduleChange(newSchedule);
   }, [currentSchedule, onScheduleChange]);
-
-  const days = Object.keys(dayNames) as Array<keyof StaffSchedule>;
 
   return (
     <Card>
@@ -253,7 +213,7 @@ export const StaffScheduleSection = ({
 
       {useCustomSchedule && (
         <CardContent className="space-y-4">
-          {days.map((day) => (
+          {DAY_NAMES.map((day) => (
             <DayScheduleRow
               key={day}
               day={day}
@@ -266,3 +226,6 @@ export const StaffScheduleSection = ({
     </Card>
   );
 };
+
+// Re-export types for backwards compatibility
+export type { StandardWeeklySchedule as StaffSchedule };

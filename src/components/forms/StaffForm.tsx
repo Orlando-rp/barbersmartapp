@@ -11,6 +11,7 @@ import { StaffScheduleSection, StaffSchedule } from "./StaffScheduleSection";
 import { StaffServicesSection } from "./StaffServicesSection";
 import { StaffUnitsScheduleSection, StaffUnitSchedule } from "./StaffUnitsScheduleSection";
 import { StaffAvatarUpload } from "@/components/profile/StaffAvatarUpload";
+import { StandardWeeklySchedule } from "@/types/schedule";
 
 interface StaffFormProps {
   staff?: any;
@@ -125,7 +126,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
     setSelectedServices(services);
   }, []);
 
-  const handleScheduleChange = useCallback((newSchedule: StaffSchedule | null) => {
+  const handleScheduleChange = useCallback((newSchedule: StandardWeeklySchedule | null) => {
     setSchedule(newSchedule);
   }, []);
 
