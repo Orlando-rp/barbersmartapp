@@ -149,11 +149,6 @@ const BarbershopSelector = () => {
                 <span className={cn("truncate flex-1", !barbershop.isMatriz && "text-sm")}>
                   {barbershop.name}
                 </span>
-                {barbershop.isMatriz && (
-                  <Badge variant="outline" className="text-xs flex-shrink-0 border-primary/50 text-primary">
-                    Matriz
-                  </Badge>
-                )}
                 {barbershop.is_primary && !barbershop.isMatriz && (
                   <Badge variant="secondary" className="text-xs flex-shrink-0">
                     Principal
