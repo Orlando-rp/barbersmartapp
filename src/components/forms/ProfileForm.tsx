@@ -11,6 +11,7 @@ interface ProfileFormProps {
   initialData: {
     full_name: string;
     phone: string;
+    preferred_name?: string | null;
   };
   onSuccess: () => void;
 }
@@ -18,6 +19,7 @@ interface ProfileFormProps {
 const profileSchema = z.object({
   full_name: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(100),
   phone: z.string().trim().min(10, "Telefone inválido").max(20),
+  preferred_name: z.string().trim().max(50).optional().nullable(),
 });
 
 export const ProfileForm = ({ initialData, onSuccess }: ProfileFormProps) => {
@@ -26,6 +28,7 @@ export const ProfileForm = ({ initialData, onSuccess }: ProfileFormProps) => {
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState(initialData.full_name);
   const [phone, setPhone] = useState(initialData.phone);
+  const [preferredName, setPreferredName] = useState(initialData.preferred_name || "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +45,7 @@ export const ProfileForm = ({ initialData, onSuccess }: ProfileFormProps) => {
     const validation = profileSchema.safeParse({
       full_name: fullName,
       phone,
+      preferred_name: preferredName || null,
     });
 
     if (!validation.success) {
@@ -61,6 +65,7 @@ export const ProfileForm = ({ initialData, onSuccess }: ProfileFormProps) => {
         .update({
           full_name: fullName,
           phone,
+          preferred_name: preferredName || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
@@ -96,6 +101,20 @@ export const ProfileForm = ({ initialData, onSuccess }: ProfileFormProps) => {
           placeholder="Seu nome completo"
           required
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="preferredName">Como quer ser chamado</Label>
+        <Input
+          id="preferredName"
+          value={preferredName}
+          onChange={(e) => setPreferredName(e.target.value)}
+          placeholder="Ex: João, Zé, Doutor Silva"
+          maxLength={50}
+        />
+        <p className="text-xs text-muted-foreground">
+          Este nome será usado nas notificações e mensagens
+        </p>
       </div>
 
       <div className="space-y-2">
