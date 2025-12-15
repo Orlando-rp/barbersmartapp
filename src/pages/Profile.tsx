@@ -16,6 +16,7 @@ interface ProfileData {
   full_name: string;
   phone: string;
   avatar_url: string | null;
+  preferred_name: string | null;
 }
 
 const Profile = () => {
@@ -25,6 +26,7 @@ const Profile = () => {
     full_name: "",
     phone: "",
     avatar_url: null,
+    preferred_name: null,
   });
   const [loading, setLoading] = useState(true);
   const [isBarber, setIsBarber] = useState(false);
@@ -42,7 +44,7 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, phone, avatar_url')
+        .select('full_name, phone, avatar_url, preferred_name')
         .eq('id', user.id)
         .single();
 
