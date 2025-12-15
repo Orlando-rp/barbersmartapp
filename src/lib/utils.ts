@@ -14,3 +14,11 @@ export function formatDuration(minutes: number): string {
   if (mins === 0) return `${hours}h`;
   return `${hours}h${mins.toString().padStart(2, '0')}`;
 }
+
+/**
+ * Retorna o nome preferido se disponível, senão o nome completo
+ * Usado para personalizar notificações e mensagens
+ */
+export function getDisplayName(preferredName?: string | null, fullName?: string | null): string {
+  return preferredName?.trim() || fullName?.trim() || 'Cliente';
+}

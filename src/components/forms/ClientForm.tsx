@@ -51,6 +51,7 @@ const clientSchema = z.object({
 
 export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
   const [name, setName] = useState(editingClient?.name || "");
+  const [preferredName, setPreferredName] = useState(editingClient?.preferred_name || "");
   const [email, setEmail] = useState(editingClient?.email || "");
   const [phone, setPhone] = useState(editingClient?.phone || "");
   const [address, setAddress] = useState(editingClient?.address || "");
@@ -130,6 +131,7 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
       const clientData = {
         barbershop_id: matrizBarbershopId,
         name: validatedData.name,
+        preferred_name: preferredName || null,
         email: validatedData.email || null,
         phone: validatedData.phone,
         birth_date: birthDate ? format(birthDate, "yyyy-MM-dd") : null,
@@ -231,6 +233,21 @@ export const ClientForm = ({ onClose, editingClient }: ClientFormProps) => {
                   <p className="text-xs sm:text-sm text-destructive">{errors.name}</p>
                 )}
               </div>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="preferredName" className="text-xs sm:text-sm">Como quer ser chamado</Label>
+                <Input
+                  id="preferredName"
+                  value={preferredName}
+                  onChange={(e) => setPreferredName(e.target.value)}
+                  placeholder="Ex: João, Zé, Dr. Silva"
+                  className="text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Usado em notificações e mensagens
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1.5 sm:space-y-2">
                 <Label htmlFor="phone" className="text-xs sm:text-sm">Telefone *</Label>
                 <div className="relative">

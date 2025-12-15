@@ -51,10 +51,13 @@ serve(async (req) => {
     const phoneClean = clientPhone.replace(/\D/g, "");
     const { data: client } = await supabase
       .from("clients")
-      .select("notification_enabled, notification_types")
+      .select("notification_enabled, notification_types, preferred_name")
       .eq("phone", clientPhone)
       .eq("barbershop_id", barbershop.parent_id || barbershopId)
       .maybeSingle();
+    
+    // Use preferred_name if available
+    const displayName = client?.preferred_name || clientName;
 
     // Check if client has opted out of completed notifications
     if (client) {
@@ -85,7 +88,7 @@ serve(async (req) => {
       .maybeSingle();
 
     // Build review request message
-    let message = `⭐ Olá ${clientName}!\n\n`;
+    let message = `⭐ Olá ${displayName}!\n\n`;
     message += `Esperamos que você tenha gostado do seu atendimento na ${barbershopName}`;
     
     if (serviceName) {

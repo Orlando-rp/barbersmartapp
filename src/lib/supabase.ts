@@ -29,6 +29,7 @@ export type Database = {
           id: string;
           barbershop_id: string | null;
           full_name: string | null;
+          preferred_name: string | null;
           avatar_url: string | null;
           phone: string | null;
           created_at: string;
@@ -53,6 +54,7 @@ export type Database = {
           id: string;
           barbershop_id: string;
           name: string;
+          preferred_name: string | null;
           email: string | null;
           phone: string;
           birth_date: string | null;
