@@ -171,15 +171,29 @@ updated_at timestamptz
 
 ```
 id uuid PK
-barbershop_id uuid FK
+barbershop_id uuid FK (matriz)
 user_id uuid FK
 specialties text[]
-commission_rate decimal(5,2)
-schedule jsonb
+commission_rate decimal(5,2) (default, usado se não houver config na unidade)
+schedule jsonb (default, usado se não houver config na unidade)
 active boolean
 created_at timestamptz
 updated_at timestamptz
 UNIQUE (barbershop_id, user_id)
+```
+
+## staff_units
+
+```
+id uuid PK
+staff_id uuid FK (referencia staff da matriz)
+barbershop_id uuid FK (unidade específica)
+commission_rate decimal(5,2) (config específica da unidade)
+schedule jsonb (horário específico da unidade)
+active boolean
+created_at timestamptz
+updated_at timestamptz
+UNIQUE (staff_id, barbershop_id)
 ```
 
 ## appointments
