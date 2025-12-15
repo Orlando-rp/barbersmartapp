@@ -5,15 +5,13 @@
 
 -- PASSO 1: Criar a barbearia principal "Barbearia do Bob" (matriz)
 -- Usando dados da barbearia Vitória Régia como base
-INSERT INTO barbershops (id, name, phone, email, address, city, state, active, parent_id, created_at)
+INSERT INTO barbershops (id, name, address, phone, email, active, parent_id, created_at)
 SELECT 
   gen_random_uuid(),
   'Barbearia do Bob',
+  address,
   phone,
   email,
-  NULL as address,
-  city,
-  state,
   true,
   NULL, -- parent_id NULL indica que é matriz
   now()
