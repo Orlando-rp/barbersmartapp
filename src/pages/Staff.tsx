@@ -46,6 +46,7 @@ interface StaffMember {
     full_name: string;
     phone: string;
     avatar_url: string;
+    preferred_name?: string | null;
     user_roles?: {
       id: string;
       role: string;
@@ -142,7 +143,8 @@ const Staff = () => {
           profiles!staff_user_id_fkey(
             full_name, 
             phone, 
-            avatar_url
+            avatar_url,
+            preferred_name
           )
         `)
         .in('barbershop_id', allBarbershopIds)
