@@ -793,7 +793,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       {/* Multi-Unit Schedule Section (shows when user has multiple units and role is barbeiro or admin+barber) */}
       {(role === 'barbeiro' || (role === 'admin' && isAlsoBarber)) && hasMultipleUnits && (
         <StaffUnitsScheduleSection
-          barbershopIds={barbershopIds}
+          barbershopIds={selectedBarbershopIds}
           schedule={unitSchedule}
           onScheduleChange={handleUnitScheduleChange}
         />
