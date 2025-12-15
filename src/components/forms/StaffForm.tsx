@@ -46,6 +46,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [loading, setLoading] = useState(false);
   
   const [fullName, setFullName] = useState(staff?.profiles?.full_name || "");
+  const [preferredName, setPreferredName] = useState(staff?.profiles?.preferred_name || "");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState(staff?.profiles?.phone || "");
   const [password, setPassword] = useState("");
@@ -297,6 +298,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           .from('profiles')
           .update({
             full_name: fullName,
+            preferred_name: preferredName || null,
             phone,
           })
           .eq('id', staff.user_id);
@@ -635,6 +637,20 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
             required
             className="text-sm"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="preferredName" className="text-sm">Como quer ser chamado</Label>
+          <Input
+            id="preferredName"
+            value={preferredName}
+            onChange={(e) => setPreferredName(e.target.value)}
+            placeholder="Ex: Zé, Dr. João"
+            className="text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Usado em relatórios e notificações
+          </p>
         </div>
 
         {!staff && (

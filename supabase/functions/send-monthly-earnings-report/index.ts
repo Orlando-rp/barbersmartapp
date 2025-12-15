@@ -80,7 +80,7 @@ serve(async (req) => {
           // Get staff profile info
           const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name, phone')
+            .select('full_name, preferred_name, phone')
             .eq('id', staff.user_id)
             .single();
 
@@ -88,6 +88,9 @@ serve(async (req) => {
             console.log(`⚠️ Profissional ${profile?.full_name || staff.id} sem telefone cadastrado`);
             continue;
           }
+          
+          // Use preferred_name if available
+          const displayName = profile.preferred_name || profile.full_name;
 
           // Calculate earnings for this staff member
           const { data: transactions } = await supabase
@@ -110,7 +113,7 @@ serve(async (req) => {
 
           // Format the report message
           const message = formatReportMessage({
-            staffName: profile.full_name,
+            staffName: displayName,
             barbershopName: barbershop.name,
             monthName,
             servicesCount,

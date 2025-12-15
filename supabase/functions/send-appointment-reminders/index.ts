@@ -119,7 +119,7 @@ serve(async (req) => {
           if (appointment.client_id) {
             const { data: clientData } = await supabase
               .from('clients')
-              .select('notification_enabled, notification_types')
+              .select('notification_enabled, notification_types, preferred_name')
               .eq('id', appointment.client_id)
               .maybeSingle();
             
@@ -134,8 +134,16 @@ serve(async (req) => {
                 console.log(`⚠️ Cliente ${appointment.client_name} não deseja receber lembretes`);
                 continue;
               }
+              
+              // Use preferred_name if available
+              if (clientData.preferred_name) {
+                appointment.client_display_name = clientData.preferred_name;
+              }
             }
           }
+          
+          // Display name for message (prefer preferred_name)
+          const displayName = appointment.client_display_name || appointment.client_name;
 
           if (!appointment.client_phone) {
             console.log(`⚠️ Agendamento ${appointment.id} sem telefone, pulando...`);
@@ -165,7 +173,7 @@ serve(async (req) => {
             timeLabel = `em ${Math.round(hoursUntil / 24)} dia(s)`;
           }
 
-          const message = `Olá ${appointment.client_name}! 👋
+          const message = `Olá ${displayName}! 👋
 
 🔔 Lembrete: Você tem um agendamento ${timeLabel}!
 

@@ -234,10 +234,13 @@ async function handleReviewFlow(
       // Get client name from phone
       const { data: client } = await supabase
         .from('clients')
-        .select('id, name')
+        .select('id, name, preferred_name')
         .eq('barbershop_id', barbershopId)
         .eq('phone', from)
         .maybeSingle();
+
+      // Use preferred_name if available
+      const displayName = client?.preferred_name || client?.name || 'Cliente via WhatsApp';
 
       // Save review
       const { error: reviewError } = await supabase
@@ -249,7 +252,7 @@ async function handleReviewFlow(
           staff_id: appointment.staff_id,
           rating,
           comment,
-          client_name: client?.name || 'Cliente via WhatsApp'
+          client_name: displayName
         });
 
       if (reviewError) {
