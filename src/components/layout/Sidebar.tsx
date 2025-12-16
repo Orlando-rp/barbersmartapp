@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Calendar,
@@ -12,6 +12,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Home,
   Shield,
   Clock,
@@ -23,6 +24,9 @@ import {
   Menu,
   Sparkles,
   Loader2,
+  Briefcase,
+  Megaphone,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -33,6 +37,8 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -44,32 +50,57 @@ interface NavItem {
   superAdminOnly?: boolean;
   adminOnly?: boolean;
   requiredFeature?: keyof PlanFeatures;
-  permission?: string; // Permissão customizável por role
+  permission?: string;
+  group: "operacoes" | "gestao" | "marketing" | "config" | "admin";
+}
+
+interface NavGroup {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
 }
 
 const navigation: NavItem[] = [
-  { name: "Dashboard", href: "/", icon: Home, permission: 'dashboard' },
-  { name: "Minhas Unidades", href: "/barbershops", icon: Building2, adminOnly: true },
-  { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit' },
-  { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit_reports' },
-  { name: "Agendamentos", href: "/appointments", icon: Calendar, requiredFeature: 'appointments', permission: 'appointments' },
-  { name: "Lista de Espera", href: "/waitlist", icon: ListChecks, requiredFeature: 'waitlist', permission: 'waitlist' },
-  { name: "Clientes", href: "/clients", icon: Users, requiredFeature: 'clients', permission: 'clients' },
-  { name: "Serviços", href: "/services", icon: Scissors, requiredFeature: 'services', permission: 'services' },
-  { name: "Equipe", href: "/staff", icon: UserCog, requiredFeature: 'staff_basic', permission: 'staff' },
-  { name: "Financeiro", href: "/finance", icon: DollarSign, requiredFeature: 'finance_basic', permission: 'finance' },
-  { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet, requiredFeature: 'staff_earnings', permission: 'meus_ganhos' },
-  { name: "Relatórios", href: "/reports", icon: BarChart3, requiredFeature: 'basic_reports', permission: 'reports' },
-  { name: "Marketing", href: "/marketing", icon: MessageSquare, requiredFeature: 'marketing_campaigns', permission: 'marketing' },
-  { name: "Avaliações", href: "/reviews", icon: StarIcon, requiredFeature: 'reviews', permission: 'reviews' },
-  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, requiredFeature: 'whatsapp_notifications', permission: 'whatsapp' },
-  { name: "Chat WhatsApp", href: "/whatsapp-chat", icon: MessageCircle, requiredFeature: 'whatsapp_chat', permission: 'whatsapp_chat' },
-  { name: "Chatbot IA", href: "/chatbot", icon: Bot, requiredFeature: 'whatsapp_chatbot', permission: 'chatbot' },
-  { name: "Horários", href: "/business-hours", icon: Clock, requiredFeature: 'business_hours', permission: 'business_hours' },
-  { name: "Auditoria", href: "/audit", icon: Shield, requiredFeature: 'audit_logs', permission: 'audit' },
-  { name: "Upgrade", href: "/upgrade", icon: Sparkles, adminOnly: true },
-  { name: "Configurações", href: "/settings", icon: Settings, permission: 'settings' },
-  { name: "Admin SaaS", href: "/saas-admin", icon: Shield, superAdminOnly: true },
+  // Operações
+  { name: "Dashboard", href: "/", icon: Home, permission: 'dashboard', group: "operacoes" },
+  { name: "Agendamentos", href: "/appointments", icon: Calendar, requiredFeature: 'appointments', permission: 'appointments', group: "operacoes" },
+  { name: "Lista de Espera", href: "/waitlist", icon: ListChecks, requiredFeature: 'waitlist', permission: 'waitlist', group: "operacoes" },
+  { name: "Clientes", href: "/clients", icon: Users, requiredFeature: 'clients', permission: 'clients', group: "operacoes" },
+  { name: "Horários", href: "/business-hours", icon: Clock, requiredFeature: 'business_hours', permission: 'business_hours', group: "operacoes" },
+  
+  // Gestão
+  { name: "Serviços", href: "/services", icon: Scissors, requiredFeature: 'services', permission: 'services', group: "gestao" },
+  { name: "Equipe", href: "/staff", icon: UserCog, requiredFeature: 'staff_basic', permission: 'staff', group: "gestao" },
+  { name: "Financeiro", href: "/finance", icon: DollarSign, requiredFeature: 'finance_basic', permission: 'finance', group: "gestao" },
+  { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet, requiredFeature: 'staff_earnings', permission: 'meus_ganhos', group: "gestao" },
+  { name: "Relatórios", href: "/reports", icon: BarChart3, requiredFeature: 'basic_reports', permission: 'reports', group: "gestao" },
+  { name: "Minhas Unidades", href: "/barbershops", icon: Building2, adminOnly: true, group: "gestao" },
+  { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit', group: "gestao" },
+  { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit_reports', group: "gestao" },
+  
+  // Marketing
+  { name: "Marketing", href: "/marketing", icon: MessageSquare, requiredFeature: 'marketing_campaigns', permission: 'marketing', group: "marketing" },
+  { name: "Avaliações", href: "/reviews", icon: StarIcon, requiredFeature: 'reviews', permission: 'reviews', group: "marketing" },
+  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, requiredFeature: 'whatsapp_notifications', permission: 'whatsapp', group: "marketing" },
+  { name: "Chat WhatsApp", href: "/whatsapp-chat", icon: MessageCircle, requiredFeature: 'whatsapp_chat', permission: 'whatsapp_chat', group: "marketing" },
+  { name: "Chatbot IA", href: "/chatbot", icon: Bot, requiredFeature: 'whatsapp_chatbot', permission: 'chatbot', group: "marketing" },
+  
+  // Config
+  { name: "Configurações", href: "/settings", icon: Settings, permission: 'settings', group: "config" },
+  { name: "Auditoria", href: "/audit", icon: Shield, requiredFeature: 'audit_logs', permission: 'audit', group: "config" },
+  { name: "Upgrade", href: "/upgrade", icon: Sparkles, adminOnly: true, group: "config" },
+  
+  // Admin
+  { name: "Admin SaaS", href: "/saas-admin", icon: Shield, superAdminOnly: true, group: "admin" },
+];
+
+const navGroups: Omit<NavGroup, "items">[] = [
+  { id: "operacoes", name: "Operações", icon: Briefcase },
+  { id: "gestao", name: "Gestão", icon: BarChart3 },
+  { id: "marketing", name: "Marketing", icon: Megaphone },
+  { id: "config", name: "Configurações", icon: Wrench },
+  { id: "admin", name: "Administração", icon: Shield },
 ];
 
 // Mobile Sidebar using Sheet
@@ -82,41 +113,21 @@ export const MobileSidebar = () => {
   const { hasPermission } = useRolePermissions();
   const location = useLocation();
 
-  // Fechar sidebar ao mudar de rota
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
 
-  const filteredNavigation = navigation.filter(item => {
-    // Super admin tem acesso total
-    if (userRole === 'super_admin') {
-      if (item.superAdminOnly) return true;
-      return true;
-    }
-    
-    // Itens exclusivos de super admin
+  const filterNavItem = (item: NavItem) => {
+    if (userRole === 'super_admin') return true;
     if (item.superAdminOnly) return false;
-    
-    // Itens exclusivos de admin
     if (item.adminOnly && userRole !== 'admin') return false;
-    
-    // Verificar multi-unidade
-    if (item.multiUnitOnly) {
-      if (barbershops.length <= 1) return false;
-    }
-    
-    // Verificar feature flag do plano
-    if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
-      return false;
-    }
-    
-    // Verificar permissão customizável por role (apenas para barbeiro/recepcionista)
-    if (item.permission && userRole !== 'admin') {
-      if (!hasPermission(item.permission)) return false;
-    }
-    
+    if (item.multiUnitOnly && barbershops.length <= 1) return false;
+    if (item.requiredFeature && !hasFeature(item.requiredFeature)) return false;
+    if (item.permission && userRole !== 'admin' && !hasPermission(item.permission)) return false;
     return true;
-  });
+  };
+
+  const filteredNavigation = navigation.filter(filterNavItem);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -128,15 +139,10 @@ export const MobileSidebar = () => {
       <SheetContent side="left" className="w-72 p-0">
         <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
         <div className="flex flex-col h-full bg-card">
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center space-x-2">
               {currentLogoUrl ? (
-                <img 
-                  src={currentLogoUrl} 
-                  alt={effectiveBranding?.system_name || 'Logo'} 
-                  className="w-8 h-8 rounded-lg object-contain"
-                />
+                <img src={currentLogoUrl} alt={effectiveBranding?.system_name || 'Logo'} className="w-8 h-8 rounded-lg object-contain" />
               ) : (
                 <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-sm">
@@ -148,7 +154,6 @@ export const MobileSidebar = () => {
             </div>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {filteredNavigation.map((item) => (
               <NavLink
@@ -158,9 +163,7 @@ export const MobileSidebar = () => {
                 className={({ isActive }) =>
                   cn(
                     "flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-soft"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   )
                 }
               >
@@ -170,40 +173,8 @@ export const MobileSidebar = () => {
             ))}
           </nav>
 
-          {/* Bottom Info */}
           <div className="p-4 border-t border-border">
-            <div className="barbershop-card p-3">
-              {subscriptionLoading ? (
-                <div className="flex items-center justify-center py-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              ) : subscription ? (
-                <>
-                  <div className="text-xs text-muted-foreground">Plano Atual</div>
-                  <div className="text-sm font-semibold text-brand">{subscription.planName}</div>
-                  {subscription.isTrialing && subscription.trialEndsAt && (
-                    <div className="text-xs text-warning mt-1">
-                      Trial até {format(subscription.trialEndsAt, "dd/MM/yyyy", { locale: ptBR })}
-                    </div>
-                  )}
-                  {!subscription.isTrialing && subscription.validUntil && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Válido até {format(subscription.validUntil, "dd/MM/yyyy", { locale: ptBR })}
-                    </div>
-                  )}
-                  {subscription.status === 'none' && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Sem assinatura ativa
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="text-xs text-muted-foreground">Plano Atual</div>
-                  <div className="text-sm font-semibold text-muted-foreground">Não configurado</div>
-                </>
-              )}
-            </div>
+            <SubscriptionInfo subscription={subscription} loading={subscriptionLoading} />
           </div>
         </div>
       </SheetContent>
@@ -211,45 +182,97 @@ export const MobileSidebar = () => {
   );
 };
 
+// Subscription Info Component
+const SubscriptionInfo = ({ subscription, loading }: { subscription: any; loading: boolean }) => {
+  if (loading) {
+    return (
+      <div className="barbershop-card p-3">
+        <div className="flex items-center justify-center py-2">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!subscription) {
+    return (
+      <div className="barbershop-card p-3">
+        <div className="text-xs text-muted-foreground">Plano Atual</div>
+        <div className="text-sm font-semibold text-muted-foreground">Não configurado</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="barbershop-card p-3">
+      <div className="text-xs text-muted-foreground">Plano Atual</div>
+      <div className="text-sm font-semibold text-brand">{subscription.planName}</div>
+      {subscription.isTrialing && subscription.trialEndsAt && (
+        <div className="text-xs text-warning mt-1">
+          Trial até {format(subscription.trialEndsAt, "dd/MM/yyyy", { locale: ptBR })}
+        </div>
+      )}
+      {!subscription.isTrialing && subscription.validUntil && (
+        <div className="text-xs text-muted-foreground mt-1">
+          Válido até {format(subscription.validUntil, "dd/MM/yyyy", { locale: ptBR })}
+        </div>
+      )}
+      {subscription.status === 'none' && (
+        <div className="text-xs text-muted-foreground mt-1">Sem assinatura ativa</div>
+      )}
+    </div>
+  );
+};
+
 // Desktop Sidebar
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('sidebar-groups');
+    return saved ? JSON.parse(saved) : { operacoes: true, gestao: true, marketing: true, config: true, admin: true };
+  });
+  
   const { barbershops, userRole } = useAuth();
   const { effectiveBranding, currentLogoUrl } = useBranding();
   const { hasFeature } = useFeatureFlags();
   const { subscription, loading: subscriptionLoading } = useSubscription();
   const { hasPermission } = useRolePermissions();
+  const location = useLocation();
 
-  const filteredNavigation = navigation.filter(item => {
-    // Super admin tem acesso total
-    if (userRole === 'super_admin') {
-      if (item.superAdminOnly) return true;
-      return true;
-    }
-    
-    // Itens exclusivos de super admin
+  const filterNavItem = (item: NavItem) => {
+    if (userRole === 'super_admin') return true;
     if (item.superAdminOnly) return false;
-    
-    // Itens exclusivos de admin
     if (item.adminOnly && userRole !== 'admin') return false;
-    
-    // Verificar multi-unidade
-    if (item.multiUnitOnly) {
-      if (barbershops.length <= 1) return false;
-    }
-    
-    // Verificar feature flag do plano
-    if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
-      return false;
-    }
-    
-    // Verificar permissão customizável por role (apenas para barbeiro/recepcionista)
-    if (item.permission && userRole !== 'admin') {
-      if (!hasPermission(item.permission)) return false;
-    }
-    
+    if (item.multiUnitOnly && barbershops.length <= 1) return false;
+    if (item.requiredFeature && !hasFeature(item.requiredFeature)) return false;
+    if (item.permission && userRole !== 'admin' && !hasPermission(item.permission)) return false;
     return true;
-  });
+  };
+
+  // Group navigation items
+  const groupedNavigation = useMemo(() => {
+    return navGroups.map(group => ({
+      ...group,
+      items: navigation.filter(item => item.group === group.id && filterNavItem(item))
+    })).filter(group => group.items.length > 0);
+  }, [userRole, barbershops.length, hasFeature, hasPermission]);
+
+  // Check if current route is in a group to auto-expand it
+  useEffect(() => {
+    const currentGroup = navigation.find(item => item.href === location.pathname)?.group;
+    if (currentGroup && !openGroups[currentGroup]) {
+      setOpenGroups(prev => ({ ...prev, [currentGroup]: true }));
+    }
+  }, [location.pathname]);
+
+  // Persist open groups state
+  useEffect(() => {
+    localStorage.setItem('sidebar-groups', JSON.stringify(openGroups));
+  }, [openGroups]);
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   return (
     <div className={cn(
@@ -261,11 +284,7 @@ const Sidebar = () => {
         {!collapsed ? (
           <div className="flex items-center space-x-2 min-w-0">
             {currentLogoUrl ? (
-              <img 
-                src={currentLogoUrl} 
-                alt={effectiveBranding?.system_name || 'Logo'} 
-                className="w-8 h-8 rounded-lg object-contain shrink-0"
-              />
+              <img src={currentLogoUrl} alt={effectiveBranding?.system_name || 'Logo'} className="w-8 h-8 rounded-lg object-contain shrink-0" />
             ) : (
               <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center shrink-0">
                 <span className="text-primary-foreground font-bold text-sm">
@@ -278,11 +297,7 @@ const Sidebar = () => {
         ) : (
           <div className="flex items-center justify-center w-full">
             {currentLogoUrl ? (
-              <img 
-                src={currentLogoUrl} 
-                alt={effectiveBranding?.system_name || 'Logo'} 
-                className="w-8 h-8 rounded-lg object-contain"
-              />
+              <img src={currentLogoUrl} alt={effectiveBranding?.system_name || 'Logo'} className="w-8 h-8 rounded-lg object-contain" />
             ) : (
               <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">
@@ -305,74 +320,79 @@ const Sidebar = () => {
       {/* Expand button when collapsed */}
       {collapsed && (
         <div className="flex justify-center py-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCollapsed(false)}
-            className="h-8 w-8"
-          >
+          <Button variant="ghost" size="icon" onClick={() => setCollapsed(false)} className="h-8 w-8">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       )}
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-2 overflow-y-auto py-2">
-        {filteredNavigation.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.href}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-soft"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent",
-                collapsed && "justify-center px-2"
-              )
-            }
-          >
-            <item.icon className={cn("h-5 w-5", !collapsed && "mr-3")} />
-            {!collapsed && <span>{item.name}</span>}
-          </NavLink>
+      {/* Navigation with Groups */}
+      <nav className="flex-1 px-2 overflow-y-auto py-2 space-y-1">
+        {groupedNavigation.map((group) => (
+          <div key={group.id}>
+            {collapsed ? (
+              // Collapsed mode: show items directly with tooltips
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <Tooltip key={item.name} delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <NavLink
+                        to={item.href}
+                        className={({ isActive }) =>
+                          cn(
+                            "flex items-center justify-center px-2 py-2.5 rounded-lg transition-colors",
+                            isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                          )
+                        }
+                      >
+                        <item.icon className="h-5 w-5" />
+                      </NavLink>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>{item.name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            ) : (
+              // Expanded mode: show collapsible groups
+              <Collapsible open={openGroups[group.id]} onOpenChange={() => toggleGroup(group.id)}>
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors rounded-lg hover:bg-accent/50">
+                    <div className="flex items-center gap-2">
+                      <group.icon className="h-4 w-4" />
+                      <span>{group.name}</span>
+                    </div>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", openGroups[group.id] && "rotate-180")} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.name}
+                      to={item.href}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ml-2",
+                          isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                        )
+                      }
+                    >
+                      <item.icon className="h-4 w-4 mr-3" />
+                      <span>{item.name}</span>
+                    </NavLink>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+          </div>
         ))}
       </nav>
 
       {/* Bottom Info */}
       {!collapsed && (
         <div className="p-4 border-t border-border">
-          <div className="barbershop-card p-3">
-            {subscriptionLoading ? (
-              <div className="flex items-center justify-center py-2">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : subscription ? (
-              <>
-                <div className="text-xs text-muted-foreground">Plano Atual</div>
-                <div className="text-sm font-semibold text-brand">{subscription.planName}</div>
-                {subscription.isTrialing && subscription.trialEndsAt && (
-                  <div className="text-xs text-warning mt-1">
-                    Trial até {format(subscription.trialEndsAt, "dd/MM/yyyy", { locale: ptBR })}
-                  </div>
-                )}
-                {!subscription.isTrialing && subscription.validUntil && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Válido até {format(subscription.validUntil, "dd/MM/yyyy", { locale: ptBR })}
-                  </div>
-                )}
-                {subscription.status === 'none' && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Sem assinatura ativa
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="text-xs text-muted-foreground">Plano Atual</div>
-                <div className="text-sm font-semibold text-muted-foreground">Não configurado</div>
-              </>
-            )}
-          </div>
+          <SubscriptionInfo subscription={subscription} loading={subscriptionLoading} />
         </div>
       )}
     </div>
