@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "./contexts/AuthContext";
 import { BrandingProvider } from "./contexts/BrandingContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ProtectedRoute, AdminRoute, SuperAdminRoute } from "./components/ProtectedRoute";
 import { PageLoader } from "./components/ui/page-loader";
 
 // Lazy load all pages for code splitting
@@ -71,33 +71,38 @@ const App = () => (
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/complete-profile" element={<ProtectedRoute><CompleteProfile /></ProtectedRoute>} />
                   
-                  {/* Protected Routes */}
+                  {/* Protected Routes - Verificação automática de permissão por rota */}
                   <Route path="/debug" element={<ProtectedRoute><Debug /></ProtectedRoute>} />
                   <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                   <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
                   <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
                   <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
-                  <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                  <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
-                  <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-                  <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-                  <Route path="/business-hours" element={<ProtectedRoute><BusinessHours /></ProtectedRoute>} />
-                  <Route path="/client-history/:clientId" element={<ProtectedRoute><ClientHistory /></ProtectedRoute>} />
-                  <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
-                  <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppSettings /></ProtectedRoute>} />
-                  <Route path="/whatsapp-chat" element={<ProtectedRoute><WhatsAppChat /></ProtectedRoute>} />
-                  <Route path="/chatbot" element={<ProtectedRoute><ChatbotSettings /></ProtectedRoute>} />
-                  <Route path="/waitlist" element={<ProtectedRoute><Waitlist /></ProtectedRoute>} />
                   <Route path="/meus-ganhos" element={<ProtectedRoute><MyEarnings /></ProtectedRoute>} />
-                  <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
-                  <Route path="/multi-unit" element={<ProtectedRoute><MultiUnitDashboard /></ProtectedRoute>} />
-                  <Route path="/staff-multi-unit" element={<ProtectedRoute><StaffMultiUnit /></ProtectedRoute>} />
-                  <Route path="/multi-unit-reports" element={<ProtectedRoute><MultiUnitReports /></ProtectedRoute>} />
-                  <Route path="/barbershops" element={<ProtectedRoute><Barbershops /></ProtectedRoute>} />
-                  <Route path="/saas-admin" element={<ProtectedRoute><SaasAdminPortal /></ProtectedRoute>} />
-                  <Route path="/upgrade" element={<ProtectedRoute><UpgradePlans /></ProtectedRoute>} />
+                  <Route path="/waitlist" element={<ProtectedRoute><Waitlist /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                  <Route path="/client-history/:clientId" element={<ProtectedRoute><ClientHistory /></ProtectedRoute>} />
+                  
+                  {/* Admin Only Routes */}
+                  <Route path="/staff" element={<AdminRoute><Staff /></AdminRoute>} />
+                  <Route path="/finance" element={<AdminRoute><Finance /></AdminRoute>} />
+                  <Route path="/reports" element={<AdminRoute><Reports /></AdminRoute>} />
+                  <Route path="/marketing" element={<AdminRoute><Marketing /></AdminRoute>} />
+                  <Route path="/business-hours" element={<AdminRoute><BusinessHours /></AdminRoute>} />
+                  <Route path="/reviews" element={<AdminRoute><Reviews /></AdminRoute>} />
+                  <Route path="/whatsapp" element={<AdminRoute><WhatsAppSettings /></AdminRoute>} />
+                  <Route path="/whatsapp-chat" element={<AdminRoute><WhatsAppChat /></AdminRoute>} />
+                  <Route path="/chatbot" element={<AdminRoute><ChatbotSettings /></AdminRoute>} />
+                  <Route path="/audit" element={<AdminRoute><AuditLogs /></AdminRoute>} />
+                  <Route path="/multi-unit" element={<AdminRoute><MultiUnitDashboard /></AdminRoute>} />
+                  <Route path="/staff-multi-unit" element={<AdminRoute><StaffMultiUnit /></AdminRoute>} />
+                  <Route path="/multi-unit-reports" element={<AdminRoute><MultiUnitReports /></AdminRoute>} />
+                  <Route path="/barbershops" element={<AdminRoute><Barbershops /></AdminRoute>} />
+                  <Route path="/upgrade" element={<AdminRoute><UpgradePlans /></AdminRoute>} />
+                  
+                  {/* Super Admin Only Routes */}
+                  <Route path="/saas-admin" element={<SuperAdminRoute><SaasAdminPortal /></SuperAdminRoute>} />
+                  
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
