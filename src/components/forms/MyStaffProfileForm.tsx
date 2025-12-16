@@ -27,10 +27,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { StaffServicesSection } from "./StaffServicesSection";
 import { 
   Loader2, Calendar, Briefcase, Save, Building2, Clock, DollarSign, 
-  Copy, RefreshCw, ArrowRight, Check, MoreVertical 
+  Copy, RefreshCw, ArrowRight, Check, Home
 } from "lucide-react";
 
 import { 
@@ -38,55 +39,52 @@ import {
   StandardWeeklySchedule, 
   DEFAULT_WEEKLY_SCHEDULE, 
   DAY_LABELS, 
-  DAY_NAMES,
   DayName 
 } from '@/types/schedule';
 
 interface StaffUnit {
-  id: string;
+  id: string; // staff_units.id or staff.id for matriz
+  staff_id: string; // staff.id (always the same for all units)
   barbershop_id: string;
   barbershop_name: string;
   commission_rate: number;
   schedule: StandardWeeklySchedule | null;
   active: boolean;
+  is_matriz: boolean;
 }
 
 export const MyStaffProfileForm = () => {
-  const { user, barbershopId, barbershops } = useAuth();
+  const { user, barbershopId } = useAuth();
+  const { sharedBarbershopId } = useSharedBarbershopId();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [staffUnits, setStaffUnits] = useState<StaffUnit[]>([]);
   const [activeTab, setActiveTab] = useState<string>("");
+  const [mainStaffId, setMainStaffId] = useState<string>("");
 
-  // Services selection (per unit)
-  const [selectedServices, setSelectedServices] = useState<Record<string, string[]>>({});
+  // Services selection (shared across all units - stored at staff level)
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   
   // Sync dialog state
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [syncSource, setSyncSource] = useState<string>("");
   const [syncTargets, setSyncTargets] = useState<string[]>([]);
-  const [syncType, setSyncType] = useState<'services' | 'schedule' | 'both'>('services');
+  const [syncType, setSyncType] = useState<'schedule'>('schedule');
 
   useEffect(() => {
-    if (user) {
+    if (user && sharedBarbershopId) {
       loadStaffData();
     }
-  }, [user, barbershops]);
+  }, [user, sharedBarbershopId]);
 
   const loadStaffData = async () => {
-    if (!user) return;
+    if (!user || !sharedBarbershopId) return;
 
     try {
       setLoading(true);
-      const barbershopIds = barbershops.map(b => b.id);
 
-      if (barbershopIds.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Load all staff records for this user across units
+      // 1. Load main staff record (from matriz)
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select(`
@@ -98,36 +96,99 @@ export const MyStaffProfileForm = () => {
           barbershops(name)
         `)
         .eq('user_id', user.id)
-        .in('barbershop_id', barbershopIds);
+        .eq('barbershop_id', sharedBarbershopId)
+        .maybeSingle();
 
       if (staffError) throw staffError;
 
-      if (staffData && staffData.length > 0) {
-        const units = staffData.map((s: any) => ({
-          id: s.id,
-          barbershop_id: s.barbershop_id,
-          barbershop_name: s.barbershops?.name || 'Barbearia',
-          commission_rate: s.commission_rate || 0,
-          schedule: s.schedule || DEFAULT_WEEKLY_SCHEDULE,
-          active: s.active,
-        }));
+      if (!staffData) {
+        // Try to find any staff record for this user
+        const { data: anyStaff } = await supabase
+          .from('staff')
+          .select('id, barbershop_id, commission_rate, schedule, active, barbershops(name)')
+          .eq('user_id', user.id)
+          .eq('active', true)
+          .limit(1)
+          .maybeSingle();
+
+        if (!anyStaff) {
+          setLoading(false);
+          return;
+        }
+
+        // Use this staff record
+        setMainStaffId(anyStaff.id);
+        
+        const units: StaffUnit[] = [{
+          id: anyStaff.id,
+          staff_id: anyStaff.id,
+          barbershop_id: anyStaff.barbershop_id,
+          barbershop_name: (anyStaff.barbershops as any)?.name || 'Barbearia',
+          commission_rate: anyStaff.commission_rate || 0,
+          schedule: anyStaff.schedule || DEFAULT_WEEKLY_SCHEDULE,
+          active: anyStaff.active,
+          is_matriz: true,
+        }];
 
         setStaffUnits(units);
         setActiveTab(units[0]?.barbershop_id || "");
 
-        // Load services for each unit
-        const servicesMap: Record<string, string[]> = {};
-        for (const unit of units) {
-          const { data: services } = await supabase
-            .from('staff_services')
-            .select('service_id')
-            .eq('staff_id', unit.id)
-            .eq('is_active', true);
-
-          servicesMap[unit.barbershop_id] = services?.map(s => s.service_id) || [];
-        }
-        setSelectedServices(servicesMap);
+        // Load services
+        await loadStaffServices(anyStaff.id);
+        setLoading(false);
+        return;
       }
+
+      setMainStaffId(staffData.id);
+
+      // 2. Load staff_units for this staff
+      const { data: unitsData, error: unitsError } = await supabase
+        .from('staff_units')
+        .select(`
+          id,
+          barbershop_id,
+          commission_rate,
+          schedule,
+          active,
+          barbershops(name)
+        `)
+        .eq('staff_id', staffData.id)
+        .eq('active', true);
+
+      // Build units list - start with matriz
+      const units: StaffUnit[] = [{
+        id: staffData.id,
+        staff_id: staffData.id,
+        barbershop_id: staffData.barbershop_id,
+        barbershop_name: (staffData.barbershops as any)?.name || 'Matriz',
+        commission_rate: staffData.commission_rate || 0,
+        schedule: staffData.schedule || DEFAULT_WEEKLY_SCHEDULE,
+        active: staffData.active,
+        is_matriz: true,
+      }];
+
+      // Add units from staff_units
+      if (unitsData && unitsData.length > 0 && !unitsError) {
+        for (const unit of unitsData) {
+          units.push({
+            id: unit.id,
+            staff_id: staffData.id,
+            barbershop_id: unit.barbershop_id,
+            barbershop_name: (unit.barbershops as any)?.name || 'Unidade',
+            commission_rate: unit.commission_rate || staffData.commission_rate || 0,
+            schedule: unit.schedule || staffData.schedule || DEFAULT_WEEKLY_SCHEDULE,
+            active: unit.active,
+            is_matriz: false,
+          });
+        }
+      }
+
+      setStaffUnits(units);
+      setActiveTab(units[0]?.barbershop_id || "");
+
+      // 3. Load services (shared at staff level)
+      await loadStaffServices(staffData.id);
+
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
       toast({
@@ -138,6 +199,16 @@ export const MyStaffProfileForm = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadStaffServices = async (staffId: string) => {
+    const { data: services } = await supabase
+      .from('staff_services')
+      .select('service_id')
+      .eq('staff_id', staffId)
+      .eq('is_active', true);
+
+    setSelectedServices(services?.map(s => s.service_id) || []);
   };
 
   const handleScheduleChange = (
@@ -164,30 +235,9 @@ export const MyStaffProfileForm = () => {
     }));
   };
 
-  const handleServicesChange = useCallback((barbershopId: string, services: string[]) => {
-    setSelectedServices(prev => ({
-      ...prev,
-      [barbershopId]: services,
-    }));
+  const handleServicesChange = useCallback((services: string[]) => {
+    setSelectedServices(services);
   }, []);
-
-  // Sync services from one unit to others
-  const handleSyncServices = (sourceUnitId: string, targetUnitIds: string[]) => {
-    const sourceServices = selectedServices[sourceUnitId] || [];
-    
-    setSelectedServices(prev => {
-      const updated = { ...prev };
-      targetUnitIds.forEach(targetId => {
-        updated[targetId] = [...sourceServices];
-      });
-      return updated;
-    });
-
-    toast({
-      title: 'Serviços sincronizados!',
-      description: `Serviços copiados para ${targetUnitIds.length} unidade(s).`,
-    });
-  };
 
   // Sync schedule from one unit to others
   const handleSyncSchedule = (sourceUnitId: string, targetUnitIds: string[]) => {
@@ -213,31 +263,18 @@ export const MyStaffProfileForm = () => {
   // Handle sync confirmation
   const handleConfirmSync = () => {
     if (!syncSource || syncTargets.length === 0) return;
-
-    if (syncType === 'services' || syncType === 'both') {
-      handleSyncServices(syncSource, syncTargets);
-    }
-    if (syncType === 'schedule' || syncType === 'both') {
-      handleSyncSchedule(syncSource, syncTargets);
-    }
-
+    handleSyncSchedule(syncSource, syncTargets);
     setSyncDialogOpen(false);
     setSyncSource("");
     setSyncTargets([]);
   };
 
   // Open sync dialog
-  const openSyncDialog = (sourceUnitId: string, type: 'services' | 'schedule' | 'both') => {
+  const openSyncDialog = (sourceUnitId: string) => {
     setSyncSource(sourceUnitId);
-    setSyncType(type);
+    setSyncType('schedule');
     setSyncTargets(staffUnits.filter(u => u.barbershop_id !== sourceUnitId).map(u => u.barbershop_id));
     setSyncDialogOpen(true);
-  };
-
-  // Sync all services to match current unit
-  const syncServicesToAllUnits = (sourceUnitId: string) => {
-    const otherUnits = staffUnits.filter(u => u.barbershop_id !== sourceUnitId);
-    handleSyncServices(sourceUnitId, otherUnits.map(u => u.barbershop_id));
   };
 
   // Sync all schedules to match current unit
@@ -247,38 +284,53 @@ export const MyStaffProfileForm = () => {
   };
 
   const handleSave = async () => {
+    if (!mainStaffId) return;
+
     try {
       setSaving(true);
 
       for (const unit of staffUnits) {
-        // Update schedule
-        const { error: staffError } = await supabase
-          .from('staff')
-          .update({
-            schedule: unit.schedule,
-          })
-          .eq('id', unit.id);
+        if (unit.is_matriz) {
+          // Update main staff record
+          const { error: staffError } = await supabase
+            .from('staff')
+            .update({
+              schedule: unit.schedule,
+              commission_rate: unit.commission_rate,
+            })
+            .eq('id', unit.id);
 
-        if (staffError) throw staffError;
+          if (staffError) throw staffError;
+        } else {
+          // Update staff_units record
+          const { error: unitError } = await supabase
+            .from('staff_units')
+            .update({
+              schedule: unit.schedule,
+              commission_rate: unit.commission_rate,
+            })
+            .eq('id', unit.id);
 
-        // Update services
+          if (unitError) throw unitError;
+        }
+      }
+
+      // Update services (at staff level)
+      await supabase
+        .from('staff_services')
+        .delete()
+        .eq('staff_id', mainStaffId);
+
+      if (selectedServices.length > 0) {
+        const inserts = selectedServices.map(serviceId => ({
+          staff_id: mainStaffId,
+          service_id: serviceId,
+          is_active: true,
+        }));
+
         await supabase
           .from('staff_services')
-          .delete()
-          .eq('staff_id', unit.id);
-
-        const unitServices = selectedServices[unit.barbershop_id] || [];
-        if (unitServices.length > 0) {
-          const inserts = unitServices.map(serviceId => ({
-            staff_id: unit.id,
-            service_id: serviceId,
-            is_active: true,
-          }));
-
-          await supabase
-            .from('staff_services')
-            .insert(inserts);
-        }
+          .insert(inserts);
       }
 
       toast({
@@ -319,7 +371,7 @@ export const MyStaffProfileForm = () => {
     );
   }
 
-  // Single unit view
+  // Single unit view (only matriz, no additional units)
   if (staffUnits.length === 1) {
     const unit = staffUnits[0];
     const schedule = unit.schedule || DEFAULT_WEEKLY_SCHEDULE;
@@ -404,9 +456,9 @@ export const MyStaffProfileForm = () => {
         </Card>
 
         <StaffServicesSection
-          barbershopId={unit.barbershop_id}
-          selectedServices={selectedServices[unit.barbershop_id] || []}
-          onServicesChange={(services) => handleServicesChange(unit.barbershop_id, services)}
+          barbershopId={sharedBarbershopId || unit.barbershop_id}
+          selectedServices={selectedServices}
+          onServicesChange={handleServicesChange}
         />
 
         <div className="flex justify-end">
@@ -438,7 +490,7 @@ export const MyStaffProfileForm = () => {
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-4">
         <Building2 className="h-5 w-5 text-primary" />
-        <span className="font-medium">Você trabalha em {staffUnits.length} unidades</span>
+        <span className="font-medium">Você trabalha em {staffUnits.length} localidade(s)</span>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -449,10 +501,14 @@ export const MyStaffProfileForm = () => {
               value={unit.barbershop_id}
               className="flex items-center gap-2 text-xs sm:text-sm"
             >
-              <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              {unit.is_matriz ? (
+                <Home className="h-3 w-3 sm:h-4 sm:w-4" />
+              ) : (
+                <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              )}
               <span className="truncate max-w-[100px] sm:max-w-none">{unit.barbershop_name}</span>
-              {unit.active && (
-                <Badge variant="secondary" className="hidden sm:inline-flex text-xs">Ativo</Badge>
+              {unit.is_matriz && (
+                <Badge variant="secondary" className="hidden sm:inline-flex text-xs">Matriz</Badge>
               )}
             </TabsTrigger>
           ))}
@@ -474,6 +530,12 @@ export const MyStaffProfileForm = () => {
                   <DollarSign className="h-3 w-3" />
                   {unit.commission_rate}% comissão
                 </Badge>
+                {unit.is_matriz && (
+                  <Badge variant="default" className="gap-1">
+                    <Home className="h-3 w-3" />
+                    Matriz
+                  </Badge>
+                )}
               </div>
 
               {/* Schedule */}
@@ -583,56 +645,30 @@ export const MyStaffProfileForm = () => {
                   })}
                 </CardContent>
               </Card>
-
-              {/* Services */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-medium flex items-center gap-2">
-                    <Briefcase className="h-4 w-4" />
-                    Serviços em {unit.barbershop_name}
-                  </h3>
-                  {staffUnits.length > 1 && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="gap-2">
-                          <RefreshCw className="h-4 w-4" />
-                          <span className="hidden sm:inline">Sincronizar</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Copiar serviços para</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => syncServicesToAllUnits(unit.barbershop_id)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Todas as outras unidades
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        {staffUnits
-                          .filter(u => u.barbershop_id !== unit.barbershop_id)
-                          .map(targetUnit => (
-                            <DropdownMenuItem
-                              key={targetUnit.barbershop_id}
-                              onClick={() => handleSyncServices(unit.barbershop_id, [targetUnit.barbershop_id])}
-                            >
-                              <ArrowRight className="h-4 w-4 mr-2" />
-                              {targetUnit.barbershop_name}
-                            </DropdownMenuItem>
-                          ))
-                        }
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-                <StaffServicesSection
-                  barbershopId={unit.barbershop_id}
-                  selectedServices={selectedServices[unit.barbershop_id] || []}
-                  onServicesChange={(services) => handleServicesChange(unit.barbershop_id, services)}
-                />
-              </div>
             </TabsContent>
           );
         })}
       </Tabs>
+
+      {/* Shared Services Section - services are the same across all units */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Briefcase className="h-4 w-4" />
+            Serviços que Realizo
+          </CardTitle>
+          <CardDescription>
+            Os serviços são compartilhados em todas as unidades onde você trabalha
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <StaffServicesSection
+            barbershopId={sharedBarbershopId || staffUnits[0]?.barbershop_id}
+            selectedServices={selectedServices}
+            onServicesChange={handleServicesChange}
+          />
+        </CardContent>
+      </Card>
 
       {/* Quick Sync All Button */}
       {staffUnits.length > 1 && (
@@ -640,20 +676,20 @@ export const MyStaffProfileForm = () => {
           <CardContent className="py-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h4 className="font-medium text-sm">Sincronização Rápida</h4>
+                <h4 className="font-medium text-sm">Sincronização Rápida de Horários</h4>
                 <p className="text-xs text-muted-foreground">
-                  Copie todas as configurações da unidade atual para as outras
+                  Copie os horários da unidade atual para as outras
                 </p>
               </div>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => openSyncDialog(activeTab, 'both')}
+                  onClick={() => openSyncDialog(activeTab)}
                   className="gap-2"
                 >
                   <RefreshCw className="h-4 w-4" />
-                  Sincronizar Tudo
+                  Sincronizar Horários
                 </Button>
               </div>
             </div>
@@ -667,27 +703,9 @@ export const MyStaffProfileForm = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Sincronização</AlertDialogTitle>
             <AlertDialogDescription>
-              {syncType === 'both' && (
-                <>
-                  Isso irá copiar <strong>horários e serviços</strong> de{' '}
-                  <strong>{staffUnits.find(u => u.barbershop_id === syncSource)?.barbershop_name}</strong>{' '}
-                  para as outras {syncTargets.length} unidade(s).
-                </>
-              )}
-              {syncType === 'services' && (
-                <>
-                  Isso irá copiar os <strong>serviços</strong> de{' '}
-                  <strong>{staffUnits.find(u => u.barbershop_id === syncSource)?.barbershop_name}</strong>{' '}
-                  para as outras {syncTargets.length} unidade(s).
-                </>
-              )}
-              {syncType === 'schedule' && (
-                <>
-                  Isso irá copiar os <strong>horários</strong> de{' '}
-                  <strong>{staffUnits.find(u => u.barbershop_id === syncSource)?.barbershop_name}</strong>{' '}
-                  para as outras {syncTargets.length} unidade(s).
-                </>
-              )}
+              Isso irá copiar os <strong>horários</strong> de{' '}
+              <strong>{staffUnits.find(u => u.barbershop_id === syncSource)?.barbershop_name}</strong>{' '}
+              para as outras {syncTargets.length} unidade(s).
               <br /><br />
               As configurações atuais das outras unidades serão substituídas.
             </AlertDialogDescription>
