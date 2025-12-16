@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { supabase } from "@/lib/supabase";
@@ -15,6 +15,7 @@ import { AppointmentsWidget } from "@/components/dashboard/widgets/AppointmentsW
 import { ClientsWidget } from "@/components/dashboard/widgets/ClientsWidget";
 import { OccupancyWidget } from "@/components/dashboard/widgets/OccupancyWidget";
 import { WidgetSelector, defaultWidgets, WidgetConfig } from "@/components/dashboard/WidgetSelector";
+import { DraggableWidgetGrid } from "@/components/dashboard/DraggableWidgetGrid";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
 import { 
   Calendar, 
@@ -25,7 +26,8 @@ import {
   UserPlus,
   Clock,
   Star,
-  Settings
+  Settings,
+  GripVertical
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,6 +42,8 @@ interface DashboardStats {
   retentionRate: number;
 }
 
+const defaultWidgetOrder = ['revenue', 'appointments', 'clients', 'occupancy'];
+
 const Index = () => {
   const { barbershopId, barbershops, selectedBarbershopId, activeBarbershopIds } = useAuth();
   const { branding } = useBranding();
@@ -49,6 +53,10 @@ const Index = () => {
   const [widgets, setWidgets] = useState<WidgetConfig[]>(() => {
     const saved = localStorage.getItem('dashboard-widgets');
     return saved ? JSON.parse(saved) : defaultWidgets;
+  });
+  const [widgetOrder, setWidgetOrder] = useState<string[]>(() => {
+    const saved = localStorage.getItem('dashboard-widget-order');
+    return saved ? JSON.parse(saved) : defaultWidgetOrder;
   });
   const [customizeMode, setCustomizeMode] = useState(false);
 
@@ -310,6 +318,31 @@ const Index = () => {
     toast.success('Widget removido');
   };
 
+  const handleReorderWidgets = useCallback((newOrder: string[]) => {
+    setWidgetOrder(newOrder);
+    localStorage.setItem('dashboard-widget-order', JSON.stringify(newOrder));
+    toast.success('Ordem dos widgets atualizada');
+  }, []);
+
+  // Render widget by ID
+  const renderWidget = useCallback((widgetId: string) => {
+    const widget = widgets.find(w => w.id === widgetId);
+    if (!widget?.enabled) return null;
+
+    switch (widgetId) {
+      case 'revenue':
+        return <RevenueWidget onRemove={customizeMode ? () => handleRemoveWidget('revenue') : undefined} />;
+      case 'appointments':
+        return <AppointmentsWidget onRemove={customizeMode ? () => handleRemoveWidget('appointments') : undefined} />;
+      case 'clients':
+        return <ClientsWidget onRemove={customizeMode ? () => handleRemoveWidget('clients') : undefined} />;
+      case 'occupancy':
+        return <OccupancyWidget onRemove={customizeMode ? () => handleRemoveWidget('occupancy') : undefined} />;
+      default:
+        return null;
+    }
+  }, [widgets, customizeMode]);
+
   if (loading) {
     return (
       <Layout>
@@ -345,8 +378,17 @@ const Index = () => {
                 size="sm"
                 onClick={() => setCustomizeMode(!customizeMode)}
               >
-                <Settings className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">{customizeMode ? 'Salvar' : 'Personalizar'}</span>
+                {customizeMode ? (
+                  <>
+                    <GripVertical className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Arraste para reorganizar</span>
+                  </>
+                ) : (
+                  <>
+                    <Settings className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Personalizar</span>
+                  </>
+                )}
               </Button>
               {customizeMode && (
                 <WidgetSelector
@@ -362,23 +404,22 @@ const Index = () => {
               </AppointmentDialog>
             </div>
           </div>
+          {customizeMode && (
+            <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+              <GripVertical className="h-3 w-3" />
+              Arraste os widgets pelo ícone para reorganizá-los
+            </p>
+          )}
         </div>
 
-        {/* Real-time Widgets */}
-        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-          {widgets.find(w => w.id === 'revenue')?.enabled && (
-            <RevenueWidget onRemove={customizeMode ? () => handleRemoveWidget('revenue') : undefined} />
-          )}
-          {widgets.find(w => w.id === 'appointments')?.enabled && (
-            <AppointmentsWidget onRemove={customizeMode ? () => handleRemoveWidget('appointments') : undefined} />
-          )}
-          {widgets.find(w => w.id === 'clients')?.enabled && (
-            <ClientsWidget onRemove={customizeMode ? () => handleRemoveWidget('clients') : undefined} />
-          )}
-          {widgets.find(w => w.id === 'occupancy')?.enabled && (
-            <OccupancyWidget onRemove={customizeMode ? () => handleRemoveWidget('occupancy') : undefined} />
-          )}
-        </div>
+        {/* Real-time Widgets with Drag & Drop */}
+        <DraggableWidgetGrid
+          widgetOrder={widgetOrder}
+          onReorder={handleReorderWidgets}
+          isCustomizeMode={customizeMode}
+        >
+          {renderWidget}
+        </DraggableWidgetGrid>
 
         {/* Legacy Quick Stats - Only show if no widgets are enabled OR consolidated view */}
         {(!widgets.some(w => w.enabled) || isConsolidatedView) && (
