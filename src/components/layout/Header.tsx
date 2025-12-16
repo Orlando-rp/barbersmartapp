@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import BarbershopSelector from "./BarbershopSelector";
 import { NotificationsDropdown } from "./NotificationsDropdown";
-import { MobileSidebar } from "./Sidebar";
+import { CommandPaletteTrigger } from "./CommandPalette";
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
@@ -64,10 +64,8 @@ const Header = () => {
   return (
     <header className="h-14 lg:h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex items-center justify-between h-full px-3 lg:px-6">
-        {/* Mobile Menu + Logo */}
-          <div className="flex items-center gap-2 lg:gap-6">
-          <MobileSidebar />
-          
+        {/* Logo + Barbershop Selector */}
+        <div className="flex items-center gap-2 lg:gap-6">
           {/* Logo - Only visible on mobile/tablet, hidden on desktop where it's in sidebar */}
           <div className="flex items-center space-x-2 lg:hidden">
             {currentLogoUrl ? (
@@ -95,7 +93,10 @@ const Header = () => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 lg:gap-4">
+        <div className="flex items-center gap-1 lg:gap-3">
+          {/* Command Palette Trigger */}
+          <CommandPaletteTrigger className="hidden sm:flex" />
+
           {/* Notifications */}
           <NotificationsDropdown />
 
