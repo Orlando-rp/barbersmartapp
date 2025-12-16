@@ -9,7 +9,7 @@ import RevenueChart from "@/components/dashboard/RevenueChart";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DashboardSkeleton } from "@/components/skeletons";
 import { RevenueWidget } from "@/components/dashboard/widgets/RevenueWidget";
 import { AppointmentsWidget } from "@/components/dashboard/widgets/AppointmentsWidget";
 import { ClientsWidget } from "@/components/dashboard/widgets/ClientsWidget";
@@ -346,9 +346,7 @@ const Index = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-96">
-          <LoadingSpinner size="lg" />
-        </div>
+        <DashboardSkeleton />
       </Layout>
     );
   }
