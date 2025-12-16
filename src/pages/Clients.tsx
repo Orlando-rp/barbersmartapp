@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { ClientDialog } from "@/components/dialogs/ClientDialog";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,42 +25,41 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Plus, Search, Phone, Mail, Calendar, MoreVertical, Pencil, Trash2, BarChart, Upload } from "lucide-react";
+import { 
+  Users, Plus, Search, Phone, Mail, Calendar, MoreVertical, 
+  Pencil, Trash2, BarChart, Upload, ArrowUpDown, ArrowUp, 
+  ArrowDown, Filter, X, UserPlus, TrendingUp, Star
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
+
+type SortField = 'name' | 'created_at' | 'phone';
+type SortDirection = 'asc' | 'desc';
+type PeriodFilter = 'all' | 'this_month' | 'last_month' | 'this_year';
 
 const Clients = () => {
   const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
-  const [filteredClients, setFilteredClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingClient, setEditingClient] = useState<any>(null);
   const [deletingClient, setDeletingClient] = useState<any>(null);
+  
+  // Filtros e ordenação
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
 
   useEffect(() => {
     if (sharedBarbershopId && allRelatedBarbershopIds.length > 0 && !loadingBarbershop) {
       fetchClients();
     }
   }, [sharedBarbershopId, allRelatedBarbershopIds, loadingBarbershop]);
-
-  useEffect(() => {
-    // Filter clients based on search term
-    if (searchTerm.trim() === "") {
-      setFilteredClients(clients);
-    } else {
-      const filtered = clients.filter(client =>
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.phone.includes(searchTerm)
-      );
-      setFilteredClients(filtered);
-    }
-  }, [searchTerm, clients]);
 
   const fetchClients = async () => {
     if (!sharedBarbershopId || allRelatedBarbershopIds.length === 0) return;
@@ -76,7 +76,6 @@ const Clients = () => {
 
       if (error) throw error;
       setClients(data || []);
-      setFilteredClients(data || []);
     } catch (error: any) {
       toast({
         title: 'Erro ao carregar clientes',
@@ -87,6 +86,99 @@ const Clients = () => {
       setLoading(false);
     }
   };
+
+  // Extrair todas as tags únicas
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    clients.forEach(client => {
+      if (client.tags && Array.isArray(client.tags)) {
+        client.tags.forEach((tag: string) => tags.add(tag));
+      }
+    });
+    return Array.from(tags).sort();
+  }, [clients]);
+
+  // Filtrar e ordenar clientes
+  const filteredClients = useMemo(() => {
+    let result = [...clients];
+
+    // Filtro de busca
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(client =>
+        client.name.toLowerCase().includes(term) ||
+        client.email?.toLowerCase().includes(term) ||
+        client.phone.includes(searchTerm) ||
+        client.preferred_name?.toLowerCase().includes(term)
+      );
+    }
+
+    // Filtro de período
+    if (periodFilter !== 'all') {
+      const now = new Date();
+      result = result.filter(client => {
+        const created = new Date(client.created_at);
+        switch (periodFilter) {
+          case 'this_month':
+            return created.getMonth() === now.getMonth() && 
+                   created.getFullYear() === now.getFullYear();
+          case 'last_month':
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            return created.getMonth() === lastMonth.getMonth() && 
+                   created.getFullYear() === lastMonth.getFullYear();
+          case 'this_year':
+            return created.getFullYear() === now.getFullYear();
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filtro de tag
+    if (selectedTag !== 'all') {
+      result = result.filter(client =>
+        client.tags && client.tags.includes(selectedTag)
+      );
+    }
+
+    // Ordenação
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case 'created_at':
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case 'phone':
+          comparison = a.phone.localeCompare(b.phone);
+          break;
+      }
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [clients, searchTerm, periodFilter, selectedTag, sortField, sortDirection]);
+
+  // Estatísticas
+  const stats = useMemo(() => {
+    const now = new Date();
+    const thisMonth = clients.filter(c => {
+      const created = new Date(c.created_at);
+      return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+    }).length;
+
+    const lastMonth = clients.filter(c => {
+      const created = new Date(c.created_at);
+      const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return created.getMonth() === last.getMonth() && created.getFullYear() === last.getFullYear();
+    }).length;
+
+    const growth = lastMonth > 0 ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100) : thisMonth > 0 ? 100 : 0;
+
+    return { total: clients.length, thisMonth, lastMonth, growth };
+  }, [clients]);
 
   const handleDeleteClient = async () => {
     if (!deletingClient) return;
@@ -115,6 +207,32 @@ const Clients = () => {
     }
   };
 
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setPeriodFilter('all');
+    setSelectedTag('all');
+    setSortField('created_at');
+    setSortDirection('desc');
+  };
+
+  const hasActiveFilters = searchTerm || periodFilter !== 'all' || selectedTag !== 'all';
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-50" />;
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="h-3 w-3 text-primary" /> : 
+      <ArrowDown className="h-3 w-3 text-primary" />;
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -132,7 +250,9 @@ const Clients = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Clientes</h1>
-            <p className="text-sm text-muted-foreground">Gerencie a base de clientes</p>
+            <p className="text-sm text-muted-foreground">
+              {filteredClients.length} de {clients.length} clientes
+            </p>
           </div>
           <div className="flex gap-2">
             <ClientImportDialog onSuccess={fetchClients}>
@@ -155,32 +275,40 @@ const Clients = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card className="barbershop-card">
             <CardContent className="p-3 md:pt-6 md:p-6">
-              <div className="text-lg md:text-2xl font-bold text-foreground">{clients.length}</div>
-              <p className="text-xs md:text-sm text-muted-foreground">Total Clientes</p>
-            </CardContent>
-          </Card>
-          <Card className="barbershop-card">
-            <CardContent className="p-3 md:pt-6 md:p-6">
-              <div className="text-lg md:text-2xl font-bold text-success">
-                {clients.filter(c => {
-                  const created = new Date(c.created_at);
-                  const now = new Date();
-                  return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
-                }).length}
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Total</span>
               </div>
-              <p className="text-xs md:text-sm text-muted-foreground">Novos (Mês)</p>
+              <div className="text-lg md:text-2xl font-bold text-foreground mt-1">{stats.total}</div>
             </CardContent>
           </Card>
           <Card className="barbershop-card">
             <CardContent className="p-3 md:pt-6 md:p-6">
-              <div className="text-lg md:text-2xl font-bold text-primary">-</div>
-              <p className="text-xs md:text-sm text-muted-foreground">Retenção</p>
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-success" />
+                <span className="text-xs text-muted-foreground">Novos (Mês)</span>
+              </div>
+              <div className="text-lg md:text-2xl font-bold text-success mt-1">{stats.thisMonth}</div>
             </CardContent>
           </Card>
           <Card className="barbershop-card">
             <CardContent className="p-3 md:pt-6 md:p-6">
-              <div className="text-lg md:text-2xl font-bold text-warning">-</div>
-              <p className="text-xs md:text-sm text-muted-foreground">Avaliação</p>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Crescimento</span>
+              </div>
+              <div className={`text-lg md:text-2xl font-bold mt-1 ${stats.growth >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {stats.growth >= 0 ? '+' : ''}{stats.growth}%
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="barbershop-card">
+            <CardContent className="p-3 md:pt-6 md:p-6">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-warning" />
+                <span className="text-xs text-muted-foreground">Mês Anterior</span>
+              </div>
+              <div className="text-lg md:text-2xl font-bold text-foreground mt-1">{stats.lastMonth}</div>
             </CardContent>
           </Card>
         </div>
@@ -188,14 +316,86 @@ const Clients = () => {
         {/* Filters */}
         <Card className="barbershop-card">
           <CardContent className="p-3 sm:p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Buscar cliente..." 
-                className="pl-10 text-sm h-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="flex flex-col gap-3">
+              {/* Search and Main Filters */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Buscar por nome, email ou telefone..." 
+                    className="pl-10 text-sm h-9"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <Select value={periodFilter} onValueChange={(v: PeriodFilter) => setPeriodFilter(v)}>
+                    <SelectTrigger className="w-[140px] h-9 text-sm">
+                      <Calendar className="h-3 w-3 mr-2" />
+                      <SelectValue placeholder="Período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="this_month">Este mês</SelectItem>
+                      <SelectItem value="last_month">Mês anterior</SelectItem>
+                      <SelectItem value="this_year">Este ano</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {allTags.length > 0 && (
+                    <Select value={selectedTag} onValueChange={setSelectedTag}>
+                      <SelectTrigger className="w-[140px] h-9 text-sm">
+                        <Filter className="h-3 w-3 mr-2" />
+                        <SelectValue placeholder="Tag" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas tags</SelectItem>
+                        {allTags.map(tag => (
+                          <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {hasActiveFilters && (
+                    <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Sort Buttons */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="hidden sm:inline">Ordenar por:</span>
+                <div className="flex gap-1">
+                  <Button 
+                    variant={sortField === 'name' ? 'secondary' : 'ghost'}
+                    size="sm" 
+                    className="h-7 px-2 text-xs"
+                    onClick={() => toggleSort('name')}
+                  >
+                    Nome <SortIcon field="name" />
+                  </Button>
+                  <Button 
+                    variant={sortField === 'created_at' ? 'secondary' : 'ghost'}
+                    size="sm" 
+                    className="h-7 px-2 text-xs"
+                    onClick={() => toggleSort('created_at')}
+                  >
+                    Data <SortIcon field="created_at" />
+                  </Button>
+                  <Button 
+                    variant={sortField === 'phone' ? 'secondary' : 'ghost'}
+                    size="sm" 
+                    className="h-7 px-2 text-xs"
+                    onClick={() => toggleSort('phone')}
+                  >
+                    Telefone <SortIcon field="phone" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -203,17 +403,47 @@ const Clients = () => {
         {/* Clients List */}
         <Card className="barbershop-card">
           <CardHeader className="p-3 md:p-6">
-            <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-              <Users className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-              Lista de Clientes
+            <CardTitle className="flex items-center justify-between text-sm md:text-base">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                Lista de Clientes
+              </div>
+              {filteredClients.length !== clients.length && (
+                <Badge variant="secondary" className="text-xs">
+                  {filteredClients.length} resultado{filteredClients.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-            <div className="space-y-2 md:space-y-4">
+            <div className="space-y-2 md:space-y-3">
               {filteredClients.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8 text-sm">
-                  {searchTerm ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado. Clique em 'Novo' para começar."}
-                </p>
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <div className="mb-4 text-muted-foreground">
+                    {searchTerm || hasActiveFilters ? <Search className="h-12 w-12" /> : <Users className="h-12 w-12" />}
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    {searchTerm || hasActiveFilters ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+                  </h3>
+                  <p className="text-muted-foreground mb-4 max-w-md">
+                    {searchTerm || hasActiveFilters 
+                      ? "Tente ajustar os filtros ou termo de busca" 
+                      : "Comece adicionando seu primeiro cliente"}
+                  </p>
+                  {hasActiveFilters ? (
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      <X className="h-4 w-4 mr-2" />
+                      Limpar Filtros
+                    </Button>
+                  ) : (
+                    <ClientDialog editingClient={null} onSuccess={fetchClients}>
+                      <Button variant="premium" size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Novo Cliente
+                      </Button>
+                    </ClientDialog>
+                  )}
+                </div>
               ) : (
                 filteredClients.map((client) => (
                 <div
@@ -237,15 +467,13 @@ const Clients = () => {
                     
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground text-sm md:text-base flex items-center gap-2">
-                        <span className="truncate">{client.name}</span>
-                        {client.tags && client.tags.length > 0 && (
-                          <div className="hidden md:flex gap-1">
-                            {client.tags.slice(0, 2).map((tag: string) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
+                        <span className="truncate">
+                          {client.preferred_name || client.name}
+                        </span>
+                        {client.preferred_name && client.preferred_name !== client.name && (
+                          <span className="text-xs text-muted-foreground truncate hidden lg:inline">
+                            ({client.name})
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 md:gap-4 text-xs text-muted-foreground">
@@ -253,11 +481,31 @@ const Clients = () => {
                           <Phone className="h-3 w-3 mr-1 shrink-0" />
                           <span className="truncate">{client.phone}</span>
                         </div>
+                        {client.email && (
+                          <div className="hidden md:flex items-center">
+                            <Mail className="h-3 w-3 mr-1 shrink-0" />
+                            <span className="truncate max-w-[150px]">{client.email}</span>
+                          </div>
+                        )}
                         <div className="hidden sm:flex items-center">
                           <Calendar className="h-3 w-3 mr-1 shrink-0" />
                           {new Date(client.created_at).toLocaleDateString('pt-BR')}
                         </div>
                       </div>
+                      {client.tags && client.tags.length > 0 && (
+                        <div className="flex gap-1 mt-1">
+                          {client.tags.slice(0, 3).map((tag: string) => (
+                            <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {client.tags.length > 3 && (
+                            <Badge variant="outline" className="text-xs px-1.5 py-0">
+                              +{client.tags.length - 3}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -267,7 +515,7 @@ const Clients = () => {
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="bg-popover">
                       <DropdownMenuItem onClick={() => navigate(`/client-history/${client.id}`)}>
                         <BarChart className="h-4 w-4 mr-2" />
                         Ver Histórico
