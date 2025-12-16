@@ -9,6 +9,7 @@ interface Barbershop {
   id: string;
   name: string;
   is_primary: boolean;
+  parent_id?: string | null;
 }
 
 interface AuthContextType {
@@ -98,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (roleData?.role === 'super_admin') {
         const { data: allBarbershops, error: allBarbershopsError } = await supabase
           .from('barbershops')
-          .select('id, name')
+          .select('id, name, parent_id')
           .eq('active', true)
           .order('name');
 
@@ -108,7 +109,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const mappedBarbershops: Barbershop[] = allBarbershops.map((b: any) => ({
             id: b.id,
             name: b.name,
-            is_primary: false
+            is_primary: false,
+            parent_id: b.parent_id
           }));
           setBarbershops(mappedBarbershops);
           // Super admin starts with "All" view (null)
@@ -135,7 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           is_primary,
           barbershops:barbershop_id (
             id,
-            name
+            name,
+            parent_id
           )
         `)
         .eq('user_id', userId);
@@ -168,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (profileData?.barbershop_id) {
           const { data: barbershopData } = await supabase
             .from('barbershops')
-            .select('id, name')
+            .select('id, name, parent_id')
             .eq('id', profileData.barbershop_id)
             .maybeSingle();
 
@@ -176,7 +179,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const fallbackBarbershop = {
               id: barbershopData.id,
               name: barbershopData.name,
-              is_primary: true
+              is_primary: true,
+              parent_id: barbershopData.parent_id
             };
             setBarbershops([fallbackBarbershop]);
             setBarbershopId(profileData.barbershop_id);
@@ -187,7 +191,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const mappedBarbershops: Barbershop[] = userBarbershopsData.map((ub: any) => ({
           id: ub.barbershops?.id || ub.barbershop_id,
           name: ub.barbershops?.name || 'Barbearia',
-          is_primary: ub.is_primary
+          is_primary: ub.is_primary,
+          parent_id: ub.barbershops?.parent_id || null
         }));
 
         setBarbershops(mappedBarbershops);
