@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBusinessHoursValidation } from "@/hooks/useBusinessHoursValidation";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { useStaffServices } from "@/hooks/useStaffServices";
+import { useSelectableUnits } from "@/hooks/useSelectableUnits";
 import { toast as sonnerToast } from "sonner";
 import { DayProps, DayContent } from "react-day-picker";
 
@@ -44,8 +45,10 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   const { sharedBarbershopId, allRelatedBarbershopIds } = useSharedBarbershopId();
   const { toast } = useToast();
   
-  // Se o usuário tem múltiplas barbearias, começa na seleção de unidade
-  const hasMultipleUnits = barbershops && barbershops.length > 1;
+  // Filtrar unidades selecionáveis (excluindo matrizes com filiais)
+  const { selectableUnits, hasMultipleUnits } = useSelectableUnits(barbershops);
+  
+  // Se o usuário tem múltiplas unidades, começa na seleção de unidade
   const [currentStep, setCurrentStep] = useState<WizardStep>(hasMultipleUnits ? 'unit' : 'professional');
   const [selectedUnitId, setSelectedUnitId] = useState<string>(barbershopId || "");
   
@@ -1008,7 +1011,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
     ? ['unit', 'professional', 'service', 'datetime', 'client', 'confirm']
     : ['professional', 'service', 'datetime', 'client', 'confirm'];
   
-  const selectedUnitData = barbershops?.find(b => b.id === selectedUnitId);
+  const selectedUnitData = selectableUnits.find(b => b.id === selectedUnitId);
 
   const selectedServiceData = services.find(s => s.id === selectedService);
   const selectedBarberData = staff.find(s => s.id === selectedBarber);
@@ -1073,7 +1076,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
               </div>
               
               <div className="grid grid-cols-1 gap-2 sm:gap-3">
-                {barbershops?.map((unit) => (
+                {selectableUnits.map((unit) => (
                   <button
                     key={unit.id}
                     type="button"

@@ -311,8 +311,8 @@ export default function PublicBooking() {
         .eq('active', true);
 
       if (!shop.parent_id && childUnits && childUnits.length > 0) {
-        const allUnits = [shop, ...childUnits];
-        setAvailableUnits(allUnits);
+        // Apenas as unidades são selecionáveis, não a matriz
+        setAvailableUnits(childUnits);
         setHasMultipleUnits(true);
         setStep(0);
         setLoading(false);
