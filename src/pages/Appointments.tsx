@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { AppointmentsSkeleton } from "@/components/skeletons";
 
 interface Appointment {
   id: string;
@@ -589,11 +590,7 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
         {/* Appointments List */}
         <div className="grid gap-4">
           {loading ? (
-            <Card className="barbershop-card">
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Carregando agendamentos...
-              </CardContent>
-            </Card>
+            <AppointmentsSkeleton />
           ) : filteredAppointments.length === 0 ? (
             <Card className="barbershop-card">
               <CardContent className="py-8 sm:py-12 text-center px-4">

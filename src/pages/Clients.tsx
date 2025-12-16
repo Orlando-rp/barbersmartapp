@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ClientsSkeleton } from "@/components/skeletons";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 
 type SortField = 'name' | 'created_at' | 'phone';
@@ -296,9 +296,7 @@ const Clients = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <LoadingSpinner size="lg" />
-        </div>
+        <ClientsSkeleton />
       </Layout>
     );
   }
