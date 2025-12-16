@@ -399,12 +399,50 @@ export default function PublicBooking() {
         .order('name');
       setServices(servicesData || []);
 
-      const { data: staffData } = await supabase
-        .from('staff')
-        .select('id, user_id, schedule, profiles(full_name, avatar_url)')
-        .eq('barbershop_id', unitId)
-        .eq('active', true);
-      setStaffList(staffData || []);
+      // Load staff - check if this is a unit (has parent_id) or matriz
+      let staffData: Staff[] = [];
+      
+      if (shop.parent_id) {
+        // This is a unit - fetch staff via staff_units
+        const { data: staffUnitsData, error: suError } = await supabase
+          .from('staff_units')
+          .select(`
+            staff_id,
+            schedule,
+            commission_rate,
+            staff:staff_id (
+              id,
+              user_id,
+              schedule,
+              profiles:user_id (full_name, avatar_url)
+            )
+          `)
+          .eq('barbershop_id', unitId)
+          .eq('active', true);
+
+        if (!suError && staffUnitsData) {
+          staffData = staffUnitsData.map((su: any) => ({
+            id: su.staff?.id,
+            user_id: su.staff?.user_id,
+            // Use unit-specific schedule if available, otherwise staff's default schedule
+            schedule: su.schedule || su.staff?.schedule,
+            profiles: su.staff?.profiles,
+          })).filter((s: any) => s.id);
+        }
+      } else {
+        // This is matriz - fetch staff directly
+        const { data: directStaff, error: dsError } = await supabase
+          .from('staff')
+          .select('id, user_id, schedule, profiles:user_id (full_name, avatar_url)')
+          .eq('barbershop_id', unitId)
+          .eq('active', true);
+
+        if (!dsError && directStaff) {
+          staffData = directStaff as Staff[];
+        }
+      }
+      
+      setStaffList(staffData);
 
       const { data: staffServicesData } = await supabase
         .from('staff_services')
