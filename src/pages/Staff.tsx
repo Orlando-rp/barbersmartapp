@@ -208,7 +208,10 @@ const Staff = () => {
             user_roles: rolesData || [],
             services: serviceNames,
             profiles: {
-              ...member.profiles,
+              full_name: member.profiles?.full_name || 'Nome não disponível',
+              phone: member.profiles?.phone || '',
+              avatar_url: member.profiles?.avatar_url || '',
+              preferred_name: member.profiles?.preferred_name || null,
               user_roles: rolesData || []
             }
           };
