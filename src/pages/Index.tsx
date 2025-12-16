@@ -41,7 +41,7 @@ interface DashboardStats {
 }
 
 const Index = () => {
-  const { barbershopId, barbershops, selectedBarbershopId } = useAuth();
+  const { barbershopId, barbershops, selectedBarbershopId, activeBarbershopIds } = useAuth();
   const { branding } = useBranding();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,8 +52,8 @@ const Index = () => {
   });
   const [customizeMode, setCustomizeMode] = useState(false);
 
-  const hasMultipleUnits = barbershops.length > 1;
-  // Visão consolidada quando "Todas as Unidades" está selecionado no Header (selectedBarbershopId === null)
+  // Visão consolidada quando múltiplas unidades selecionáveis e nenhuma selecionada
+  const hasMultipleUnits = activeBarbershopIds.length > 1;
   const isConsolidatedView = hasMultipleUnits && selectedBarbershopId === null;
 
   useEffect(() => {
@@ -63,10 +63,10 @@ const Index = () => {
   }, [barbershopId, isConsolidatedView]);
 
   useEffect(() => {
-    if (isConsolidatedView) {
+    if (isConsolidatedView && activeBarbershopIds.length > 0) {
       fetchConsolidatedStats();
     }
-  }, [isConsolidatedView, barbershops]);
+  }, [isConsolidatedView, activeBarbershopIds]);
 
   const fetchConsolidatedStats = async () => {
     try {
@@ -84,12 +84,13 @@ const Index = () => {
       const allServiceCounts: Record<string, number> = {};
       let totalAppointments = 0;
 
-      for (const barbershop of barbershops) {
+      // Usar apenas unidades operacionais (exclui matrizes com filhos)
+      for (const unitId of activeBarbershopIds) {
         // Agendamentos hoje
         const { count: todayCount } = await supabase
           .from('appointments')
           .select('*', { count: 'exact', head: true })
-          .eq('barbershop_id', barbershop.id)
+          .eq('barbershop_id', unitId)
           .eq('appointment_date', today);
         totalTodayAppointments += todayCount || 0;
 
@@ -97,7 +98,7 @@ const Index = () => {
         const { data: transactions } = await supabase
           .from('transactions')
           .select('amount')
-          .eq('barbershop_id', barbershop.id)
+          .eq('barbershop_id', unitId)
           .eq('type', 'receita')
           .gte('transaction_date', firstDayOfMonth);
         totalMonthRevenue += transactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
@@ -106,7 +107,7 @@ const Index = () => {
         const { count: clientCount } = await supabase
           .from('clients')
           .select('*', { count: 'exact', head: true })
-          .eq('barbershop_id', barbershop.id)
+          .eq('barbershop_id', unitId)
           .eq('active', true);
         totalActiveClients += clientCount || 0;
 
@@ -114,7 +115,7 @@ const Index = () => {
         const { data: appointments } = await supabase
           .from('appointments')
           .select('service_name, client_id')
-          .eq('barbershop_id', barbershop.id)
+          .eq('barbershop_id', unitId)
           .gte('appointment_date', firstDayOfMonth);
 
         appointments?.forEach(apt => {
@@ -128,7 +129,7 @@ const Index = () => {
         const { count: confirmedCount } = await supabase
           .from('appointments')
           .select('*', { count: 'exact', head: true })
-          .eq('barbershop_id', barbershop.id)
+          .eq('barbershop_id', unitId)
           .gte('appointment_date', firstDayOfMonth)
           .in('status', ['confirmado', 'concluido']);
         totalOccupancy += confirmedCount || 0;
@@ -137,14 +138,14 @@ const Index = () => {
         const { count: newClientsCount } = await supabase
           .from('clients')
           .select('*', { count: 'exact', head: true })
-          .eq('barbershop_id', barbershop.id)
+          .eq('barbershop_id', unitId)
           .gte('created_at', firstDayOfMonth);
         totalNewClients += newClientsCount || 0;
 
         // Avaliação
         try {
           const { data: avgRating } = await supabase
-            .rpc('get_barbershop_average_rating', { barbershop_uuid: barbershop.id });
+            .rpc('get_barbershop_average_rating', { barbershop_uuid: unitId });
           totalRating += avgRating || 0;
         } catch (e) {}
       }
@@ -161,7 +162,7 @@ const Index = () => {
         todayAppointments: totalTodayAppointments,
         monthRevenue: totalMonthRevenue,
         activeClients: totalActiveClients,
-        averageRating: barbershops.length > 0 ? Math.round((totalRating / barbershops.length) * 10) / 10 : 0,
+        averageRating: activeBarbershopIds.length > 0 ? Math.round((totalRating / activeBarbershopIds.length) * 10) / 10 : 0,
         popularServices,
         occupancyRate: totalAppointments > 0 ? Math.round((totalOccupancy / totalAppointments) * 100) : 0,
         newClientsThisMonth: totalNewClients,
@@ -333,7 +334,7 @@ const Index = () => {
               </h1>
               <p className="text-muted-foreground text-sm lg:text-lg">
                 {isConsolidatedView 
-                  ? `Visão consolidada de ${barbershops.length} unidades`
+                  ? `Visão consolidada de ${activeBarbershopIds.length} unidades`
                   : (branding?.tagline || 'Gerencie sua barbearia de forma inteligente')
                 }
               </p>
