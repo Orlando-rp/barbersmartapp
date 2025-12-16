@@ -12,16 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useMemo } from "react";
-
-interface BarbershopWithHierarchy {
-  id: string;
-  name: string;
-  is_primary?: boolean;
-  parent_id?: string | null;
-  isMatriz: boolean;
-  children: string[];
-}
+import { useSelectableUnits } from "@/hooks/useSelectableUnits";
 
 const BarbershopSelector = () => {
   const { barbershops, selectedBarbershopId, setSelectedBarbershop, userRole } = useAuth();
@@ -30,59 +21,12 @@ const BarbershopSelector = () => {
   // Regular users only see it if they have more than one barbershop
   const isSuperAdmin = userRole === 'super_admin';
   
-  if (!isSuperAdmin && barbershops.length <= 1) {
+  // Filtrar unidades selecionáveis (excluindo matrizes que têm unidades)
+  const { selectableUnits, matrizName, hasMultipleUnits } = useSelectableUnits(barbershops);
+  
+  if (!isSuperAdmin && !hasMultipleUnits) {
     return null;
   }
-
-  // Organizar barbearias: Mostrar apenas unidades (filiais), não a matriz
-  const { selectableUnits, matrizName } = useMemo(() => {
-    const matrizes: BarbershopWithHierarchy[] = [];
-    const unidades: BarbershopWithHierarchy[] = [];
-    
-    // Separar matrizes (sem parent_id) e unidades
-    barbershops.forEach((b: any) => {
-      const item: BarbershopWithHierarchy = {
-        ...b,
-        isMatriz: !b.parent_id,
-        children: [],
-      };
-      
-      if (!b.parent_id) {
-        matrizes.push(item);
-      } else {
-        unidades.push(item);
-      }
-    });
-    
-    // Identificar matrizes que TÊM unidades (não devem ser selecionáveis)
-    const matrizesComUnidades = new Set<string>();
-    unidades.forEach(u => {
-      if (u.parent_id) {
-        matrizesComUnidades.add(u.parent_id);
-      }
-    });
-    
-    // Resultado: unidades + matrizes SEM unidades (barbearias independentes)
-    const result: BarbershopWithHierarchy[] = [];
-    
-    // Adicionar matrizes que NÃO têm unidades (são barbearias independentes)
-    matrizes.forEach(matriz => {
-      if (!matrizesComUnidades.has(matriz.id)) {
-        result.push(matriz);
-      }
-    });
-    
-    // Adicionar todas as unidades
-    result.push(...unidades);
-    
-    // Nome da matriz principal (para exibição)
-    const matrizPrincipal = matrizes.find(m => matrizesComUnidades.has(m.id));
-    
-    return { 
-      selectableUnits: result,
-      matrizName: matrizPrincipal?.name || null
-    };
-  }, [barbershops]);
 
   const selectedBarbershop = barbershops.find(b => b.id === selectedBarbershopId);
 
@@ -132,7 +76,7 @@ const BarbershopSelector = () => {
         <DropdownMenuSeparator />
         
         {/* Barbershop list with hierarchy */}
-        <ScrollArea className={cn(isSuperAdmin && barbershops.length > 8 ? "h-[300px]" : "")}>
+        <ScrollArea className={cn(isSuperAdmin && selectableUnits.length > 8 ? "h-[300px]" : "")}>
           {selectableUnits.map((barbershop) => (
             <DropdownMenuItem
               key={barbershop.id}
@@ -143,7 +87,7 @@ const BarbershopSelector = () => {
               )}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                {barbershop.isMatriz ? (
+                {!barbershop.parent_id ? (
                   <Home className="h-4 w-4 flex-shrink-0 text-primary" />
                 ) : (
                   <GitBranch className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
