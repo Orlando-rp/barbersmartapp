@@ -19,7 +19,7 @@ interface StaffFormProps {
   onSuccess?: () => void;
 }
 
-// Schema for validating staff form data - only includes fields that exist in the database
+// Schema for validating staff form data
 const staffSchema = z.object({
   full_name: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(100),
   email: z.string().trim().email("Email inválido").max(255),
@@ -29,18 +29,8 @@ const staffSchema = z.object({
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional(),
 });
 
-// Schema for staff table insert/update - only valid database columns
-const staffTableSchema = z.object({
-  barbershop_id: z.string().uuid(),
-  user_id: z.string().uuid(),
-  specialties: z.array(z.string()).optional(),
-  commission_rate: z.number().min(0).max(100),
-  active: z.boolean(),
-  schedule: z.record(z.any()).nullable().optional(),
-});
-
 export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
-  const { barbershopId, barbershops } = useAuth();
+  const { barbershopId } = useAuth();
   const { sharedBarbershopId, loading: loadingSharedId } = useSharedBarbershopId();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -50,6 +40,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState(staff?.profiles?.phone || "");
   const [password, setPassword] = useState("");
+  
   // Determine primary role - admin takes precedence
   const primaryRole = staff?.user_roles?.find((r: any) => r.role === 'admin')?.role 
     || staff?.user_roles?.[0]?.role 
@@ -61,10 +52,8 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   const [commissionRate, setCommissionRate] = useState(staff?.commission_rate || 0);
   const [specialties] = useState<string[]>(staff?.specialties || []);
   
-  // Selected barbershops for new staff (multi-select)
-  const [selectedBarbershopIds, setSelectedBarbershopIds] = useState<string[]>(
-    staff?.barbershop_id ? [staff.barbershop_id] : (barbershopId ? [barbershopId] : [])
-  );
+  // Selected unit IDs for staff_units (unidades onde trabalha)
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
 
   // Individual schedule (for single unit)
   const [useCustomSchedule, setUseCustomSchedule] = useState(!!staff?.schedule);
@@ -80,43 +69,42 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
   // Avatar
   const [avatarUrl, setAvatarUrl] = useState<string | null>(staff?.profiles?.avatar_url || null);
 
-  // All available barbershops for selection
-  const [availableBarbershops, setAvailableBarbershops] = useState<Array<{id: string, name: string}>>([]);
+  // Available units for selection (unidades filhas da matriz)
+  const [availableUnits, setAvailableUnits] = useState<Array<{id: string, name: string}>>([]);
 
-  // Memoize barbershop IDs to prevent unnecessary re-renders
-  const barbershopIds = useMemo(() => barbershops.map(b => b.id), [barbershops]);
-  
-  // Check if user has multiple units
-  const hasMultipleUnits = barbershops.length > 1;
+  // Check if organization has multiple units
+  const hasMultipleUnits = availableUnits.length > 0;
 
-  // Toggle barbershop selection
-  const toggleBarbershopSelection = (shopId: string) => {
-    setSelectedBarbershopIds(prev => 
-      prev.includes(shopId) 
-        ? prev.filter(id => id !== shopId)
-        : [...prev, shopId]
+  // Toggle unit selection
+  const toggleUnitSelection = (unitId: string) => {
+    setSelectedUnitIds(prev => 
+      prev.includes(unitId) 
+        ? prev.filter(id => id !== unitId)
+        : [...prev, unitId]
     );
   };
 
-  // Load available barbershops
+  // Load available units (barbershops with parent_id = sharedBarbershopId)
   useEffect(() => {
-    const loadBarbershops = async () => {
+    const loadUnits = async () => {
+      if (!sharedBarbershopId) return;
+
       const { data } = await supabase
         .from('barbershops')
         .select('id, name')
-        .in('id', barbershopIds)
+        .eq('parent_id', sharedBarbershopId)
         .eq('active', true)
         .order('name');
       
       if (data) {
-        setAvailableBarbershops(data);
+        setAvailableUnits(data);
       }
     };
     
-    if (barbershopIds.length > 0) {
-      loadBarbershops();
+    if (sharedBarbershopId) {
+      loadUnits();
     }
-  }, [barbershopIds]);
+  }, [sharedBarbershopId]);
 
   // Stable callbacks for child components
   const handleUnitScheduleChange = useCallback((newSchedule: StaffUnitSchedule) => {
@@ -135,37 +123,35 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
     setUseCustomSchedule(value);
   }, []);
 
-  // Load staff services and all barbershops where this staff works
+  // Load staff services and staff_units for existing staff
   useEffect(() => {
     if (staff?.id) {
       loadStaffServices();
+      loadStaffUnits();
     }
-    if (staff?.user_id) {
-      loadStaffBarbershops();
-    }
-  }, [staff?.id, staff?.user_id]);
+  }, [staff?.id]);
 
-  // Load all barbershops where this staff member works (for multi-unit editing)
-  const loadStaffBarbershops = async () => {
-    if (!staff?.user_id) return;
+  // Load staff_units for existing staff member
+  const loadStaffUnits = async () => {
+    if (!staff?.id) return;
     
     try {
       const { data, error } = await supabase
-        .from('staff')
+        .from('staff_units')
         .select('barbershop_id')
-        .eq('user_id', staff.user_id)
+        .eq('staff_id', staff.id)
         .eq('active', true);
 
       if (error) {
-        console.warn('Erro ao carregar unidades do staff:', error);
+        console.warn('Erro ao carregar staff_units:', error);
         return;
       }
 
       if (data && data.length > 0) {
-        setSelectedBarbershopIds(data.map(s => s.barbershop_id));
+        setSelectedUnitIds(data.map(s => s.barbershop_id));
       }
     } catch (error) {
-      console.warn('Erro ao carregar unidades:', error);
+      console.warn('Tabela staff_units pode não existir ainda:', error);
     }
   };
 
@@ -222,11 +208,80 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
     }
   };
 
+  // Save staff_units for a staff member
+  const saveStaffUnits = async (staffId: string) => {
+    if (!hasMultipleUnits) return;
+
+    try {
+      // Get existing staff_units
+      const { data: existingUnits } = await supabase
+        .from('staff_units')
+        .select('id, barbershop_id')
+        .eq('staff_id', staffId);
+
+      const existingUnitIds = (existingUnits || []).map(u => u.barbershop_id);
+
+      // Units to add
+      const toAdd = selectedUnitIds.filter(id => !existingUnitIds.includes(id));
+      
+      // Units to remove (deactivate)
+      const toRemove = existingUnitIds.filter(id => !selectedUnitIds.includes(id));
+
+      // Add new units
+      if (toAdd.length > 0) {
+        const inserts = toAdd.map(unitId => ({
+          staff_id: staffId,
+          barbershop_id: unitId,
+          commission_rate: commissionRate,
+          schedule: unitSchedule,
+          active: true,
+        }));
+
+        const { error } = await supabase
+          .from('staff_units')
+          .insert(inserts);
+
+        if (error) {
+          console.warn('Erro ao adicionar staff_units:', error);
+        }
+      }
+
+      // Deactivate removed units
+      for (const unitId of toRemove) {
+        const record = existingUnits?.find(u => u.barbershop_id === unitId);
+        if (record) {
+          await supabase
+            .from('staff_units')
+            .update({ active: false })
+            .eq('id', record.id);
+        }
+      }
+
+      // Update existing units with new schedule/commission
+      const toUpdate = selectedUnitIds.filter(id => existingUnitIds.includes(id));
+      for (const unitId of toUpdate) {
+        await supabase
+          .from('staff_units')
+          .update({
+            commission_rate: commissionRate,
+            schedule: unitSchedule,
+            active: true,
+          })
+          .eq('staff_id', staffId)
+          .eq('barbershop_id', unitId);
+      }
+    } catch (error) {
+      console.warn('Erro ao salvar staff_units:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!barbershopId) {
+    // Use sharedBarbershopId (matriz) for staff creation
+    const matrizId = sharedBarbershopId || barbershopId;
+    
+    if (!matrizId) {
       toast({
         title: "Erro",
         description: "Barbearia não identificada.",
@@ -235,17 +290,13 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
       return;
     }
 
-    // Debug: verificar role do usuário atual
+    // Verify current user permissions
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser) {
-      const { data: userRoles, error: rolesError } = await supabase
+      const { data: userRoles } = await supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', currentUser.id);
-      
-      console.log('Current user ID:', currentUser.id);
-      console.log('Current barbershop ID:', barbershopId);
-      console.log('User roles found:', userRoles);
       
       if (!userRoles || userRoles.length === 0) {
         toast({
@@ -275,7 +326,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
     try {
       if (staff) {
-        // Editar membro existente
+        // ===== EDITAR MEMBRO EXISTENTE =====
         const validation = staffSchema.omit({ email: true, password: true }).safeParse({
           full_name: fullName,
           phone,
@@ -293,7 +344,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           return;
         }
 
-        // Atualizar profile
+        // Update profile
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
@@ -305,150 +356,67 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         if (profileError) throw profileError;
 
-        // Atualizar staff com schedule (usa unitSchedule se multi-unidade)
-        const scheduleToSave = hasMultipleUnits ? unitSchedule : (useCustomSchedule ? schedule : null);
-        
-        const staffUpdateData = {
-          specialties,
-          commission_rate: commissionRate,
-          schedule: scheduleToSave,
-        };
+        // Update staff record in matriz
+        const scheduleToSave = hasMultipleUnits ? null : (useCustomSchedule ? schedule : null);
         
         const { error: staffError } = await supabase
           .from('staff')
-          .update(staffUpdateData)
+          .update({
+            specialties,
+            commission_rate: commissionRate,
+            schedule: scheduleToSave,
+          })
           .eq('id', staff.id);
 
         if (staffError) throw staffError;
 
-        // Atualizar staff_services
+        // Update staff_services
         await saveStaffServices(staff.id);
 
-        // Gerenciar unidades onde o staff trabalha (multi-unit)
-        if (hasMultipleUnits && selectedBarbershopIds.length > 0) {
-          // Buscar todos os registros staff deste usuário
-          const { data: existingStaffRecords } = await supabase
-            .from('staff')
-            .select('id, barbershop_id')
-            .eq('user_id', staff.user_id);
+        // Update staff_units (multi-unit assignments)
+        await saveStaffUnits(staff.id);
 
-          const existingBarbershopIds = (existingStaffRecords || []).map(s => s.barbershop_id);
-
-          // Unidades para adicionar (não existem ainda)
-          const toAdd = selectedBarbershopIds.filter(id => !existingBarbershopIds.includes(id));
-          
-          // Unidades para remover (existem mas não estão selecionadas)
-          const toRemove = existingBarbershopIds.filter(id => !selectedBarbershopIds.includes(id));
-
-          // Adicionar novos registros staff
-          for (const shopId of toAdd) {
-            const { error: addError } = await supabase
-              .from('staff')
-              .insert({
-                barbershop_id: shopId,
-                user_id: staff.user_id,
-                commission_rate: commissionRate,
-                schedule: scheduleToSave,
-                active: true,
-              });
-
-            if (addError) {
-              console.warn(`Erro ao adicionar staff à unidade ${shopId}:`, addError);
-            }
-          }
-
-          // Desativar registros staff das unidades removidas
-          for (const shopId of toRemove) {
-            const recordToRemove = existingStaffRecords?.find(s => s.barbershop_id === shopId);
-            if (recordToRemove) {
-              const { error: removeError } = await supabase
-                .from('staff')
-                .update({ active: false })
-                .eq('id', recordToRemove.id);
-
-              if (removeError) {
-                console.warn(`Erro ao remover staff da unidade ${shopId}:`, removeError);
-              }
-            }
-          }
-
-          // Atualizar schedule em todos os registros staff ativos
-          for (const shopId of selectedBarbershopIds) {
-            if (!toAdd.includes(shopId)) { // Não precisa atualizar os recém-adicionados
-              const { error: updateError } = await supabase
-                .from('staff')
-                .update({ 
-                  schedule: scheduleToSave,
-                  commission_rate: commissionRate,
-                })
-                .eq('user_id', staff.user_id)
-                .eq('barbershop_id', shopId);
-
-              if (updateError) {
-                console.warn(`Erro ao atualizar staff na unidade ${shopId}:`, updateError);
-              }
-            }
-          }
-        }
-
-        // Gerenciar roles - admin pode também ser barbeiro
+        // Manage roles - admin can also be barber
         const existingRoles = staff.user_roles || [];
-        const existingAdminRole = existingRoles.find((r: any) => r.role === 'admin');
         const existingBarberRole = existingRoles.find((r: any) => r.role === 'barbeiro');
 
-        // Atualizar role principal
+        // Update primary role if changed
         if (existingRoles[0]?.role !== role) {
           const existingRoleId = existingRoles[0]?.id;
           
           if (existingRoleId) {
-            const { error: roleError } = await supabase
+            await supabase
               .from('user_roles')
               .update({ role })
               .eq('id', existingRoleId);
-
-            if (roleError) {
-              console.warn('Erro ao atualizar role:', roleError);
-            }
           } else {
-            const { error: roleError } = await supabase
+            await supabase
               .from('user_roles')
               .insert({
                 user_id: staff.user_id,
                 role,
-                barbershop_id: barbershopId,
+                barbershop_id: matrizId,
               });
-
-            if (roleError) {
-              console.warn('Erro ao inserir role:', roleError);
-            }
           }
         }
 
-        // Se é admin e também barbeiro, garantir que tem a role de barbeiro
+        // If admin and also barber, ensure barber role exists
         if (role === 'admin' && isAlsoBarber && !existingBarberRole) {
-          const { error: barberRoleError } = await supabase
+          await supabase
             .from('user_roles')
             .insert({
               user_id: staff.user_id,
               role: 'barbeiro',
-              barbershop_id: barbershopId,
+              barbershop_id: matrizId,
             });
-
-          if (barberRoleError) {
-            console.warn('Erro ao adicionar role de barbeiro:', barberRoleError);
-          }
         }
 
-        // Se é admin mas não é mais barbeiro, remover role de barbeiro
+        // If admin but no longer barber, remove barber role
         if (role === 'admin' && !isAlsoBarber && existingBarberRole) {
-          const { error: removeBarberError } = await supabase
+          await supabase
             .from('user_roles')
             .delete()
             .eq('id', existingBarberRole.id);
-
-          if (removeBarberError) {
-            console.warn('Erro ao remover role de barbeiro:', removeBarberError);
-          }
         }
 
         toast({
@@ -456,7 +424,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           description: `${fullName} foi atualizado com sucesso.`,
         });
       } else {
-        // Adicionar novo membro
+        // ===== ADICIONAR NOVO MEMBRO =====
         const validation = staffSchema.safeParse({
           full_name: fullName,
           email,
@@ -476,7 +444,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           return;
         }
 
-        // 1. Tentar criar usuário no Supabase Auth
+        // 1. Create user in Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
@@ -488,14 +456,13 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           },
         });
 
-        // Se usuário já existe, tentar buscar pelo email
         let userId = authData?.user?.id;
         
         if (authError) {
           if (authError.message === 'User already registered') {
             toast({
               title: "Usuário já cadastrado",
-              description: "Este email já está registrado no sistema. Por favor, use outro email ou entre em contato com o suporte.",
+              description: "Este email já está registrado no sistema. Por favor, use outro email.",
               variant: "destructive",
             });
             setLoading(false);
@@ -506,90 +473,88 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         
         if (!userId) throw new Error("Falha ao criar usuário");
 
-        // 2. Atualizar profile (caso o trigger não tenha criado)
-        const primaryBarbershopId = selectedBarbershopIds[0] || barbershopId;
-        
+        // 2. Create/update profile
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
             id: userId,
-            barbershop_id: primaryBarbershopId,
+            barbershop_id: matrizId,
             full_name: fullName,
             phone,
           });
 
         if (profileError) {
           console.error('Erro ao criar profile:', profileError);
-          // Continuar mesmo com erro no profile, pois o trigger pode ter criado
         }
 
-        // 3. Criar registros na tabela staff para cada barbearia selecionada
-        const scheduleToSave = hasMultipleUnits ? unitSchedule : (useCustomSchedule ? schedule : null);
-        const targetBarbershops = selectedBarbershopIds.length > 0 ? selectedBarbershopIds : [barbershopId];
+        // 3. Create staff record in MATRIZ (single record per user)
+        const scheduleToSave = hasMultipleUnits ? null : (useCustomSchedule ? schedule : null);
         
-        let firstStaffId: string | null = null;
-        
-        for (const shopId of targetBarbershops) {
-          if (!shopId) continue;
-          
-          const staffInsertData = {
-            barbershop_id: shopId,
+        const { data: staffResult, error: staffError } = await supabase
+          .from('staff')
+          .insert({
+            barbershop_id: matrizId,
             user_id: userId,
             specialties,
             commission_rate: commissionRate,
             active: true,
             schedule: scheduleToSave,
-          };
+          })
+          .select('id')
+          .single();
 
-          const { data: staffResult, error: staffError } = await supabase
-            .from('staff')
-            .insert(staffInsertData)
-            .select('id')
-            .single();
+        if (staffError) {
+          console.error('Erro ao criar staff:', staffError);
+          throw staffError;
+        }
 
-          if (staffError) {
-            console.error(`Erro ao criar staff para barbearia ${shopId}:`, staffError);
-            continue;
-          }
-          
-          if (!firstStaffId && staffResult?.id) {
-            firstStaffId = staffResult.id;
+        const staffId = staffResult.id;
+
+        // 4. Create staff_units for selected units
+        if (hasMultipleUnits && selectedUnitIds.length > 0) {
+          const unitInserts = selectedUnitIds.map(unitId => ({
+            staff_id: staffId,
+            barbershop_id: unitId,
+            commission_rate: commissionRate,
+            schedule: unitSchedule,
+            active: true,
+          }));
+
+          const { error: unitsError } = await supabase
+            .from('staff_units')
+            .insert(unitInserts);
+
+          if (unitsError) {
+            console.warn('Erro ao criar staff_units:', unitsError);
           }
         }
 
-
-        // 4. Atribuir role para a barbearia principal
+        // 5. Assign role for matriz
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
             user_id: userId,
             role,
-            barbershop_id: primaryBarbershopId,
+            barbershop_id: matrizId,
           });
 
         if (roleError) {
           console.error('Erro ao atribuir role:', roleError);
         }
 
-        // Se é admin e também barbeiro, adicionar role de barbeiro
+        // If admin and also barber, add barber role
         if (role === 'admin' && isAlsoBarber) {
-          const { error: barberRoleError } = await supabase
+          await supabase
             .from('user_roles')
             .insert({
               user_id: userId,
               role: 'barbeiro',
-              barbershop_id: primaryBarbershopId,
+              barbershop_id: matrizId,
             });
-
-          if (barberRoleError) {
-            console.warn('Erro ao adicionar role de barbeiro:', barberRoleError);
-          }
         }
 
-        // 5. Salvar staff_services para o primeiro staff criado
-        if (firstStaffId) {
-          await saveStaffServices(firstStaffId);
-        }
+        // 6. Save staff_services
+        await saveStaffServices(staffId);
 
         toast({
           title: "Membro adicionado!",
@@ -703,7 +668,6 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
             onChange={(e) => {
               const newRole = e.target.value;
               setRole(newRole);
-              // Auto-enable isAlsoBarber when switching to admin from barbeiro
               if (newRole === 'admin' && role === 'barbeiro') {
                 setIsAlsoBarber(true);
               }
@@ -750,56 +714,56 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         </div>
       </div>
 
-      {/* Barbershop Selection - Multi-select for staff when user has multiple units */}
-      {hasMultipleUnits && availableBarbershops.length > 1 && (
+      {/* Unit Selection - Multi-select for staff when organization has multiple units */}
+      {hasMultipleUnits && (
         <div className="space-y-3">
           <Label className="text-sm">
-            {staff ? 'Unidades onde trabalha *' : 'Barbearias onde irá trabalhar *'}
+            Unidades onde irá trabalhar
           </Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {availableBarbershops.map((shop) => (
+            {availableUnits.map((unit) => (
               <div
-                key={shop.id}
+                key={unit.id}
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selectedBarbershopIds.includes(shop.id)
+                  selectedUnitIds.includes(unit.id)
                     ? 'border-primary bg-primary/5'
                     : 'border-border hover:border-primary/50'
                 }`}
-                onClick={() => toggleBarbershopSelection(shop.id)}
+                onClick={() => toggleUnitSelection(unit.id)}
               >
                 <input
                   type="checkbox"
-                  checked={selectedBarbershopIds.includes(shop.id)}
-                  onChange={() => toggleBarbershopSelection(shop.id)}
+                  checked={selectedUnitIds.includes(unit.id)}
+                  onChange={() => toggleUnitSelection(unit.id)}
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <span className="text-sm font-medium">{shop.name}</span>
+                <span className="text-sm font-medium">{unit.name}</span>
               </div>
             ))}
           </div>
-          {selectedBarbershopIds.length === 0 && (
-            <p className="text-xs text-destructive">
-              Selecione pelo menos uma unidade
+          {selectedUnitIds.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              Se nenhuma unidade for selecionada, o profissional trabalhará apenas na matriz.
             </p>
           )}
-          {selectedBarbershopIds.length > 1 && !staff && (
+          {selectedUnitIds.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              O profissional será cadastrado em {selectedBarbershopIds.length} unidades. Você poderá configurar horários específicos para cada unidade depois.
+              O profissional atuará em {selectedUnitIds.length} unidade(s). Configurações de horário podem ser definidas por unidade.
             </p>
           )}
         </div>
       )}
 
-      {/* Multi-Unit Schedule Section (shows when user has multiple units and role is barbeiro or admin+barber) */}
-      {(role === 'barbeiro' || (role === 'admin' && isAlsoBarber)) && hasMultipleUnits && (
+      {/* Multi-Unit Schedule Section */}
+      {(role === 'barbeiro' || (role === 'admin' && isAlsoBarber)) && hasMultipleUnits && selectedUnitIds.length > 0 && (
         <StaffUnitsScheduleSection
-          barbershopIds={selectedBarbershopIds}
+          barbershopIds={selectedUnitIds}
           schedule={unitSchedule}
           onScheduleChange={handleUnitScheduleChange}
         />
       )}
 
-      {/* Individual Schedule Section (shows for barbeiro or admin+barber) */}
+      {/* Individual Schedule Section (single unit) */}
       {(role === 'barbeiro' || (role === 'admin' && isAlsoBarber)) && !hasMultipleUnits && (
         <StaffScheduleSection
           schedule={schedule}
@@ -810,7 +774,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         />
       )}
 
-      {/* Services Selection Section - Uses shared barbershop ID for multi-unit */}
+      {/* Services Selection Section */}
       {(role === 'barbeiro' || (role === 'admin' && isAlsoBarber)) && !loadingSharedId && sharedBarbershopId && (
         <StaffServicesSection
           barbershopId={sharedBarbershopId}
