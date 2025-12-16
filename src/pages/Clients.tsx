@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { ClientDialog } from "@/components/dialogs/ClientDialog";
@@ -25,10 +25,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { 
   Users, Plus, Search, Phone, Mail, Calendar, MoreVertical, 
   Pencil, Trash2, BarChart, Upload, ArrowUpDown, ArrowUp, 
-  ArrowDown, Filter, X, UserPlus, TrendingUp, Star
+  ArrowDown, Filter, X, UserPlus, TrendingUp, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +52,7 @@ const Clients = () => {
   const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const listRef = useRef<HTMLDivElement>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,6 +64,10 @@ const Clients = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
   const [selectedTag, setSelectedTag] = useState<string>('all');
+  
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   useEffect(() => {
     if (sharedBarbershopId && allRelatedBarbershopIds.length > 0 && !loadingBarbershop) {
@@ -161,6 +175,22 @@ const Clients = () => {
     return result;
   }, [clients, searchTerm, periodFilter, selectedTag, sortField, sortDirection]);
 
+  // Reset página quando filtros mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, periodFilter, selectedTag, sortField, sortDirection]);
+
+  // Dados paginados
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+  const paginatedClients = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredClients.slice(startIndex, endIndex);
+  }, [filteredClients, currentPage, itemsPerPage]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredClients.length);
+
   // Estatísticas
   const stats = useMemo(() => {
     const now = new Date();
@@ -222,6 +252,36 @@ const Clients = () => {
     setSelectedTag('all');
     setSortField('created_at');
     setSortDirection('desc');
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      
+      if (currentPage > 3) pages.push('ellipsis');
+      
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      
+      for (let i = start; i <= end; i++) pages.push(i);
+      
+      if (currentPage < totalPages - 2) pages.push('ellipsis');
+      
+      pages.push(totalPages);
+    }
+    
+    return pages;
   };
 
   const hasActiveFilters = searchTerm || periodFilter !== 'all' || selectedTag !== 'all';
@@ -401,7 +461,7 @@ const Clients = () => {
         </Card>
 
         {/* Clients List */}
-        <Card className="barbershop-card">
+        <Card className="barbershop-card" ref={listRef}>
           <CardHeader className="p-3 md:p-6">
             <CardTitle className="flex items-center justify-between text-sm md:text-base">
               <div className="flex items-center gap-2">
@@ -445,7 +505,7 @@ const Clients = () => {
                   )}
                 </div>
               ) : (
-                filteredClients.map((client) => (
+                paginatedClients.map((client) => (
                 <div
                   key={client.id}
                   className="flex items-center justify-between p-2 md:p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors gap-2"
@@ -537,6 +597,86 @@ const Clients = () => {
               ))
               )}
             </div>
+
+            {/* Paginação */}
+            {filteredClients.length > itemsPerPage && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-border">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span>
+                    Mostrando {startIndex + 1}-{endIndex} de {filteredClients.length}
+                  </span>
+                  <Select 
+                    value={itemsPerPage.toString()} 
+                    onValueChange={(v) => {
+                      setItemsPerPage(Number(v));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[130px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 por página</SelectItem>
+                      <SelectItem value="20">20 por página</SelectItem>
+                      <SelectItem value="50">50 por página</SelectItem>
+                      <SelectItem value="100">100 por página</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 h-8 px-2"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span className="hidden sm:inline">Anterior</span>
+                      </Button>
+                    </PaginationItem>
+                    
+                    {getPageNumbers().map((page, idx) => (
+                      <PaginationItem key={idx} className="hidden sm:block">
+                        {page === 'ellipsis' ? (
+                          <PaginationEllipsis />
+                        ) : (
+                          <PaginationLink
+                            onClick={() => handlePageChange(page)}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        )}
+                      </PaginationItem>
+                    ))}
+                    
+                    <PaginationItem className="sm:hidden">
+                      <span className="px-2 text-sm text-muted-foreground">
+                        {currentPage} / {totalPages}
+                      </span>
+                    </PaginationItem>
+                    
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 h-8 px-2"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        <span className="hidden sm:inline">Próximo</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
 
