@@ -1,6 +1,8 @@
 import { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Sparkline } from "@/components/ui/sparkline";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface StatsCardProps {
   title: string;
@@ -11,9 +13,19 @@ interface StatsCardProps {
   };
   icon: LucideIcon;
   variant?: "default" | "primary" | "success" | "warning";
+  sparklineData?: number[];
+  sparklineTooltip?: string;
 }
 
-const StatsCard = ({ title, value, change, icon: Icon, variant = "default" }: StatsCardProps) => {
+const StatsCard = ({ 
+  title, 
+  value, 
+  change, 
+  icon: Icon, 
+  variant = "default",
+  sparklineData,
+  sparklineTooltip = "Últimos 7 dias"
+}: StatsCardProps) => {
   const variants = {
     default: "bg-card",
     primary: "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20",
@@ -28,6 +40,13 @@ const StatsCard = ({ title, value, change, icon: Icon, variant = "default" }: St
     warning: "text-warning",
   };
 
+  const sparklineColors: Record<string, "primary" | "success" | "warning"> = {
+    default: "primary",
+    primary: "primary",
+    success: "success",
+    warning: "warning",
+  };
+
   return (
     <Card className={cn("transition-smooth hover:shadow-medium", variants[variant])}>
       <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
@@ -38,6 +57,25 @@ const StatsCard = ({ title, value, change, icon: Icon, variant = "default" }: St
       </CardHeader>
       <CardContent className="p-3 sm:p-4 pt-1 sm:pt-2">
         <div className="text-lg sm:text-2xl font-bold text-foreground truncate">{value}</div>
+        
+        {/* Sparkline */}
+        {sparklineData && sparklineData.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="mt-2 cursor-help">
+                <Sparkline 
+                  data={sparklineData} 
+                  color={sparklineColors[variant]} 
+                  height={28}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs">{sparklineTooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
         {change && (
           <div className="flex items-center flex-wrap text-xs mt-1 sm:mt-2">
             <span
