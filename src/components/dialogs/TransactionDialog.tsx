@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { TransactionForm, TransactionFormData } from "@/components/forms/TransactionForm";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSelectableUnits } from "@/hooks/useSelectableUnits";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -23,11 +24,12 @@ export const TransactionDialog = ({
   onSuccess 
 }: TransactionDialogProps) => {
   const { selectedBarbershopId, barbershops, user } = useAuth();
+  const { selectableUnits } = useSelectableUnits(barbershops);
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Se tiver apenas uma barbearia, usa ela. Senão, usa a selecionada ou a primeira disponível
-  const effectiveBarbershopId = selectedBarbershopId || (barbershops.length === 1 ? barbershops[0].id : barbershops[0]?.id);
+  // Usa apenas unidades selecionáveis (nunca a matriz)
+  const effectiveBarbershopId = selectedBarbershopId || (selectableUnits.length === 1 ? selectableUnits[0].id : selectableUnits[0]?.id);
 
   const handleSubmit = async (data: TransactionFormData) => {
     if (!effectiveBarbershopId || !user) {
