@@ -34,12 +34,12 @@ const BarbershopSelector = () => {
     return null;
   }
 
-  // Organizar barbearias em hierarquia: Matrizes e Unidades
-  const organizedBarbershops = useMemo(() => {
+  // Organizar barbearias: Mostrar apenas unidades (filiais), não a matriz
+  const { selectableUnits, matrizName } = useMemo(() => {
     const matrizes: BarbershopWithHierarchy[] = [];
-    const unidadesByParent: Record<string, BarbershopWithHierarchy[]> = {};
+    const unidades: BarbershopWithHierarchy[] = [];
     
-    // Primeiro passo: identificar matrizes (sem parent_id) e agrupar unidades
+    // Separar matrizes (sem parent_id) e unidades
     barbershops.forEach((b: any) => {
       const item: BarbershopWithHierarchy = {
         ...b,
@@ -50,35 +50,38 @@ const BarbershopSelector = () => {
       if (!b.parent_id) {
         matrizes.push(item);
       } else {
-        if (!unidadesByParent[b.parent_id]) {
-          unidadesByParent[b.parent_id] = [];
-        }
-        unidadesByParent[b.parent_id].push(item);
+        unidades.push(item);
       }
     });
     
-    // Segundo passo: associar unidades às matrizes
-    matrizes.forEach(matriz => {
-      matriz.children = unidadesByParent[matriz.id]?.map(u => u.id) || [];
+    // Identificar matrizes que TÊM unidades (não devem ser selecionáveis)
+    const matrizesComUnidades = new Set<string>();
+    unidades.forEach(u => {
+      if (u.parent_id) {
+        matrizesComUnidades.add(u.parent_id);
+      }
     });
     
-    // Resultado: lista ordenada com matrizes e suas unidades logo abaixo
+    // Resultado: unidades + matrizes SEM unidades (barbearias independentes)
     const result: BarbershopWithHierarchy[] = [];
+    
+    // Adicionar matrizes que NÃO têm unidades (são barbearias independentes)
     matrizes.forEach(matriz => {
-      result.push(matriz);
-      if (unidadesByParent[matriz.id]) {
-        result.push(...unidadesByParent[matriz.id]);
+      if (!matrizesComUnidades.has(matriz.id)) {
+        result.push(matriz);
       }
     });
     
-    // Incluir unidades órfãs (sem matriz visível)
-    Object.keys(unidadesByParent).forEach(parentId => {
-      if (!matrizes.find(m => m.id === parentId)) {
-        result.push(...unidadesByParent[parentId]);
-      }
-    });
+    // Adicionar todas as unidades
+    result.push(...unidades);
     
-    return result;
+    // Nome da matriz principal (para exibição)
+    const matrizPrincipal = matrizes.find(m => matrizesComUnidades.has(m.id));
+    
+    return { 
+      selectableUnits: result,
+      matrizName: matrizPrincipal?.name || null
+    };
   }, [barbershops]);
 
   const selectedBarbershop = barbershops.find(b => b.id === selectedBarbershopId);
@@ -105,7 +108,7 @@ const BarbershopSelector = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[280px] sm:w-[320px]" align="start">
         <DropdownMenuLabel>
-          {isSuperAdmin ? 'Visualizar como Cliente' : 'Barbearia / Unidades'}
+          {isSuperAdmin ? 'Visualizar como Cliente' : (matrizName ? `${matrizName} - Unidades` : 'Selecionar Unidade')}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
@@ -130,14 +133,13 @@ const BarbershopSelector = () => {
         
         {/* Barbershop list with hierarchy */}
         <ScrollArea className={cn(isSuperAdmin && barbershops.length > 8 ? "h-[300px]" : "")}>
-          {organizedBarbershops.map((barbershop) => (
+          {selectableUnits.map((barbershop) => (
             <DropdownMenuItem
               key={barbershop.id}
               onClick={() => setSelectedBarbershop(barbershop.id)}
               className={cn(
                 "flex items-center justify-between cursor-pointer",
-                selectedBarbershopId === barbershop.id && "bg-primary/10",
-                !barbershop.isMatriz && "pl-6" // Indent units
+                selectedBarbershopId === barbershop.id && "bg-primary/10"
               )}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -146,10 +148,10 @@ const BarbershopSelector = () => {
                 ) : (
                   <GitBranch className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
                 )}
-                <span className={cn("truncate flex-1", !barbershop.isMatriz && "text-sm")}>
+                <span className="truncate flex-1">
                   {barbershop.name}
                 </span>
-                {barbershop.is_primary && !barbershop.isMatriz && (
+                {barbershop.is_primary && (
                   <Badge variant="secondary" className="text-xs flex-shrink-0">
                     Principal
                   </Badge>
