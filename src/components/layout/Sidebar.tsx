@@ -30,6 +30,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { format } from "date-fns";
@@ -41,31 +42,33 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   multiUnitOnly?: boolean;
   superAdminOnly?: boolean;
+  adminOnly?: boolean;
   requiredFeature?: keyof PlanFeatures;
+  permission?: string; // Permissão customizável por role
 }
 
 const navigation: NavItem[] = [
-  { name: "Dashboard", href: "/", icon: Home },
-  { name: "Minhas Unidades", href: "/barbershops", icon: Building2 },
-  { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true, requiredFeature: 'multi_unit' },
-  { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true, requiredFeature: 'multi_unit_reports' },
-  { name: "Agendamentos", href: "/appointments", icon: Calendar, requiredFeature: 'appointments' },
-  { name: "Lista de Espera", href: "/waitlist", icon: ListChecks, requiredFeature: 'waitlist' },
-  { name: "Clientes", href: "/clients", icon: Users, requiredFeature: 'clients' },
-  { name: "Serviços", href: "/services", icon: Scissors, requiredFeature: 'services' },
-  { name: "Equipe", href: "/staff", icon: UserCog, requiredFeature: 'staff_basic' },
-  { name: "Financeiro", href: "/finance", icon: DollarSign, requiredFeature: 'finance_basic' },
-  { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet, requiredFeature: 'staff_earnings' },
-  { name: "Relatórios", href: "/reports", icon: BarChart3, requiredFeature: 'basic_reports' },
-  { name: "Marketing", href: "/marketing", icon: MessageSquare, requiredFeature: 'marketing_campaigns' },
-  { name: "Avaliações", href: "/reviews", icon: StarIcon, requiredFeature: 'reviews' },
-  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, requiredFeature: 'whatsapp_notifications' },
-  { name: "Chat WhatsApp", href: "/whatsapp-chat", icon: MessageCircle, requiredFeature: 'whatsapp_chat' },
-  { name: "Chatbot IA", href: "/chatbot", icon: Bot, requiredFeature: 'whatsapp_chatbot' },
-  { name: "Horários", href: "/business-hours", icon: Clock, requiredFeature: 'business_hours' },
-  { name: "Auditoria", href: "/audit", icon: Shield, requiredFeature: 'audit_logs' },
-  { name: "Upgrade", href: "/upgrade", icon: Sparkles },
-  { name: "Configurações", href: "/settings", icon: Settings },
+  { name: "Dashboard", href: "/", icon: Home, permission: 'dashboard' },
+  { name: "Minhas Unidades", href: "/barbershops", icon: Building2, adminOnly: true },
+  { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit' },
+  { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit_reports' },
+  { name: "Agendamentos", href: "/appointments", icon: Calendar, requiredFeature: 'appointments', permission: 'appointments' },
+  { name: "Lista de Espera", href: "/waitlist", icon: ListChecks, requiredFeature: 'waitlist', permission: 'waitlist' },
+  { name: "Clientes", href: "/clients", icon: Users, requiredFeature: 'clients', permission: 'clients' },
+  { name: "Serviços", href: "/services", icon: Scissors, requiredFeature: 'services', permission: 'services' },
+  { name: "Equipe", href: "/staff", icon: UserCog, requiredFeature: 'staff_basic', permission: 'staff' },
+  { name: "Financeiro", href: "/finance", icon: DollarSign, requiredFeature: 'finance_basic', permission: 'finance' },
+  { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet, requiredFeature: 'staff_earnings', permission: 'meus_ganhos' },
+  { name: "Relatórios", href: "/reports", icon: BarChart3, requiredFeature: 'basic_reports', permission: 'reports' },
+  { name: "Marketing", href: "/marketing", icon: MessageSquare, requiredFeature: 'marketing_campaigns', permission: 'marketing' },
+  { name: "Avaliações", href: "/reviews", icon: StarIcon, requiredFeature: 'reviews', permission: 'reviews' },
+  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, requiredFeature: 'whatsapp_notifications', permission: 'whatsapp' },
+  { name: "Chat WhatsApp", href: "/whatsapp-chat", icon: MessageCircle, requiredFeature: 'whatsapp_chat', permission: 'whatsapp_chat' },
+  { name: "Chatbot IA", href: "/chatbot", icon: Bot, requiredFeature: 'whatsapp_chatbot', permission: 'chatbot' },
+  { name: "Horários", href: "/business-hours", icon: Clock, requiredFeature: 'business_hours', permission: 'business_hours' },
+  { name: "Auditoria", href: "/audit", icon: Shield, requiredFeature: 'audit_logs', permission: 'audit' },
+  { name: "Upgrade", href: "/upgrade", icon: Sparkles, adminOnly: true },
+  { name: "Configurações", href: "/settings", icon: Settings, permission: 'settings' },
   { name: "Admin SaaS", href: "/saas-admin", icon: Shield, superAdminOnly: true },
 ];
 
@@ -76,6 +79,7 @@ export const MobileSidebar = () => {
   const { effectiveBranding, currentLogoUrl } = useBranding();
   const { hasFeature } = useFeatureFlags();
   const { subscription, loading: subscriptionLoading } = useSubscription();
+  const { hasPermission } = useRolePermissions();
   const location = useLocation();
 
   // Fechar sidebar ao mudar de rota
@@ -84,16 +88,33 @@ export const MobileSidebar = () => {
   }, [location.pathname]);
 
   const filteredNavigation = navigation.filter(item => {
-    if (item.superAdminOnly) {
-      return userRole === 'super_admin';
+    // Super admin tem acesso total
+    if (userRole === 'super_admin') {
+      if (item.superAdminOnly) return true;
+      return true;
     }
+    
+    // Itens exclusivos de super admin
+    if (item.superAdminOnly) return false;
+    
+    // Itens exclusivos de admin
+    if (item.adminOnly && userRole !== 'admin') return false;
+    
+    // Verificar multi-unidade
     if (item.multiUnitOnly) {
-      if (!(barbershops.length > 1 || userRole === 'super_admin')) return false;
+      if (barbershops.length <= 1) return false;
     }
-    // Check feature flag requirement
+    
+    // Verificar feature flag do plano
     if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
       return false;
     }
+    
+    // Verificar permissão customizável por role (apenas para barbeiro/recepcionista)
+    if (item.permission && userRole !== 'admin') {
+      if (!hasPermission(item.permission)) return false;
+    }
+    
     return true;
   });
 
@@ -197,18 +218,36 @@ const Sidebar = () => {
   const { effectiveBranding, currentLogoUrl } = useBranding();
   const { hasFeature } = useFeatureFlags();
   const { subscription, loading: subscriptionLoading } = useSubscription();
+  const { hasPermission } = useRolePermissions();
 
   const filteredNavigation = navigation.filter(item => {
-    if (item.superAdminOnly) {
-      return userRole === 'super_admin';
+    // Super admin tem acesso total
+    if (userRole === 'super_admin') {
+      if (item.superAdminOnly) return true;
+      return true;
     }
+    
+    // Itens exclusivos de super admin
+    if (item.superAdminOnly) return false;
+    
+    // Itens exclusivos de admin
+    if (item.adminOnly && userRole !== 'admin') return false;
+    
+    // Verificar multi-unidade
     if (item.multiUnitOnly) {
-      if (!(barbershops.length > 1 || userRole === 'super_admin')) return false;
+      if (barbershops.length <= 1) return false;
     }
-    // Check feature flag requirement
+    
+    // Verificar feature flag do plano
     if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
       return false;
     }
+    
+    // Verificar permissão customizável por role (apenas para barbeiro/recepcionista)
+    if (item.permission && userRole !== 'admin') {
+      if (!hasPermission(item.permission)) return false;
+    }
+    
     return true;
   });
 

@@ -13,6 +13,7 @@ import DomainSettings from "@/components/settings/DomainSettings";
 import PortfolioGalleryManager from "@/components/settings/PortfolioGalleryManager";
 import NotificationSettings from "@/components/settings/NotificationSettings";
 import BarbershopBrandingConfig from "@/components/settings/BarbershopBrandingConfig";
+import RolePermissionsConfig from "@/components/settings/RolePermissionsConfig";
 import { FeatureGate } from "@/components/FeatureGate";
 import { Save, User, Bell, Clock, Globe, Image, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -33,7 +34,7 @@ interface BarbershopSettings {
 }
 
 const SettingsPage = () => {
-  const { barbershopId } = useAuth();
+  const { barbershopId, userRole } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -250,6 +251,13 @@ const SettingsPage = () => {
               <BarbershopBrandingConfig />
             </FeatureGate>
           </div>
+
+          {/* Role Permissions - Only visible for admin */}
+          {(userRole === 'admin' || userRole === 'super_admin') && (
+            <div className="lg:col-span-2">
+              <RolePermissionsConfig />
+            </div>
+          )}
         </div>
       </div>
     </Layout>
