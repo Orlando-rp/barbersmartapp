@@ -197,12 +197,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setBarbershops(mappedBarbershops);
 
-        // Set primary barbershop as default
+        // Identify matrices that have units (should not be auto-selected)
+        const matrizesComUnidades = new Set<string>();
+        mappedBarbershops.forEach(b => {
+          if (b.parent_id) {
+            matrizesComUnidades.add(b.parent_id);
+          }
+        });
+
+        // Set primary barbershop as default reference
         const primaryBarbershop = mappedBarbershops.find(b => b.is_primary);
         const defaultBarbershop = primaryBarbershop || mappedBarbershops[0];
         
         setBarbershopId(defaultBarbershop.id);
-        setSelectedBarbershopId(defaultBarbershop.id);
+
+        // If default is a matriz with units, start with consolidated view (null)
+        // Otherwise, select the default barbershop
+        const isMatrizComUnidades = matrizesComUnidades.has(defaultBarbershop.id);
+        if (isMatrizComUnidades) {
+          setSelectedBarbershopId(null);
+        } else {
+          setSelectedBarbershopId(defaultBarbershop.id);
+        }
       }
     } catch (error) {
       console.error('Error in fetchUserData:', error);
