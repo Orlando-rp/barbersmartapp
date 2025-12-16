@@ -62,7 +62,8 @@ const Finance = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
-  const isConsolidatedView = barbershops.length > 1 && selectedBarbershopId === null;
+  // Visão consolidada quando há múltiplas unidades selecionáveis e nenhuma está selecionada
+  const isConsolidatedView = activeBarbershopIds.length > 1 && selectedBarbershopId === null;
 
   useEffect(() => {
     if (activeBarbershopIds.length === 0) {
@@ -227,7 +228,7 @@ const Finance = () => {
                     {isConsolidatedView && (
                       <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 flex items-center gap-0.5">
                         <Building2 className="h-2 w-2" />
-                        <span>{barbershops.length}</span>
+                        <span>{activeBarbershopIds.length}</span>
                       </Badge>
                     )}
                   </div>
@@ -249,7 +250,7 @@ const Finance = () => {
                     {isConsolidatedView && (
                       <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 flex items-center gap-0.5">
                         <Building2 className="h-2 w-2" />
-                        <span>{barbershops.length}</span>
+                        <span>{activeBarbershopIds.length}</span>
                       </Badge>
                     )}
                   </div>
@@ -271,7 +272,7 @@ const Finance = () => {
                     {isConsolidatedView && (
                       <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 flex items-center gap-0.5">
                         <Building2 className="h-2 w-2" />
-                        <span>{barbershops.length}</span>
+                        <span>{activeBarbershopIds.length}</span>
                       </Badge>
                     )}
                   </div>
@@ -293,7 +294,7 @@ const Finance = () => {
                     {isConsolidatedView && (
                       <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 flex items-center gap-0.5">
                         <Building2 className="h-2 w-2" />
-                        <span>{barbershops.length}</span>
+                        <span>{activeBarbershopIds.length}</span>
                       </Badge>
                     )}
                   </div>

@@ -309,9 +309,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Compute activeBarbershopIds based on selection
-  const activeBarbershopIds = selectedBarbershopId === null 
-    ? barbershops.map(b => b.id)
-    : [selectedBarbershopId];
+  // Filter out matrices that have units (only units are selectable for operations)
+  const activeBarbershopIds = (() => {
+    if (selectedBarbershopId !== null) {
+      return [selectedBarbershopId];
+    }
+    
+    // Identify matrices that have units (should not be included in queries)
+    const matrizesComUnidades = new Set<string>();
+    barbershops.forEach(b => {
+      if (b.parent_id) {
+        matrizesComUnidades.add(b.parent_id);
+      }
+    });
+    
+    // Return only: independent barbershops (no children) + units (have parent_id)
+    return barbershops
+      .filter(b => !matrizesComUnidades.has(b.id) || b.parent_id)
+      .map(b => b.id);
+  })();
 
   return (
     <AuthContext.Provider
