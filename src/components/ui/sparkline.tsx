@@ -39,14 +39,17 @@ export const Sparkline = ({
   className,
   showGradient = true
 }: SparklineProps) => {
-  // Transform array of numbers into chart data format
-  const chartData = data.map((value, index) => ({ value, index }));
-  const colors = colorMap[color];
-  const gradientId = `sparkline-gradient-${color}-${Math.random().toString(36).substr(2, 9)}`;
-
-  if (data.length === 0) {
+  // Filter out invalid values (NaN, undefined, null)
+  const cleanData = data.filter(v => v !== undefined && v !== null && !isNaN(v));
+  
+  if (cleanData.length === 0) {
     return null;
   }
+
+  // Transform array of numbers into chart data format
+  const chartData = cleanData.map((value, index) => ({ value, index }));
+  const colors = colorMap[color];
+  const gradientId = `sparkline-gradient-${color}-${Math.random().toString(36).substr(2, 9)}`;
 
   return (
     <div className={cn("w-full", className)} style={{ height }}>
