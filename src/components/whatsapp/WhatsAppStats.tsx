@@ -16,42 +16,24 @@ interface WhatsAppStatsProps {
 }
 
 export const WhatsAppStats = ({ provider }: WhatsAppStatsProps) => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [stats, setStats] = useState<WhatsAppStats | null>(null);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       loadStats();
     }
-  }, [barbershopId, provider]);
+  }, [activeBarbershopIds, provider]);
 
   const loadStats = async () => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
 
-    try {
-      const { data, error } = await supabase
-        .rpc('get_whatsapp_stats', { 
-          barbershop_uuid: barbershopId,
-          days_ago: 30 
-        });
-
-      if (error) {
-        if (error.code === 'PGRST202' || error.code === 'PGRST204') {
-          await calculateStats();
-        } else {
-          throw error;
-        }
-      } else if (data && data.length > 0) {
-        setStats(data[0]);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
-      await calculateStats();
-    }
+    // Como RPC não suporta múltiplos IDs facilmente, calcular diretamente
+    await calculateStats();
   };
 
   const calculateStats = async () => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
 
     try {
       const thirtyDaysAgo = new Date();
@@ -60,7 +42,7 @@ export const WhatsAppStats = ({ provider }: WhatsAppStatsProps) => {
       const { data } = await supabase
         .from('whatsapp_logs')
         .select('status')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('provider', provider)
         .gte('created_at', thirtyDaysAgo.toISOString());
 
