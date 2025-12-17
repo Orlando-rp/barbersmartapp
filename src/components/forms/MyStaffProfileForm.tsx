@@ -316,10 +316,12 @@ export const MyStaffProfileForm = () => {
       }
 
       // Update services (at staff level)
-      await supabase
+      const { error: deleteServicesError } = await supabase
         .from('staff_services')
         .delete()
         .eq('staff_id', mainStaffId);
+
+      if (deleteServicesError) throw deleteServicesError;
 
       if (selectedServices.length > 0) {
         const inserts = selectedServices.map(serviceId => ({
@@ -328,9 +330,11 @@ export const MyStaffProfileForm = () => {
           is_active: true,
         }));
 
-        await supabase
+        const { error: insertServicesError } = await supabase
           .from('staff_services')
           .insert(inserts);
+
+        if (insertServicesError) throw insertServicesError;
       }
 
       toast({
