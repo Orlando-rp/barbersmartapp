@@ -498,15 +498,15 @@ const Index = () => {
               <div className="space-y-2 sm:space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm text-muted-foreground">Ocupação</span>
-                  <span className="text-xs sm:text-sm font-medium text-success">{currentStats?.occupancyRate}%</span>
+                  <span className="text-xs sm:text-sm font-medium text-success">{currentStats?.occupancyRate ?? 0}%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm text-muted-foreground">Novos</span>
-                  <span className="text-xs sm:text-sm font-medium text-primary">+{currentStats?.newClientsThisMonth}</span>
+                  <span className="text-xs sm:text-sm font-medium text-primary">+{currentStats?.newClientsThisMonth ?? 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm text-muted-foreground">Fidelização</span>
-                  <span className="text-xs sm:text-sm font-medium text-warning">{currentStats?.retentionRate}%</span>
+                  <span className="text-xs sm:text-sm font-medium text-warning">{currentStats?.retentionRate ?? 0}%</span>
                 </div>
               </div>
             </CardContent>

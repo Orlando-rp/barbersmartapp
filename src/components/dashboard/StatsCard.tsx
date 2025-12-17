@@ -84,7 +84,7 @@ const StatsCard = ({
                 change.type === "increase" ? "text-success" : "text-destructive"
               )}
             >
-              {change.type === "increase" ? "+" : "-"}{Math.abs(change.value)}%
+              {change.type === "increase" ? "+" : "-"}{Number.isFinite(change.value) ? Math.abs(change.value) : 0}%
             </span>
             <span className="text-muted-foreground ml-1 hidden sm:inline">vs. mês anterior</span>
           </div>
