@@ -11,10 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Clock, Calendar as CalendarIcon, XCircle, Plus, Save } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Clock, Calendar as CalendarIcon, XCircle, Plus, Save, Building2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useSelectableUnits } from "@/hooks/useSelectableUnits";
 
 interface DaySchedule {
   day: string;
@@ -54,7 +57,12 @@ const defaultSchedule: DaySchedule[] = [
 ];
 
 const BusinessHours = () => {
-  const { barbershopId } = useAuth();
+  const { barbershopId, barbershops } = useAuth();
+  const { selectableUnits, hasMultipleUnits } = useSelectableUnits(barbershops);
+  
+  // Estado para unidade selecionada - usa a primeira unidade selecionável ou barbershopId
+  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [schedule, setSchedule] = useState<DaySchedule[]>(defaultSchedule);
@@ -70,21 +78,39 @@ const BusinessHours = () => {
   const [specialBreakStart, setSpecialBreakStart] = useState('');
   const [specialBreakEnd, setSpecialBreakEnd] = useState('');
 
+  // Define a unidade inicial quando disponível
   useEffect(() => {
-    if (barbershopId) {
+    if (!selectedUnitId && selectableUnits.length > 0) {
+      // Se o barbershopId atual está entre as unidades selecionáveis, usa ele
+      const currentIsSelectable = selectableUnits.find(u => u.id === barbershopId);
+      if (currentIsSelectable) {
+        setSelectedUnitId(barbershopId!);
+      } else {
+        // Caso contrário, usa a primeira unidade disponível
+        setSelectedUnitId(selectableUnits[0].id);
+      }
+    } else if (!selectedUnitId && barbershopId && selectableUnits.length === 0) {
+      // Se não há unidades selecionáveis, usa o barbershopId direto
+      setSelectedUnitId(barbershopId);
+    }
+  }, [barbershopId, selectableUnits, selectedUnitId]);
+
+  // Carrega os horários quando a unidade selecionada muda
+  useEffect(() => {
+    if (selectedUnitId) {
       loadBusinessHours();
     }
-  }, [barbershopId]);
+  }, [selectedUnitId]);
 
   const importFromLegacySettings = async () => {
-    if (!barbershopId) return;
+    if (!selectedUnitId) return;
 
     try {
       // Fetch legacy opening_hours from barbershops.settings
       const { data: barbershopData, error: barbershopError } = await supabase
         .from('barbershops')
         .select('settings')
-        .eq('id', barbershopId)
+        .eq('id', selectedUnitId)
         .maybeSingle();
 
       if (barbershopError) throw barbershopError;
@@ -93,16 +119,6 @@ const BusinessHours = () => {
       
       if (legacyHours && Object.keys(legacyHours).length > 0) {
         // Map legacy format to business_hours format
-        const dayMapping: Record<string, string> = {
-          'monday': 'monday',
-          'tuesday': 'tuesday', 
-          'wednesday': 'wednesday',
-          'thursday': 'thursday',
-          'friday': 'friday',
-          'saturday': 'saturday',
-          'sunday': 'sunday'
-        };
-
         const importedSchedule = defaultSchedule.map(day => {
           const legacy = legacyHours[day.day];
           if (legacy) {
@@ -118,7 +134,7 @@ const BusinessHours = () => {
 
         // Save imported schedule to business_hours table
         const scheduleData = importedSchedule.map(day => ({
-          barbershop_id: barbershopId,
+          barbershop_id: selectedUnitId,
           day_of_week: day.day,
           is_open: day.enabled,
           open_time: day.openTime,
@@ -138,7 +154,7 @@ const BusinessHours = () => {
       } else {
         // No legacy data, save default schedule
         const scheduleData = defaultSchedule.map(day => ({
-          barbershop_id: barbershopId,
+          barbershop_id: selectedUnitId,
           day_of_week: day.day,
           is_open: day.enabled,
           open_time: day.openTime,
@@ -169,7 +185,7 @@ const BusinessHours = () => {
       const { data: scheduleData, error: scheduleError } = await supabase
         .from('business_hours')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', selectedUnitId)
         .order('day_of_week');
 
       if (scheduleError) throw scheduleError;
@@ -200,7 +216,7 @@ const BusinessHours = () => {
         const { data: blockedData, error: blockedError } = await supabase
           .from('blocked_dates')
           .select('*')
-          .eq('barbershop_id', barbershopId)
+          .eq('barbershop_id', selectedUnitId)
           .gte('blocked_date', new Date().toISOString().split('T')[0]);
 
         if (blockedError && !blockedError.message?.includes('does not exist')) {
@@ -225,7 +241,7 @@ const BusinessHours = () => {
         const { data: specialData, error: specialError } = await supabase
           .from('special_hours')
           .select('*')
-          .eq('barbershop_id', barbershopId)
+          .eq('barbershop_id', selectedUnitId)
           .gte('special_date', new Date().toISOString().split('T')[0]);
 
         if (specialError && !specialError.message?.includes('does not exist')) {
@@ -258,7 +274,7 @@ const BusinessHours = () => {
   };
 
   const saveSchedule = async () => {
-    if (!barbershopId) return;
+    if (!selectedUnitId) return;
 
     try {
       setSaving(true);
@@ -267,11 +283,11 @@ const BusinessHours = () => {
       await supabase
         .from('business_hours')
         .delete()
-        .eq('barbershop_id', barbershopId);
+        .eq('barbershop_id', selectedUnitId);
 
       // Insert new schedules
       const scheduleData = schedule.map(day => ({
-        barbershop_id: barbershopId,
+        barbershop_id: selectedUnitId,
         day_of_week: day.day,
         is_open: day.enabled,
         open_time: day.openTime,
@@ -302,7 +318,7 @@ const BusinessHours = () => {
   };
 
   const addBlockedDate = async () => {
-    if (!selectedDate || !blockReason.trim() || !barbershopId) {
+    if (!selectedDate || !blockReason.trim() || !selectedUnitId) {
       toast.error('Selecione uma data e informe o motivo do bloqueio');
       return;
     }
@@ -311,7 +327,7 @@ const BusinessHours = () => {
       const { data, error } = await supabase
         .from('blocked_dates')
         .insert({
-          barbershop_id: barbershopId,
+          barbershop_id: selectedUnitId,
           blocked_date: format(selectedDate, 'yyyy-MM-dd'),
           reason: blockReason,
         })
@@ -350,7 +366,7 @@ const BusinessHours = () => {
   };
 
   const addSpecialHour = async () => {
-    if (!selectedSpecialDate || !specialReason.trim() || !barbershopId) {
+    if (!selectedSpecialDate || !specialReason.trim() || !selectedUnitId) {
       toast.error('Selecione uma data e informe o motivo');
       return;
     }
@@ -364,7 +380,7 @@ const BusinessHours = () => {
       const { data, error } = await supabase
         .from('special_hours')
         .insert({
-          barbershop_id: barbershopId,
+          barbershop_id: selectedUnitId,
           special_date: format(selectedSpecialDate, 'yyyy-MM-dd'),
           reason: specialReason,
           is_open: specialIsOpen,
@@ -427,6 +443,10 @@ const BusinessHours = () => {
     }
   };
 
+  // Pega o nome da unidade selecionada
+  const selectedUnitName = selectableUnits.find(u => u.id === selectedUnitId)?.name || 
+    barbershops?.find(b => b.id === selectedUnitId)?.name || '';
+
   if (loading) {
     return (
       <Layout>
@@ -446,6 +466,53 @@ const BusinessHours = () => {
             Configure os horários, intervalos e bloqueios
           </p>
         </div>
+
+        {/* Seletor de Unidade */}
+        {hasMultipleUnits && (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-lg">Selecionar Unidade</CardTitle>
+              </div>
+              <CardDescription>
+                Escolha a unidade para configurar os horários de funcionamento
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select value={selectedUnitId} onValueChange={setSelectedUnitId}>
+                <SelectTrigger className="w-full sm:w-80">
+                  <SelectValue placeholder="Selecione uma unidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectableUnits.map(unit => (
+                    <SelectItem key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        )}
+
+        {!selectedUnitId && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Selecione uma unidade para configurar os horários de funcionamento.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {selectedUnitId && (
+          <>
+            {selectedUnitName && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Building2 className="h-4 w-4" />
+                <span>Configurando horários para: <strong className="text-foreground">{selectedUnitName}</strong></span>
+              </div>
+            )}
 
         <Tabs defaultValue="schedule" className="space-y-4 sm:space-y-6">
           <TabsList className="h-auto flex-wrap">
@@ -770,6 +837,8 @@ const BusinessHours = () => {
             </div>
           </TabsContent>
         </Tabs>
+          </>
+        )}
       </div>
     </Layout>
   );

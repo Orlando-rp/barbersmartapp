@@ -45,46 +45,46 @@ export const useBusinessHoursValidation = (
   const [staffSchedules, setStaffSchedules] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
-  // Effective unit for schedule checking
+  // Effective unit for schedule checking - usa a unidade selecionada ou barbershopId
   const effectiveUnitId = selectedUnitId || barbershopId;
 
   useEffect(() => {
-    if (barbershopId) {
+    if (effectiveUnitId) {
       loadValidationData();
     }
-  }, [barbershopId, allRelatedBarbershopIds?.join(',')]);
+  }, [effectiveUnitId, allRelatedBarbershopIds?.join(',')]);
 
   const loadValidationData = async () => {
-    if (!barbershopId) return;
+    if (!effectiveUnitId) return;
 
     try {
       setLoading(true);
 
-      // Load business hours
+      // Load business hours - usa a unidade efetiva
       const { data: hoursData } = await supabase
         .from('business_hours')
         .select('*')
-        .eq('barbershop_id', barbershopId);
+        .eq('barbershop_id', effectiveUnitId);
       setBusinessHours(hoursData || []);
 
-      // Load special hours
+      // Load special hours - usa a unidade efetiva
       const { data: specialData } = await supabase
         .from('special_hours')
         .select('*')
-        .eq('barbershop_id', barbershopId);
+        .eq('barbershop_id', effectiveUnitId);
       setSpecialHours(specialData || []);
 
-      // Load blocked dates
+      // Load blocked dates - usa a unidade efetiva
       const { data: blockedData } = await supabase
         .from('blocked_dates')
         .select('blocked_date')
-        .eq('barbershop_id', barbershopId);
+        .eq('barbershop_id', effectiveUnitId);
       setBlockedDates((blockedData || []).map(b => b.blocked_date));
 
-      // Load staff schedules
+      // Load staff schedules - busca de todas as unidades relacionadas
       const searchIds = allRelatedBarbershopIds?.length 
         ? allRelatedBarbershopIds 
-        : [barbershopId];
+        : [effectiveUnitId];
 
       const { data: staffData } = await supabase
         .from('staff')

@@ -546,11 +546,15 @@ export default function PublicBooking() {
       const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
       
       let isInBreak = false;
-      if (!staffDaySchedule && dayHours.break_start && dayHours.break_end) {
+      // Verificar breaks - priorizar staff schedule, senão usar business hours
+      const breakStart = staffDaySchedule?.break_start || dayHours.break_start;
+      const breakEnd = staffDaySchedule?.break_end || dayHours.break_end;
+      
+      if (breakStart && breakEnd) {
         const slotMinutes = currentHour * 60 + currentMinute;
         const slotEndMinutes = slotMinutes + selectedService.duration;
-        const [breakStartHour, breakStartMin] = dayHours.break_start.split(':').map(Number);
-        const [breakEndHour, breakEndMin] = dayHours.break_end.split(':').map(Number);
+        const [breakStartHour, breakStartMin] = breakStart.split(':').map(Number);
+        const [breakEndHour, breakEndMin] = breakEnd.split(':').map(Number);
         const breakStartMinutes = breakStartHour * 60 + breakStartMin;
         const breakEndMinutes = breakEndHour * 60 + breakEndMin;
 
@@ -570,10 +574,12 @@ export default function PublicBooking() {
       }
     }
 
+    // Usar selectedUnit.id para buscar agendamentos da unidade correta
+    const effectiveUnitId = selectedUnit?.id || barbershopId;
     const { data: existingAppointments } = await supabase
       .from('appointments')
       .select('appointment_time, duration')
-      .eq('barbershop_id', barbershopId)
+      .eq('barbershop_id', effectiveUnitId)
       .eq('staff_id', selectedStaff.id)
       .eq('appointment_date', formattedDate)
       .neq('status', 'cancelado');
