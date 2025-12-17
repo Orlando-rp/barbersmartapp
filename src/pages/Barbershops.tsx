@@ -52,7 +52,12 @@ interface Barbershop {
 
 interface UnitFormData {
   name: string;
-  address: string;
+  cep: string;
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  address_number: string;
   phone: string;
   email: string;
   active: boolean;
@@ -76,7 +81,12 @@ interface ProfileFormData {
 
 const defaultUnitFormData: UnitFormData = {
   name: "",
-  address: "",
+  cep: "",
+  street: "",
+  neighborhood: "",
+  city: "",
+  state: "",
+  address_number: "",
   phone: "",
   email: "",
   active: true,
@@ -166,9 +176,16 @@ const Barbershops = () => {
 
   const openEditDialog = (barbershop: Barbershop) => {
     setEditingId(barbershop.id);
+    // Parse existing address if available
+    const addressParts = barbershop.address?.split(',').map(s => s.trim()) || [];
     setFormData({
       name: barbershop.name,
-      address: barbershop.address || "",
+      cep: "",
+      street: addressParts[0] || "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      address_number: "",
       phone: barbershop.phone || "",
       email: barbershop.email || "",
       active: barbershop.active,
@@ -265,12 +282,23 @@ const Barbershops = () => {
     try {
       setSaving(true);
 
+      // Build full address from components
+      const addressParts = [
+        formData.street,
+        formData.address_number,
+        formData.neighborhood,
+        formData.city,
+        formData.state,
+        formData.cep
+      ].filter(Boolean);
+      const fullAddress = addressParts.join(', ') || null;
+
       if (editingId) {
         const { error } = await supabase
           .from('barbershops')
           .update({
             name: formData.name.trim(),
-            address: formData.address.trim() || null,
+            address: fullAddress,
             phone: formData.phone.trim() || null,
             email: formData.email.trim() || null,
             active: formData.active,
@@ -286,7 +314,7 @@ const Barbershops = () => {
           .from('barbershops')
           .insert({
             name: formData.name.trim(),
-            address: formData.address.trim() || null,
+            address: fullAddress,
             phone: formData.phone.trim() || null,
             email: formData.email.trim() || null,
             active: formData.active,
@@ -750,13 +778,75 @@ const Barbershops = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Endereço</Label>
-                <Input
-                  id="address"
-                  placeholder="Rua, número, bairro, cidade"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                <Label htmlFor="cep">CEP</Label>
+                <CEPInput
+                  id="cep"
+                  placeholder="00000-000"
+                  value={formData.cep}
+                  onChange={(value) => setFormData({ ...formData, cep: value })}
+                  onAddressFound={(address: ViaCEPResponse) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      street: address.logradouro || prev.street,
+                      neighborhood: address.bairro || prev.neighborhood,
+                      city: address.localidade || prev.city,
+                      state: address.uf || prev.state,
+                    }));
+                  }}
                 />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="street">Rua</Label>
+                  <Input
+                    id="street"
+                    placeholder="Nome da rua"
+                    value={formData.street}
+                    onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address_number">Número</Label>
+                  <Input
+                    id="address_number"
+                    placeholder="Nº"
+                    value={formData.address_number}
+                    onChange={(e) => setFormData({ ...formData, address_number: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="neighborhood">Bairro</Label>
+                <Input
+                  id="neighborhood"
+                  placeholder="Nome do bairro"
+                  value={formData.neighborhood}
+                  onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="city">Cidade</Label>
+                  <Input
+                    id="city"
+                    placeholder="Nome da cidade"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">UF</Label>
+                  <Input
+                    id="state"
+                    placeholder="UF"
+                    maxLength={2}
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -766,7 +856,7 @@ const Barbershops = () => {
                     id="phone"
                     placeholder="(11) 99999-9999"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
                   />
                 </div>
 
