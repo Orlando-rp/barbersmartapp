@@ -24,25 +24,25 @@ interface WhatsAppLogsProps {
 }
 
 export const WhatsAppLogs = ({ provider }: WhatsAppLogsProps) => {
-  const { barbershopId } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const [logs, setLogs] = useState<WhatsAppLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       loadLogs();
     }
-  }, [barbershopId, provider]);
+  }, [activeBarbershopIds, provider]);
 
   const loadLogs = async () => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
 
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('whatsapp_logs')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('provider', provider)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -53,7 +53,7 @@ export const WhatsAppLogs = ({ provider }: WhatsAppLogsProps) => {
           const { data: allData } = await supabase
             .from('whatsapp_logs')
             .select('*')
-            .eq('barbershop_id', barbershopId)
+            .in('barbershop_id', activeBarbershopIds)
             .order('created_at', { ascending: false })
             .limit(50);
           setLogs(allData || []);
