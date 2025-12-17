@@ -444,7 +444,11 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
           return;
         }
 
-        // 1. Create user in Supabase Auth
+        // 1. Save current session before creating new user
+        const { data: currentSessionData } = await supabase.auth.getSession();
+        const originalSession = currentSessionData?.session;
+
+        // 2. Create user in Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
@@ -472,6 +476,14 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         }
         
         if (!userId) throw new Error("Falha ao criar usuário");
+
+        // 3. Restore original session immediately after user creation
+        if (originalSession) {
+          await supabase.auth.setSession({
+            access_token: originalSession.access_token,
+            refresh_token: originalSession.refresh_token,
+          });
+        }
 
         // 2. Create/update profile
         const { error: profileError } = await supabase
