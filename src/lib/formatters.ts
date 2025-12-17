@@ -120,7 +120,12 @@ export const formatPhone = (value: string): string => {
     .replace(/(\d{5})(\d)/, '$1-$2');
 };
 
-// Format CEP: 00000-000
+// Validate email format
+export const validateEmail = (email: string): boolean => {
+  if (!email.trim()) return true; // Empty is valid (optional field)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
+};
 export const formatCEP = (value: string): string => {
   const numbers = value.replace(/\D/g, '').slice(0, 8);
   return numbers.replace(/(\d{5})(\d)/, '$1-$2');
