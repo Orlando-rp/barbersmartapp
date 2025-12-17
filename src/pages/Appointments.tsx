@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ const statusConfig = {
 const Appointments = () => {
   const { activeBarbershopIds, barbershops } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +64,17 @@ const Appointments = () => {
   
   // Map barbershop IDs to names for quick lookup
   const barbershopNamesMap = new Map(barbershops.map(b => [b.id, b.name]));
+
+  // Handle ?new=true URL parameter to open dialog
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setIsDialogOpen(true);
+      setEditingAppointment(null);
+      // Remove the parameter from URL after opening dialog
+      searchParams.delete('new');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (activeBarbershopIds.length > 0) {

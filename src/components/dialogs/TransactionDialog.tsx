@@ -13,20 +13,35 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 interface TransactionDialogProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   transaction?: any;
   onSuccess?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const TransactionDialog = ({ 
   children, 
   transaction,
-  onSuccess 
+  onSuccess,
+  open: controlledOpen,
+  onOpenChange
 }: TransactionDialogProps) => {
   const { selectedBarbershopId, barbershops, user } = useAuth();
   const { selectableUnits } = useSelectableUnits(barbershops);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
 
   // Usa apenas unidades selecionáveis (nunca a matriz)
   const effectiveBarbershopId = selectedBarbershopId || (selectableUnits.length === 1 ? selectableUnits[0].id : selectableUnits[0]?.id);
@@ -93,9 +108,11 @@ export const TransactionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      {children && (
+        <DialogTrigger asChild>
+          {children}
+        </DialogTrigger>
+      )}
       <DialogContent className="w-[calc(100%-2rem)] sm:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-base sm:text-lg">

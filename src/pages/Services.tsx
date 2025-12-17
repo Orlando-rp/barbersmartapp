@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { ServiceDialog } from "@/components/dialogs/ServiceDialog";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ const Services = () => {
   const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const { categories: dbCategories } = useServiceCategories();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("Todos");
@@ -66,6 +68,16 @@ const Services = () => {
   const [categorySheetOpen, setCategorySheetOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  // Handle ?new=true URL parameter to open dialog
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setEditingService(null);
+      setEditDialogOpen(true);
+      searchParams.delete('new');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (sharedBarbershopId && allRelatedBarbershopIds.length > 0 && !loadingBarbershop) {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, CheckCircle, XCircle, UserPlus, User, Building2 } from "lucide-react";
@@ -61,6 +62,7 @@ const Staff = () => {
   const { barbershopId, user, barbershops, selectedBarbershopId } = useAuth();
   const { sharedBarbershopId, matrizBarbershopId, allRelatedBarbershopIds, isUnit, loading: sharedLoading } = useSharedBarbershopId();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -69,6 +71,16 @@ const Staff = () => {
   const [staffToDelete, setStaffToDelete] = useState<string | null>(null);
   const [isCurrentUserInStaff, setIsCurrentUserInStaff] = useState(true);
   const [addingSelf, setAddingSelf] = useState(false);
+
+  // Handle ?new=true URL parameter to open dialog
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setSelectedStaff(undefined);
+      setDialogOpen(true);
+      searchParams.delete('new');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Get all barbershop IDs for shared staff (matriz + unidades)
   // Staff records are stored at MATRIZ level, so we MUST include the matriz ID
