@@ -58,8 +58,8 @@ interface StaffMember {
 }
 
 const Staff = () => {
-  const { barbershopId, user, barbershops } = useAuth();
-  const { sharedBarbershopId, isUnit, loading: sharedLoading } = useSharedBarbershopId();
+  const { barbershopId, user, barbershops, selectedBarbershopId } = useAuth();
+  const { sharedBarbershopId, matrizBarbershopId, allRelatedBarbershopIds, isUnit, loading: sharedLoading } = useSharedBarbershopId();
   const { toast } = useToast();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,30 +70,55 @@ const Staff = () => {
   const [isCurrentUserInStaff, setIsCurrentUserInStaff] = useState(true);
   const [addingSelf, setAddingSelf] = useState(false);
 
+  // Get effective barbershop ID for fetching - use matrizBarbershopId or fall back to first available
+  const effectiveBarbershopId = matrizBarbershopId || (barbershops.length > 0 ? barbershops[0].id : null);
+
   // Get all barbershop IDs for shared staff (matriz + unidades)
   const getAllBarbershopIds = async (): Promise<string[]> => {
-    if (!sharedBarbershopId) return barbershopId ? [barbershopId] : [];
+    // If we already have allRelatedBarbershopIds from hook, use them
+    if (allRelatedBarbershopIds.length > 0) {
+      return allRelatedBarbershopIds;
+    }
+    
+    // Fallback: get from first barbershop
+    const rootId = effectiveBarbershopId;
+    if (!rootId) return [];
     
     // Get parent and all children from database
     const { data } = await supabase
       .from('barbershops')
-      .select('id')
-      .or(`id.eq.${sharedBarbershopId},parent_id.eq.${sharedBarbershopId}`);
+      .select('id, parent_id')
+      .or(`id.eq.${rootId},parent_id.eq.${rootId}`);
     
-    return data?.map(b => b.id) || [sharedBarbershopId];
+    if (!data) return [rootId];
+    
+    // If rootId has a parent, use parent as the real root
+    const currentItem = data.find(b => b.id === rootId);
+    if (currentItem?.parent_id) {
+      const { data: parentData } = await supabase
+        .from('barbershops')
+        .select('id')
+        .or(`id.eq.${currentItem.parent_id},parent_id.eq.${currentItem.parent_id}`);
+      return parentData?.map(b => b.id) || [rootId];
+    }
+    
+    return data?.map(b => b.id) || [rootId];
   };
 
   useEffect(() => {
-    if (sharedBarbershopId && !sharedLoading) {
-      fetchStaff();
-    } else if (!sharedLoading && !sharedBarbershopId) {
-      setLoading(false);
+    // Fetch staff when we have effective barbershop ID or loading is complete
+    if (!sharedLoading) {
+      if (effectiveBarbershopId) {
+        fetchStaff();
+      } else {
+        setLoading(false);
+      }
     }
-  }, [sharedBarbershopId, sharedLoading]);
+  }, [effectiveBarbershopId, sharedLoading]);
 
   // Real-time updates
   useEffect(() => {
-    if (!sharedBarbershopId) return;
+    if (!effectiveBarbershopId) return;
 
     const channel = supabase
       .channel('staff-realtime')
@@ -113,10 +138,10 @@ const Staff = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sharedBarbershopId]);
+  }, [effectiveBarbershopId]);
 
   const fetchStaff = async () => {
-    if (!sharedBarbershopId) {
+    if (!effectiveBarbershopId) {
       setLoading(false);
       return;
     }
