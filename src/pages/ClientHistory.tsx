@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 
 const ClientHistory = () => {
   const { clientId } = useParams<{ clientId: string }>();
-  const { barbershopId } = useAuth();
+  const { allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState<Client | null>(null);
@@ -61,27 +61,32 @@ const ClientHistory = () => {
   const [visitFrequency, setVisitFrequency] = useState(0);
 
   useEffect(() => {
-    if (clientId && barbershopId) {
+    if (clientId && allRelatedBarbershopIds.length > 0 && !loadingBarbershop) {
       loadClientData();
     }
-  }, [clientId, barbershopId]);
+  }, [clientId, allRelatedBarbershopIds, loadingBarbershop]);
 
   const loadClientData = async () => {
     try {
       setLoading(true);
 
-      // Load client info
+      // Load client info - clientes são compartilhados entre unidades
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('*')
         .eq('id', clientId)
-        .eq('barbershop_id', barbershopId)
-        .single();
+        .in('barbershop_id', allRelatedBarbershopIds)
+        .maybeSingle();
 
       if (clientError) throw clientError;
+      if (!clientData) {
+        toast.error('Cliente não encontrado');
+        navigate('/clients');
+        return;
+      }
       setClient(clientData);
 
-      // Load appointments
+      // Load appointments - buscar de todas as unidades relacionadas
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select(`
@@ -94,7 +99,7 @@ const ClientHistory = () => {
           staff_id
         `)
         .eq('client_id', clientId)
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', allRelatedBarbershopIds)
         .order('appointment_date', { ascending: false })
         .order('appointment_time', { ascending: false });
 
