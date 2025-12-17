@@ -86,10 +86,8 @@ const Header = () => {
             </h1>
           </div>
           
-          {/* Barbershop Selector - hidden on very small screens */}
-          <div className="hidden md:block">
-            <BarbershopSelector />
-          </div>
+          {/* Barbershop Selector */}
+          <BarbershopSelector />
         </div>
 
         {/* Actions */}
