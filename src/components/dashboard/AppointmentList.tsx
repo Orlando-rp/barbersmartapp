@@ -18,30 +18,29 @@ interface Appointment {
   barber_name?: string;
 }
 const AppointmentList = () => {
-  const {
-    barbershopId
-  } = useAuth();
+  const { activeBarbershopIds } = useAuth();
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    if (barbershopId) {
+    if (activeBarbershopIds.length > 0) {
       fetchTodayAppointments();
 
-      // Realtime subscription
+      // Realtime subscription - sem filtro específico pois realtime não suporta IN
       const channel = supabase.channel('dashboard-appointments').on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'appointments',
-        filter: `barbershop_id=eq.${barbershopId}`
+        table: 'appointments'
       }, () => {
         fetchTodayAppointments();
       }).subscribe();
+      
       return () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [barbershopId]);
+  }, [activeBarbershopIds]);
   const fetchTodayAppointments = async () => {
     try {
       setLoading(true);
@@ -49,7 +48,7 @@ const AppointmentList = () => {
       const {
         data: appointmentsData,
         error
-      } = await supabase.from('appointments').select('id, client_name, service_name, appointment_time, status, staff_id').eq('barbershop_id', barbershopId).eq('appointment_date', today).order('appointment_time', {
+      } = await supabase.from('appointments').select('id, client_name, service_name, appointment_time, status, staff_id').in('barbershop_id', activeBarbershopIds).eq('appointment_date', today).order('appointment_time', {
         ascending: true
       }).limit(5);
       if (error) throw error;
