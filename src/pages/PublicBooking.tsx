@@ -463,13 +463,18 @@ export default function PublicBooking() {
     }
   };
 
-  const filteredStaffList = selectedService 
-    ? staffList.filter(staff => {
-        const staffHasServiceEntries = staffServices.some(ss => ss.staff_id === staff.id);
+  // Staff list - show all active staff (no filtering needed since staff comes before service)
+  const filteredStaffList = staffList;
+
+  // Filter services by selected staff - show only services the staff provides
+  const filteredServices = selectedStaff 
+    ? services.filter(service => {
+        const staffHasServiceEntries = staffServices.some(ss => ss.staff_id === selectedStaff.id);
+        // If staff has no service entries, assume they provide all services
         if (!staffHasServiceEntries) return true;
-        return staffServices.some(ss => ss.staff_id === staff.id && ss.service_id === selectedService.id);
+        return staffServices.some(ss => ss.staff_id === selectedStaff.id && ss.service_id === service.id);
       })
-    : staffList;
+    : services;
 
   // Use standardized schedule functions
   const staffWorksOnDate = (staff: Staff, date: Date): boolean => {
@@ -725,8 +730,11 @@ export default function PublicBooking() {
     try {
       setSubmitting(true);
 
+      // Use selectedUnit.id for proper unit assignment
+      const effectiveUnitId = selectedUnit?.id || barbershopId;
+
       const appointmentData = {
-        barbershop_id: barbershopId,
+        barbershop_id: effectiveUnitId,
         staff_id: selectedStaff.id,
         service_id: selectedService.id,
         appointment_date: format(selectedDate, 'yyyy-MM-dd'),
@@ -986,8 +994,8 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
 
   const totalSteps = hasMultipleUnits ? 5 : 4;
   const stepLabels = hasMultipleUnits 
-    ? ['Unidade', 'Serviço', 'Profissional', 'Data', 'Dados']
-    : ['Serviço', 'Profissional', 'Data', 'Dados'];
+    ? ['Unidade', 'Profissional', 'Serviço', 'Data', 'Dados']
+    : ['Profissional', 'Serviço', 'Data', 'Dados'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
@@ -1080,8 +1088,8 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
           <CardHeader className="px-4 sm:px-6 pb-2">
             <CardTitle className="flex items-center gap-3 text-lg sm:text-xl">
               {step === 0 && <><Building2 className="h-5 w-5 text-accent" /> Escolha a Unidade</>}
-              {step === 1 && <><Scissors className="h-5 w-5 text-accent" /> Escolha o Serviço</>}
-              {step === 2 && <><User className="h-5 w-5 text-accent" /> Escolha o Profissional</>}
+              {step === 1 && <><User className="h-5 w-5 text-accent" /> Escolha o Profissional</>}
+              {step === 2 && <><Scissors className="h-5 w-5 text-accent" /> Escolha o Serviço</>}
               {step === 3 && <><CalendarIcon className="h-5 w-5 text-accent" /> Data e Horário</>}
               {step === 4 && <><Phone className="h-5 w-5 text-accent" /> Seus Dados</>}
             </CardTitle>
@@ -1143,7 +1151,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 </motion.div>
               )}
 
-            {/* Step 1: Service Selection */}
+            {/* Step 1: Staff Selection (Profissional primeiro) */}
             {step === 1 && (
               <motion.div
                 key="step-1"
@@ -1155,13 +1163,76 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 transition={stepTransition}
                 className="grid gap-3"
               >
-                {services.length === 0 ? (
+                {filteredStaffList.length === 0 ? (
                   <div className="text-center py-12">
-                    <Scissors className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nenhum serviço disponível</p>
+                    <User className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nenhum profissional disponível</p>
                   </div>
                 ) : (
-                  services.map((service, index) => (
+                  filteredStaffList.map((staff, index) => (
+                    <motion.div
+                      key={staff.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => {
+                        setSelectedStaff(staff);
+                        setSelectedService(null); // Reset service when staff changes
+                        setSelectedDate(undefined);
+                        setSelectedTime('');
+                      }}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                        selectedStaff?.id === staff.id
+                          ? 'border-accent bg-accent/5 shadow-md'
+                          : 'border-border hover:border-accent/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-14 w-14 border-2 border-background shadow">
+                          <AvatarImage src={getStaffAvatar(staff) || undefined} alt={getStaffName(staff)} />
+                          <AvatarFallback className="bg-gradient-to-br from-accent/20 to-accent/10 text-accent font-semibold text-lg">
+                            {getStaffInitials(staff)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-base">{getStaffName(staff)}</h3>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Star className="h-3.5 w-3.5 fill-warning text-warning" />
+                            <span className="text-xs text-muted-foreground">Profissional</span>
+                          </div>
+                        </div>
+                        {selectedStaff?.id === staff.id && (
+                          <Check className="h-5 w-5 text-accent" />
+                        )}
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </motion.div>
+            )}
+
+            {/* Step 2: Service Selection (Serviço filtrado pelo profissional) */}
+            {step === 2 && (
+              <motion.div
+                key="step-2"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="grid gap-3"
+              >
+                {filteredServices.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Scissors className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nenhum serviço disponível para este profissional</p>
+                    <Button variant="link" onClick={() => { setDirection(-1); setStep(1); }} className="mt-2">
+                      Escolher outro profissional
+                    </Button>
+                  </div>
+                ) : (
+                  filteredServices.map((service, index) => (
                     <motion.div
                       key={service.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -1199,68 +1270,6 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                             {formatDuration(service.duration)}
                           </Badge>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </motion.div>
-            )}
-
-            {/* Step 2: Staff Selection */}
-            {step === 2 && (
-              <motion.div
-                key="step-2"
-                custom={direction}
-                variants={stepVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={stepTransition}
-                className="grid gap-3"
-              >
-                {filteredStaffList.length === 0 ? (
-                  <div className="text-center py-12">
-                    <User className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nenhum profissional disponível</p>
-                    <Button variant="link" onClick={() => { setDirection(-1); setStep(1); }} className="mt-2">
-                      Escolher outro serviço
-                    </Button>
-                  </div>
-                ) : (
-                  filteredStaffList.map((staff, index) => (
-                    <motion.div
-                      key={staff.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      onClick={() => {
-                        setSelectedStaff(staff);
-                        setSelectedDate(undefined);
-                        setSelectedTime('');
-                      }}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
-                        selectedStaff?.id === staff.id
-                          ? 'border-accent bg-accent/5 shadow-md'
-                          : 'border-border hover:border-accent/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <Avatar className="h-14 w-14 border-2 border-background shadow">
-                          <AvatarImage src={getStaffAvatar(staff) || undefined} alt={getStaffName(staff)} />
-                          <AvatarFallback className="bg-gradient-to-br from-accent/20 to-accent/10 text-accent font-semibold text-lg">
-                            {getStaffInitials(staff)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-base">{getStaffName(staff)}</h3>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Star className="h-3.5 w-3.5 fill-warning text-warning" />
-                            <span className="text-xs text-muted-foreground">Profissional</span>
-                          </div>
-                        </div>
-                        {selectedStaff?.id === staff.id && (
-                          <Check className="h-5 w-5 text-accent" />
-                        )}
                       </div>
                     </motion.div>
                   ))
@@ -1580,11 +1589,16 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 onClick={() => {
                   setDirection(-1);
                   if (step === 1 && hasMultipleUnits) {
-                    setSelectedService(null);
+                    // Going back to unit selection - reset all selections
                     setSelectedStaff(null);
+                    setSelectedService(null);
                     setSelectedDate(undefined);
                     setSelectedTime('');
                     setStep(0);
+                  } else if (step === 2) {
+                    // Going back to staff selection - reset service selection
+                    setSelectedService(null);
+                    setStep(1);
                   } else {
                     setStep(step - 1);
                   }
@@ -1604,8 +1618,8 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                   }}
                   disabled={
                     (step === 0 && !selectedUnit) ||
-                    (step === 1 && !selectedService) ||
-                    (step === 2 && !selectedStaff) ||
+                    (step === 1 && !selectedStaff) ||
+                    (step === 2 && !selectedService) ||
                     (step === 3 && (!selectedDate || !selectedTime))
                   }
                   className="h-11 bg-accent hover:bg-accent/90 text-accent-foreground"
