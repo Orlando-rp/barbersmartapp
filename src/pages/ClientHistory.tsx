@@ -355,22 +355,22 @@ const ClientHistory = () => {
         </div>
 
         {/* Charts Row */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           {/* Frequency Chart */}
           <Card>
-            <CardHeader>
-              <CardTitle>Frequência de Visitas</CardTitle>
-              <CardDescription>Últimos 6 meses</CardDescription>
+            <CardHeader className="pb-2 sm:pb-4">
+              <CardTitle className="text-base sm:text-lg">Frequência de Visitas</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Últimos 6 meses</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2 sm:p-6">
               {monthlyStats.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={200} className="sm:!h-[280px]">
                   <LineChart data={monthlyStats}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} width={30} />
                     <Tooltip />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Line 
                       type="monotone" 
                       dataKey="appointments" 
@@ -381,47 +381,47 @@ const ClientHistory = () => {
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center text-muted-foreground py-8">Sem dados disponíveis</p>
+                <p className="text-center text-muted-foreground py-8 text-sm">Sem dados disponíveis</p>
               )}
             </CardContent>
           </Card>
 
           {/* Revenue Chart */}
           <Card>
-            <CardHeader>
-              <CardTitle>Receita por Mês</CardTitle>
-              <CardDescription>Últimos 6 meses</CardDescription>
+            <CardHeader className="pb-2 sm:pb-4">
+              <CardTitle className="text-base sm:text-lg">Receita por Mês</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Últimos 6 meses</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2 sm:p-6">
               {monthlyStats.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={200} className="sm:!h-[280px]">
                   <BarChart data={monthlyStats}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} width={40} />
                     <Tooltip formatter={(value) => `R$ ${Number(value).toFixed(2)}`} />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Bar dataKey="revenue" fill="#82ca9d" name="Receita" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center text-muted-foreground py-8">Sem dados disponíveis</p>
+                <p className="text-center text-muted-foreground py-8 text-sm">Sem dados disponíveis</p>
               )}
             </CardContent>
           </Card>
         </div>
 
         {/* Services Stats Row */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           {/* Favorite Services Pie Chart */}
           <Card>
-            <CardHeader>
-              <CardTitle>Serviços Favoritos</CardTitle>
-              <CardDescription>Distribuição por quantidade de vezes</CardDescription>
+            <CardHeader className="pb-2 sm:pb-4">
+              <CardTitle className="text-base sm:text-lg">Serviços Favoritos</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Distribuição por quantidade</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2 sm:p-6">
               {serviceStats.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
                   <PieChart>
                     <Pie
                       data={serviceStats}
@@ -429,53 +429,55 @@ const ClientHistory = () => {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
-                      label={(entry) => `${entry.name} (${entry.count})`}
+                      outerRadius={70}
+                      label={({ name, count }) => window.innerWidth > 640 ? `${name} (${count})` : `${count}`}
+                      labelLine={window.innerWidth > 640}
                     >
                       {serviceStats.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center text-muted-foreground py-8">Sem dados disponíveis</p>
+                <p className="text-center text-muted-foreground py-8 text-sm">Sem dados disponíveis</p>
               )}
             </CardContent>
           </Card>
 
           {/* Services Ranking */}
           <Card>
-            <CardHeader>
-              <CardTitle>Ranking de Serviços</CardTitle>
-              <CardDescription>Ordenado por número de vezes</CardDescription>
+            <CardHeader className="pb-2 sm:pb-4">
+              <CardTitle className="text-base sm:text-lg">Ranking de Serviços</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Ordenado por frequência</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 sm:p-6">
               {serviceStats.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-3">
                   {serviceStats.map((service, index) => (
-                    <div key={service.name} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold">
+                    <div key={service.name} className="flex items-center justify-between p-2 sm:p-3 border border-border rounded-lg gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 text-primary font-bold text-xs sm:text-sm shrink-0">
                           {index + 1}
                         </div>
-                        <div>
-                          <p className="font-medium">{service.name}</p>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm sm:text-base truncate">{service.name}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             {service.count} {service.count === 1 ? 'vez' : 'vezes'}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-success">R$ {service.total.toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">Total gasto</p>
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-success text-sm sm:text-base">R$ {service.total.toFixed(2)}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">Total gasto</p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-muted-foreground py-8">Sem dados disponíveis</p>
+                <p className="text-center text-muted-foreground py-8 text-sm">Sem dados disponíveis</p>
               )}
             </CardContent>
           </Card>
@@ -483,49 +485,52 @@ const ClientHistory = () => {
 
         {/* Recent Appointments */}
         <Card>
-          <CardHeader>
-            <CardTitle>Histórico de Agendamentos</CardTitle>
-            <CardDescription>Todos os agendamentos do cliente</CardDescription>
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Histórico de Agendamentos</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Todos os agendamentos do cliente</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6">
               {appointments.length > 0 ? (
                 <div className="space-y-2">
                   {appointments.map((apt) => (
                     <div
                       key={apt.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors gap-2 sm:gap-4"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="text-center">
-                          <p className="text-2xl font-bold">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="text-center min-w-[40px]">
+                          <p className="text-lg sm:text-2xl font-bold">
                             {apt.datetime ? format(apt.datetime, 'dd') : '-'}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
                             {apt.datetime ? format(apt.datetime, 'MMM/yy', { locale: ptBR }) : '-'}
                           </p>
                         </div>
-                        <div>
-                          <p className="font-medium">{apt.service_name}</p>
-                          <div className="flex gap-2 mt-1">
-                            <p className="text-sm text-muted-foreground">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm sm:text-base truncate">{apt.service_name}</p>
+                          <div className="flex flex-wrap gap-1 sm:gap-2 mt-0.5 sm:mt-1">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               {apt.datetime ? format(apt.datetime, "HH:mm") : apt.appointment_time}
                             </p>
                             {apt.staff_name && (
                               <>
-                                <span className="text-muted-foreground">•</span>
-                                <p className="text-sm text-muted-foreground">{apt.staff_name}</p>
+                                <span className="text-muted-foreground hidden sm:inline">•</span>
+                                <p className="text-xs sm:text-sm text-muted-foreground truncate">{apt.staff_name}</p>
                               </>
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <p className="font-bold text-lg">R$ {apt.service_price?.toFixed(2)}</p>
-                        <Badge variant={
-                          apt.status === 'concluido' ? 'default' :
-                          apt.status === 'confirmado' ? 'secondary' :
-                          apt.status === 'cancelado' ? 'destructive' : 'outline'
-                        }>
+                      <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 pl-[52px] sm:pl-0">
+                        <p className="font-bold text-sm sm:text-lg">R$ {apt.service_price?.toFixed(2)}</p>
+                        <Badge 
+                          variant={
+                            apt.status === 'concluido' ? 'default' :
+                            apt.status === 'confirmado' ? 'secondary' :
+                            apt.status === 'cancelado' ? 'destructive' : 'outline'
+                          }
+                          className="text-[10px] sm:text-xs"
+                        >
                           {apt.status}
                         </Badge>
                       </div>
@@ -533,7 +538,7 @@ const ClientHistory = () => {
                   ))}
                 </div>
               ) : (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground py-8 text-sm">
                 Nenhum agendamento encontrado
               </p>
             )}
