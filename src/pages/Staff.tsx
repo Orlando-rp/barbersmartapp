@@ -70,55 +70,66 @@ const Staff = () => {
   const [isCurrentUserInStaff, setIsCurrentUserInStaff] = useState(true);
   const [addingSelf, setAddingSelf] = useState(false);
 
-  // Get effective barbershop ID for fetching - use matrizBarbershopId or fall back to first available
-  const effectiveBarbershopId = matrizBarbershopId || (barbershops.length > 0 ? barbershops[0].id : null);
-
   // Get all barbershop IDs for shared staff (matriz + unidades)
+  // Staff records are stored at MATRIZ level, so we MUST include the matriz ID
   const getAllBarbershopIds = async (): Promise<string[]> => {
-    // If we already have allRelatedBarbershopIds from hook, use them
-    if (allRelatedBarbershopIds.length > 0) {
+    // If we have allRelatedBarbershopIds from hook and it includes the matriz, use them
+    if (allRelatedBarbershopIds.length > 0 && matrizBarbershopId && allRelatedBarbershopIds.includes(matrizBarbershopId)) {
+      console.log('[Staff] Using allRelatedBarbershopIds from hook:', allRelatedBarbershopIds);
       return allRelatedBarbershopIds;
     }
     
-    // Fallback: get from first barbershop
-    const rootId = effectiveBarbershopId;
-    if (!rootId) return [];
+    // Determine root ID - use matrizBarbershopId, or find from first barbershop
+    let rootId = matrizBarbershopId;
     
-    // Get parent and all children from database
-    const { data } = await supabase
-      .from('barbershops')
-      .select('id, parent_id')
-      .or(`id.eq.${rootId},parent_id.eq.${rootId}`);
-    
-    if (!data) return [rootId];
-    
-    // If rootId has a parent, use parent as the real root
-    const currentItem = data.find(b => b.id === rootId);
-    if (currentItem?.parent_id) {
-      const { data: parentData } = await supabase
-        .from('barbershops')
-        .select('id')
-        .or(`id.eq.${currentItem.parent_id},parent_id.eq.${currentItem.parent_id}`);
-      return parentData?.map(b => b.id) || [rootId];
-    }
-    
-    return data?.map(b => b.id) || [rootId];
-  };
-
-  useEffect(() => {
-    // Fetch staff when we have effective barbershop ID or loading is complete
-    if (!sharedLoading) {
-      if (effectiveBarbershopId) {
-        fetchStaff();
+    if (!rootId && barbershops.length > 0) {
+      // Find the matriz from available barbershops
+      const primaryBarbershop = barbershops.find(b => !b.parent_id) || barbershops[0];
+      
+      if (primaryBarbershop.parent_id) {
+        // It's a unit, get the parent
+        const { data: parentData } = await supabase
+          .from('barbershops')
+          .select('id')
+          .eq('id', primaryBarbershop.parent_id)
+          .single();
+        rootId = parentData?.id || primaryBarbershop.id;
       } else {
-        setLoading(false);
+        rootId = primaryBarbershop.id;
       }
     }
-  }, [effectiveBarbershopId, sharedLoading]);
+    
+    if (!rootId) {
+      console.warn('[Staff] No root barbershop ID found');
+      return [];
+    }
+    
+    // Get all barbershops in hierarchy (matriz + all units)
+    const { data } = await supabase
+      .from('barbershops')
+      .select('id')
+      .or(`id.eq.${rootId},parent_id.eq.${rootId}`);
+    
+    const allIds = data?.map(b => b.id) || [rootId];
+    console.log('[Staff] Computed allBarbershopIds:', allIds);
+    return allIds;
+  };
+  
+  // Get effective barbershop ID for realtime subscription
+  const effectiveBarbershopId = matrizBarbershopId || (barbershops.length > 0 ? barbershops[0].id : null);
+
+  useEffect(() => {
+    // Fetch staff when hook loading is complete and we have some barbershops
+    if (!sharedLoading && (matrizBarbershopId || barbershops.length > 0)) {
+      fetchStaff();
+    } else if (!sharedLoading && !matrizBarbershopId && barbershops.length === 0) {
+      setLoading(false);
+    }
+  }, [matrizBarbershopId, sharedLoading, barbershops.length]);
 
   // Real-time updates
   useEffect(() => {
-    if (!effectiveBarbershopId) return;
+    if (!effectiveBarbershopId && barbershops.length === 0) return;
 
     const channel = supabase
       .channel('staff-realtime')
@@ -138,19 +149,20 @@ const Staff = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [effectiveBarbershopId]);
+  }, [effectiveBarbershopId, barbershops.length]);
 
   const fetchStaff = async () => {
-    if (!effectiveBarbershopId) {
+    // Get all barbershop IDs first
+    const allBarbershopIds = await getAllBarbershopIds();
+    
+    if (allBarbershopIds.length === 0) {
+      console.warn('[Staff] No barbershop IDs to query');
       setLoading(false);
       return;
     }
     
     try {
       setLoading(true);
-      
-      // Get all barbershop IDs (matriz + unidades)
-      const allBarbershopIds = await getAllBarbershopIds();
       
       // Buscar nomes das barbearias
       const { data: barbershopsData } = await supabase
