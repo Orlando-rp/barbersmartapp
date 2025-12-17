@@ -118,15 +118,19 @@ export const PredictiveAnalytics = () => {
     const revenueWeights = [0.1, 0.1, 0.15, 0.2, 0.2, 0.25];
     const weightedRevenue = recentData.reduce((sum, d, i) => sum + d.revenue * (revenueWeights[i] || 0.15), 0);
     
-    // Calculate trend
-    const revenueGrowth = recentData.length >= 2 
-      ? (recentData[recentData.length - 1].revenue - recentData[0].revenue) / recentData[0].revenue 
+    // Calculate trend - protect against division by zero
+    const firstRevenue = recentData[0]?.revenue || 0;
+    const lastRevenue = recentData[recentData.length - 1]?.revenue || 0;
+    const revenueGrowth = recentData.length >= 2 && firstRevenue > 0
+      ? (lastRevenue - firstRevenue) / firstRevenue 
       : 0;
     
-    // No-show rate prediction
-    const avgNoShowRate = recentData.reduce((sum, d) => sum + d.noShowRate, 0) / recentData.length;
+    // No-show rate prediction - protect against division by zero
+    const avgNoShowRate = recentData.length > 0 
+      ? recentData.reduce((sum, d) => sum + (d.noShowRate || 0), 0) / recentData.length 
+      : 0;
     const noShowTrend = recentData.length >= 2
-      ? (recentData[recentData.length - 1].noShowRate - recentData[0].noShowRate) / 6
+      ? ((recentData[recentData.length - 1]?.noShowRate || 0) - (recentData[0]?.noShowRate || 0)) / 6
       : 0;
 
     const futurePredictions: Prediction[] = [];
@@ -149,18 +153,26 @@ export const PredictiveAnalytics = () => {
   const calculateInsights = (data: MonthlyData[]) => {
     if (data.length === 0) return;
 
-    const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
-    const avgRevenue = totalRevenue / data.length;
+    const totalRevenue = data.reduce((sum, d) => sum + (d.revenue || 0), 0);
+    const avgRevenue = data.length > 0 ? totalRevenue / data.length : 0;
 
     // Revenue growth rate (comparing last 3 months to previous 3)
-    const recent3 = data.slice(-3).reduce((sum, d) => sum + d.revenue, 0);
-    const previous3 = data.slice(-6, -3).reduce((sum, d) => sum + d.revenue, 0);
+    const recent3 = data.slice(-3).reduce((sum, d) => sum + (d.revenue || 0), 0);
+    const previous3 = data.slice(-6, -3).reduce((sum, d) => sum + (d.revenue || 0), 0);
     const growthRate = previous3 > 0 ? ((recent3 - previous3) / previous3) * 100 : 0;
 
-    // No-show insights
-    const avgNoShow = data.reduce((sum, d) => sum + d.noShowRate, 0) / data.length;
-    const recentNoShow = data.slice(-3).reduce((sum, d) => sum + d.noShowRate, 0) / 3;
-    const previousNoShow = data.slice(-6, -3).reduce((sum, d) => sum + d.noShowRate, 0) / 3;
+    // No-show insights - protect against division by zero
+    const avgNoShow = data.length > 0 
+      ? data.reduce((sum, d) => sum + (d.noShowRate || 0), 0) / data.length 
+      : 0;
+    const recentNoShowData = data.slice(-3);
+    const previousNoShowData = data.slice(-6, -3);
+    const recentNoShow = recentNoShowData.length > 0 
+      ? recentNoShowData.reduce((sum, d) => sum + (d.noShowRate || 0), 0) / recentNoShowData.length 
+      : 0;
+    const previousNoShow = previousNoShowData.length > 0 
+      ? previousNoShowData.reduce((sum, d) => sum + (d.noShowRate || 0), 0) / previousNoShowData.length 
+      : 0;
     const noShowTrend = recentNoShow - previousNoShow;
 
     // Best and worst months
