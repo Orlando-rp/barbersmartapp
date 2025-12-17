@@ -43,6 +43,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { ClientsSkeleton } from "@/components/skeletons";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
+import { IllustratedEmptyState } from "@/components/ui/illustrated-empty-state";
 
 type SortField = 'name' | 'created_at' | 'phone';
 type SortDirection = 'asc' | 'desc';
@@ -314,13 +315,13 @@ const Clients = () => {
           </div>
           <div className="flex gap-2">
             <ClientImportDialog onSuccess={fetchClients}>
-              <Button variant="outline" size="default" className="w-full sm:w-auto">
+              <Button id="import-dialog-trigger" variant="outline" size="default" className="w-full sm:w-auto">
                 <Upload className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Importar</span>
               </Button>
             </ClientImportDialog>
             <ClientDialog editingClient={null} onSuccess={fetchClients}>
-              <Button variant="premium" size="default" className="w-full sm:w-auto">
+              <Button id="client-dialog-trigger" variant="premium" size="default" className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Novo Cliente</span>
                 <span className="sm:hidden">Novo</span>
@@ -476,32 +477,27 @@ const Clients = () => {
           <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
             <div className="space-y-2 md:space-y-3">
               {filteredClients.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 text-center">
-                  <div className="mb-4 text-muted-foreground">
-                    {searchTerm || hasActiveFilters ? <Search className="h-12 w-12" /> : <Users className="h-12 w-12" />}
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    {searchTerm || hasActiveFilters ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-                  </h3>
-                  <p className="text-muted-foreground mb-4 max-w-md">
-                    {searchTerm || hasActiveFilters 
-                      ? "Tente ajustar os filtros ou termo de busca" 
-                      : "Comece adicionando seu primeiro cliente"}
-                  </p>
-                  {hasActiveFilters ? (
+                hasActiveFilters ? (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <Search className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum cliente encontrado</h3>
+                    <p className="text-muted-foreground mb-4 max-w-md">Tente ajustar os filtros ou termo de busca</p>
                     <Button variant="outline" size="sm" onClick={clearFilters}>
                       <X className="h-4 w-4 mr-2" />
                       Limpar Filtros
                     </Button>
-                  ) : (
-                    <ClientDialog editingClient={null} onSuccess={fetchClients}>
-                      <Button variant="premium" size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Novo Cliente
-                      </Button>
-                    </ClientDialog>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <IllustratedEmptyState
+                    illustration="users"
+                    title="Nenhum cliente cadastrado"
+                    description="Construa seu banco de clientes para acompanhar histórico de atendimentos, preferências e facilitar agendamentos."
+                    actionLabel="Adicionar Cliente"
+                    onAction={() => document.getElementById('client-dialog-trigger')?.click()}
+                    secondaryActionLabel="Importar Clientes"
+                    onSecondaryAction={() => document.getElementById('import-dialog-trigger')?.click()}
+                  />
+                )
               ) : (
                 paginatedClients.map((client) => (
                 <div
