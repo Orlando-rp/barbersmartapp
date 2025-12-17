@@ -27,11 +27,11 @@ interface Notification {
 }
 
 // Helper para gerenciar estado de notificações no localStorage
-const getStorageKey = (barbershopId: string) => `notifications_state_${barbershopId}`;
+const getStorageKey = (barbershopIds: string[]) => `notifications_state_${barbershopIds.sort().join('_')}`;
 
-const getNotificationState = (barbershopId: string): { read: string[]; dismissed: string[] } => {
+const getNotificationState = (barbershopIds: string[]): { read: string[]; dismissed: string[] } => {
   try {
-    const stored = localStorage.getItem(getStorageKey(barbershopId));
+    const stored = localStorage.getItem(getStorageKey(barbershopIds));
     if (stored) {
       return JSON.parse(stored);
     }
@@ -41,16 +41,16 @@ const getNotificationState = (barbershopId: string): { read: string[]; dismissed
   return { read: [], dismissed: [] };
 };
 
-const saveNotificationState = (barbershopId: string, state: { read: string[]; dismissed: string[] }) => {
+const saveNotificationState = (barbershopIds: string[], state: { read: string[]; dismissed: string[] }) => {
   try {
-    localStorage.setItem(getStorageKey(barbershopId), JSON.stringify(state));
+    localStorage.setItem(getStorageKey(barbershopIds), JSON.stringify(state));
   } catch (e) {
     console.error('Erro ao salvar estado de notificações:', e);
   }
 };
 
 export const NotificationsDropdown = () => {
-  const { barbershopId, user } = useAuth();
+  const { activeBarbershopIds, user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [stateLoaded, setStateLoaded] = useState(false);
@@ -59,22 +59,22 @@ export const NotificationsDropdown = () => {
 
   // Carregar estado salvo ao montar (PRIMEIRO)
   useEffect(() => {
-    if (barbershopId) {
-      const savedState = getNotificationState(barbershopId);
+    if (activeBarbershopIds.length > 0) {
+      const savedState = getNotificationState(activeBarbershopIds);
       console.log('[Notifications] Estado carregado do localStorage:', savedState);
       setNotifState(savedState);
       setStateLoaded(true);
     }
-  }, [barbershopId]);
+  }, [activeBarbershopIds]);
 
   // Buscar notificações APENAS após estado ser carregado
   useEffect(() => {
-    if (barbershopId && stateLoaded) {
+    if (activeBarbershopIds.length > 0 && stateLoaded) {
       fetchNotifications();
       const unsubscribe = subscribeToNotifications();
       return unsubscribe;
     }
-  }, [barbershopId, stateLoaded, notifState.dismissed]);
+  }, [activeBarbershopIds, stateLoaded, notifState.dismissed]);
 
   const fetchNotifications = async () => {
     try {
@@ -89,7 +89,7 @@ export const NotificationsDropdown = () => {
       const { data: pendingAppointments } = await supabase
         .from('appointments')
         .select('id, client_name, appointment_time, service_name')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('appointment_date', today)
         .eq('status', 'pendente')
         .order('appointment_time', { ascending: true })
@@ -112,7 +112,7 @@ export const NotificationsDropdown = () => {
       const { data: waitlistItems } = await supabase
         .from('waitlist')
         .select('id, client_name')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .eq('status', 'waiting')
         .limit(5);
 
@@ -136,7 +136,7 @@ export const NotificationsDropdown = () => {
       const { data: recentReviews } = await supabase
         .from('reviews')
         .select('id, client_name, rating, created_at')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .gte('created_at', yesterday.toISOString())
         .order('created_at', { ascending: false })
         .limit(3);
@@ -161,7 +161,7 @@ export const NotificationsDropdown = () => {
       const { data: newClients } = await supabase
         .from('clients')
         .select('id, name, created_at')
-        .eq('barbershop_id', barbershopId)
+        .in('barbershop_id', activeBarbershopIds)
         .gte('created_at', yesterday.toISOString())
         .order('created_at', { ascending: false })
         .limit(3);
@@ -194,7 +194,7 @@ export const NotificationsDropdown = () => {
   };
 
   const subscribeToNotifications = () => {
-    // Escutar novos agendamentos em tempo real
+    // Escutar novos agendamentos em tempo real (sem filtro específico, validamos no callback)
     const channel = supabase
       .channel('notifications')
       .on(
@@ -202,11 +202,13 @@ export const NotificationsDropdown = () => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'appointments',
-          filter: `barbershop_id=eq.${barbershopId}`
+          table: 'appointments'
         },
         (payload) => {
           const apt = payload.new as any;
+          // Verificar se pertence a uma das barbearias ativas
+          if (!activeBarbershopIds.includes(apt.barbershop_id)) return;
+          
           const newNotif = {
             id: `apt-${apt.id}`,
             type: 'appointment' as const,
@@ -232,11 +234,13 @@ export const NotificationsDropdown = () => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'reviews',
-          filter: `barbershop_id=eq.${barbershopId}`
+          table: 'reviews'
         },
         (payload) => {
           const review = payload.new as any;
+          // Verificar se pertence a uma das barbearias ativas
+          if (!activeBarbershopIds.includes(review.barbershop_id)) return;
+          
           const newNotif = {
             id: `review-${review.id}`,
             type: 'review' as const,
@@ -265,7 +269,7 @@ export const NotificationsDropdown = () => {
   };
 
   const markAsRead = (id: string) => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
     
     setNotifications(prev => 
       prev.map(n => n.id === id ? { ...n, read: true } : n)
@@ -277,11 +281,11 @@ export const NotificationsDropdown = () => {
       read: [...new Set([...notifState.read, id])]
     };
     setNotifState(newState);
-    saveNotificationState(barbershopId, newState);
+    saveNotificationState(activeBarbershopIds, newState);
   };
 
   const markAllAsRead = () => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
     
     const allIds = notifications.map(n => n.id);
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -292,11 +296,11 @@ export const NotificationsDropdown = () => {
       read: [...new Set([...notifState.read, ...allIds])]
     };
     setNotifState(newState);
-    saveNotificationState(barbershopId, newState);
+    saveNotificationState(activeBarbershopIds, newState);
   };
 
   const clearAll = () => {
-    if (!barbershopId) return;
+    if (activeBarbershopIds.length === 0) return;
     
     const allIds = notifications.map(n => n.id);
     setNotifications([]);
@@ -307,7 +311,7 @@ export const NotificationsDropdown = () => {
       dismissed: [...new Set([...notifState.dismissed, ...allIds])]
     };
     setNotifState(newState);
-    saveNotificationState(barbershopId, newState);
+    saveNotificationState(activeBarbershopIds, newState);
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
