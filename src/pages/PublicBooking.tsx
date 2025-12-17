@@ -232,74 +232,91 @@ export default function PublicBooking() {
 
   useEffect(() => {
     if (barbershopId) {
-      checkForMultipleUnits();
+      resolveBarbershopAndLoad();
       trackVisit();
     }
   }, [barbershopId]);
 
-  // Check if this is a parent barbershop with multiple units
-  const checkForMultipleUnits = async () => {
+  // Resolve barbershopId (UUID or subdomain) to matriz and load data
+  const resolveBarbershopAndLoad = async () => {
     try {
       setLoading(true);
 
-      // First load the barbershop info
-      const { data: shop, error: shopError } = await supabase
+      // Check if barbershopId is a UUID or a subdomain
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(barbershopId || '');
+      
+      let matrizId: string | null = null;
+
+      if (!isUUID) {
+        // It's a subdomain - look up in barbershop_domains
+        const { data: domainData } = await supabase
+          .from('barbershop_domains')
+          .select('barbershop_id')
+          .eq('subdomain', barbershopId?.toLowerCase())
+          .eq('subdomain_status', 'active')
+          .maybeSingle();
+
+        if (domainData?.barbershop_id) {
+          matrizId = domainData.barbershop_id;
+        } else {
+          toast({ title: 'Link de agendamento não encontrado', variant: 'destructive' });
+          setLoading(false);
+          return;
+        }
+      } else {
+        // It's a UUID - check if it's a unit or matriz
+        const { data: shop, error: shopError } = await supabase
+          .from('barbershops')
+          .select('id, parent_id')
+          .eq('id', barbershopId)
+          .single();
+
+        if (shopError || !shop) {
+          toast({ title: 'Barbearia não encontrada', variant: 'destructive' });
+          setLoading(false);
+          return;
+        }
+
+        // If it's a unit, get the matriz
+        matrizId = shop.parent_id || shop.id;
+      }
+
+      // Load matriz data
+      const { data: matriz, error: matrizError } = await supabase
         .from('barbershops')
         .select('id, name, address, phone, parent_id, custom_branding')
-        .eq('id', barbershopId)
+        .eq('id', matrizId)
         .single();
 
-      if (shopError || !shop) {
+      if (matrizError || !matriz) {
         toast({ title: 'Barbearia não encontrada', variant: 'destructive' });
         setLoading(false);
         return;
       }
-      setBarbershop(shop);
 
-      // Determine root barbershop ID (matriz)
-      const rootId = shop.parent_id || shop.id;
+      setBarbershop(matriz);
+      setMatrizName(matriz.name);
 
-      // Load matriz branding - sempre buscar da matriz (barbearia principal)
-      let matrizData: { name: string; custom_branding: any } | null = null;
-      
-      if (shop.parent_id) {
-        // Esta é uma unidade, buscar branding da matriz
-        const { data: matriz } = await supabase
-          .from('barbershops')
-          .select('name, custom_branding')
-          .eq('id', rootId)
-          .single();
-        matrizData = matriz;
+      // Load branding
+      if (matriz.custom_branding) {
+        setMatrizBranding(matriz.custom_branding);
       } else {
-        // Esta é a matriz
-        matrizData = { name: shop.name, custom_branding: shop.custom_branding };
-      }
-
-      if (matrizData) {
-        setMatrizName(matrizData.name);
+        const { data: systemBranding } = await supabase
+          .from('system_branding')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
         
-        // Se a matriz tem custom_branding, usar
-        if (matrizData.custom_branding) {
-          setMatrizBranding(matrizData.custom_branding);
-        } else {
-          // Caso contrário, buscar system_branding global como fallback
-          const { data: systemBranding } = await supabase
-            .from('system_branding')
-            .select('*')
-            .limit(1)
-            .maybeSingle();
-          
-          if (systemBranding) {
-            setMatrizBranding({
-              logo_url: systemBranding.logo_url,
-              logo_url_dark: systemBranding.logo_dark_url,
-              primary_color: systemBranding.primary_color,
-              secondary_color: systemBranding.secondary_color,
-              accent_color: systemBranding.accent_color,
-              system_name: matrizData.name, // Manter nome da barbearia
-              tagline: systemBranding.tagline,
-            });
-          }
+        if (systemBranding) {
+          setMatrizBranding({
+            logo_url: systemBranding.logo_url,
+            logo_url_dark: systemBranding.logo_dark_url,
+            primary_color: systemBranding.primary_color,
+            secondary_color: systemBranding.secondary_color,
+            accent_color: systemBranding.accent_color,
+            system_name: matriz.name,
+            tagline: systemBranding.tagline,
+          });
         }
       }
 
@@ -307,23 +324,24 @@ export default function PublicBooking() {
       const { data: childUnits } = await supabase
         .from('barbershops')
         .select('id, name, address, phone, parent_id, custom_branding')
-        .eq('parent_id', rootId)
+        .eq('parent_id', matrizId)
         .eq('active', true);
 
-      if (!shop.parent_id && childUnits && childUnits.length > 0) {
-        // Apenas as unidades são selecionáveis, não a matriz
+      if (childUnits && childUnits.length > 0) {
+        // Multiple units - show unit selection (Step 0)
         setAvailableUnits(childUnits);
         setHasMultipleUnits(true);
         setStep(0);
         setLoading(false);
       } else {
+        // Single location - skip to Step 1
         setHasMultipleUnits(false);
-        setSelectedUnit(shop);
+        setSelectedUnit(matriz);
         setStep(1);
-        await loadBarbershopData(shop.id);
+        await loadBarbershopData(matriz.id);
       }
     } catch (error) {
-      console.error('Erro ao verificar unidades:', error);
+      console.error('Erro ao carregar barbearia:', error);
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' });
       setLoading(false);
     }

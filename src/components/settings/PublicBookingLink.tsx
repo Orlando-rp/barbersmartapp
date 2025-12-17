@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import {
   Dialog,
   DialogContent,
@@ -36,66 +37,80 @@ interface BookingStats {
 }
 
 export const PublicBookingLink = () => {
-  const { selectedBarbershopId, barbershops } = useAuth();
+  const { barbershops } = useAuth();
+  const { matrizBarbershopId, allRelatedBarbershopIds, loading: loadingMatriz } = useSharedBarbershopId();
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [stats, setStats] = useState<BookingStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [subdomain, setSubdomain] = useState<string | null>(null);
 
-  const currentBarbershop = barbershops.find(b => b.id === selectedBarbershopId);
+  const currentBarbershop = barbershops.find(b => b.id === matrizBarbershopId);
   
-  // Generate the public booking URL
+  // Generate the public booking URL using subdomain or matriz ID
   const baseUrl = window.location.origin;
-  const publicUrl = selectedBarbershopId 
-    ? `${baseUrl}/agendar/${selectedBarbershopId}`
+  const bookingSlug = subdomain || matrizBarbershopId;
+  const publicUrl = bookingSlug 
+    ? `${baseUrl}/agendar/${bookingSlug}`
     : null;
 
+  // Fetch subdomain for matriz
   useEffect(() => {
-    if (selectedBarbershopId) {
+    const fetchSubdomain = async () => {
+      if (!matrizBarbershopId) return;
+      
+      const { data } = await supabase
+        .from('barbershop_domains')
+        .select('subdomain')
+        .eq('barbershop_id', matrizBarbershopId)
+        .eq('subdomain_status', 'active')
+        .maybeSingle();
+      
+      if (data?.subdomain) {
+        setSubdomain(data.subdomain);
+      }
+    };
+    
+    fetchSubdomain();
+  }, [matrizBarbershopId]);
+
+  // Fetch aggregated stats for all related barbershops (matriz + units)
+  useEffect(() => {
+    if (matrizBarbershopId && allRelatedBarbershopIds.length > 0) {
       fetchStats();
     }
-  }, [selectedBarbershopId]);
+  }, [matrizBarbershopId, allRelatedBarbershopIds]);
 
   const fetchStats = async () => {
-    if (!selectedBarbershopId) return;
+    if (!matrizBarbershopId || allRelatedBarbershopIds.length === 0) return;
     
     setLoadingStats(true);
     try {
-      // Try to use RPC function first
-      const { data, error } = await supabase.rpc('get_public_booking_stats', {
-        p_barbershop_id: selectedBarbershopId,
-        p_days: 30
-      });
+      // Fetch stats for all related barbershops (matriz + units)
+      const { data: visitsData, error: visitsError } = await supabase
+        .from('public_booking_visits')
+        .select('id, visitor_ip, converted')
+        .in('barbershop_id', allRelatedBarbershopIds)
+        .gte('visited_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-      if (error) {
-        // Fallback: query directly
-        const { data: visitsData, error: visitsError } = await supabase
-          .from('public_booking_visits')
-          .select('id, visitor_ip, converted')
-          .eq('barbershop_id', selectedBarbershopId)
-          .gte('visited_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
-
-        if (!visitsError && visitsData) {
-          const total = visitsData.length;
-          const unique = new Set(visitsData.map(v => v.visitor_ip)).size;
-          const conversions = visitsData.filter(v => v.converted).length;
-          
-          setStats({
-            total_visits: total,
-            unique_visits: unique,
-            conversions: conversions,
-            conversion_rate: total > 0 ? Math.round((conversions / total) * 100 * 10) / 10 : 0
-          });
-        } else {
-          setStats({
-            total_visits: 0,
-            unique_visits: 0,
-            conversions: 0,
-            conversion_rate: 0
-          });
-        }
+      if (!visitsError && visitsData) {
+        const total = visitsData.length;
+        const unique = new Set(visitsData.map(v => v.visitor_ip)).size;
+        const conversions = visitsData.filter(v => v.converted).length;
+        
+        setStats({
+          total_visits: total,
+          unique_visits: unique,
+          conversions: conversions,
+          conversion_rate: total > 0 ? Math.round((conversions / total) * 100 * 10) / 10 : 0
+        });
       } else {
-        setStats(data);
+        setStats({
+          total_visits: 0,
+          unique_visits: 0,
+          conversions: 0,
+          conversion_rate: 0
+        });
       }
     } catch (error) {
       console.log('Stats not available yet');
@@ -151,11 +166,11 @@ export const PublicBookingLink = () => {
     ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(publicUrl)}`
     : null;
 
-  if (!selectedBarbershopId) {
+  if (loadingMatriz || !matrizBarbershopId) {
     return (
       <Card className="border-dashed">
         <CardContent className="py-6 text-center text-muted-foreground">
-          Selecione uma barbearia para ver o link de agendamento
+          {loadingMatriz ? 'Carregando...' : 'Selecione uma barbearia para ver o link de agendamento'}
         </CardContent>
       </Card>
     );
