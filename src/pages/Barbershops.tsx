@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Separator } from "@/components/ui/separator";
+import { CPFCNPJInput } from "@/components/ui/cpf-cnpj-input";
+import { validateCPFOrCNPJ, formatPhone } from "@/lib/formatters";
 import {
   Dialog,
   DialogContent,
@@ -183,6 +185,15 @@ const Barbershops = () => {
     if (!matriz || !profileFormData.name.trim()) {
       toast.error('O nome da barbearia é obrigatório');
       return;
+    }
+
+    // Validate CPF/CNPJ if provided
+    if (profileFormData.cnpj.trim()) {
+      const validation = validateCPFOrCNPJ(profileFormData.cnpj);
+      if (!validation.valid) {
+        toast.error('CPF ou CNPJ inválido');
+        return;
+      }
     }
 
     try {
@@ -797,13 +808,16 @@ const Barbershops = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="profile-cnpj">CNPJ</Label>
-                <Input
+                <Label htmlFor="profile-cnpj">CPF ou CNPJ</Label>
+                <CPFCNPJInput
                   id="profile-cnpj"
-                  placeholder="00.000.000/0001-00"
+                  placeholder="000.000.000-00 ou 00.000.000/0001-00"
                   value={profileFormData.cnpj}
-                  onChange={(e) => setProfileFormData({ ...profileFormData, cnpj: e.target.value })}
+                  onChange={(value) => setProfileFormData({ ...profileFormData, cnpj: value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Digite apenas números - a formatação é automática
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -823,7 +837,7 @@ const Barbershops = () => {
                     id="profile-phone"
                     placeholder="(11) 99999-9999"
                     value={profileFormData.phone}
-                    onChange={(e) => setProfileFormData({ ...profileFormData, phone: e.target.value })}
+                    onChange={(e) => setProfileFormData({ ...profileFormData, phone: formatPhone(e.target.value) })}
                   />
                 </div>
 
@@ -865,7 +879,7 @@ const Barbershops = () => {
                         id="responsible-phone"
                         placeholder="(11) 99999-9999"
                         value={profileFormData.responsible_phone}
-                        onChange={(e) => setProfileFormData({ ...profileFormData, responsible_phone: e.target.value })}
+                        onChange={(e) => setProfileFormData({ ...profileFormData, responsible_phone: formatPhone(e.target.value) })}
                       />
                     </div>
 
