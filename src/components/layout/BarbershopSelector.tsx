@@ -33,21 +33,24 @@ const BarbershopSelector = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2 max-w-[280px] sm:max-w-none justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+        <Button 
+          variant="outline" 
+          className="gap-1.5 sm:gap-2 max-w-[160px] sm:max-w-[280px] md:max-w-none justify-between h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
+        >
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             {isSuperAdmin ? (
-              <Eye className="h-4 w-4 text-warning flex-shrink-0" />
+              <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-warning flex-shrink-0" />
             ) : (
-              <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
+              <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
             )}
             <span className="truncate">
               {selectedBarbershopId === null 
-                ? (isSuperAdmin ? 'Todas as Barbearias' : 'Todas as Unidades')
+                ? (isSuperAdmin ? 'Todas' : 'Todas')
                 : (selectedBarbershop?.name || 'Selecionar')
               }
             </span>
           </div>
-          <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
+          <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-50 flex-shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[280px] sm:w-[320px]" align="start">
