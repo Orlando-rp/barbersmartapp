@@ -13,7 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Clock, Calendar as CalendarIcon, XCircle, Plus, Save, Building2, AlertCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Clock, Calendar as CalendarIcon, XCircle, Plus, Save, Building2, AlertCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -77,6 +86,11 @@ const BusinessHours = () => {
   const [specialCloseTime, setSpecialCloseTime] = useState('18:00');
   const [specialBreakStart, setSpecialBreakStart] = useState('');
   const [specialBreakEnd, setSpecialBreakEnd] = useState('');
+  
+  // Estados para copiar horários entre unidades
+  const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [selectedUnitsForCopy, setSelectedUnitsForCopy] = useState<string[]>([]);
+  const [copyingSchedule, setCopyingSchedule] = useState(false);
 
   // Define a unidade inicial quando disponível
   useEffect(() => {
@@ -315,6 +329,75 @@ const BusinessHours = () => {
     const updated = [...schedule];
     updated[index] = { ...updated[index], [field]: value };
     setSchedule(updated);
+  };
+
+  // Unidades disponíveis para cópia (exclui a unidade atual)
+  const unitsForCopy = selectableUnits.filter(u => u.id !== selectedUnitId);
+
+  const toggleUnitForCopy = (unitId: string) => {
+    setSelectedUnitsForCopy(prev => 
+      prev.includes(unitId) 
+        ? prev.filter(id => id !== unitId)
+        : [...prev, unitId]
+    );
+  };
+
+  const selectAllUnitsForCopy = () => {
+    if (selectedUnitsForCopy.length === unitsForCopy.length) {
+      setSelectedUnitsForCopy([]);
+    } else {
+      setSelectedUnitsForCopy(unitsForCopy.map(u => u.id));
+    }
+  };
+
+  const copyScheduleToUnits = async () => {
+    if (selectedUnitsForCopy.length === 0) {
+      toast.error('Selecione pelo menos uma unidade para copiar');
+      return;
+    }
+
+    try {
+      setCopyingSchedule(true);
+
+      for (const unitId of selectedUnitsForCopy) {
+        // Delete existing schedules for the target unit
+        await supabase
+          .from('business_hours')
+          .delete()
+          .eq('barbershop_id', unitId);
+
+        // Insert copied schedules
+        const scheduleData = schedule.map(day => ({
+          barbershop_id: unitId,
+          day_of_week: day.day,
+          is_open: day.enabled,
+          open_time: day.openTime,
+          close_time: day.closeTime,
+          break_start: day.breakStart || null,
+          break_end: day.breakEnd || null,
+        }));
+
+        const { error } = await supabase
+          .from('business_hours')
+          .insert(scheduleData);
+
+        if (error) throw error;
+      }
+
+      const unitNames = selectedUnitsForCopy
+        .map(id => selectableUnits.find(u => u.id === id)?.name)
+        .filter(Boolean)
+        .join(', ');
+
+      toast.success(`Horários copiados para: ${unitNames}`);
+      setShowCopyDialog(false);
+      setSelectedUnitsForCopy([]);
+    } catch (error) {
+      console.error('Erro ao copiar horários:', error);
+      toast.error('Erro ao copiar horários');
+    } finally {
+      setCopyingSchedule(false);
+    }
   };
 
   const addBlockedDate = async () => {
@@ -597,7 +680,17 @@ const BusinessHours = () => {
                   </div>
                 ))}
 
-                <div className="flex justify-end">
+                <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                  {hasMultipleUnits && unitsForCopy.length > 0 && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowCopyDialog(true)}
+                      size="lg"
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copiar para outras unidades
+                    </Button>
+                  )}
                   <Button onClick={saveSchedule} disabled={saving} size="lg">
                     <Save className="mr-2 h-4 w-4" />
                     {saving ? 'Salvando...' : 'Salvar Horários'}
@@ -840,6 +933,75 @@ const BusinessHours = () => {
           </>
         )}
       </div>
+
+      {/* Dialog para copiar horários */}
+      <Dialog open={showCopyDialog} onOpenChange={setShowCopyDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Copiar horários para outras unidades</DialogTitle>
+            <DialogDescription>
+              Selecione as unidades que receberão os mesmos horários de funcionamento configurados.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {unitsForCopy.length > 1 && (
+              <div className="flex items-center space-x-2 pb-2 border-b border-border">
+                <Checkbox
+                  id="select-all"
+                  checked={selectedUnitsForCopy.length === unitsForCopy.length}
+                  onCheckedChange={selectAllUnitsForCopy}
+                />
+                <label
+                  htmlFor="select-all"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Selecionar todas as unidades
+                </label>
+              </div>
+            )}
+            
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {unitsForCopy.map(unit => (
+                <div key={unit.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50">
+                  <Checkbox
+                    id={unit.id}
+                    checked={selectedUnitsForCopy.includes(unit.id)}
+                    onCheckedChange={() => toggleUnitForCopy(unit.id)}
+                  />
+                  <label
+                    htmlFor={unit.id}
+                    className="flex-1 text-sm cursor-pointer font-medium"
+                  >
+                    {unit.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+            
+            {selectedUnitsForCopy.length > 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Os horários existentes nas {selectedUnitsForCopy.length} unidade(s) selecionada(s) serão substituídos.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowCopyDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={copyScheduleToUnits} 
+              disabled={copyingSchedule || selectedUnitsForCopy.length === 0}
+            >
+              {copyingSchedule ? 'Copiando...' : `Copiar para ${selectedUnitsForCopy.length} unidade(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
