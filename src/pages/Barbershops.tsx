@@ -12,7 +12,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Separator } from "@/components/ui/separator";
 import { CPFCNPJInput } from "@/components/ui/cpf-cnpj-input";
 import { CEPInput } from "@/components/ui/cep-input";
-import { validateCPFOrCNPJ, formatPhone, ViaCEPResponse } from "@/lib/formatters";
+import { validateCPFOrCNPJ, validateEmail, formatPhone, ViaCEPResponse } from "@/lib/formatters";
 import {
   Dialog,
   DialogContent,
@@ -231,6 +231,16 @@ const Barbershops = () => {
       }
     }
 
+    // Validate emails
+    if (!validateEmail(profileFormData.email)) {
+      toast.error('Email da barbearia inválido');
+      return;
+    }
+    if (!validateEmail(profileFormData.responsible_email)) {
+      toast.error('Email do responsável inválido');
+      return;
+    }
+
     try {
       setSavingProfile(true);
 
@@ -276,6 +286,12 @@ const Barbershops = () => {
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast.error('O nome da unidade é obrigatório');
+      return;
+    }
+
+    // Validate email
+    if (!validateEmail(formData.email)) {
+      toast.error('Email inválido');
       return;
     }
 
