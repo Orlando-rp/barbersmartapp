@@ -119,3 +119,43 @@ export const formatPhone = (value: string): string => {
     .replace(/(\d{2})(\d)/, '($1) $2')
     .replace(/(\d{5})(\d)/, '$1-$2');
 };
+
+// Format CEP: 00000-000
+export const formatCEP = (value: string): string => {
+  const numbers = value.replace(/\D/g, '').slice(0, 8);
+  return numbers.replace(/(\d{5})(\d)/, '$1-$2');
+};
+
+// Validate CEP
+export const validateCEP = (cep: string): boolean => {
+  const numbers = cep.replace(/\D/g, '');
+  return numbers.length === 8;
+};
+
+// ViaCEP API response interface
+export interface ViaCEPResponse {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  erro?: boolean;
+}
+
+// Fetch address from ViaCEP
+export const fetchAddressByCEP = async (cep: string): Promise<ViaCEPResponse | null> => {
+  const numbers = cep.replace(/\D/g, '');
+  if (numbers.length !== 8) return null;
+  
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${numbers}/json/`);
+    const data = await response.json();
+    
+    if (data.erro) return null;
+    return data;
+  } catch (error) {
+    console.error('Erro ao buscar CEP:', error);
+    return null;
+  }
+};
