@@ -52,6 +52,7 @@ interface NavItem {
   requiredFeature?: keyof PlanFeatures;
   permission?: string;
   group: "operacoes" | "gestao" | "marketing" | "config" | "admin";
+  tourId?: string;
 }
 
 interface NavGroup {
@@ -63,16 +64,16 @@ interface NavGroup {
 
 const navigation: NavItem[] = [
   // Operações
-  { name: "Dashboard", href: "/", icon: Home, permission: 'dashboard', group: "operacoes" },
-  { name: "Agendamentos", href: "/appointments", icon: Calendar, requiredFeature: 'appointments', permission: 'appointments', group: "operacoes" },
+  { name: "Dashboard", href: "/", icon: Home, permission: 'dashboard', group: "operacoes", tourId: "dashboard" },
+  { name: "Agendamentos", href: "/appointments", icon: Calendar, requiredFeature: 'appointments', permission: 'appointments', group: "operacoes", tourId: "appointments" },
   { name: "Lista de Espera", href: "/waitlist", icon: ListChecks, requiredFeature: 'waitlist', permission: 'waitlist', group: "operacoes" },
-  { name: "Clientes", href: "/clients", icon: Users, requiredFeature: 'clients', permission: 'clients', group: "operacoes" },
+  { name: "Clientes", href: "/clients", icon: Users, requiredFeature: 'clients', permission: 'clients', group: "operacoes", tourId: "clients" },
   { name: "Horários", href: "/business-hours", icon: Clock, requiredFeature: 'business_hours', permission: 'business_hours', group: "operacoes" },
   
   // Gestão
   { name: "Serviços", href: "/services", icon: Scissors, requiredFeature: 'services', permission: 'services', group: "gestao" },
   { name: "Equipe", href: "/staff", icon: UserCog, requiredFeature: 'staff_basic', permission: 'staff', group: "gestao" },
-  { name: "Financeiro", href: "/finance", icon: DollarSign, requiredFeature: 'finance_basic', permission: 'finance', group: "gestao" },
+  { name: "Financeiro", href: "/finance", icon: DollarSign, requiredFeature: 'finance_basic', permission: 'finance', group: "gestao", tourId: "finance" },
   { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet, requiredFeature: 'staff_earnings', permission: 'meus_ganhos', group: "gestao" },
   { name: "Relatórios", href: "/reports", icon: BarChart3, requiredFeature: 'basic_reports', permission: 'reports', group: "gestao" },
   { name: "Minhas Unidades", href: "/barbershops", icon: Building2, adminOnly: true, group: "gestao" },
@@ -82,12 +83,12 @@ const navigation: NavItem[] = [
   // Marketing
   { name: "Marketing", href: "/marketing", icon: MessageSquare, requiredFeature: 'marketing_campaigns', permission: 'marketing', group: "marketing" },
   { name: "Avaliações", href: "/reviews", icon: StarIcon, requiredFeature: 'reviews', permission: 'reviews', group: "marketing" },
-  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, requiredFeature: 'whatsapp_notifications', permission: 'whatsapp', group: "marketing" },
+  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, requiredFeature: 'whatsapp_notifications', permission: 'whatsapp', group: "marketing", tourId: "whatsapp" },
   { name: "Chat WhatsApp", href: "/whatsapp-chat", icon: MessageCircle, requiredFeature: 'whatsapp_chat', permission: 'whatsapp_chat', group: "marketing" },
   { name: "Chatbot IA", href: "/chatbot", icon: Bot, requiredFeature: 'whatsapp_chatbot', permission: 'chatbot', group: "marketing" },
   
   // Config
-  { name: "Configurações", href: "/settings", icon: Settings, permission: 'settings', group: "config" },
+  { name: "Configurações", href: "/settings", icon: Settings, permission: 'settings', group: "config", tourId: "settings" },
   { name: "Auditoria", href: "/audit", icon: Shield, requiredFeature: 'audit_logs', permission: 'audit', group: "config" },
   { name: "Upgrade", href: "/upgrade", icon: Sparkles, adminOnly: true, group: "config" },
   
@@ -371,6 +372,7 @@ const Sidebar = () => {
                     <NavLink
                       key={item.name}
                       to={item.href}
+                      data-tour={item.tourId}
                       className={({ isActive }) =>
                         cn(
                           "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ml-2",
