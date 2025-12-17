@@ -15,9 +15,10 @@ import NotificationSettings from "@/components/settings/NotificationSettings";
 import BarbershopBrandingConfig from "@/components/settings/BarbershopBrandingConfig";
 import RolePermissionsConfig from "@/components/settings/RolePermissionsConfig";
 import { FeatureGate } from "@/components/FeatureGate";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { 
   Save, User, Bell, Clock, Globe, Image, Sparkles, 
-  Shield, Settings, ChevronRight, Building2, Link2
+  Shield, Settings, ChevronRight, Building2, Link2, RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -52,6 +53,7 @@ const settingsSections = [
 const SettingsPage = () => {
   const { barbershopId, userRole } = useAuth();
   const navigate = useNavigate();
+  const { resetTour } = useOnboarding();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -210,7 +212,17 @@ const SettingsPage = () => {
                     placeholder="contato@barbearia.com"
                   />
                 </div>
-                <div className="pt-4 flex justify-end">
+                <div className="pt-4 flex flex-col sm:flex-row justify-between gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      resetTour();
+                      toast.success('Tour reiniciado! Navegue para o Dashboard para ver o tour.');
+                    }}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reiniciar Tour
+                  </Button>
                   <Button 
                     variant="premium" 
                     onClick={handleSave}

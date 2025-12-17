@@ -1,20 +1,32 @@
 import { ReactNode } from "react";
+import { AnimatePresence } from "framer-motion";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import BottomNavigation from "./BottomNavigation";
 import FloatingActionButton from "./FloatingActionButton";
 import { CommandPalette } from "./CommandPalette";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { useOnboarding } from "@/hooks/useOnboarding";
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  const { showTour, completeTour, skipTour } = useOnboarding();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Global Command Palette (Ctrl+K) */}
       <CommandPalette />
+      
+      {/* Onboarding Tour */}
+      <AnimatePresence>
+        {showTour && (
+          <OnboardingTour onComplete={completeTour} onSkip={skipTour} />
+        )}
+      </AnimatePresence>
       
       <div className="flex">
         <Sidebar />
