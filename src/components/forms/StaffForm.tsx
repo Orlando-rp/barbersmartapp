@@ -477,15 +477,7 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
         
         if (!userId) throw new Error("Falha ao criar usuário");
 
-        // 3. Restore original session immediately after user creation
-        if (originalSession) {
-          await supabase.auth.setSession({
-            access_token: originalSession.access_token,
-            refresh_token: originalSession.refresh_token,
-          });
-        }
-
-        // 2. Create/update profile
+        // 3. Create profile WHILE new user is still "logged in" (RLS allows self-insert)
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -497,6 +489,14 @@ export const StaffForm = ({ staff, onClose, onSuccess }: StaffFormProps) => {
 
         if (profileError) {
           console.error('Erro ao criar profile:', profileError);
+        }
+
+        // 4. NOW restore original admin session
+        if (originalSession) {
+          await supabase.auth.setSession({
+            access_token: originalSession.access_token,
+            refresh_token: originalSession.refresh_token,
+          });
         }
 
         // 3. Create staff record in MATRIZ (single record per user)
