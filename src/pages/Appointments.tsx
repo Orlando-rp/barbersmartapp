@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AppointmentsSkeleton } from "@/components/skeletons";
+import { IllustratedEmptyState } from "@/components/ui/illustrated-empty-state";
 
 interface Appointment {
   id: string;
@@ -592,17 +593,30 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
           {loading ? (
             <AppointmentsSkeleton />
           ) : filteredAppointments.length === 0 ? (
-            <Card className="barbershop-card">
-              <CardContent className="py-8 sm:py-12 text-center px-4">
-                <Calendar className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">Nenhum agendamento encontrado</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {searchTerm || selectedBarber !== "all" || selectedDate !== "all"
-                    ? "Tente ajustar os filtros"
-                    : "Crie seu primeiro agendamento para começar"}
-                </p>
-              </CardContent>
-            </Card>
+            searchTerm || selectedBarber !== "all" || selectedDate !== "all" ? (
+              <Card className="barbershop-card">
+                <CardContent className="py-8 sm:py-12 text-center px-4">
+                  <Search className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">Nenhum agendamento encontrado</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Tente ajustar os filtros de busca</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="barbershop-card">
+                <CardContent className="py-4">
+                  <IllustratedEmptyState
+                    illustration="calendar"
+                    title="Nenhum agendamento"
+                    description="Sua agenda está vazia. Crie seu primeiro agendamento e comece a gerenciar sua barbearia de forma inteligente."
+                    actionLabel="Criar Agendamento"
+                    onAction={() => {
+                      setEditingAppointment(null);
+                      setIsDialogOpen(true);
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            )
           ) : (
             filteredAppointments.map((appointment) => (
               <Card key={appointment.id} className="barbershop-card hover:shadow-lg transition-shadow">

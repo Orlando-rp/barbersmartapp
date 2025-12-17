@@ -14,6 +14,7 @@ import { CategoryManager } from "@/components/services/CategoryManager";
 import { useServiceCategories } from "@/hooks/useServiceCategories";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { formatDuration } from "@/lib/utils";
+import { IllustratedEmptyState } from "@/components/ui/illustrated-empty-state";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -217,7 +218,7 @@ const Services = () => {
               </SheetContent>
             </Sheet>
             <ServiceDialog>
-              <Button variant="premium" size="default" className="w-full sm:w-auto">
+              <Button id="service-dialog-trigger" variant="premium" size="default" className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Serviço
               </Button>
@@ -314,14 +315,22 @@ const Services = () => {
         <Card className="barbershop-card">
           <CardContent className="p-0">
             {filteredServices.length === 0 ? (
-              <div className="text-center py-8 px-4">
-                <Scissors className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  {services.length === 0 
-                    ? 'Nenhum serviço cadastrado ainda. Clique em "Novo Serviço" para começar.'
-                    : 'Nenhum serviço encontrado para esta categoria.'}
-                </p>
-              </div>
+              services.length === 0 ? (
+                <IllustratedEmptyState
+                  illustration="services"
+                  title="Nenhum serviço cadastrado"
+                  description="Adicione os serviços oferecidos pela sua barbearia com preços e durações para facilitar os agendamentos."
+                  actionLabel="Adicionar Serviço"
+                  onAction={() => document.getElementById('service-dialog-trigger')?.click()}
+                />
+              ) : (
+                <div className="text-center py-8 px-4">
+                  <Search className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum serviço encontrado para esta categoria.
+                  </p>
+                </div>
+              )
             ) : (
               <>
                 {/* Desktop Table */}
