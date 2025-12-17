@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import Layout from "@/components/layout/Layout";
@@ -52,6 +53,7 @@ interface FinancialSummary {
 
 const Finance = () => {
   const { activeBarbershopIds, selectedBarbershopId, barbershops } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalRevenue: 0,
@@ -61,9 +63,19 @@ const Finance = () => {
   });
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Visão consolidada quando há múltiplas unidades selecionáveis e nenhuma está selecionada
   const isConsolidatedView = activeBarbershopIds.length > 1 && selectedBarbershopId === null;
+
+  // Handle ?new=true URL parameter to open dialog
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setIsDialogOpen(true);
+      searchParams.delete('new');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (activeBarbershopIds.length === 0) {
@@ -210,6 +222,12 @@ const Finance = () => {
                 <span className="hidden sm:inline">Nova Transação</span>
               </Button>
             </TransactionDialog>
+            {/* Controlled dialog for FAB */}
+            <TransactionDialog 
+              open={isDialogOpen} 
+              onOpenChange={setIsDialogOpen} 
+              onSuccess={fetchFinancialData}
+            />
           </div>
         </div>
 

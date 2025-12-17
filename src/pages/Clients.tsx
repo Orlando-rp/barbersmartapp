@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { ClientDialog } from "@/components/dialogs/ClientDialog";
 import { ClientImportDialog } from "@/components/dialogs/ClientImportDialog";
@@ -54,6 +54,7 @@ const Clients = () => {
   const { sharedBarbershopId, allRelatedBarbershopIds, loading: loadingBarbershop } = useSharedBarbershopId();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const listRef = useRef<HTMLDivElement>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +71,15 @@ const Clients = () => {
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  // Handle ?new=true URL parameter to open dialog
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setEditingClient({});
+      searchParams.delete('new');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (sharedBarbershopId && allRelatedBarbershopIds.length > 0 && !loadingBarbershop) {
