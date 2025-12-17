@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import Layout from "@/components/layout/Layout";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AppointmentsSkeleton } from "@/components/skeletons";
 import { IllustratedEmptyState } from "@/components/ui/illustrated-empty-state";
+import { PullToRefreshContainer } from "@/components/ui/pull-to-refresh";
 
 interface Appointment {
   id: string;
@@ -508,9 +510,19 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
     }
   };
 
+  // Pull to refresh callback
+  const handleRefresh = useCallback(async () => {
+    await fetchAppointments();
+    toast({
+      title: "Atualizado",
+      description: "Agendamentos atualizados.",
+    });
+  }, [activeBarbershopIds]);
+
   return (
     <Layout>
-      <div className="space-y-4 lg:space-y-6">
+      <PullToRefreshContainer onRefresh={handleRefresh} disabled={loading}>
+        <div className="space-y-4 lg:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -720,7 +732,8 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
             ))
           )}
         </div>
-      </div>
+        </div>
+      </PullToRefreshContainer>
     </Layout>
   );
 };

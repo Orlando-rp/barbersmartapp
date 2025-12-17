@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { ClientDialog } from "@/components/dialogs/ClientDialog";
@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ClientsSkeleton } from "@/components/skeletons";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { IllustratedEmptyState } from "@/components/ui/illustrated-empty-state";
+import { PullToRefreshContainer } from "@/components/ui/pull-to-refresh";
 
 type SortField = 'name' | 'created_at' | 'phone';
 type SortDirection = 'asc' | 'desc';
@@ -287,6 +288,15 @@ const Clients = () => {
 
   const hasActiveFilters = searchTerm || periodFilter !== 'all' || selectedTag !== 'all';
 
+  // Pull to refresh callback
+  const handleRefresh = useCallback(async () => {
+    await fetchClients();
+    toast({
+      title: "Atualizado",
+      description: "Lista de clientes atualizada.",
+    });
+  }, [sharedBarbershopId, allRelatedBarbershopIds]);
+
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-50" />;
     return sortDirection === 'asc' ? 
@@ -304,7 +314,8 @@ const Clients = () => {
 
   return (
     <Layout>
-      <div className="space-y-4 md:space-y-6">
+      <PullToRefreshContainer onRefresh={handleRefresh} disabled={loading}>
+        <div className="space-y-4 md:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -705,7 +716,8 @@ const Clients = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+        </div>
+      </PullToRefreshContainer>
     </Layout>
   );
 };
