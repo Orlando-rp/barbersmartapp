@@ -218,6 +218,14 @@ const Staff = () => {
             .eq('user_id', member.user_id)
             .in('barbershop_id', allBarbershopIds);
           
+          // Dedupe roles by role type (remove duplicates from multiple units)
+          const uniqueRoles = rolesData?.reduce((acc, curr) => {
+            if (!acc.some(r => r.role === curr.role)) {
+              acc.push(curr);
+            }
+            return acc;
+          }, [] as typeof rolesData) || [];
+          
           // Buscar serviços do staff
           let serviceNames: string[] = [];
           try {
@@ -242,14 +250,14 @@ const Staff = () => {
           
           return {
             ...member,
-            user_roles: rolesData || [],
+            user_roles: uniqueRoles,
             services: serviceNames,
             profiles: {
               full_name: member.profiles?.full_name || 'Nome não disponível',
               phone: member.profiles?.phone || '',
               avatar_url: member.profiles?.avatar_url || '',
               preferred_name: member.profiles?.preferred_name || null,
-              user_roles: rolesData || []
+              user_roles: uniqueRoles
             }
           };
         })
