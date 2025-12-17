@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Separator } from "@/components/ui/separator";
 import { CPFCNPJInput } from "@/components/ui/cpf-cnpj-input";
-import { validateCPFOrCNPJ, formatPhone } from "@/lib/formatters";
+import { CEPInput } from "@/components/ui/cep-input";
+import { validateCPFOrCNPJ, formatPhone, ViaCEPResponse } from "@/lib/formatters";
 import {
   Dialog,
   DialogContent,
@@ -59,7 +60,12 @@ interface UnitFormData {
 
 interface ProfileFormData {
   name: string;
-  address: string;
+  cep: string;
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  address_number: string;
   phone: string;
   email: string;
   cnpj: string;
@@ -78,7 +84,12 @@ const defaultUnitFormData: UnitFormData = {
 
 const defaultProfileFormData: ProfileFormData = {
   name: "",
-  address: "",
+  cep: "",
+  street: "",
+  neighborhood: "",
+  city: "",
+  state: "",
+  address_number: "",
   phone: "",
   email: "",
   cnpj: "",
@@ -167,9 +178,16 @@ const Barbershops = () => {
 
   const openProfileDialog = () => {
     if (matriz) {
+      // Parse existing address if available
+      const addressParts = matriz.address?.split(',').map(s => s.trim()) || [];
       setProfileFormData({
         name: matriz.name || "",
-        address: matriz.address || "",
+        cep: "",
+        street: addressParts[0] || "",
+        neighborhood: "",
+        city: "",
+        state: "",
+        address_number: "",
         phone: matriz.phone || "",
         email: matriz.email || "",
         cnpj: matriz.cnpj || "",
@@ -199,11 +217,22 @@ const Barbershops = () => {
     try {
       setSavingProfile(true);
 
+      // Build full address from components
+      const addressParts = [
+        profileFormData.street,
+        profileFormData.address_number,
+        profileFormData.neighborhood,
+        profileFormData.city,
+        profileFormData.state,
+        profileFormData.cep
+      ].filter(Boolean);
+      const fullAddress = addressParts.join(', ') || null;
+
       const { error } = await supabase
         .from('barbershops')
         .update({
           name: profileFormData.name.trim(),
-          address: profileFormData.address.trim() || null,
+          address: fullAddress,
           phone: profileFormData.phone.trim() || null,
           email: profileFormData.email.trim() || null,
           cnpj: profileFormData.cnpj.trim() || null,
@@ -820,15 +849,92 @@ const Barbershops = () => {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="profile-address">Endereço</Label>
-                <Input
-                  id="profile-address"
-                  placeholder="Endereço da sede"
-                  value={profileFormData.address}
-                  onChange={(e) => setProfileFormData({ ...profileFormData, address: e.target.value })}
-                />
+              <Separator />
+
+              <div>
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Endereço
+                </h4>
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-cep">CEP</Label>
+                      <CEPInput
+                        id="profile-cep"
+                        placeholder="00000-000"
+                        value={profileFormData.cep}
+                        onChange={(value) => setProfileFormData({ ...profileFormData, cep: value })}
+                        onAddressFound={(addr: ViaCEPResponse) => {
+                          setProfileFormData(prev => ({
+                            ...prev,
+                            street: addr.logradouro,
+                            neighborhood: addr.bairro,
+                            city: addr.localidade,
+                            state: addr.uf,
+                          }));
+                          toast.success('Endereço encontrado!');
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-2 space-y-2">
+                      <Label htmlFor="profile-street">Rua</Label>
+                      <Input
+                        id="profile-street"
+                        placeholder="Rua, Avenida..."
+                        value={profileFormData.street}
+                        onChange={(e) => setProfileFormData({ ...profileFormData, street: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-number">Número</Label>
+                      <Input
+                        id="profile-number"
+                        placeholder="123"
+                        value={profileFormData.address_number}
+                        onChange={(e) => setProfileFormData({ ...profileFormData, address_number: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-3 space-y-2">
+                      <Label htmlFor="profile-neighborhood">Bairro</Label>
+                      <Input
+                        id="profile-neighborhood"
+                        placeholder="Bairro"
+                        value={profileFormData.neighborhood}
+                        onChange={(e) => setProfileFormData({ ...profileFormData, neighborhood: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="col-span-3 space-y-2">
+                      <Label htmlFor="profile-city">Cidade</Label>
+                      <Input
+                        id="profile-city"
+                        placeholder="Cidade"
+                        value={profileFormData.city}
+                        onChange={(e) => setProfileFormData({ ...profileFormData, city: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-state">UF</Label>
+                      <Input
+                        id="profile-state"
+                        placeholder="SP"
+                        maxLength={2}
+                        value={profileFormData.state}
+                        onChange={(e) => setProfileFormData({ ...profileFormData, state: e.target.value.toUpperCase() })}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              <Separator />
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
