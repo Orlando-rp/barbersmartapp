@@ -186,7 +186,16 @@ export const useBarbershopDomain = () => {
     }
 
     try {
-      // Generate verification token
+      const currentCustomDomain = domain?.custom_domain?.toLowerCase().trim() ?? null;
+      const isSameDomain = !!domain && currentCustomDomain === normalizedDomain;
+
+      // IMPORTANT: keep TXT token stable. If the domain is the same and we already have a token,
+      // do not regenerate it (otherwise the user would need to update DNS again).
+      if (isSameDomain && domain?.dns_verification_token) {
+        return { success: true, verificationToken: domain.dns_verification_token };
+      }
+
+      // Generate verification token (only when needed)
       const { data: tokenData } = await supabase.rpc('generate_dns_verification_token');
       const verificationToken = tokenData || `lovable_verify_${Date.now()}`;
 
