@@ -18,8 +18,9 @@ import { FeatureGate } from "@/components/FeatureGate";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { 
   Save, User, Bell, Clock, Globe, Image, Sparkles, 
-  Shield, Settings, ChevronRight, Building2, Link2, RotateCcw
+  Shield, Settings, ChevronRight, Building2, Link2, RotateCcw, LayoutTemplate
 } from "lucide-react";
+import LandingPageBuilder from "@/components/settings/LandingPageBuilder";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,7 @@ interface BarbershopSettings {
   };
 }
 
-type SettingsSection = 'profile' | 'notifications' | 'hours' | 'domain' | 'portfolio' | 'branding' | 'permissions';
+type SettingsSection = 'profile' | 'notifications' | 'hours' | 'domain' | 'portfolio' | 'landing' | 'branding' | 'permissions';
 
 const settingsSections = [
   { id: 'profile' as const, label: 'Perfil', icon: Building2, description: 'Dados da barbearia' },
@@ -46,6 +47,7 @@ const settingsSections = [
   { id: 'hours' as const, label: 'Horários', icon: Clock, description: 'Funcionamento' },
   { id: 'domain' as const, label: 'Domínio', icon: Globe, description: 'Link público' },
   { id: 'portfolio' as const, label: 'Portfólio', icon: Image, description: 'Galeria de fotos' },
+  { id: 'landing' as const, label: 'Landing Page', icon: LayoutTemplate, description: 'Página pública' },
   { id: 'branding' as const, label: 'Marca', icon: Sparkles, description: 'Identidade visual' },
   { id: 'permissions' as const, label: 'Permissões', icon: Shield, description: 'Controle de acesso' },
 ];
@@ -297,6 +299,17 @@ const SettingsPage = () => {
               <p className="text-sm text-muted-foreground">Mostre seu trabalho na página pública</p>
             </div>
             <PortfolioGalleryManager />
+          </div>
+        );
+
+      case 'landing':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Landing Page</h2>
+              <p className="text-sm text-muted-foreground">Configure sua página pública com templates</p>
+            </div>
+            <LandingPageBuilder />
           </div>
         );
 
