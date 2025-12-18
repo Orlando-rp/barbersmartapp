@@ -42,12 +42,23 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          role: 'super_admin' | 'admin' | 'barbeiro' | 'recepcionista';
+          role: 'super_admin' | 'admin' | 'barbeiro' | 'recepcionista' | 'cliente';
           barbershop_id: string | null;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['user_roles']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['user_roles']['Insert']>;
+      };
+      client_users: {
+        Row: {
+          id: string;
+          user_id: string;
+          client_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['client_users']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['client_users']['Insert']>;
       };
       clients: {
         Row: {
