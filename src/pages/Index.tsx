@@ -45,11 +45,12 @@ interface DashboardStats {
 const defaultWidgetOrder = ['revenue', 'appointments', 'clients', 'occupancy'];
 
 const Index = () => {
-  const { barbershopId, barbershops, selectedBarbershopId, activeBarbershopIds } = useAuth();
+  const { barbershopId, barbershops, selectedBarbershopId, activeBarbershopIds, user } = useAuth();
   const { branding } = useBranding();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [consolidatedStats, setConsolidatedStats] = useState<DashboardStats | null>(null);
+  const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
   const [widgets, setWidgets] = useState<WidgetConfig[]>(() => {
     const saved = localStorage.getItem('dashboard-widgets');
     return saved ? JSON.parse(saved) : defaultWidgets;
@@ -63,6 +64,28 @@ const Index = () => {
   // Visão consolidada quando múltiplas unidades selecionáveis e nenhuma selecionada
   const hasMultipleUnits = activeBarbershopIds.length > 1;
   const isConsolidatedView = hasMultipleUnits && selectedBarbershopId === null;
+
+  // Fetch user profile for display name
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.id) return;
+      
+      const { data } = await supabase
+        .from('profiles')
+        .select('preferred_name, full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (data) {
+        const displayName = data.preferred_name?.trim() 
+          || data.full_name?.split(' ')[0] 
+          || null;
+        setUserDisplayName(displayName);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [user?.id]);
 
   useEffect(() => {
     if (barbershopId && !isConsolidatedView) {
@@ -361,7 +384,10 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
-                Bem-vindo ao {branding?.system_name || 'BarberSmart'}! 👋
+                {userDisplayName 
+                  ? `Bem-vindo, ${userDisplayName}!` 
+                  : `Bem-vindo ao ${branding?.system_name || 'BarberSmart'}!`
+                } 👋
               </h1>
               <p className="text-muted-foreground text-sm lg:text-lg">
                 {isConsolidatedView 
