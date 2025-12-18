@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { TemplateRenderer } from "@/components/landing-templates/TemplateRenderer";
+import { LandingPageConfig } from "@/types/landing-page";
 import {
   Calendar,
   Clock,
@@ -28,9 +30,13 @@ interface Barbershop {
   id: string;
   name: string;
   address: string;
+  city?: string;
+  state?: string;
   phone: string;
   email: string;
   logo_url: string | null;
+  latitude?: number;
+  longitude?: number;
   settings: {
     description?: string;
     instagram?: string;
@@ -46,6 +52,7 @@ interface Service {
   price: number;
   duration: number;
   category: string | null;
+  image_url?: string | null;
 }
 
 interface StaffMember {
@@ -54,6 +61,8 @@ interface StaffMember {
   avatar_url: string | null;
   full_name: string;
   specialties: string[];
+  bio?: string;
+  instagram?: string;
 }
 
 interface Review {
@@ -65,13 +74,14 @@ interface Review {
 }
 
 interface BusinessHour {
-  day_of_week: string;
+  day_of_week: number;
   is_open: boolean;
   open_time: string;
   close_time: string;
 }
 
-interface LandingConfig {
+// Legacy config interface for backward compatibility
+interface LegacyLandingConfig {
   hero_title?: string | null;
   hero_subtitle?: string | null;
   show_services?: boolean;
@@ -109,6 +119,11 @@ const dayNames: Record<string, string> = {
   sunday: "Domingo",
 };
 
+// Helper to check if config uses new template system
+const isNewTemplateConfig = (config: any): config is LandingPageConfig => {
+  return config && typeof config === 'object' && 'template_id' in config && config.sections?.length > 0;
+};
+
 const BarbershopLanding = () => {
   const { barbershopId, subdomain } = useParams<{ barbershopId?: string; subdomain?: string }>();
   const navigate = useNavigate();
@@ -122,7 +137,12 @@ const BarbershopLanding = () => {
   const [averageRating, setAverageRating] = useState<number>(0);
   const [portfolioPhotos, setPortfolioPhotos] = useState<PortfolioPhoto[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<PortfolioPhoto | null>(null);
-  const [landingConfig, setLandingConfig] = useState<LandingConfig>({
+  
+  // New template system config
+  const [templateConfig, setTemplateConfig] = useState<LandingPageConfig | null>(null);
+  
+  // Legacy config for backward compatibility
+  const [landingConfig, setLandingConfig] = useState<LegacyLandingConfig>({
     show_services: true,
     show_team: true,
     show_reviews: true,
@@ -164,7 +184,13 @@ const BarbershopLanding = () => {
           }
           
           shopId = customDomainData.barbershop_id;
-          setLandingConfig(customDomainData.landing_page_config || {});
+          
+          // Check if using new template system
+          if (isNewTemplateConfig(customDomainData.landing_page_config)) {
+            setTemplateConfig(customDomainData.landing_page_config);
+          } else {
+            setLandingConfig(customDomainData.landing_page_config || {});
+          }
           
           // If landing page disabled, redirect to booking
           if (!customDomainData.landing_page_enabled) {
@@ -173,7 +199,13 @@ const BarbershopLanding = () => {
           }
         } else {
           shopId = domainData.barbershop_id;
-          setLandingConfig(domainData.landing_page_config || {});
+          
+          // Check if using new template system
+          if (isNewTemplateConfig(domainData.landing_page_config)) {
+            setTemplateConfig(domainData.landing_page_config);
+          } else {
+            setLandingConfig(domainData.landing_page_config || {});
+          }
           
           if (!domainData.landing_page_enabled) {
             navigate(`/agendar/${shopId}`, { replace: true });
@@ -205,7 +237,7 @@ const BarbershopLanding = () => {
           .single(),
         supabase
           .from('services')
-          .select('id, name, description, price, duration, category')
+          .select('id, name, description, price, duration, category, image_url')
           .eq('barbershop_id', shopId)
           .eq('active', true)
           .order('category', { ascending: true })
@@ -218,7 +250,8 @@ const BarbershopLanding = () => {
             specialties,
             profiles!staff_user_id_fkey (
               full_name,
-              avatar_url
+              avatar_url,
+              bio
             )
           `)
           .eq('barbershop_id', shopId)
@@ -229,11 +262,12 @@ const BarbershopLanding = () => {
           .eq('barbershop_id', shopId)
           .eq('status', 'approved')
           .order('created_at', { ascending: false })
-          .limit(6),
+          .limit(10),
         supabase
           .from('business_hours')
           .select('day_of_week, is_open, open_time, close_time')
-          .eq('barbershop_id', shopId),
+          .eq('barbershop_id', shopId)
+          .order('day_of_week', { ascending: true }),
         supabase.rpc('get_barbershop_average_rating', { shop_id: shopId }),
         supabase
           .from('portfolio_photos')
@@ -260,6 +294,7 @@ const BarbershopLanding = () => {
         specialties: s.specialties || [],
         full_name: s.profiles?.full_name || 'Profissional',
         avatar_url: s.profiles?.avatar_url,
+        bio: s.profiles?.bio,
       }));
       setStaff(processedStaff);
       
@@ -308,6 +343,36 @@ const BarbershopLanding = () => {
       </div>
     );
   }
+
+  // If using new template system, render with TemplateRenderer
+  if (templateConfig) {
+    const bookingUrl = `/agendar/${barbershop.id}`;
+    
+    return (
+      <TemplateRenderer
+        config={templateConfig}
+        barbershopId={barbershop.id}
+        barbershopData={{
+          name: barbershop.name,
+          logo_url: barbershop.logo_url || undefined,
+          address: barbershop.address,
+          city: barbershop.city,
+          state: barbershop.state,
+          phone: barbershop.phone,
+          instagram: barbershop.settings?.instagram,
+          latitude: barbershop.latitude,
+          longitude: barbershop.longitude,
+        }}
+        services={services}
+        staff={staff}
+        reviews={reviews}
+        businessHours={businessHours}
+        bookingUrl={bookingUrl}
+      />
+    );
+  }
+
+  // Legacy rendering below...
 
   const groupedServices = services.reduce((acc, service) => {
     const category = service.category || 'Outros';
@@ -791,9 +856,11 @@ const BarbershopLanding = () => {
                   </h3>
                   
                   <div className="space-y-3">
-                    {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
-                      const hours = businessHours.find(h => h.day_of_week === day);
-                      const isToday = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() === day;
+                    {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
+                      const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                      const day = dayMap[dayIndex];
+                      const hours = businessHours.find(h => h.day_of_week === dayIndex);
+                      const isToday = new Date().getDay() === dayIndex;
                       
                       return (
                         <div
