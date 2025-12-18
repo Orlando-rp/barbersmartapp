@@ -200,6 +200,7 @@ export default function PublicBooking() {
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
   
   // Waitlist state
   const [showWaitlistForm, setShowWaitlistForm] = useState(false);
@@ -905,10 +906,11 @@ export default function PublicBooking() {
         p_appointment_date: format(selectedDate, 'yyyy-MM-dd'),
         p_appointment_time: selectedTime,
         p_duration: selectedService.duration,
+        p_service_price: selectedService.price,
+        p_service_name: selectedService.name,
         p_client_name: clientName.trim(),
         p_client_phone: clientPhone.replace(/\D/g, ''),
-        p_service_name: selectedService.name,
-        p_service_price: selectedService.price
+        p_client_email: clientEmail?.trim() || null
       });
 
       if (rpcError) throw rpcError;

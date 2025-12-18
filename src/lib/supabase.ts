@@ -103,6 +103,7 @@ export type Database = {
           service_id: string | null;
           appointment_date: string;
           appointment_time: string;
+          duration: number | null;
           status: 'pendente' | 'confirmado' | 'concluido' | 'cancelado' | 'falta';
           notes: string | null;
           client_name: string | null;
