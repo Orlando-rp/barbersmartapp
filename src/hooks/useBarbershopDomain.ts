@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -40,22 +40,42 @@ export interface BarbershopDomain {
 const BASE_DOMAIN = 'barbersmart.app';
 
 export const useBarbershopDomain = () => {
-  const { selectedBarbershopId } = useAuth();
+  const { selectedBarbershopId, barbershopId, barbershops } = useAuth();
   const [domain, setDomain] = useState<BarbershopDomain | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Para domínios, usar a matriz (root) quando em modo consolidado
+  const effectiveBarbershopId = useMemo(() => {
+    // Se há uma barbearia selecionada, usar ela
     if (selectedBarbershopId) {
+      return selectedBarbershopId;
+    }
+    
+    // Se está em modo "Todas as Unidades", encontrar a matriz
+    if (barbershops.length > 0) {
+      // Encontrar a raiz (barbershop sem parent_id)
+      const rootBarbershop = barbershops.find(b => !b.parent_id);
+      if (rootBarbershop) {
+        return rootBarbershop.id;
+      }
+    }
+    
+    // Último fallback
+    return barbershopId;
+  }, [selectedBarbershopId, barbershopId, barbershops]);
+
+  useEffect(() => {
+    if (effectiveBarbershopId) {
       fetchDomain();
     } else {
       setDomain(null);
       setLoading(false);
     }
-  }, [selectedBarbershopId]);
+  }, [effectiveBarbershopId]);
 
   const fetchDomain = async () => {
-    if (!selectedBarbershopId) return;
+    if (!effectiveBarbershopId) return;
 
     try {
       setLoading(true);
@@ -64,7 +84,7 @@ export const useBarbershopDomain = () => {
       const { data, error: fetchError } = await supabase
         .from('barbershop_domains')
         .select('*')
-        .eq('barbershop_id', selectedBarbershopId)
+        .eq('barbershop_id', effectiveBarbershopId)
         .maybeSingle();
 
       if (fetchError) {
@@ -102,7 +122,7 @@ export const useBarbershopDomain = () => {
   };
 
   const saveSubdomain = async (subdomain: string): Promise<{ success: boolean; error?: string }> => {
-    if (!selectedBarbershopId) {
+    if (!effectiveBarbershopId) {
       return { success: false, error: 'Barbearia não selecionada' };
     }
 
@@ -137,7 +157,7 @@ export const useBarbershopDomain = () => {
         const { error } = await supabase
           .from('barbershop_domains')
           .insert({
-            barbershop_id: selectedBarbershopId,
+            barbershop_id: effectiveBarbershopId,
             subdomain: normalizedSubdomain,
             subdomain_status: 'active',
           });
@@ -153,7 +173,7 @@ export const useBarbershopDomain = () => {
   };
 
   const saveCustomDomain = async (customDomain: string): Promise<{ success: boolean; error?: string; verificationToken?: string }> => {
-    if (!selectedBarbershopId) {
+    if (!effectiveBarbershopId) {
       return { success: false, error: 'Barbearia não selecionada' };
     }
 
@@ -190,7 +210,7 @@ export const useBarbershopDomain = () => {
         const { error } = await supabase
           .from('barbershop_domains')
           .insert({
-            barbershop_id: selectedBarbershopId,
+            barbershop_id: effectiveBarbershopId,
             custom_domain: normalizedDomain,
             custom_domain_status: 'pending',
             dns_verification_token: verificationToken,
