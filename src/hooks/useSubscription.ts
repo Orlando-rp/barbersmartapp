@@ -38,12 +38,18 @@ export const useSubscription = () => {
     try {
       setLoading(true);
 
-      // Identificar os IDs raiz (matriz) - barbearias sem parent_id ou os parent_ids
-      const rootIds = barbershops
-        .map(b => b.parent_id || b.id)
-        .filter((v, i, a) => a.indexOf(v) === i); // unique
+      // Coletar TODOS os IDs relacionados (próprios + parents)
+      const ownIds = barbershops.map(b => b.id);
+      const parentIds = barbershops
+        .map(b => b.parent_id)
+        .filter((id): id is string => id !== null && id !== undefined);
+      
+      // Combinar e remover duplicatas
+      const allRelatedIds = [...new Set([...ownIds, ...parentIds])];
 
-      if (rootIds.length === 0) {
+      console.log('[useSubscription] Buscando assinatura para IDs:', allRelatedIds);
+
+      if (allRelatedIds.length === 0) {
         setSubscription({
           planName: 'Gratuito',
           status: 'none',
@@ -54,7 +60,7 @@ export const useSubscription = () => {
         return;
       }
 
-      // Buscar assinatura da matriz (root barbershop)
+      // Buscar assinatura em qualquer barbershop da hierarquia
       const { data, error } = await supabase
         .from('subscriptions')
         .select(`
@@ -73,9 +79,13 @@ export const useSubscription = () => {
             price
           )
         `)
-        .in('barbershop_id', rootIds)
+        .in('barbershop_id', allRelatedIds)
         .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
+
+      console.log('[useSubscription] Resultado da busca:', { data, error });
 
       if (error) {
         // Tabela pode não existir ainda
