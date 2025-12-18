@@ -36,6 +36,14 @@ import {
 } from '@/types/landing-page';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { 
+  VariantSelector,
+  heroVariantOptions,
+  servicesVariantOptions,
+  teamVariantOptions,
+  galleryVariantOptions,
+  reviewsVariantOptions 
+} from './VariantSelector';
 import {
   DndContext,
   closestCenter,
@@ -573,73 +581,17 @@ interface SectionEditorProps<T> {
   barbershopId: string;
 }
 
-// Variant options for each section type
-const heroVariants = [
-  { value: 'default', label: 'Padrão' },
-  { value: 'split-screen', label: 'Tela Dividida' },
-  { value: 'video-parallax', label: 'Vídeo com Parallax' },
-  { value: 'slideshow', label: 'Slideshow' },
-  { value: 'minimal', label: 'Minimalista' },
-  { value: 'animated-text', label: 'Texto Animado' },
-];
-
-const servicesVariants = [
-  { value: 'default', label: 'Padrão' },
-  { value: 'featured', label: 'Com Destaque' },
-  { value: 'minimal', label: 'Minimalista' },
-  { value: 'hover-cards', label: 'Cards Interativos' },
-  { value: 'pricing-table', label: 'Tabela de Preços' },
-];
-
-const teamVariants = [
-  { value: 'default', label: 'Padrão' },
-  { value: 'featured', label: 'Com Destaque' },
-  { value: 'minimal-cards', label: 'Cards Mínimos' },
-  { value: 'overlay', label: 'Overlay na Foto' },
-  { value: 'cards-horizontal', label: 'Cards Horizontais' },
-];
-
-const galleryVariants = [
-  { value: 'default', label: 'Padrão' },
-  { value: 'featured', label: 'Com Destaque' },
-  { value: 'before-after', label: 'Antes/Depois' },
-  { value: 'collage', label: 'Colagem Criativa' },
-  { value: 'polaroid', label: 'Estilo Polaroid' },
-];
-
-const reviewsVariants = [
-  { value: 'default', label: 'Padrão' },
-  { value: 'featured', label: 'Com Destaque' },
-  { value: 'marquee', label: 'Marquee Infinito' },
-  { value: 'testimonial-wall', label: 'Mural de Depoimentos' },
-  { value: 'quote-highlight', label: 'Citações em Destaque' },
-];
-
 const HeroEditor: React.FC<SectionEditorProps<HeroSettings>> = ({ section, onUpdate, onVariantChange, barbershopId }) => {
   const settings = section.settings as HeroSettings;
   
   return (
     <div className="space-y-4">
-      {/* Variant Selector */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          Estilo Visual
-        </Label>
-        <Select
-          value={section.variant || 'default'}
-          onValueChange={(value) => onVariantChange?.(value)}
-        >
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Selecione um estilo" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            {heroVariants.map((v) => (
-              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Variant Selector with Preview */}
+      <VariantSelector
+        value={section.variant || 'default'}
+        onChange={(value) => onVariantChange?.(value)}
+        options={heroVariantOptions}
+      />
 
       <Separator />
 
@@ -792,26 +744,12 @@ const ServicesEditor: React.FC<SectionEditorProps<ServicesSettings>> = ({ sectio
   
   return (
     <div className="space-y-4">
-      {/* Variant Selector */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          Estilo Visual
-        </Label>
-        <Select
-          value={section.variant || 'default'}
-          onValueChange={(value) => onVariantChange?.(value)}
-        >
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Selecione um estilo" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            {servicesVariants.map((v) => (
-              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Variant Selector with Preview */}
+      <VariantSelector
+        value={section.variant || 'default'}
+        onChange={(value) => onVariantChange?.(value)}
+        options={servicesVariantOptions}
+      />
 
       <Separator />
 
@@ -925,26 +863,12 @@ const TeamEditor: React.FC<SectionEditorProps<TeamSettings>> = ({ section, onUpd
   
   return (
     <div className="space-y-4">
-      {/* Variant Selector */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          Estilo Visual
-        </Label>
-        <Select
-          value={section.variant || 'default'}
-          onValueChange={(value) => onVariantChange?.(value)}
-        >
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Selecione um estilo" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            {teamVariants.map((v) => (
-              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Variant Selector with Preview */}
+      <VariantSelector
+        value={section.variant || 'default'}
+        onChange={(value) => onVariantChange?.(value)}
+        options={teamVariantOptions}
+      />
 
       <Separator />
 
@@ -1047,26 +971,12 @@ const GalleryEditor: React.FC<SectionEditorProps<GallerySettings>> = ({ section,
   
   return (
     <div className="space-y-4">
-      {/* Variant Selector */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          Estilo Visual
-        </Label>
-        <Select
-          value={section.variant || 'default'}
-          onValueChange={(value) => onVariantChange?.(value)}
-        >
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Selecione um estilo" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            {galleryVariants.map((v) => (
-              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Variant Selector with Preview */}
+      <VariantSelector
+        value={section.variant || 'default'}
+        onChange={(value) => onVariantChange?.(value)}
+        options={galleryVariantOptions}
+      />
 
       <Separator />
 
@@ -1146,26 +1056,12 @@ const ReviewsEditor: React.FC<SectionEditorProps<ReviewsSettings>> = ({ section,
   
   return (
     <div className="space-y-4">
-      {/* Variant Selector */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          Estilo Visual
-        </Label>
-        <Select
-          value={section.variant || 'default'}
-          onValueChange={(value) => onVariantChange?.(value)}
-        >
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Selecione um estilo" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            {reviewsVariants.map((v) => (
-              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Variant Selector with Preview */}
+      <VariantSelector
+        value={section.variant || 'default'}
+        onChange={(value) => onVariantChange?.(value)}
+        options={reviewsVariantOptions}
+      />
 
       <Separator />
 
