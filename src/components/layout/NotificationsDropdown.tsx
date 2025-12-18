@@ -135,21 +135,39 @@ export const NotificationsDropdown = () => {
       
       const { data: recentReviews } = await supabase
         .from('reviews')
-        .select('id, client_name, rating, created_at')
+        .select('id, client_name, rating, created_at, client_id')
         .in('barbershop_id', activeBarbershopIds)
         .gte('created_at', yesterday.toISOString())
         .order('created_at', { ascending: false })
         .limit(3);
+      
+      // Buscar nomes preferidos dos clientes das avaliações
+      const reviewClientIds = recentReviews?.map(r => r.client_id).filter(Boolean) || [];
+      let reviewClientNames: Record<string, string> = {};
+      if (reviewClientIds.length > 0) {
+        const { data: reviewClients } = await supabase
+          .from('clients')
+          .select('id, name, preferred_name')
+          .in('id', reviewClientIds);
+        if (reviewClients) {
+          reviewClientNames = Object.fromEntries(
+            reviewClients.map(c => [c.id, c.preferred_name || c.name])
+          );
+        }
+      }
 
       if (recentReviews) {
         recentReviews.forEach((review) => {
           const reviewId = `review-${review.id}`;
           if (!dismissed.includes(reviewId)) {
+            const clientDisplayName = review.client_id 
+              ? (reviewClientNames[review.client_id] || review.client_name)
+              : review.client_name;
             notifs.push({
               id: reviewId,
               type: 'review',
               title: 'Nova Avaliação',
-              message: `${review.client_name} deixou uma avaliação de ${review.rating} estrelas`,
+              message: `${clientDisplayName} deixou uma avaliação de ${review.rating} estrelas`,
               read: read.includes(reviewId),
               created_at: review.created_at,
             });
@@ -160,7 +178,7 @@ export const NotificationsDropdown = () => {
       // 4. Novos clientes (últimas 24h)
       const { data: newClients } = await supabase
         .from('clients')
-        .select('id, name, created_at')
+        .select('id, name, preferred_name, created_at')
         .in('barbershop_id', activeBarbershopIds)
         .gte('created_at', yesterday.toISOString())
         .order('created_at', { ascending: false })
@@ -174,7 +192,7 @@ export const NotificationsDropdown = () => {
               id: clientId,
               type: 'client',
               title: 'Novo Cliente',
-              message: `${client.name} foi cadastrado`,
+              message: `${client.preferred_name || client.name} foi cadastrado`,
               read: read.includes(clientId),
               created_at: client.created_at,
             });
