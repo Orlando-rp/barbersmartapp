@@ -16,6 +16,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 interface Client {
   id: string;
   name: string;
+  preferred_name?: string;
   email?: string;
   phone?: string;
   created_at: string;
@@ -268,7 +269,7 @@ const ClientHistory = () => {
               <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">{client.name}</h1>
+              <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">{client.preferred_name || client.name}</h1>
               <div className="flex flex-wrap gap-2 sm:gap-4 mt-1 sm:mt-2 text-xs sm:text-sm text-muted-foreground">
                 {client.phone && (
                   <div className="flex items-center gap-1">
