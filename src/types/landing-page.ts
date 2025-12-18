@@ -4,6 +4,13 @@ export type TemplateCategory = 'modern' | 'vintage' | 'urban' | 'premium' | 'bol
 
 export type SectionType = 'hero' | 'services' | 'team' | 'gallery' | 'reviews' | 'location' | 'cta';
 
+// Section Variants
+export type HeroVariant = 'default' | 'split-screen' | 'video-parallax' | 'animated-text' | 'slideshow' | 'minimal';
+export type ServicesVariant = 'default' | 'featured' | 'minimal' | 'hover-cards' | 'pricing-table';
+export type TeamVariant = 'default' | 'featured' | 'minimal-cards' | 'overlay' | 'cards-horizontal';
+export type GalleryVariant = 'default' | 'featured' | 'before-after' | 'collage' | 'polaroid';
+export type ReviewsVariant = 'default' | 'featured' | 'marquee' | 'testimonial-wall' | 'quote-highlight';
+
 export interface ImageConfig {
   id: string;
   url: string;
@@ -40,6 +47,7 @@ export interface HeroSettings {
   background_type: 'image' | 'color' | 'gradient' | 'video';
   background_value: string;
   background_image?: ImageConfig;
+  background_images?: ImageConfig[]; // For slideshow variant
   text_position: 'left' | 'center' | 'right';
   text_color: 'light' | 'dark';
   height: 'fullscreen' | '75vh' | '50vh';
@@ -50,6 +58,12 @@ export interface HeroSettings {
   cta_secondary_action?: string;
   show_logo: boolean;
   show_scroll_indicator: boolean;
+  // Split screen settings
+  split_image?: ImageConfig;
+  split_position?: 'left' | 'right';
+  // Slideshow settings
+  slideshow_interval?: number; // seconds
+  slideshow_transition?: 'fade' | 'slide' | 'zoom';
 }
 
 export interface ServicesSettings {
