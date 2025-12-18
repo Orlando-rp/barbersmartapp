@@ -54,7 +54,7 @@ BEGIN
   FROM appointments
   WHERE staff_id = p_staff_id
     AND appointment_date = p_appointment_date
-    AND status NOT IN ('cancelado', 'nao_compareceu')
+    AND status NOT IN ('cancelado')
     AND (
       -- Novo agendamento começa durante um existente
       (p_appointment_time >= appointment_time AND p_appointment_time < appointment_time + (duration || ' minutes')::INTERVAL)
