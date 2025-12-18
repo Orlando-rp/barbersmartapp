@@ -10,17 +10,6 @@ interface SubscriptionPlan {
   price: number;
 }
 
-interface Subscription {
-  id: string;
-  barbershop_id: string;
-  plan_id: string;
-  status: string;
-  trial_ends_at: string | null;
-  current_period_start: string | null;
-  current_period_end: string | null;
-  plan?: SubscriptionPlan;
-}
-
 export interface SubscriptionInfo {
   planName: string;
   status: string;
@@ -30,26 +19,42 @@ export interface SubscriptionInfo {
 }
 
 export const useSubscription = () => {
-  const { selectedBarbershopId } = useAuth();
+  const { user, barbershops } = useAuth();
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (selectedBarbershopId) {
+    if (user && barbershops.length > 0) {
       fetchSubscription();
     } else {
       setSubscription(null);
       setLoading(false);
     }
-  }, [selectedBarbershopId]);
+  }, [user, barbershops]);
 
   const fetchSubscription = async () => {
-    if (!selectedBarbershopId) return;
+    if (!user || barbershops.length === 0) return;
 
     try {
       setLoading(true);
 
-      // Buscar assinatura da barbearia com o plano associado
+      // Identificar os IDs raiz (matriz) - barbearias sem parent_id ou os parent_ids
+      const rootIds = barbershops
+        .map(b => b.parent_id || b.id)
+        .filter((v, i, a) => a.indexOf(v) === i); // unique
+
+      if (rootIds.length === 0) {
+        setSubscription({
+          planName: 'Gratuito',
+          status: 'none',
+          validUntil: null,
+          isTrialing: false,
+          trialEndsAt: null,
+        });
+        return;
+      }
+
+      // Buscar assinatura da matriz (root barbershop)
       const { data, error } = await supabase
         .from('subscriptions')
         .select(`
@@ -68,7 +73,7 @@ export const useSubscription = () => {
             price
           )
         `)
-        .eq('barbershop_id', selectedBarbershopId)
+        .in('barbershop_id', rootIds)
         .eq('status', 'active')
         .maybeSingle();
 
