@@ -120,27 +120,54 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
     setDnsRecords(records => records.map(r => ({ ...r, status: 'checking' as const })));
 
     try {
-      // Simulate DNS check - in production, this would call an Edge Function
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call real DNS verification Edge Function
+      const { data, error } = await supabase.functions.invoke('verify-dns', {
+        body: {
+          domain: domain.custom_domain,
+          verificationToken: domain.dns_verification_token,
+          barbershopId: domain.barbershop_id
+        }
+      });
 
-      // For demo purposes, we'll mark records as valid if dns_verified_at exists
-      const isVerified = !!domain.dns_verified_at;
-      
-      setDnsRecords(records => records.map(r => ({
-        ...r,
-        status: isVerified ? 'valid' : 'pending'
-      })));
+      if (error) throw error;
+
+      console.log('DNS verification result:', data);
+
+      // Update records based on real DNS check results
+      setDnsRecords(records => records.map(r => {
+        if (r.type === 'A' && r.name === '@') {
+          return { ...r, status: data.aRecord?.configured ? 'valid' : 'pending' };
+        }
+        if (r.type === 'A' && r.name === 'www') {
+          return { ...r, status: data.wwwRecord?.configured ? 'valid' : 'pending' };
+        }
+        if (r.type === 'TXT') {
+          return { ...r, status: data.txtRecord?.configured ? 'valid' : 'pending' };
+        }
+        return r;
+      }));
 
       setLastChecked(new Date());
       
-      if (isVerified) {
-        toast.success("DNS configurado corretamente!");
+      // Show appropriate toast based on overall status
+      if (data.overallStatus === 'verified') {
+        toast.success("DNS verificado com sucesso! Todos os registros estão corretos.");
+        refresh(); // Refresh domain data to get updated status
+      } else if (data.overallStatus === 'partial') {
+        const configured = [];
+        const pending = [];
+        if (data.aRecord?.configured) configured.push('A');
+        else pending.push('A');
+        if (data.txtRecord?.configured) configured.push('TXT');
+        else pending.push('TXT');
+        
+        toast.info(`Parcialmente configurado. Faltam: ${pending.join(', ')}`);
       } else {
-        toast.info("Aguardando propagação do DNS...");
+        toast.info("Aguardando propagação do DNS... Registros ainda não detectados.");
       }
     } catch (error) {
       console.error('Error checking DNS:', error);
-      toast.error("Erro ao verificar DNS");
+      toast.error("Erro ao verificar DNS. Tente novamente.");
       setDnsRecords(records => records.map(r => ({ ...r, status: 'pending' })));
     } finally {
       setChecking(false);
