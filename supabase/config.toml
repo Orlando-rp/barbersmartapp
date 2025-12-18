@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.reset-password-whatsapp]
 verify_jwt = false
+
+[functions.verify-otp-client]
+verify_jwt = false
