@@ -1,5 +1,6 @@
 import React from 'react';
-import { landingTemplates, LandingTemplate } from './templateConfigs';
+import { landingTemplates } from './templateConfigs';
+import { LandingTemplate } from '@/types/landing-page';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check } from 'lucide-react';
