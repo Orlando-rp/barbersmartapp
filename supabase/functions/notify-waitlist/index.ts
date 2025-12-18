@@ -117,6 +117,7 @@ serve(async (req) => {
           if (clientData) {
             clientDisplayName = clientData.preferred_name || clientData.name || entry.client_name;
           }
+        }
 
         // Format date for message
         const dateObj = new Date(entry.preferred_date + "T12:00:00");
