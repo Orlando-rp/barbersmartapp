@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.verify-otp-client]
 verify_jwt = false
+
+[functions.verify-dns]
+verify_jwt = false
