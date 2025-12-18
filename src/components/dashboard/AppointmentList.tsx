@@ -11,11 +11,13 @@ import { toast } from "sonner";
 interface Appointment {
   id: string;
   client_name: string;
+  client_display_name?: string;
   service_name: string;
   appointment_time: string;
   status: "pendente" | "confirmado" | "concluido" | "cancelado";
   staff_id: string;
   barber_name?: string;
+  client_id?: string;
 }
 const AppointmentList = () => {
   const { activeBarbershopIds } = useAuth();
@@ -48,7 +50,7 @@ const AppointmentList = () => {
       const {
         data: appointmentsData,
         error
-      } = await supabase.from('appointments').select('id, client_name, service_name, appointment_time, status, staff_id').in('barbershop_id', activeBarbershopIds).eq('appointment_date', today).order('appointment_time', {
+      } = await supabase.from('appointments').select('id, client_name, client_id, service_name, appointment_time, status, staff_id').in('barbershop_id', activeBarbershopIds).eq('appointment_date', today).order('appointment_time', {
         ascending: true
       }).limit(5);
       if (error) throw error;
@@ -56,9 +58,27 @@ const AppointmentList = () => {
       // Buscar nomes dos barbeiros
       if (appointmentsData && appointmentsData.length > 0) {
         const staffIds = [...new Set(appointmentsData.map(apt => apt.staff_id))];
+        const clientIds = [...new Set(appointmentsData.map(apt => apt.client_id).filter(Boolean))];
+        
+        // Buscar dados dos barbeiros
         const {
           data: staffData
         } = await supabase.from('staff').select('id, user_id').in('id', staffIds);
+        
+        // Buscar nomes preferidos dos clientes
+        let clientNamesMap: Record<string, string> = {};
+        if (clientIds.length > 0) {
+          const { data: clientsData } = await supabase
+            .from('clients')
+            .select('id, name, preferred_name')
+            .in('id', clientIds);
+          if (clientsData) {
+            clientNamesMap = Object.fromEntries(
+              clientsData.map(c => [c.id, c.preferred_name || c.name])
+            );
+          }
+        }
+        
         if (staffData) {
           const userIds = staffData.map(s => s.user_id);
           const {
@@ -68,13 +88,18 @@ const AppointmentList = () => {
             const profile = profilesData?.find(p => p.id === s.user_id);
             return [s.id, profile?.full_name || 'Barbeiro'];
           }));
-          const appointmentsWithBarbers = appointmentsData.map(apt => ({
+          const appointmentsWithDetails = appointmentsData.map(apt => ({
             ...apt,
-            barber_name: staffMap.get(apt.staff_id) || 'Barbeiro'
+            barber_name: staffMap.get(apt.staff_id) || 'Barbeiro',
+            client_display_name: apt.client_id ? (clientNamesMap[apt.client_id] || apt.client_name) : apt.client_name
           }));
-          setAppointments(appointmentsWithBarbers);
+          setAppointments(appointmentsWithDetails);
         } else {
-          setAppointments(appointmentsData);
+          const appointmentsWithClientNames = appointmentsData.map(apt => ({
+            ...apt,
+            client_display_name: apt.client_id ? (clientNamesMap[apt.client_id] || apt.client_name) : apt.client_name
+          }));
+          setAppointments(appointmentsWithClientNames);
         }
       } else {
         setAppointments([]);
@@ -139,7 +164,7 @@ const AppointmentList = () => {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                       <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
-                      <span className="font-medium text-sm sm:text-base text-foreground truncate">{appointment.client_name}</span>
+                      <span className="font-medium text-sm sm:text-base text-foreground truncate">{appointment.client_display_name || appointment.client_name}</span>
                     </div>
                     <Badge className={`${getStatusColor(appointment.status)} text-xs flex-shrink-0`}>
                       {getStatusText(appointment.status)}
