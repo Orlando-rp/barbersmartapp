@@ -307,15 +307,19 @@ const Appointments = () => {
         return;
       }
 
-      // Verificar preferências de notificação do cliente
+      // Verificar preferências de notificação do cliente e buscar nome preferido
+      let clientDisplayName = appointment.client_name;
       if (appointment.client_id) {
         const { data: clientData } = await supabase
           .from('clients')
-          .select('notification_enabled, notification_types')
+          .select('notification_enabled, notification_types, preferred_name, name')
           .eq('id', appointment.client_id)
           .maybeSingle();
 
         if (clientData) {
+          // Usar nome preferido se disponível
+          clientDisplayName = clientData.preferred_name || clientData.name || appointment.client_name;
+          
           // Cliente não quer receber notificações
           if (!clientData.notification_enabled) {
             console.log('Cliente optou por não receber notificações');
@@ -352,7 +356,7 @@ const Appointments = () => {
       const formattedDate = format(parseISO(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR });
 
       const messages = {
-        confirmed: `Olá ${appointment.client_name}! ✅
+        confirmed: `Olá ${clientDisplayName}! ✅
 
 Ótima notícia! Seu agendamento foi confirmado:
 
@@ -362,7 +366,7 @@ const Appointments = () => {
 👤 Profissional: ${appointment.staff?.name || 'Não especificado'}
 
 Aguardamos você! 💈`,
-        cancelled: `Olá ${appointment.client_name}! 😔
+        cancelled: `Olá ${clientDisplayName}! 😔
 
 Infelizmente seu agendamento foi cancelado:
 
@@ -371,7 +375,7 @@ Infelizmente seu agendamento foi cancelado:
 ✂️ Serviço: ${appointment.service_name}
 
 Se desejar reagendar, entre em contato conosco. Ficaremos felizes em atendê-lo! 💈`,
-        completed: `Olá ${appointment.client_name}! 🎉
+        completed: `Olá ${clientDisplayName}! 🎉
 
 Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
 
