@@ -210,7 +210,23 @@ const LandingPageBuilder: React.FC = () => {
       if (error && error.code !== 'PGRST116') throw error;
 
       if (data?.landing_page_config) {
-        setConfig(data.landing_page_config as LandingPageConfig);
+        const loadedConfig = data.landing_page_config as Partial<LandingPageConfig>;
+        const defaultTemplate = landingTemplates[0];
+        
+        // Merge loaded config with defaults to ensure all properties exist
+        setConfig({
+          ...defaultTemplate.defaultConfig,
+          ...loadedConfig,
+          sections: loadedConfig.sections || defaultTemplate.defaultConfig.sections || [],
+          global_styles: {
+            ...defaultTemplate.defaultConfig.global_styles,
+            ...(loadedConfig.global_styles || {}),
+          },
+          seo: {
+            ...defaultTemplate.defaultConfig.seo,
+            ...(loadedConfig.seo || {}),
+          },
+        });
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
