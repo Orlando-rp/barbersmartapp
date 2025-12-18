@@ -1876,8 +1876,20 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                     className="h-12 text-base"
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clientEmail" className="text-sm font-medium">
+                    Seu Email <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </Label>
+                  <Input
+                    id="clientEmail"
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    className="h-12 text-base"
+                  />
+                </div>
 
-                {/* Summary Card */}
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
