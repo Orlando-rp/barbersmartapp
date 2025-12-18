@@ -233,7 +233,6 @@ export default function PublicBooking() {
   useEffect(() => {
     if (barbershopId) {
       resolveBarbershopAndLoad();
-      trackVisit();
     }
   }, [barbershopId]);
 
@@ -279,6 +278,11 @@ export default function PublicBooking() {
 
         // If it's a unit, get the matriz
         matrizId = shop.parent_id || shop.id;
+      }
+
+      // Track visit for the matriz (UUID) once resolved
+      if (matrizId) {
+        void trackVisit(matrizId);
       }
 
       // Load matriz data
@@ -357,15 +361,14 @@ export default function PublicBooking() {
     }
   };
 
-  const trackVisit = async () => {
-    if (!barbershopId) return;
+  const trackVisit = async (matrizId: string) => {
     try {
       await supabase.from('public_booking_visits').insert({
-        barbershop_id: barbershopId,
+        barbershop_id: matrizId,
         referrer: document.referrer || null,
         user_agent: navigator.userAgent,
       });
-    } catch (error) {
+    } catch {
       console.log('Visit tracking skipped');
     }
   };
@@ -498,39 +501,42 @@ export default function PublicBooking() {
   const staffWorksOnDate = (staff: Staff, date: Date): boolean => {
     if (!staff.schedule) return true;
     const dayOfWeek = DAY_OF_WEEK_MAP[date.getDay()];
-    
+
     // Use centralized function to get schedule
     const daySchedule = getScheduleForDay(
-      staff.schedule, 
-      dayOfWeek, 
-      selectedUnit?.id || barbershopId || undefined
+      staff.schedule,
+      dayOfWeek,
+      selectedUnit?.id || barbershop?.id || undefined
     );
-    
+
     return daySchedule?.enabled ?? true;
   };
 
-  const getStaffScheduleForDayInternal = (staff: Staff, date: Date): { 
-    start: string; 
-    end: string; 
-    break_start?: string | null; 
+  const getStaffScheduleForDayInternal = (
+    staff: Staff,
+    date: Date
+  ): {
+    start: string;
+    end: string;
+    break_start?: string | null;
     break_end?: string | null;
   } | null => {
     if (!staff.schedule) return null;
     const dayOfWeek = DAY_OF_WEEK_MAP[date.getDay()];
-    
+
     // Use centralized function
     const daySchedule = getScheduleForDay(
-      staff.schedule, 
-      dayOfWeek, 
-      selectedUnit?.id || barbershopId || undefined
+      staff.schedule,
+      dayOfWeek,
+      selectedUnit?.id || barbershop?.id || undefined
     );
-    
+
     if (daySchedule?.enabled) {
-      return { 
-        start: daySchedule.start, 
+      return {
+        start: daySchedule.start,
         end: daySchedule.end,
         break_start: daySchedule.break_start,
-        break_end: daySchedule.break_end
+        break_end: daySchedule.break_end,
       };
     }
     return null;
@@ -598,7 +604,12 @@ export default function PublicBooking() {
     }
 
     // Usar selectedUnit.id para buscar agendamentos da unidade correta
-    const effectiveUnitId = selectedUnit?.id || barbershopId;
+    const effectiveUnitId = selectedUnit?.id || barbershop?.id;
+    if (!effectiveUnitId) {
+      setAvailableSlots([]);
+      return;
+    }
+
     const { data: existingAppointments } = await supabase
       .from('appointments')
       .select('appointment_time, duration')
@@ -811,7 +822,7 @@ Aguardamos você! 💈`;
               instanceName: config.instance_name,
               to: clientPhone,
               message,
-              barbershopId,
+              barbershopId: effectiveUnitId,
               recipientName: clientName
             }
           });
@@ -916,7 +927,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
               instanceName: config.instance_name,
               to: clientPhone,
               message,
-              barbershopId,
+              barbershopId: effectiveUnitId,
               recipientName: clientName
             }
           });
