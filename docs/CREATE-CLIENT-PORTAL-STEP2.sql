@@ -1,7 +1,17 @@
 -- ===========================================
 -- PORTAL DO CLIENTE - ETAPA 2: TABELAS E RLS
 -- Execute APÓS a etapa 1 ter sido commitada
+-- STATUS: EXECUTADO COM SUCESSO
 -- ===========================================
+
+-- Criar função set_updated_at se não existir
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Tabela de vinculação cliente-usuário
 CREATE TABLE IF NOT EXISTS public.client_users (
@@ -174,18 +184,6 @@ USING (
     client_id = public.get_client_id_for_user(auth.uid())
 )
 WITH CHECK (
-    client_id = public.get_client_id_for_user(auth.uid())
-);
-
--- ===========================================
--- POLÍTICAS RLS - whatsapp_messages (para clientes)
--- ===========================================
-
-DROP POLICY IF EXISTS "Clients can view own messages" ON public.whatsapp_messages;
-CREATE POLICY "Clients can view own messages"
-ON public.whatsapp_messages FOR SELECT
-TO authenticated
-USING (
     client_id = public.get_client_id_for_user(auth.uid())
 );
 
