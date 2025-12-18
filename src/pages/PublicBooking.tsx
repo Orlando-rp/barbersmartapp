@@ -893,25 +893,27 @@ export default function PublicBooking() {
         return;
       }
 
-      const appointmentData = {
-        barbershop_id: effectiveUnitId,
-        staff_id: selectedStaff.id,
-        service_id: selectedService.id,
-        appointment_date: format(selectedDate, 'yyyy-MM-dd'),
-        appointment_time: selectedTime,
-        duration: selectedService.duration,
-        client_name: clientName.trim(),
-        client_phone: clientPhone.replace(/\D/g, ''),
-        service_name: selectedService.name,
-        service_price: selectedService.price,
-        status: 'pendente'
-      };
+      // Usar RPC SECURITY DEFINER para criar agendamento de forma segura
+      // Isso permite inserção sem autenticação e cria cliente automaticamente
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('create_public_appointment', {
+        p_barbershop_id: effectiveUnitId,
+        p_staff_id: selectedStaff.id,
+        p_service_id: selectedService.id,
+        p_appointment_date: format(selectedDate, 'yyyy-MM-dd'),
+        p_appointment_time: selectedTime,
+        p_duration: selectedService.duration,
+        p_client_name: clientName.trim(),
+        p_client_phone: clientPhone.replace(/\D/g, ''),
+        p_service_name: selectedService.name,
+        p_service_price: selectedService.price
+      });
 
-      const { error } = await supabase
-        .from('appointments')
-        .insert(appointmentData);
-
-      if (error) throw error;
+      if (rpcError) throw rpcError;
+      
+      // Verificar resposta da RPC
+      if (!rpcResult?.success) {
+        throw new Error(rpcResult?.error || 'Erro ao criar agendamento');
+      }
 
       try {
         const { data: whatsappConfig } = await supabase
