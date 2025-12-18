@@ -734,13 +734,16 @@ export default function PublicBooking() {
       return;
     }
 
-    const { data: existingAppointments } = await supabase
-      .from('appointments')
-      .select('appointment_time, duration')
-      .eq('barbershop_id', effectiveUnitId)
-      .eq('staff_id', selectedStaff.id)
-      .eq('appointment_date', formattedDate)
-      .neq('status', 'cancelado');
+    // Usar RPC segura para buscar horários ocupados (bypass RLS para anon)
+    const { data: existingAppointments, error: slotsError } = await supabase.rpc('get_occupied_slots', {
+      p_barbershop_id: effectiveUnitId,
+      p_staff_id: selectedStaff.id,
+      p_date: formattedDate
+    });
+
+    if (slotsError) {
+      console.error('Erro ao buscar horários ocupados:', slotsError);
+    }
 
     const bookedSlots = (existingAppointments || []).map(apt => ({
       time: apt.appointment_time,
