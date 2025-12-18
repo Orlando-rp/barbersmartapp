@@ -27,13 +27,40 @@ import { useBarbershopDomain, BarbershopDomain } from "@/hooks/useBarbershopDoma
 interface DnsRecord {
   type: string;
   name: string;
+  displayName: string; // Full name for display (e.g., _lovable.app)
   value: string;
+  foundValue: string | null; // Value found in DNS
   status: 'checking' | 'valid' | 'invalid' | 'pending';
 }
 
 interface DnsVerificationStatusProps {
   onBack?: () => void;
 }
+
+// Helper function to calculate TXT record name for subdomains
+const getTxtRecordName = (customDomain: string): { name: string; displayName: string; fullDomain: string } => {
+  // Check if it's a subdomain (e.g., app.barbeariadobob.com.br)
+  const parts = customDomain.split('.');
+  
+  if (parts.length > 2) {
+    // It's a subdomain - extract the subdomain part
+    // For app.barbeariadobob.com.br -> subdomain is "app"
+    const subdomain = parts[0];
+    const baseDomain = parts.slice(1).join('.');
+    return {
+      name: `_lovable.${subdomain}`,
+      displayName: `_lovable.${subdomain}`,
+      fullDomain: `_lovable.${customDomain}`
+    };
+  }
+  
+  // It's a root domain
+  return {
+    name: '_lovable',
+    displayName: '_lovable',
+    fullDomain: `_lovable.${customDomain}`
+  };
+};
 
 const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
   const { domain, loading, refresh } = useBarbershopDomain();
@@ -45,23 +72,31 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
   // Initialize DNS records based on domain data
   useEffect(() => {
     if (domain?.custom_domain) {
+      const txtInfo = getTxtRecordName(domain.custom_domain);
+      
       setDnsRecords([
         {
           type: 'A',
           name: '@',
+          displayName: '@',
           value: '185.158.133.1',
+          foundValue: null,
           status: domain.dns_verified_at ? 'valid' : 'pending'
         },
         {
           type: 'A',
           name: 'www',
+          displayName: 'www',
           value: '185.158.133.1',
+          foundValue: null,
           status: domain.dns_verified_at ? 'valid' : 'pending'
         },
         {
           type: 'TXT',
-          name: '_lovable',
+          name: txtInfo.name,
+          displayName: txtInfo.displayName,
           value: domain.dns_verification_token || 'Gerando...',
+          foundValue: null,
           status: domain.dns_verified_at ? 'valid' : 'pending'
         }
       ]);
@@ -136,13 +171,25 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
       // Update records based on real DNS check results
       setDnsRecords(records => records.map(r => {
         if (r.type === 'A' && r.name === '@') {
-          return { ...r, status: data.aRecord?.configured ? 'valid' : 'pending' };
+          return { 
+            ...r, 
+            status: data.aRecord?.configured ? 'valid' : 'pending',
+            foundValue: data.aRecord?.value || null
+          };
         }
         if (r.type === 'A' && r.name === 'www') {
-          return { ...r, status: data.wwwRecord?.configured ? 'valid' : 'pending' };
+          return { 
+            ...r, 
+            status: data.wwwRecord?.configured ? 'valid' : 'pending',
+            foundValue: data.wwwRecord?.value || null
+          };
         }
         if (r.type === 'TXT') {
-          return { ...r, status: data.txtRecord?.configured ? 'valid' : 'pending' };
+          return { 
+            ...r, 
+            status: data.txtRecord?.configured ? 'valid' : 'pending',
+            foundValue: data.txtRecord?.value || null
+          };
         }
         return r;
       }));
@@ -390,7 +437,13 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
           {dnsRecords.map((record, index) => (
             <div
               key={index}
-              className="p-3 rounded-lg border bg-muted/30 space-y-2"
+              className={`p-3 rounded-lg border space-y-2 ${
+                record.status === 'valid' 
+                  ? 'bg-success/5 border-success/30' 
+                  : record.status === 'checking'
+                  ? 'bg-muted/30'
+                  : 'bg-warning/5 border-warning/30'
+              }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -398,22 +451,76 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
                   <Badge variant="outline" className="font-mono text-xs">
                     {record.type}
                   </Badge>
-                  <span className="text-sm font-medium">{record.name}</span>
+                  <span className="text-sm font-medium">{record.displayName}</span>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0"
                   onClick={() => copyToClipboard(record.value)}
+                  title="Copiar valor esperado"
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-background rounded border">
-                <code className="text-xs font-mono break-all flex-1">
-                  {record.value}
-                </code>
+              
+              {/* Expected value */}
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Valor esperado:</p>
+                <div className="flex items-center gap-2 p-2 bg-background rounded border">
+                  <code className="text-xs font-mono break-all flex-1">
+                    {record.value}
+                  </code>
+                </div>
               </div>
+
+              {/* Found value (only show after checking) */}
+              {record.foundValue !== null && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Valor encontrado no DNS:</p>
+                  <div className={`flex items-center gap-2 p-2 rounded border ${
+                    record.status === 'valid' 
+                      ? 'bg-success/10 border-success/30' 
+                      : 'bg-warning/10 border-warning/30'
+                  }`}>
+                    <code className="text-xs font-mono break-all flex-1">
+                      {record.foundValue}
+                    </code>
+                    {record.status === 'valid' && (
+                      <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Not found message */}
+              {record.foundValue === null && record.status !== 'checking' && lastChecked && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Valor encontrado no DNS:</p>
+                  <div className="flex items-center gap-2 p-2 bg-warning/10 rounded border border-warning/30">
+                    <span className="text-xs text-warning italic">
+                      Não encontrado - verifique a configuração no seu provedor
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Test link for TXT records */}
+              {record.type === 'TXT' && domain?.custom_domain && (
+                <div className="pt-1">
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs"
+                    onClick={() => {
+                      const txtInfo = getTxtRecordName(domain.custom_domain!);
+                      window.open(`https://dns.google/resolve?name=${txtInfo.fullDomain}&type=TXT`, '_blank');
+                    }}
+                  >
+                    Testar no dns.google <ExternalLink className="h-3 w-3 ml-1" />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
 
