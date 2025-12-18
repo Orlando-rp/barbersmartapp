@@ -116,9 +116,9 @@ export default function ClientDashboard() {
       <div className="space-y-6">
         {/* Welcome Section */}
         <div>
-          <h1 className="text-2xl font-bold">Olá, {displayName}!</h1>
+          <h1 className="text-2xl font-bold">Bem-vindo, {displayName}! 👋</h1>
           <p className="text-muted-foreground">
-            Bem-vindo ao seu portal de agendamentos
+            Seu portal de agendamentos
           </p>
         </div>
 
