@@ -748,8 +748,15 @@ export default function PublicBooking() {
     try {
       setSubmitting(true);
 
-      // Use selectedUnit.id for proper unit assignment
-      const effectiveUnitId = selectedUnit?.id || barbershopId;
+      // Use selectedUnit.id for proper unit assignment, fallback to barbershop.id (matriz)
+      // Never use barbershopId directly as it could be a subdomain string
+      const effectiveUnitId = selectedUnit?.id || barbershop?.id;
+      
+      if (!effectiveUnitId) {
+        toast({ title: 'Erro: Unidade não selecionada', variant: 'destructive' });
+        setSubmitting(false);
+        return;
+      }
 
       const appointmentData = {
         barbershop_id: effectiveUnitId,
@@ -775,7 +782,7 @@ export default function PublicBooking() {
         const { data: whatsappConfig } = await supabase
           .from('whatsapp_config')
           .select('config, is_active')
-          .eq('barbershop_id', barbershopId)
+          .eq('barbershop_id', effectiveUnitId)
           .eq('provider', 'evolution')
           .maybeSingle();
 
@@ -839,8 +846,17 @@ Aguardamos você! 💈`;
     try {
       setSubmittingWaitlist(true);
 
+      // Use selectedUnit.id for proper unit assignment, fallback to barbershop.id (matriz)
+      const effectiveUnitId = selectedUnit?.id || barbershop?.id;
+      
+      if (!effectiveUnitId) {
+        toast({ title: 'Erro: Unidade não selecionada', variant: 'destructive' });
+        setSubmittingWaitlist(false);
+        return;
+      }
+
       const waitlistData = {
-        barbershop_id: barbershopId,
+        barbershop_id: effectiveUnitId,
         client_name: clientName.trim(),
         client_phone: clientPhone.replace(/\D/g, ''),
         preferred_date: format(selectedDate, 'yyyy-MM-dd'),
@@ -863,7 +879,7 @@ Aguardamos você! 💈`;
       const { count } = await supabase
         .from('waitlist')
         .select('*', { count: 'exact', head: true })
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', effectiveUnitId)
         .eq('preferred_date', format(selectedDate, 'yyyy-MM-dd'))
         .eq('staff_id', selectedStaff.id)
         .eq('status', 'waiting');
@@ -874,7 +890,7 @@ Aguardamos você! 💈`;
         const { data: whatsappConfig } = await supabase
           .from('whatsapp_config')
           .select('config, is_active')
-          .eq('barbershop_id', barbershopId)
+          .eq('barbershop_id', effectiveUnitId)
           .eq('provider', 'evolution')
           .maybeSingle();
 
