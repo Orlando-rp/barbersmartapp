@@ -296,6 +296,15 @@ const LandingPageBuilder: React.FC = () => {
     }));
   };
 
+  const updateSectionVariant = (sectionId: string, variant: string) => {
+    setConfig((prev) => ({
+      ...prev,
+      sections: prev.sections.map((s) =>
+        s.id === sectionId ? { ...s, variant } : s
+      ),
+    }));
+  };
+
   const updateGlobalStyles = (styles: Partial<GlobalStyles>) => {
     setConfig((prev) => ({
       ...prev,
@@ -327,15 +336,15 @@ const LandingPageBuilder: React.FC = () => {
 
     switch (activeSection.type) {
       case 'hero':
-        return <HeroEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} barbershopId={barbershopId || ''} />;
+        return <HeroEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} onVariantChange={(v) => updateSectionVariant(activeSection.id, v)} barbershopId={barbershopId || ''} />;
       case 'services':
-        return <ServicesEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} barbershopId={barbershopId || ''} />;
+        return <ServicesEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} onVariantChange={(v) => updateSectionVariant(activeSection.id, v)} barbershopId={barbershopId || ''} />;
       case 'team':
-        return <TeamEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} barbershopId={barbershopId || ''} />;
+        return <TeamEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} onVariantChange={(v) => updateSectionVariant(activeSection.id, v)} barbershopId={barbershopId || ''} />;
       case 'gallery':
-        return <GalleryEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} barbershopId={barbershopId || ''} />;
+        return <GalleryEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} onVariantChange={(v) => updateSectionVariant(activeSection.id, v)} barbershopId={barbershopId || ''} />;
       case 'reviews':
-        return <ReviewsEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} barbershopId={barbershopId || ''} />;
+        return <ReviewsEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} onVariantChange={(v) => updateSectionVariant(activeSection.id, v)} barbershopId={barbershopId || ''} />;
       case 'location':
         return <LocationEditor section={activeSection} onUpdate={(s) => updateSectionSettings(activeSection.id, s)} barbershopId={barbershopId || ''} />;
       case 'cta':
@@ -560,14 +569,80 @@ const LandingPageBuilder: React.FC = () => {
 interface SectionEditorProps<T> {
   section: SectionConfig;
   onUpdate: (settings: Partial<T>) => void;
+  onVariantChange?: (variant: string) => void;
   barbershopId: string;
 }
 
-const HeroEditor: React.FC<SectionEditorProps<HeroSettings>> = ({ section, onUpdate, barbershopId }) => {
+// Variant options for each section type
+const heroVariants = [
+  { value: 'default', label: 'Padrão' },
+  { value: 'split-screen', label: 'Tela Dividida' },
+  { value: 'video-parallax', label: 'Vídeo com Parallax' },
+  { value: 'slideshow', label: 'Slideshow' },
+  { value: 'minimal', label: 'Minimalista' },
+  { value: 'animated-text', label: 'Texto Animado' },
+];
+
+const servicesVariants = [
+  { value: 'default', label: 'Padrão' },
+  { value: 'featured', label: 'Com Destaque' },
+  { value: 'minimal', label: 'Minimalista' },
+  { value: 'hover-cards', label: 'Cards Interativos' },
+  { value: 'pricing-table', label: 'Tabela de Preços' },
+];
+
+const teamVariants = [
+  { value: 'default', label: 'Padrão' },
+  { value: 'featured', label: 'Com Destaque' },
+  { value: 'minimal-cards', label: 'Cards Mínimos' },
+  { value: 'overlay', label: 'Overlay na Foto' },
+  { value: 'cards-horizontal', label: 'Cards Horizontais' },
+];
+
+const galleryVariants = [
+  { value: 'default', label: 'Padrão' },
+  { value: 'featured', label: 'Com Destaque' },
+  { value: 'before-after', label: 'Antes/Depois' },
+  { value: 'collage', label: 'Colagem Criativa' },
+  { value: 'polaroid', label: 'Estilo Polaroid' },
+];
+
+const reviewsVariants = [
+  { value: 'default', label: 'Padrão' },
+  { value: 'featured', label: 'Com Destaque' },
+  { value: 'marquee', label: 'Marquee Infinito' },
+  { value: 'testimonial-wall', label: 'Mural de Depoimentos' },
+  { value: 'quote-highlight', label: 'Citações em Destaque' },
+];
+
+const HeroEditor: React.FC<SectionEditorProps<HeroSettings>> = ({ section, onUpdate, onVariantChange, barbershopId }) => {
   const settings = section.settings as HeroSettings;
   
   return (
     <div className="space-y-4">
+      {/* Variant Selector */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4" />
+          Estilo Visual
+        </Label>
+        <Select
+          value={section.variant || 'default'}
+          onValueChange={(value) => onVariantChange?.(value)}
+        >
+          <SelectTrigger className="bg-background">
+            <SelectValue placeholder="Selecione um estilo" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover z-50">
+            {heroVariants.map((v) => (
+              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
       <div className="space-y-2">
         <Label>Título</Label>
         <Input
@@ -712,11 +787,34 @@ const HeroEditor: React.FC<SectionEditorProps<HeroSettings>> = ({ section, onUpd
   );
 };
 
-const ServicesEditor: React.FC<SectionEditorProps<ServicesSettings>> = ({ section, onUpdate }) => {
+const ServicesEditor: React.FC<SectionEditorProps<ServicesSettings>> = ({ section, onUpdate, onVariantChange }) => {
   const settings = section.settings as ServicesSettings;
   
   return (
     <div className="space-y-4">
+      {/* Variant Selector */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4" />
+          Estilo Visual
+        </Label>
+        <Select
+          value={section.variant || 'default'}
+          onValueChange={(value) => onVariantChange?.(value)}
+        >
+          <SelectTrigger className="bg-background">
+            <SelectValue placeholder="Selecione um estilo" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover z-50">
+            {servicesVariants.map((v) => (
+              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
       <div className="space-y-2">
         <Label>Layout</Label>
         <Select
@@ -822,11 +920,34 @@ const ServicesEditor: React.FC<SectionEditorProps<ServicesSettings>> = ({ sectio
   );
 };
 
-const TeamEditor: React.FC<SectionEditorProps<TeamSettings>> = ({ section, onUpdate }) => {
+const TeamEditor: React.FC<SectionEditorProps<TeamSettings>> = ({ section, onUpdate, onVariantChange }) => {
   const settings = section.settings as TeamSettings;
   
   return (
     <div className="space-y-4">
+      {/* Variant Selector */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4" />
+          Estilo Visual
+        </Label>
+        <Select
+          value={section.variant || 'default'}
+          onValueChange={(value) => onVariantChange?.(value)}
+        >
+          <SelectTrigger className="bg-background">
+            <SelectValue placeholder="Selecione um estilo" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover z-50">
+            {teamVariants.map((v) => (
+              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
       <div className="space-y-2">
         <Label>Layout</Label>
         <Select
@@ -921,11 +1042,34 @@ const TeamEditor: React.FC<SectionEditorProps<TeamSettings>> = ({ section, onUpd
   );
 };
 
-const GalleryEditor: React.FC<SectionEditorProps<GallerySettings>> = ({ section, onUpdate }) => {
+const GalleryEditor: React.FC<SectionEditorProps<GallerySettings>> = ({ section, onUpdate, onVariantChange }) => {
   const settings = section.settings as GallerySettings;
   
   return (
     <div className="space-y-4">
+      {/* Variant Selector */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4" />
+          Estilo Visual
+        </Label>
+        <Select
+          value={section.variant || 'default'}
+          onValueChange={(value) => onVariantChange?.(value)}
+        >
+          <SelectTrigger className="bg-background">
+            <SelectValue placeholder="Selecione um estilo" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover z-50">
+            {galleryVariants.map((v) => (
+              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
       <div className="space-y-2">
         <Label>Layout</Label>
         <Select
@@ -997,11 +1141,34 @@ const GalleryEditor: React.FC<SectionEditorProps<GallerySettings>> = ({ section,
   );
 };
 
-const ReviewsEditor: React.FC<SectionEditorProps<ReviewsSettings>> = ({ section, onUpdate }) => {
+const ReviewsEditor: React.FC<SectionEditorProps<ReviewsSettings>> = ({ section, onUpdate, onVariantChange }) => {
   const settings = section.settings as ReviewsSettings;
   
   return (
     <div className="space-y-4">
+      {/* Variant Selector */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4" />
+          Estilo Visual
+        </Label>
+        <Select
+          value={section.variant || 'default'}
+          onValueChange={(value) => onVariantChange?.(value)}
+        >
+          <SelectTrigger className="bg-background">
+            <SelectValue placeholder="Selecione um estilo" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover z-50">
+            {reviewsVariants.map((v) => (
+              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
       <div className="space-y-2">
         <Label>Layout</Label>
         <Select
