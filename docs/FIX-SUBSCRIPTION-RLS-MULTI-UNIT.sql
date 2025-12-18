@@ -79,9 +79,11 @@ USING (
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'usage_metrics') THEN
-        -- Remover políticas antigas
+        -- Remover TODAS as variações de políticas antigas
         DROP POLICY IF EXISTS "Users can view own metrics" ON public.usage_metrics;
+        DROP POLICY IF EXISTS "Users can view metrics in hierarchy" ON public.usage_metrics;
         DROP POLICY IF EXISTS "Super admins can manage all metrics" ON public.usage_metrics;
+        DROP POLICY IF EXISTS "Super admins can manage metrics" ON public.usage_metrics;
         
         -- Política de SELECT
         CREATE POLICY "Users can view metrics in hierarchy"
