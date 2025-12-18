@@ -103,7 +103,21 @@ serve(async (req) => {
     };
 
     for (const entry of entries) {
+      // Buscar nome preferido do cliente se disponível (fora do try para usar no catch)
+      let clientDisplayName = entry.client_name;
       try {
+        if (entry.client_phone) {
+          const { data: clientData } = await supabase
+            .from("clients")
+            .select("preferred_name, name")
+            .eq("phone", entry.client_phone.replace(/\D/g, ""))
+            .eq("barbershop_id", barbershopId)
+            .maybeSingle();
+          
+          if (clientData) {
+            clientDisplayName = clientData.preferred_name || clientData.name || entry.client_name;
+          }
+
         // Format date for message
         const dateObj = new Date(entry.preferred_date + "T12:00:00");
         const formattedDate = dateObj.toLocaleDateString("pt-BR", {
@@ -112,8 +126,8 @@ serve(async (req) => {
           month: "long",
         });
 
-        // Build notification message
-        let message = `🎉 Boa notícia, ${entry.client_name}!\n\n`;
+        // Build notification message using preferred name
+        let message = `🎉 Boa notícia, ${clientDisplayName}!\n\n`;
         message += `Surgiu uma vaga na ${barbershopName} para ${formattedDate}`;
         
         if (availableTime) {
@@ -130,7 +144,7 @@ serve(async (req) => {
         
         message += `.\n\nEntre em contato conosco para confirmar seu agendamento!`;
 
-        console.log(`Notifying ${entry.client_name} (${entry.client_phone})`);
+        console.log(`Notifying ${clientDisplayName} (${entry.client_phone})`);
 
         if (whatsappConfigured) {
           // Send WhatsApp message
@@ -158,15 +172,15 @@ serve(async (req) => {
           const responseData = await response.json();
 
           if (!response.ok) {
-            console.error("WhatsApp API error for", entry.client_name, responseData);
+            console.error("WhatsApp API error for", clientDisplayName, responseData);
             throw new Error(responseData.error?.message || "Failed to send WhatsApp");
           }
 
-          // Log the message
+          // Log the message with preferred name
           await supabase.from("whatsapp_logs").insert({
             barbershop_id: barbershopId,
             recipient_phone: phoneNumber,
-            recipient_name: entry.client_name,
+            recipient_name: clientDisplayName,
             message_type: "text",
             message_content: message,
             status: "sent",
@@ -189,14 +203,14 @@ serve(async (req) => {
       } catch (entryError) {
         console.error("Error notifying entry:", entry.id, entryError);
         results.failed++;
-        results.errors.push(`${entry.client_name}: ${entryError instanceof Error ? entryError.message : "Unknown error"}`);
+        results.errors.push(`${clientDisplayName}: ${entryError instanceof Error ? entryError.message : "Unknown error"}`);
         
-        // Log failed attempt
+        // Log failed attempt with preferred name
         if (whatsappConfigured) {
           await supabase.from("whatsapp_logs").insert({
             barbershop_id: barbershopId,
             recipient_phone: entry.client_phone.replace(/\D/g, ""),
-            recipient_name: entry.client_name,
+            recipient_name: clientDisplayName,
             message_type: "text",
             message_content: "Notificação de vaga disponível",
             status: "failed",
