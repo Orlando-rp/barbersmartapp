@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { ProtectedRoute, AdminRoute, SuperAdminRoute } from '../ProtectedRoute';
+import { ClientProtectedRoute } from '../client/ClientProtectedRoute';
 import { PageLoader } from '../ui/page-loader';
 import { PageTransition } from './PageTransition';
 
@@ -41,6 +42,14 @@ const TermsOfService = lazy(() => import("../../pages/TermsOfService"));
 const Install = lazy(() => import("../../pages/Install"));
 const NotFound = lazy(() => import("../../pages/NotFound"));
 
+// Client Portal Pages
+const ClientAuth = lazy(() => import("../../pages/client/ClientAuth"));
+const ClientDashboard = lazy(() => import("../../pages/client/ClientDashboard"));
+const ClientAppointments = lazy(() => import("../../pages/client/ClientAppointments"));
+const ClientProfile = lazy(() => import("../../pages/client/ClientProfile"));
+const ClientNotifications = lazy(() => import("../../pages/client/ClientNotifications"));
+const ClientReviews = lazy(() => import("../../pages/client/ClientReviews"));
+
 export const AnimatedRoutes = () => {
   const location = useLocation();
 
@@ -59,6 +68,14 @@ export const AnimatedRoutes = () => {
           {/* Auth Routes */}
           <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
           <Route path="/complete-profile" element={<ProtectedRoute><PageTransition><CompleteProfile /></PageTransition></ProtectedRoute>} />
+          
+          {/* Client Portal Routes */}
+          <Route path="/cliente/auth" element={<PageTransition><ClientAuth /></PageTransition>} />
+          <Route path="/cliente" element={<ClientProtectedRoute><PageTransition><ClientDashboard /></PageTransition></ClientProtectedRoute>} />
+          <Route path="/cliente/agendamentos" element={<ClientProtectedRoute><PageTransition><ClientAppointments /></PageTransition></ClientProtectedRoute>} />
+          <Route path="/cliente/perfil" element={<ClientProtectedRoute><PageTransition><ClientProfile /></PageTransition></ClientProtectedRoute>} />
+          <Route path="/cliente/notificacoes" element={<ClientProtectedRoute><PageTransition><ClientNotifications /></PageTransition></ClientProtectedRoute>} />
+          <Route path="/cliente/avaliacoes" element={<ClientProtectedRoute><PageTransition><ClientReviews /></PageTransition></ClientProtectedRoute>} />
           
           {/* Protected Routes */}
           <Route path="/debug" element={<ProtectedRoute><PageTransition><Debug /></PageTransition></ProtectedRoute>} />
