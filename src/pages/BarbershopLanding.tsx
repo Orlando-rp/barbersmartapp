@@ -21,6 +21,7 @@ import {
   MessageCircle,
   Instagram,
   Facebook,
+  UserCircle,
 } from "lucide-react";
 
 interface Barbershop {
@@ -461,6 +462,18 @@ const BarbershopLanding = () => {
                       WhatsApp
                     </button>
                   )}
+                  <button
+                    onClick={() => navigate('/cliente/auth')}
+                    className={`inline-flex items-center justify-center gap-2 px-6 py-3 font-medium border-2 transition-opacity hover:opacity-80 ${getButtonRadius()}`}
+                    style={{ 
+                      borderColor: landingConfig.hero_image_url ? '#fff' : 'var(--landing-primary)',
+                      color: landingConfig.hero_image_url ? '#fff' : 'var(--landing-primary)',
+                      backgroundColor: 'transparent'
+                    }}
+                  >
+                    <UserCircle className="h-5 w-5" />
+                    Área do Cliente
+                  </button>
                 </div>
               </div>
             </div>
