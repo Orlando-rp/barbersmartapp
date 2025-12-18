@@ -264,6 +264,7 @@ export default function ClientReviews() {
               </div>
             ) : reviews?.length === 0 ? (
               <IllustratedEmptyState
+                illustration="reviews"
                 title="Nenhuma avaliação"
                 description="Você ainda não avaliou nenhum serviço."
               />
