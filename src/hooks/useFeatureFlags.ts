@@ -48,7 +48,13 @@ interface UseFeatureFlagsReturn {
 }
 
 export const useFeatureFlags = (): UseFeatureFlagsReturn => {
-  const { selectedBarbershopId, userRole } = useAuth();
+  const {
+    selectedBarbershopId,
+    userRole,
+    barbershopId,
+    barbershops,
+    activeBarbershopIds,
+  } = useAuth();
   const [features, setFeatures] = useState<PlanFeatures>(defaultPlanFeatures);
   const [planName, setPlanName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +68,25 @@ export const useFeatureFlags = (): UseFeatureFlagsReturn => {
       return;
     }
 
-    if (!selectedBarbershopId) {
+    // Build a robust list of candidate barbershop IDs to find the active subscription.
+    // This prevents features from being "disabled" when the user is on the consolidated (null) view.
+    const candidateBarbershopIds = (() => {
+      const ids = new Set<string>();
+
+      if (selectedBarbershopId) ids.add(selectedBarbershopId);
+      if (barbershopId) ids.add(barbershopId);
+
+      (activeBarbershopIds || []).forEach((id) => ids.add(id));
+
+      (barbershops || []).forEach((b: any) => {
+        if (b?.id) ids.add(b.id);
+        if (b?.parent_id) ids.add(b.parent_id);
+      });
+
+      return Array.from(ids);
+    })();
+
+    if (candidateBarbershopIds.length === 0) {
       setFeatures(defaultPlanFeatures);
       setPlanName(null);
       setLoading(false);
@@ -75,13 +99,16 @@ export const useFeatureFlags = (): UseFeatureFlagsReturn => {
         .from('subscriptions')
         .select(`
           status,
+          barbershop_id,
           subscription_plans(
             name,
             feature_flags
           )
         `)
-        .eq('barbershop_id', selectedBarbershopId)
+        .in('barbershop_id', candidateBarbershopIds)
         .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (subError) {
@@ -95,13 +122,13 @@ export const useFeatureFlags = (): UseFeatureFlagsReturn => {
       if (subscription?.subscription_plans) {
         const plan = subscription.subscription_plans as any;
         setPlanName(plan.name || 'Free');
-        
+
         // Parse feature_flags from plan
         if (plan.feature_flags) {
-          const flags = typeof plan.feature_flags === 'string' 
-            ? JSON.parse(plan.feature_flags) 
+          const flags = typeof plan.feature_flags === 'string'
+            ? JSON.parse(plan.feature_flags)
             : plan.feature_flags;
-          
+
           setFeatures({
             ...defaultPlanFeatures,
             ...flags,
@@ -121,7 +148,7 @@ export const useFeatureFlags = (): UseFeatureFlagsReturn => {
     } finally {
       setLoading(false);
     }
-  }, [selectedBarbershopId, userRole]);
+  }, [activeBarbershopIds, barbershopId, barbershops, selectedBarbershopId, userRole]);
 
   useEffect(() => {
     fetchFeatures();

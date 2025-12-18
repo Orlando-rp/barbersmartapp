@@ -252,14 +252,23 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
       }
 
       // Check if barbershop (ou matriz) has white_label feature
+      // (some tenants store the subscription on the unidade instead of the matriz)
+      const idsToCheck = [rootId];
+      if (barbershop.id && barbershop.id !== rootId) {
+        idsToCheck.push(barbershop.id);
+      }
+
       const { data: subscription } = await supabase
         .from('subscriptions')
         .select(`
           status,
+          barbershop_id,
           subscription_plans(feature_flags)
         `)
-        .eq('barbershop_id', rootId) // Verificar na matriz
+        .in('barbershop_id', idsToCheck)
         .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (subscription?.subscription_plans) {
@@ -268,6 +277,8 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
           ? JSON.parse(plan.feature_flags)
           : plan.feature_flags;
         setHasWhiteLabel(flags?.white_label === true);
+      } else {
+        setHasWhiteLabel(false);
       }
     } catch (err) {
       console.log('Error fetching barbershop branding:', err);
