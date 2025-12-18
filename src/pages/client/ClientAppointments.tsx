@@ -258,6 +258,7 @@ export default function ClientAppointments() {
               ))
             ) : upcomingAppointments?.length === 0 ? (
               <IllustratedEmptyState
+                illustration="calendar"
                 title="Nenhum agendamento"
                 description="Você não tem agendamentos futuros. Que tal marcar um horário?"
                 actionLabel="Fazer Agendamento"
@@ -281,6 +282,7 @@ export default function ClientAppointments() {
               ))
             ) : pastAppointments?.length === 0 ? (
               <IllustratedEmptyState
+                illustration="calendar"
                 title="Sem histórico"
                 description="Você ainda não tem agendamentos concluídos."
               />

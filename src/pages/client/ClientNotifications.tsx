@@ -77,6 +77,7 @@ export default function ClientNotifications() {
           </div>
         ) : messages?.length === 0 ? (
           <IllustratedEmptyState
+            illustration="generic"
             title="Nenhuma notificação"
             description="Você ainda não recebeu nenhuma notificação via WhatsApp."
           />
