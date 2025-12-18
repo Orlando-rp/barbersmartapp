@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { User, LogOut, Settings as SettingsIcon } from "lucide-react";
+import { User, LogOut, Settings as SettingsIcon, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,12 @@ import { supabase } from "@/lib/supabase";
 import BarbershopSelector from "./BarbershopSelector";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { CommandPaletteTrigger } from "./CommandPalette";
+import { useTheme } from "next-themes";
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
   const { effectiveBranding, currentLogoUrl } = useBranding();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileFullName, setProfileFullName] = useState<string | null>(null);
@@ -92,6 +94,21 @@ const Header = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-1 lg:gap-3">
+          {/* Theme Toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="h-9 w-9 lg:h-10 lg:w-10"
+            title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4 lg:h-5 lg:w-5" />
+            ) : (
+              <Moon className="h-4 w-4 lg:h-5 lg:w-5" />
+            )}
+          </Button>
+
           {/* Command Palette Trigger */}
           <CommandPaletteTrigger className="hidden sm:flex" />
 
