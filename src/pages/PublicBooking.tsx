@@ -933,7 +933,20 @@ export default function PublicBooking() {
           const staffName = getStaffName(selectedStaff);
           const formattedDate = format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
           
-          const message = `Olá ${clientName}! 👋
+          // Buscar nome preferido do cliente se ele já existe no sistema
+          let clientDisplayName = clientName;
+          const { data: existingClient } = await supabase
+            .from('clients')
+            .select('preferred_name, name')
+            .eq('phone', clientPhone.replace(/\D/g, ''))
+            .eq('barbershop_id', effectiveUnitId)
+            .maybeSingle();
+          
+          if (existingClient) {
+            clientDisplayName = existingClient.preferred_name || existingClient.name || clientName;
+          }
+          
+          const message = `Olá ${clientDisplayName}! 👋
 
 ✅ Seu agendamento foi confirmado!
 
@@ -1057,7 +1070,20 @@ Aguardamos você! 💈`;
           const config = whatsappConfig.config as any;
           const formattedDate = format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
           
-          const message = `Olá ${clientName}! 👋
+          // Buscar nome preferido do cliente se ele já existe no sistema
+          let clientDisplayName = clientName;
+          const { data: existingClient } = await supabase
+            .from('clients')
+            .select('preferred_name, name')
+            .eq('phone', clientPhone.replace(/\D/g, ''))
+            .eq('barbershop_id', effectiveUnitId)
+            .maybeSingle();
+          
+          if (existingClient) {
+            clientDisplayName = existingClient.preferred_name || existingClient.name || clientName;
+          }
+          
+          const message = `Olá ${clientDisplayName}! 👋
 
 📋 Você foi adicionado à lista de espera!
 
@@ -1076,7 +1102,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
               to: clientPhone,
               message,
               barbershopId: effectiveUnitId,
-              recipientName: clientName
+              recipientName: clientDisplayName
             }
           });
         }

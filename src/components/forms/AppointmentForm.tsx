@@ -564,15 +564,19 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
         return;
       }
 
-      // Verificar preferências de notificação do cliente (se cadastrado)
+      // Verificar preferências de notificação do cliente (se cadastrado) e buscar nome preferido
+      let clientDisplayName = data.clientName;
       if (data.clientId) {
         const { data: clientData } = await supabase
           .from('clients')
-          .select('notification_enabled, notification_types')
+          .select('notification_enabled, notification_types, preferred_name, name')
           .eq('id', data.clientId)
           .maybeSingle();
 
         if (clientData) {
+          // Usar nome preferido se disponível
+          clientDisplayName = clientData.preferred_name || clientData.name || data.clientName;
+          
           if (!clientData.notification_enabled) {
             console.log('Cliente optou por não receber notificações');
             return;
@@ -609,8 +613,8 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
         instance_name: string;
       };
 
-      // Montar mensagem de confirmação
-      const message = `Olá ${data.clientName}! 👋
+      // Montar mensagem de confirmação usando nome preferido
+      const message = `Olá ${clientDisplayName}! 👋
 
 ✅ Seu agendamento foi confirmado:
 
