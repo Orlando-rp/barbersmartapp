@@ -40,6 +40,7 @@ const DomainSettings = () => {
     updateLandingPageConfig,
     getFullSubdomainUrl,
     getFullCustomDomainUrl,
+    getPrimaryUrl,
   } = useBarbershopDomain();
 
   const [subdomain, setSubdomain] = useState(domain?.subdomain || "");
@@ -54,13 +55,8 @@ const DomainSettings = () => {
     if (domain?.custom_domain) setCustomDomain(domain.custom_domain);
   }, [domain?.subdomain, domain?.custom_domain]);
 
-  // Get the functional public URL
-  const getPublicUrl = () => {
-    if (domain?.subdomain) {
-      return `${window.location.origin}/s/${domain.subdomain}`;
-    }
-    return null;
-  };
+  // Get the public URL using configured domain (custom domain > subdomain)
+  const publicUrl = getPrimaryUrl();
 
   const handleCheckSubdomain = async () => {
     if (!subdomain.trim()) return;
@@ -152,8 +148,6 @@ const DomainSettings = () => {
       </Card>
     );
   }
-
-  const publicUrl = getPublicUrl();
 
   return (
     <div className="space-y-4 sm:space-y-6">

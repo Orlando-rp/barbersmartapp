@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
+import { useBarbershopDomain } from "@/hooks/useBarbershopDomain";
 import {
   Dialog,
   DialogContent,
@@ -39,40 +40,17 @@ interface BookingStats {
 export const PublicBookingLink = () => {
   const { barbershops } = useAuth();
   const { matrizBarbershopId, allRelatedBarbershopIds, loading: loadingMatriz } = useSharedBarbershopId();
+  const { getPrimaryUrl, loading: loadingDomain } = useBarbershopDomain();
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [stats, setStats] = useState<BookingStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
-  const [subdomain, setSubdomain] = useState<string | null>(null);
 
   const currentBarbershop = barbershops.find(b => b.id === matrizBarbershopId);
   
-  // Generate the public booking URL using subdomain or matriz ID
-  const baseUrl = window.location.origin;
-  const bookingSlug = subdomain || matrizBarbershopId;
-  const publicUrl = bookingSlug 
-    ? `${baseUrl}/agendar/${bookingSlug}`
-    : null;
-
-  // Fetch subdomain for matriz
-  useEffect(() => {
-    const fetchSubdomain = async () => {
-      if (!matrizBarbershopId) return;
-      
-      const { data } = await supabase
-        .from('barbershop_domains')
-        .select('subdomain')
-        .eq('barbershop_id', matrizBarbershopId)
-        .eq('subdomain_status', 'active')
-        .maybeSingle();
-      
-      if (data?.subdomain) {
-        setSubdomain(data.subdomain);
-      }
-    };
-    
-    fetchSubdomain();
-  }, [matrizBarbershopId]);
+  // Get the public URL from configured domain (custom domain > subdomain > fallback)
+  const primaryDomain = getPrimaryUrl();
+  const publicUrl = primaryDomain ? `${primaryDomain}/agendar` : null;
 
   // Fetch aggregated stats for all related barbershops (matriz + units)
   useEffect(() => {
@@ -166,11 +144,22 @@ export const PublicBookingLink = () => {
     ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(publicUrl)}`
     : null;
 
-  if (loadingMatriz || !matrizBarbershopId) {
+  if (loadingMatriz || loadingDomain || !matrizBarbershopId) {
     return (
       <Card className="border-dashed">
         <CardContent className="py-6 text-center text-muted-foreground">
-          {loadingMatriz ? 'Carregando...' : 'Selecione uma barbearia para ver o link de agendamento'}
+          {(loadingMatriz || loadingDomain) ? 'Carregando...' : 'Selecione uma barbearia para ver o link de agendamento'}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // If no domain configured, show message to configure
+  if (!publicUrl) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-6 text-center text-muted-foreground">
+          Configure um subdomínio em Configurações &gt; Domínio para gerar o link de agendamento
         </CardContent>
       </Card>
     );
