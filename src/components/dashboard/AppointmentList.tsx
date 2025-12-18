@@ -83,10 +83,10 @@ const AppointmentList = () => {
           const userIds = staffData.map(s => s.user_id);
           const {
             data: profilesData
-          } = await supabase.from('profiles').select('id, full_name').in('id', userIds);
+          } = await supabase.from('profiles').select('id, full_name, preferred_name').in('id', userIds);
           const staffMap = new Map(staffData.map(s => {
             const profile = profilesData?.find(p => p.id === s.user_id);
-            return [s.id, profile?.full_name || 'Barbeiro'];
+            return [s.id, profile?.preferred_name || profile?.full_name || 'Barbeiro'];
           }));
           const appointmentsWithDetails = appointmentsData.map(apt => ({
             ...apt,

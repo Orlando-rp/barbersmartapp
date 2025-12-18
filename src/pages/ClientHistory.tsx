@@ -121,11 +121,11 @@ const ClientHistory = () => {
           const userIds = staffData.map(s => s.user_id);
           const { data: profilesData } = await supabase
             .from('profiles')
-            .select('id, full_name')
+            .select('id, full_name, preferred_name')
             .in('id', userIds);
 
-          // Create map: staff_id -> full_name
-          const profileMap = new Map(profilesData?.map(p => [p.id, p.full_name]) || []);
+          // Create map: staff_id -> display name (preferred_name has priority)
+          const profileMap = new Map(profilesData?.map(p => [p.id, p.preferred_name || p.full_name]) || []);
           staffData.forEach(staff => {
             staffMap.set(staff.id, profileMap.get(staff.user_id));
           });

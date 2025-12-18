@@ -63,7 +63,7 @@ export default function ClientAppointments() {
         .from('appointments')
         .select(`
           *,
-          staff:staff_id(id, user_id, profiles:user_id(full_name, avatar_url)),
+          staff:staff_id(id, user_id, profiles:user_id(full_name, preferred_name, avatar_url)),
           service:service_id(name, duration, price)
         `)
         .eq('client_id', client.id)
@@ -88,7 +88,7 @@ export default function ClientAppointments() {
         .from('appointments')
         .select(`
           *,
-          staff:staff_id(id, user_id, profiles:user_id(full_name, avatar_url)),
+          staff:staff_id(id, user_id, profiles:user_id(full_name, preferred_name, avatar_url)),
           service:service_id(name, duration, price),
           reviews:reviews(id, rating)
         `)
@@ -168,7 +168,7 @@ export default function ClientAppointments() {
                 </div>
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  <span>{appointment.staff?.profiles?.full_name || 'Profissional'}</span>
+                  <span>{appointment.staff?.profiles?.preferred_name || appointment.staff?.profiles?.full_name || 'Profissional'}</span>
                 </div>
               </div>
 

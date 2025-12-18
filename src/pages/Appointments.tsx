@@ -213,18 +213,18 @@ const Appointments = () => {
       const userIds = staffData?.map(s => s.user_id) || [];
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url')
+        .select('id, full_name, preferred_name, avatar_url')
         .in('id', userIds);
 
       if (profilesError) throw profilesError;
 
-      // Create staff lookup with name and avatar
+      // Create staff lookup with name and avatar (preferred_name has priority)
       const staffLookupMap = new Map<string, { name: string; avatar_url: string | null }>();
       staffData?.forEach(staff => {
         const profile = profilesData?.find(p => p.id === staff.user_id);
         if (profile) {
           staffLookupMap.set(staff.id, { 
-            name: profile.full_name, 
+            name: profile.preferred_name || profile.full_name, 
             avatar_url: profile.avatar_url 
           });
         }
