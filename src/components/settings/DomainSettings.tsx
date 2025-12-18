@@ -22,13 +22,16 @@ import {
   Share2,
   QrCode,
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Activity
 } from "lucide-react";
 import { useBarbershopDomain } from "@/hooks/useBarbershopDomain";
 import { toast } from "@/components/ui/sonner";
 import LandingThemeCustomizer from "./LandingThemeCustomizer";
+import DnsVerificationStatus from "./DnsVerificationStatus";
 
 const DomainSettings = () => {
+  const [showDnsVerification, setShowDnsVerification] = useState(false);
   const {
     domain,
     loading,
@@ -147,6 +150,11 @@ const DomainSettings = () => {
         </CardContent>
       </Card>
     );
+  }
+
+  // Show DNS verification page if requested
+  if (showDnsVerification) {
+    return <DnsVerificationStatus onBack={() => setShowDnsVerification(false)} />;
   }
 
   return (
@@ -356,8 +364,17 @@ const DomainSettings = () => {
                         <Globe className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium break-all">{domain.custom_domain}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {getStatusBadge(domain.custom_domain_status)}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDnsVerification(true)}
+                          className="gap-1"
+                        >
+                          <Activity className="h-3.5 w-3.5" />
+                          Ver Status DNS
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
