@@ -14,7 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star, Bug, ChevronDown, ChevronUp, Copy, CheckCheck } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
@@ -208,6 +209,44 @@ export default function PublicBooking() {
   const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
   const [waitlistSuccess, setWaitlistSuccess] = useState(false);
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
+
+  // Debug mode state
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(true);
+  const [debugErrors, setDebugErrors] = useState<Array<{ timestamp: string; action: string; error: any }>>([]);
+  const [copiedDebug, setCopiedDebug] = useState(false);
+
+  // Enable debug mode via URL param ?debug=true
+  useEffect(() => {
+    const debugParam = searchParams.get('debug');
+    setDebugMode(debugParam === 'true' || debugParam === '1');
+  }, [searchParams]);
+
+  const addDebugError = (action: string, error: any) => {
+    setDebugErrors(prev => [...prev, {
+      timestamp: new Date().toISOString(),
+      action,
+      error: error instanceof Error ? { message: error.message, stack: error.stack } : error
+    }]);
+  };
+
+  const copyDebugInfo = () => {
+    const debugInfo = {
+      urlParam: barbershopId,
+      resolvedMatrizId: barbershop?.id || null,
+      resolvedMatrizName: barbershop?.name || null,
+      selectedUnitId: selectedUnit?.id || null,
+      selectedUnitName: selectedUnit?.name || null,
+      effectiveUnitId: selectedUnit?.id || barbershop?.id || null,
+      hasMultipleUnits,
+      availableUnitsCount: availableUnits.length,
+      allRelatedBarbershopIds,
+      errors: debugErrors
+    };
+    navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2));
+    setCopiedDebug(true);
+    setTimeout(() => setCopiedDebug(false), 2000);
+  };
 
   // Apply custom branding colors
   useEffect(() => {
@@ -832,9 +871,26 @@ Aguardamos você! 💈`;
       }
 
       setSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar agendamento:', error);
-      toast({ title: 'Erro ao criar agendamento', variant: 'destructive' });
+      addDebugError('handleSubmit', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        appointmentData: {
+          barbershop_id: selectedUnit?.id || barbershop?.id,
+          staff_id: selectedStaff?.id,
+          service_id: selectedService?.id,
+          appointment_date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null,
+          appointment_time: selectedTime
+        }
+      });
+      toast({ 
+        title: 'Erro ao criar agendamento', 
+        description: debugMode ? error?.message : undefined,
+        variant: 'destructive' 
+      });
     } finally {
       setSubmitting(false);
     }
@@ -937,9 +993,19 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
       }
 
       setWaitlistSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao entrar na lista de espera:', error);
-      toast({ title: 'Erro ao entrar na lista de espera', variant: 'destructive' });
+      addDebugError('handleWaitlistSubmit', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint
+      });
+      toast({ 
+        title: 'Erro ao entrar na lista de espera', 
+        description: debugMode ? error?.message : undefined,
+        variant: 'destructive' 
+      });
     } finally {
       setSubmittingWaitlist(false);
     }
@@ -1705,6 +1771,105 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
             </p>
           )}
         </div>
+
+        {/* Debug Panel */}
+        {debugMode && (
+          <Collapsible open={debugOpen} onOpenChange={setDebugOpen} className="mt-6">
+            <Card className="border-amber-500/50 bg-amber-500/5">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-amber-500/10 transition-colors py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bug className="h-4 w-4 text-amber-500" />
+                      <CardTitle className="text-sm text-amber-500">Debug Mode</CardTitle>
+                    </div>
+                    {debugOpen ? (
+                      <ChevronUp className="h-4 w-4 text-amber-500" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-amber-500" />
+                    )}
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 space-y-4">
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyDebugInfo}
+                      className="text-xs"
+                    >
+                      {copiedDebug ? (
+                        <>
+                          <CheckCheck className="h-3 w-3 mr-1" />
+                          Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copiar Debug Info
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3 text-xs font-mono">
+                    <div className="bg-muted/50 rounded p-3 space-y-2">
+                      <p className="text-muted-foreground font-semibold mb-2">IDs Resolvidos:</p>
+                      <div className="grid gap-1">
+                        <p><span className="text-muted-foreground">URL Param:</span> <span className="text-foreground">{barbershopId}</span></p>
+                        <p><span className="text-muted-foreground">Matriz ID:</span> <span className="text-foreground">{barbershop?.id || 'null'}</span></p>
+                        <p><span className="text-muted-foreground">Matriz Name:</span> <span className="text-foreground">{barbershop?.name || 'null'}</span></p>
+                        <p><span className="text-muted-foreground">Selected Unit ID:</span> <span className="text-foreground">{selectedUnit?.id || 'null'}</span></p>
+                        <p><span className="text-muted-foreground">Selected Unit Name:</span> <span className="text-foreground">{selectedUnit?.name || 'null'}</span></p>
+                        <p><span className="text-muted-foreground">Effective Unit ID:</span> <span className="text-accent font-bold">{selectedUnit?.id || barbershop?.id || 'null'}</span></p>
+                        <p><span className="text-muted-foreground">Has Multiple Units:</span> <span className="text-foreground">{String(hasMultipleUnits)}</span></p>
+                        <p><span className="text-muted-foreground">Available Units:</span> <span className="text-foreground">{availableUnits.length}</span></p>
+                      </div>
+                    </div>
+
+                    <div className="bg-muted/50 rounded p-3 space-y-2">
+                      <p className="text-muted-foreground font-semibold mb-2">All Related IDs:</p>
+                      <div className="max-h-20 overflow-y-auto">
+                        {allRelatedBarbershopIds.length > 0 ? (
+                          allRelatedBarbershopIds.map((id, i) => (
+                            <p key={i} className="text-foreground truncate">{id}</p>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground italic">Nenhum</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {debugErrors.length > 0 && (
+                      <div className="bg-destructive/10 border border-destructive/30 rounded p-3 space-y-2">
+                        <p className="text-destructive font-semibold mb-2">Erros ({debugErrors.length}):</p>
+                        <div className="max-h-40 overflow-y-auto space-y-2">
+                          {debugErrors.map((err, i) => (
+                            <div key={i} className="bg-background/50 rounded p-2 space-y-1">
+                              <p className="text-muted-foreground text-[10px]">{err.timestamp}</p>
+                              <p className="text-destructive font-semibold">{err.action}</p>
+                              <pre className="text-foreground whitespace-pre-wrap break-all text-[10px]">
+                                {JSON.stringify(err.error, null, 2)}
+                              </pre>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {debugErrors.length === 0 && (
+                      <div className="bg-green-500/10 border border-green-500/30 rounded p-3">
+                        <p className="text-green-500">✓ Nenhum erro registrado</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
       </div>
     </div>
   );
