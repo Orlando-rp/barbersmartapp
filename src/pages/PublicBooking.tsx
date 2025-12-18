@@ -215,12 +215,23 @@ export default function PublicBooking() {
   const [debugOpen, setDebugOpen] = useState(true);
   const [debugErrors, setDebugErrors] = useState<Array<{ timestamp: string; action: string; error: any }>>([]);
   const [copiedDebug, setCopiedDebug] = useState(false);
+  const [loadingStartTime, setLoadingStartTime] = useState<Date | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState<string>('Iniciando...');
 
   // Enable debug mode via URL param ?debug=true
   useEffect(() => {
     const debugParam = searchParams.get('debug');
     setDebugMode(debugParam === 'true' || debugParam === '1');
   }, [searchParams]);
+
+  // Track loading start time
+  useEffect(() => {
+    if (loading && !loadingStartTime) {
+      setLoadingStartTime(new Date());
+    } else if (!loading) {
+      setLoadingStartTime(null);
+    }
+  }, [loading]);
 
   const addDebugError = (action: string, error: any) => {
     setDebugErrors(prev => [...prev, {
@@ -279,6 +290,7 @@ export default function PublicBooking() {
   const resolveBarbershopAndLoad = async () => {
     try {
       setLoading(true);
+      setLoadingStatus('Verificando link de agendamento...');
 
       // Check if barbershopId is a UUID or a subdomain
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(barbershopId || '');
@@ -286,22 +298,39 @@ export default function PublicBooking() {
       let matrizId: string | null = null;
 
       if (!isUUID) {
+        setLoadingStatus('Buscando por subdomínio...');
         // It's a subdomain - look up in barbershop_domains
-        const { data: domainData } = await supabase
+        const { data: domainData, error: domainError } = await supabase
           .from('barbershop_domains')
           .select('barbershop_id')
           .eq('subdomain', barbershopId?.toLowerCase())
           .eq('subdomain_status', 'active')
           .maybeSingle();
 
+        if (domainError) {
+          addDebugError('resolveBarbershopAndLoad:subdomain', {
+            message: domainError.message,
+            code: domainError.code,
+            details: domainError.details,
+            urlParam: barbershopId,
+            type: 'subdomain_lookup'
+          });
+        }
+
         if (domainData?.barbershop_id) {
           matrizId = domainData.barbershop_id;
         } else {
+          addDebugError('resolveBarbershopAndLoad:subdomain_not_found', {
+            message: 'Subdomínio não encontrado ou inativo',
+            urlParam: barbershopId,
+            type: 'subdomain_not_found'
+          });
           toast({ title: 'Link de agendamento não encontrado', variant: 'destructive' });
           setLoading(false);
           return;
         }
       } else {
+        setLoadingStatus('Buscando barbearia por UUID...');
         // It's a UUID - check if it's a unit or matriz
         const { data: shop, error: shopError } = await supabase
           .from('barbershops')
@@ -309,7 +338,23 @@ export default function PublicBooking() {
           .eq('id', barbershopId)
           .single();
 
+        if (shopError) {
+          addDebugError('resolveBarbershopAndLoad:uuid_lookup', {
+            message: shopError.message,
+            code: shopError.code,
+            details: shopError.details,
+            hint: shopError.hint,
+            urlParam: barbershopId,
+            type: 'uuid_lookup'
+          });
+        }
+
         if (shopError || !shop) {
+          addDebugError('resolveBarbershopAndLoad:uuid_not_found', {
+            message: 'UUID não encontrado no banco de dados',
+            urlParam: barbershopId,
+            type: 'uuid_not_found'
+          });
           toast({ title: 'Barbearia não encontrada', variant: 'destructive' });
           setLoading(false);
           return;
@@ -324,6 +369,7 @@ export default function PublicBooking() {
         void trackVisit(matrizId);
       }
 
+      setLoadingStatus('Carregando dados da barbearia...');
       // Load matriz data
       const { data: matriz, error: matrizError } = await supabase
         .from('barbershops')
@@ -331,7 +377,23 @@ export default function PublicBooking() {
         .eq('id', matrizId)
         .single();
 
+      if (matrizError) {
+        addDebugError('resolveBarbershopAndLoad:matriz_load', {
+          message: matrizError.message,
+          code: matrizError.code,
+          details: matrizError.details,
+          hint: matrizError.hint,
+          matrizId,
+          type: 'matriz_load'
+        });
+      }
+
       if (matrizError || !matriz) {
+        addDebugError('resolveBarbershopAndLoad:matriz_not_found', {
+          message: 'Matriz não encontrada',
+          matrizId,
+          type: 'matriz_not_found'
+        });
         toast({ title: 'Barbearia não encontrada', variant: 'destructive' });
         setLoading(false);
         return;
@@ -340,6 +402,7 @@ export default function PublicBooking() {
       setBarbershop(matriz);
       setMatrizName(matriz.name);
 
+      setLoadingStatus('Carregando configurações de marca...');
       // Load branding
       if (matriz.custom_branding) {
         setMatrizBranding(matriz.custom_branding);
@@ -363,12 +426,22 @@ export default function PublicBooking() {
         }
       }
 
+      setLoadingStatus('Verificando unidades...');
       // Check if there are child units
-      const { data: childUnits } = await supabase
+      const { data: childUnits, error: unitsError } = await supabase
         .from('barbershops')
         .select('id, name, address, phone, parent_id, custom_branding')
         .eq('parent_id', matrizId)
         .eq('active', true);
+
+      if (unitsError) {
+        addDebugError('resolveBarbershopAndLoad:units_load', {
+          message: unitsError.message,
+          code: unitsError.code,
+          matrizId,
+          type: 'units_load'
+        });
+      }
 
       if (childUnits && childUnits.length > 0) {
         // Multiple units - show unit selection (Step 0)
@@ -383,8 +456,14 @@ export default function PublicBooking() {
         setStep(1);
         await loadBarbershopData(matriz.id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar barbearia:', error);
+      addDebugError('resolveBarbershopAndLoad:exception', {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack,
+        urlParam: barbershopId,
+        type: 'exception'
+      });
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' });
       setLoading(false);
     }
@@ -515,8 +594,14 @@ export default function PublicBooking() {
         .eq('barbershop_id', unitId);
       setBusinessHours(hoursData || []);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
+      addDebugError('loadBarbershopData:exception', {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack,
+        unitId,
+        type: 'exception'
+      });
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -1019,15 +1104,72 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
 
   // Loading state
   if (loading) {
+    const elapsedTime = loadingStartTime ? Math.round((new Date().getTime() - loadingStartTime.getTime()) / 1000) : 0;
+    
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/50 flex flex-col items-center justify-center p-4">
         <div className="text-center space-y-4">
           <div className="relative">
             <div className="w-16 h-16 rounded-full border-4 border-muted animate-pulse" />
             <Loader2 className="h-8 w-8 animate-spin text-accent absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
           </div>
-          <p className="text-muted-foreground text-sm">Carregando...</p>
+          <p className="text-muted-foreground text-sm">{loadingStatus}</p>
         </div>
+        
+        {/* Debug Panel on Loading */}
+        {debugMode && (
+          <div className="mt-8 w-full max-w-md">
+            <Collapsible open={debugOpen} onOpenChange={setDebugOpen}>
+              <Card className="border-amber-500/50 bg-amber-500/5">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-amber-500/10 transition-colors py-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bug className="h-4 w-4 text-amber-500" />
+                        <CardTitle className="text-sm text-amber-500">Debug Mode (Loading)</CardTitle>
+                      </div>
+                      {debugOpen ? (
+                        <ChevronUp className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-amber-500" />
+                      )}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-3 text-xs font-mono">
+                    <div className="bg-muted/50 rounded p-3 space-y-2">
+                      <p className="text-muted-foreground font-semibold mb-2">Status:</p>
+                      <div className="grid gap-1">
+                        <p><span className="text-muted-foreground">URL Param:</span> <span className="text-foreground">{barbershopId}</span></p>
+                        <p><span className="text-muted-foreground">Loading:</span> <span className="text-amber-500">true</span></p>
+                        <p><span className="text-muted-foreground">Status:</span> <span className="text-foreground">{loadingStatus}</span></p>
+                        <p><span className="text-muted-foreground">Tempo:</span> <span className="text-foreground">{elapsedTime}s</span></p>
+                      </div>
+                    </div>
+                    
+                    {debugErrors.length > 0 && (
+                      <div className="bg-destructive/10 border border-destructive/30 rounded p-3 space-y-2">
+                        <p className="text-destructive font-semibold mb-2">Erros ({debugErrors.length}):</p>
+                        <div className="max-h-40 overflow-y-auto space-y-2">
+                          {debugErrors.map((err, i) => (
+                            <div key={i} className="bg-background/50 rounded p-2 space-y-1">
+                              <p className="text-muted-foreground text-[10px]">{err.timestamp}</p>
+                              <p className="text-destructive font-semibold">{err.action}</p>
+                              <pre className="text-foreground whitespace-pre-wrap break-all text-[10px]">
+                                {JSON.stringify(err.error, null, 2)}
+                              </pre>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          </div>
+        )}
       </div>
     );
   }
@@ -1035,7 +1177,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
   // Not found state
   if (!barbershop) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/50 flex flex-col items-center justify-center p-4">
         <Card className="max-w-md w-full border-destructive/20">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
@@ -1045,6 +1187,85 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
             <CardDescription>O link de agendamento é inválido ou expirou.</CardDescription>
           </CardHeader>
         </Card>
+        
+        {/* Debug Panel on Not Found */}
+        {debugMode && (
+          <div className="mt-8 w-full max-w-md">
+            <Collapsible open={debugOpen} onOpenChange={setDebugOpen}>
+              <Card className="border-amber-500/50 bg-amber-500/5">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-amber-500/10 transition-colors py-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bug className="h-4 w-4 text-amber-500" />
+                        <CardTitle className="text-sm text-amber-500">Debug Mode (Not Found)</CardTitle>
+                      </div>
+                      {debugOpen ? (
+                        <ChevronUp className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-amber-500" />
+                      )}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-3 text-xs font-mono">
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={copyDebugInfo}
+                        className="text-xs"
+                      >
+                        {copiedDebug ? (
+                          <>
+                            <CheckCheck className="h-3 w-3 mr-1" />
+                            Copiado!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copiar Debug Info
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    <div className="bg-muted/50 rounded p-3 space-y-2">
+                      <p className="text-muted-foreground font-semibold mb-2">Diagnóstico:</p>
+                      <div className="grid gap-1">
+                        <p><span className="text-muted-foreground">URL Param:</span> <span className="text-foreground">{barbershopId}</span></p>
+                        <p><span className="text-muted-foreground">É UUID:</span> <span className="text-foreground">{/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(barbershopId || '') ? 'Sim' : 'Não (subdomínio)'}</span></p>
+                        <p><span className="text-muted-foreground">Barbershop:</span> <span className="text-destructive">null</span></p>
+                      </div>
+                    </div>
+                    
+                    {debugErrors.length > 0 ? (
+                      <div className="bg-destructive/10 border border-destructive/30 rounded p-3 space-y-2">
+                        <p className="text-destructive font-semibold mb-2">Erros de Carregamento ({debugErrors.length}):</p>
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {debugErrors.map((err, i) => (
+                            <div key={i} className="bg-background/50 rounded p-2 space-y-1">
+                              <p className="text-muted-foreground text-[10px]">{err.timestamp}</p>
+                              <p className="text-destructive font-semibold">{err.action}</p>
+                              <pre className="text-foreground whitespace-pre-wrap break-all text-[10px]">
+                                {JSON.stringify(err.error, null, 2)}
+                              </pre>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded p-3">
+                        <p className="text-amber-500">⚠️ Nenhum erro capturado - link pode estar incorreto</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          </div>
+        )}
       </div>
     );
   }
