@@ -26,7 +26,7 @@ export default function ClientDashboard() {
         .from('appointments')
         .select(`
           *,
-          staff:staff_id(id, user_id, profiles:user_id(full_name, avatar_url)),
+          staff:staff_id(id, user_id, profiles:user_id(full_name, preferred_name, avatar_url)),
           service:service_id(name, duration, price)
         `)
         .eq('client_id', client.id)
@@ -162,7 +162,7 @@ export default function ClientDashboard() {
                     <div className="flex items-center gap-2 text-muted-foreground mt-1">
                       <User className="h-4 w-4" />
                       <span className="text-sm">
-                        {nextAppointment.staff?.profiles?.full_name || 'Profissional'}
+                        {nextAppointment.staff?.profiles?.preferred_name || nextAppointment.staff?.profiles?.full_name || 'Profissional'}
                       </span>
                     </div>
                   </div>
