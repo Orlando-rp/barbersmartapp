@@ -1,7 +1,7 @@
-import React from 'react';
-import { SectionConfig, HeroSettings, GlobalStyles } from '@/types/landing-page';
+import React, { useState, useEffect } from 'react';
+import { SectionConfig, HeroSettings, GlobalStyles, HeroVariant } from '@/types/landing-page';
 import { Button } from '@/components/ui/button';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface HeroSectionProps {
@@ -23,7 +23,30 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   isPreview,
 }) => {
   const settings = section.settings as HeroSettings;
-  const variant = section.variant;
+  const variant = section.variant as HeroVariant;
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [parallaxOffset, setParallaxOffset] = useState(0);
+
+  // Slideshow effect
+  useEffect(() => {
+    if (variant === 'slideshow' && settings.background_images?.length) {
+      const interval = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % settings.background_images!.length);
+      }, (settings.slideshow_interval || 5) * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [variant, settings.background_images, settings.slideshow_interval]);
+
+  // Parallax effect
+  useEffect(() => {
+    if (variant === 'video-parallax' && !isPreview) {
+      const handleScroll = () => {
+        setParallaxOffset(window.scrollY * 0.5);
+      };
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, [variant, isPreview]);
 
   const heightClass = 
     settings.height === 'fullscreen' ? 'min-h-screen' :
@@ -36,6 +59,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const textColorClass = settings.text_color === 'light' ? 'text-white' : 'text-gray-900';
 
   const getBackgroundStyle = (): React.CSSProperties => {
+    if (variant === 'slideshow') return {};
+    
     switch (settings.background_type) {
       case 'image':
         return {
@@ -73,6 +98,251 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
   };
 
+  // Split Screen Variant
+  if (variant === 'split-screen') {
+    const imagePosition = settings.split_position || 'right';
+    return (
+      <section className={cn('relative flex', heightClass)}>
+        <div className={cn(
+          'flex flex-col md:flex-row w-full',
+          imagePosition === 'left' ? 'md:flex-row-reverse' : ''
+        )}>
+          {/* Content Side */}
+          <div 
+            className="w-full md:w-1/2 flex flex-col justify-center p-8 md:p-16"
+            style={{ 
+              backgroundColor: settings.background_value ? `hsl(${settings.background_value})` : 'hsl(var(--landing-primary))'
+            }}
+          >
+            {settings.show_logo && barbershopData.logo_url && (
+              <img
+                src={barbershopData.logo_url}
+                alt={barbershopData.name}
+                className="h-12 md:h-16 w-auto mb-6 object-contain"
+              />
+            )}
+            <h1 
+              className={cn('text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight', textColorClass)}
+              style={{ fontFamily: 'var(--landing-font-heading)' }}
+            >
+              {settings.title || barbershopData.name}
+            </h1>
+            {settings.subtitle && (
+              <p className={cn('text-lg md:text-xl mb-8 opacity-90', textColorClass)}>
+                {settings.subtitle}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-4">
+              <Button
+                size="lg"
+                onClick={handleCTAClick}
+                className="text-lg px-8 py-6"
+                style={{ backgroundColor: 'var(--landing-accent)', borderRadius: 'var(--landing-radius)' }}
+              >
+                {settings.cta_primary_text}
+              </Button>
+              {settings.cta_secondary_text && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => {
+                    if (settings.cta_secondary_action?.startsWith('#')) {
+                      document.querySelector(settings.cta_secondary_action)?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className={cn('text-lg px-8 py-6', textColorClass)}
+                  style={{ borderRadius: 'var(--landing-radius)' }}
+                >
+                  {settings.cta_secondary_text}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Image Side */}
+          <div 
+            className="w-full md:w-1/2 min-h-[50vh] md:min-h-full bg-cover bg-center"
+            style={{ 
+              backgroundImage: `url(${settings.split_image?.url || settings.background_image?.url || ''})` 
+            }}
+          />
+        </div>
+      </section>
+    );
+  }
+
+  // Slideshow Variant
+  if (variant === 'slideshow' && settings.background_images?.length) {
+    return (
+      <section className={cn('relative flex flex-col justify-center overflow-hidden', heightClass)}>
+        {/* Slideshow Background */}
+        {settings.background_images.map((img, index) => (
+          <div
+            key={img.id}
+            className={cn(
+              'absolute inset-0 bg-cover bg-center transition-opacity duration-1000',
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
+            )}
+            style={{ backgroundImage: `url(${img.url})` }}
+          />
+        ))}
+
+        {/* Overlay */}
+        <div 
+          className="absolute inset-0 bg-black"
+          style={{ opacity: settings.overlay_opacity }}
+        />
+
+        {/* Content */}
+        <div className={cn(
+          'relative z-10 container mx-auto px-4 py-20 flex flex-col',
+          textPositionClass
+        )}>
+          {settings.show_logo && barbershopData.logo_url && (
+            <img
+              src={barbershopData.logo_url}
+              alt={barbershopData.name}
+              className="h-16 md:h-20 w-auto mb-8 object-contain"
+            />
+          )}
+          <h1 
+            className={cn('text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight', textColorClass)}
+            style={{ fontFamily: 'var(--landing-font-heading)' }}
+          >
+            {settings.title || barbershopData.name}
+          </h1>
+          {settings.subtitle && (
+            <p className={cn('text-lg md:text-xl lg:text-2xl mb-8 max-w-2xl opacity-90', textColorClass)}>
+              {settings.subtitle}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-4">
+            <Button
+              size="lg"
+              onClick={handleCTAClick}
+              className="text-lg px-8 py-6"
+              style={{ backgroundColor: 'var(--landing-accent)', borderRadius: 'var(--landing-radius)' }}
+            >
+              {settings.cta_primary_text}
+            </Button>
+          </div>
+        </div>
+
+        {/* Slideshow Indicators */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {settings.background_images.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={cn(
+                'w-2 h-2 rounded-full transition-all',
+                index === currentSlide ? 'bg-white w-6' : 'bg-white/50'
+              )}
+            />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Minimal Variant
+  if (variant === 'minimal') {
+    return (
+      <section 
+        className={cn('relative flex flex-col justify-center', heightClass)}
+        style={getBackgroundStyle()}
+      >
+        {(settings.background_type === 'image' || settings.background_type === 'video') && (
+          <div className="absolute inset-0 bg-black" style={{ opacity: settings.overlay_opacity }} />
+        )}
+        <div className="relative z-10 container mx-auto px-4 py-20">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 
+              className={cn('text-6xl md:text-8xl lg:text-9xl font-bold mb-8 tracking-tighter', textColorClass)}
+              style={{ fontFamily: 'var(--landing-font-heading)' }}
+            >
+              {settings.title || barbershopData.name}
+            </h1>
+            {settings.subtitle && (
+              <p className={cn('text-xl md:text-2xl mb-12 opacity-70 max-w-xl mx-auto', textColorClass)}>
+                {settings.subtitle}
+              </p>
+            )}
+            <Button
+              size="lg"
+              onClick={handleCTAClick}
+              className="text-lg px-12 py-6"
+              style={{ backgroundColor: 'var(--landing-accent)', borderRadius: 'var(--landing-radius)' }}
+            >
+              {settings.cta_primary_text}
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Video Parallax Variant
+  if (variant === 'video-parallax' && settings.background_type === 'video') {
+    return (
+      <section className={cn('relative flex flex-col justify-center overflow-hidden', heightClass)}>
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ transform: `translateY(${parallaxOffset}px)` }}
+        >
+          <source src={settings.background_value} type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black" style={{ opacity: settings.overlay_opacity }} />
+        <div className={cn(
+          'relative z-10 container mx-auto px-4 py-20 flex flex-col',
+          textPositionClass
+        )}>
+          {settings.show_logo && barbershopData.logo_url && (
+            <img
+              src={barbershopData.logo_url}
+              alt={barbershopData.name}
+              className="h-16 md:h-20 w-auto mb-8 object-contain"
+            />
+          )}
+          <h1 
+            className={cn('text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight', textColorClass)}
+            style={{ fontFamily: 'var(--landing-font-heading)' }}
+          >
+            {settings.title || barbershopData.name}
+          </h1>
+          {settings.subtitle && (
+            <p className={cn('text-lg md:text-xl lg:text-2xl mb-8 max-w-2xl opacity-90', textColorClass)}>
+              {settings.subtitle}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-4">
+            <Button
+              size="lg"
+              onClick={handleCTAClick}
+              className="text-lg px-8 py-6"
+              style={{ backgroundColor: 'var(--landing-accent)', borderRadius: 'var(--landing-radius)' }}
+            >
+              {settings.cta_primary_text}
+            </Button>
+          </div>
+        </div>
+        {settings.show_scroll_indicator && (
+          <button
+            onClick={scrollToContent}
+            className={cn('absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10', textColorClass)}
+          >
+            <ChevronDown className="h-8 w-8" />
+          </button>
+        )}
+      </section>
+    );
+  }
+
+  // Default Variant
   return (
     <section 
       className={cn('relative flex flex-col justify-center', heightClass)}
@@ -104,7 +374,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         'relative z-10 container mx-auto px-4 py-20 flex flex-col',
         textPositionClass
       )}>
-        {/* Logo */}
         {settings.show_logo && barbershopData.logo_url && (
           <img
             src={barbershopData.logo_url}
@@ -112,8 +381,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             className="h-16 md:h-20 w-auto mb-8 object-contain"
           />
         )}
-
-        {/* Title */}
         <h1 
           className={cn(
             'font-bold mb-4 leading-tight',
@@ -124,33 +391,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         >
           {settings.title || barbershopData.name}
         </h1>
-
-        {/* Subtitle */}
         {settings.subtitle && (
-          <p 
-            className={cn(
-              'text-lg md:text-xl lg:text-2xl mb-8 max-w-2xl opacity-90',
-              textColorClass
-            )}
-          >
+          <p className={cn('text-lg md:text-xl lg:text-2xl mb-8 max-w-2xl opacity-90', textColorClass)}>
             {settings.subtitle}
           </p>
         )}
-
-        {/* CTAs */}
         <div className="flex flex-wrap gap-4">
           <Button
             size="lg"
             onClick={handleCTAClick}
             className="text-lg px-8 py-6"
-            style={{
-              backgroundColor: 'var(--landing-accent)',
-              borderRadius: 'var(--landing-radius)',
-            }}
+            style={{ backgroundColor: 'var(--landing-accent)', borderRadius: 'var(--landing-radius)' }}
           >
             {settings.cta_primary_text}
           </Button>
-
           {settings.cta_secondary_text && (
             <Button
               size="lg"
@@ -169,14 +423,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </div>
       </div>
 
-      {/* Scroll indicator */}
       {settings.show_scroll_indicator && (
         <button
           onClick={scrollToContent}
-          className={cn(
-            'absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce',
-            textColorClass
-          )}
+          className={cn('absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce', textColorClass)}
         >
           <ChevronDown className="h-8 w-8" />
         </button>
