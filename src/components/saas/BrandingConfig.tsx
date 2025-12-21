@@ -169,16 +169,16 @@ export const BrandingConfig = () => {
       setUploadingLogo(true);
       
       const fileExt = file.name.split('.').pop();
-      const fileName = `branding/logo-${Date.now()}.${fileExt}`;
+      const fileName = `branding/saas/logo-${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('public-assets')
+        .from('landing-images')
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('public-assets')
+        .from('landing-images')
         .getPublicUrl(fileName);
 
       setConfig(prev => ({ ...prev, logoUrl: publicUrl }));
@@ -199,16 +199,16 @@ export const BrandingConfig = () => {
       setUploadingFavicon(true);
       
       const fileExt = file.name.split('.').pop();
-      const fileName = `branding/favicon-${Date.now()}.${fileExt}`;
+      const fileName = `branding/saas/favicon-${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('public-assets')
+        .from('landing-images')
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('public-assets')
+        .from('landing-images')
         .getPublicUrl(fileName);
 
       setConfig(prev => ({ ...prev, faviconUrl: publicUrl }));
