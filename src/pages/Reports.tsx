@@ -21,7 +21,8 @@ import { ServicesChart } from "@/components/reports/ServicesChart";
 import { TeamPerformance } from "@/components/reports/TeamPerformance";
 import { CommissionReport } from "@/components/reports/CommissionReport";
 import { PredictiveAnalytics } from "@/components/reports/PredictiveAnalytics";
-import { Download, Calendar as CalendarIcon, FileText, FileSpreadsheet, Wallet, BrainCircuit } from "lucide-react";
+import { NoShowRecoveryReport } from "@/components/reports/NoShowRecoveryReport";
+import { Download, Calendar as CalendarIcon, FileText, FileSpreadsheet, Wallet, BrainCircuit, UserX } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -324,13 +325,17 @@ const Reports = () => {
 
         {/* Reports Tabs */}
         <Tabs defaultValue="general" className="space-y-4">
-          <TabsList className="bg-muted/50 h-auto flex-wrap w-full grid grid-cols-3 gap-1 p-1">
+          <TabsList className="bg-muted/50 h-auto flex-wrap w-full grid grid-cols-2 sm:grid-cols-4 gap-1 p-1">
             <TabsTrigger value="general" className="text-xs sm:text-sm px-2 py-1.5">
               Visão Geral
             </TabsTrigger>
             <TabsTrigger value="commissions" className="gap-1 text-xs sm:text-sm px-2 py-1.5">
               <Wallet className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
               <span className="truncate">Comissões</span>
+            </TabsTrigger>
+            <TabsTrigger value="noshow" className="gap-1 text-xs sm:text-sm px-2 py-1.5">
+              <UserX className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">No-Shows</span>
             </TabsTrigger>
             <TabsTrigger value="predictive" className="gap-1 text-xs sm:text-sm px-2 py-1.5">
               <BrainCircuit className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
@@ -354,6 +359,10 @@ const Reports = () => {
 
           <TabsContent value="commissions">
             <CommissionReport period={period} />
+          </TabsContent>
+
+          <TabsContent value="noshow">
+            <NoShowRecoveryReport period={period} />
           </TabsContent>
 
           <TabsContent value="predictive">
