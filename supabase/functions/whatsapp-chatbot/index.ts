@@ -20,6 +20,9 @@ interface ConversationContext {
     // Review data
     reviewAppointmentId?: string;
     reviewRating?: number;
+    // Reschedule data
+    rescheduleAppointmentId?: string;
+    rescheduleSlots?: { date: string; time: string; formatted: string }[];
   };
 }
 
@@ -102,6 +105,50 @@ serve(async (req) => {
             success: true, 
             response: reviewResult.response,
             context: reviewResult.context.step
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Handle reschedule flow (when client responds with slot number)
+    if (context.step === 'awaiting_reschedule_choice') {
+      const rescheduleResult = await handleRescheduleFlow(supabase, context, message, from, barbershopId, instanceName, apiUrl, apiKey);
+      if (rescheduleResult.handled) {
+        conversations.set(conversationKey, rescheduleResult.context);
+        
+        // Log the conversation
+        await logConversation(supabase, barbershopId, from, message, rescheduleResult.response);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            response: rescheduleResult.response,
+            context: rescheduleResult.context.step
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Check for reschedule response (numbers 1, 2, or 3) from recent no-show suggestions
+    const rescheduleCheck = await checkForRescheduleResponse(supabase, message, from, barbershopId);
+    if (rescheduleCheck.isRescheduleResponse) {
+      context.step = 'awaiting_reschedule_choice';
+      context.data.rescheduleAppointmentId = rescheduleCheck.appointmentId;
+      context.data.rescheduleSlots = rescheduleCheck.suggestedSlots;
+      conversations.set(conversationKey, context);
+      
+      const rescheduleResult = await handleRescheduleFlow(supabase, context, message, from, barbershopId, instanceName, apiUrl, apiKey);
+      if (rescheduleResult.handled) {
+        conversations.set(conversationKey, rescheduleResult.context);
+        await logConversation(supabase, barbershopId, from, message, rescheduleResult.response);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            response: rescheduleResult.response,
+            context: rescheduleResult.context.step
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -279,6 +326,185 @@ async function handleReviewFlow(
     await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
   }
 
+  return { handled, response, context: newContext };
+}
+
+// Check if incoming message is a response to a reschedule suggestion
+async function checkForRescheduleResponse(
+  supabase: any,
+  message: string,
+  phone: string,
+  barbershopId: string
+): Promise<{ isRescheduleResponse: boolean; appointmentId?: string; suggestedSlots?: any[] }> {
+  // Check if message is a simple number (1, 2, or 3)
+  const trimmedMessage = message.trim();
+  if (!/^[1-3]$/.test(trimmedMessage)) {
+    return { isRescheduleResponse: false };
+  }
+
+  // Format phone for search
+  let searchPhone = phone.replace(/\D/g, '');
+  if (searchPhone.startsWith('55')) {
+    searchPhone = searchPhone.substring(2);
+  }
+
+  // Look for recent no_show_reschedule log sent to this phone (within last 24h)
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  
+  const { data: recentLogs } = await supabase
+    .from('whatsapp_logs')
+    .select('*')
+    .eq('barbershop_id', barbershopId)
+    .eq('message_type', 'no_show_reschedule')
+    .eq('status', 'sent')
+    .gte('created_at', twentyFourHoursAgo)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (!recentLogs || recentLogs.length === 0) {
+    return { isRescheduleResponse: false };
+  }
+
+  // Find log matching this phone
+  const matchingLog = recentLogs.find((log: any) => {
+    const logPhone = (log.phone || log.recipient_phone || '').replace(/\D/g, '');
+    return logPhone.includes(searchPhone) || searchPhone.includes(logPhone);
+  });
+
+  if (!matchingLog || !matchingLog.metadata?.suggested_slots) {
+    return { isRescheduleResponse: false };
+  }
+
+  return {
+    isRescheduleResponse: true,
+    appointmentId: matchingLog.metadata.appointment_id,
+    suggestedSlots: matchingLog.metadata.suggested_slots,
+  };
+}
+
+// Handle reschedule flow - create new appointment from selected slot
+async function handleRescheduleFlow(
+  supabase: any,
+  context: ConversationContext,
+  message: string,
+  from: string,
+  barbershopId: string,
+  instanceName: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<{ handled: boolean; response: string; context: ConversationContext }> {
+  const newContext = { ...context, data: { ...context.data } };
+  let response = '';
+  let handled = true;
+
+  const trimmedMessage = message.trim();
+  const slotIndex = parseInt(trimmedMessage) - 1;
+  const slots = context.data.rescheduleSlots || [];
+  
+  if (slotIndex < 0 || slotIndex >= slots.length) {
+    response = `Por favor, responda com um número válido (1 a ${slots.length}) para escolher o horário desejado.`;
+  } else {
+    const selectedSlot = slots[slotIndex];
+    const appointmentId = context.data.rescheduleAppointmentId;
+    
+    try {
+      // Get original appointment details
+      const { data: originalAppointment } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          clients!inner (id, name, phone),
+          services (id, name, price, duration)
+        `)
+        .eq('id', appointmentId)
+        .single();
+      
+      if (!originalAppointment) {
+        response = 'Desculpe, não encontramos o agendamento original. Por favor, entre em contato com a barbearia.';
+        newContext.step = 'initial';
+        newContext.data = {};
+      } else {
+        // Create new appointment
+        const { error: appointmentError } = await supabase
+          .from('appointments')
+          .insert({
+            barbershop_id: barbershopId,
+            client_id: originalAppointment.client_id,
+            staff_id: originalAppointment.staff_id,
+            service_id: originalAppointment.service_id,
+            date: selectedSlot.date,
+            time: selectedSlot.time,
+            duration: originalAppointment.duration || originalAppointment.services?.duration || 30,
+            status: 'agendado',
+            notes: `Reagendamento automático (no-show de ${originalAppointment.date})`,
+          });
+        
+        if (appointmentError) {
+          console.error('[Chatbot] Error creating reschedule appointment:', appointmentError);
+          response = 'Desculpe, houve um erro ao criar o reagendamento. Por favor, entre em contato com a barbearia.';
+        } else {
+          // Update original appointment to mark it was rescheduled
+          await supabase
+            .from('appointments')
+            .update({ 
+              notes: `${originalAppointment.notes || ''}\nReagendado para ${selectedSlot.formatted}`.trim(),
+            })
+            .eq('id', appointmentId);
+          
+          // Get barbershop name
+          const { data: barbershop } = await supabase
+            .from('barbershops')
+            .select('name')
+            .eq('id', barbershopId)
+            .single();
+          
+          const clientName = originalAppointment.clients?.name?.split(' ')[0] || 'Cliente';
+          const serviceName = originalAppointment.services?.name || 'serviço';
+          
+          response = `✅ Perfeito, ${clientName}!
+
+Seu ${serviceName} foi reagendado para:
+
+📅 ${selectedSlot.formatted}
+
+Aguardamos você! 💈
+
+_${barbershop?.name || 'Barbearia'}_`;
+          
+          // Log the successful reschedule
+          await supabase.from('whatsapp_logs').insert({
+            barbershop_id: barbershopId,
+            phone: from,
+            message_type: 'reschedule_confirmed',
+            message_content: response,
+            status: 'sent',
+            metadata: {
+              original_appointment_id: appointmentId,
+              new_date: selectedSlot.date,
+              new_time: selectedSlot.time,
+            },
+          });
+          
+          console.log(`[Chatbot] Successfully created reschedule for appointment ${appointmentId}`);
+        }
+        
+        // Reset context
+        newContext.step = 'initial';
+        newContext.data = {};
+      }
+    } catch (error) {
+      console.error('[Chatbot] Error in reschedule flow:', error);
+      response = 'Desculpe, houve um erro. Por favor, entre em contato com a barbearia.';
+      newContext.step = 'initial';
+      newContext.data = {};
+    }
+  }
+  
+  // Send response
+  if (handled && response && instanceName && apiUrl) {
+    await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
+  }
+  
   return { handled, response, context: newContext };
 }
 
