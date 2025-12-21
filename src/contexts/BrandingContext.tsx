@@ -36,6 +36,8 @@ interface BrandingContextType {
   loading: boolean;
   refreshBranding: () => Promise<void>;
   hasWhiteLabel: boolean;
+  tenantBranding: CustomBranding | null;
+  tenantBarbershopName: string | null;
 }
 
 const defaultBranding: SystemBranding = {
@@ -58,6 +60,8 @@ const BrandingContext = createContext<BrandingContextType>({
   loading: true,
   refreshBranding: async () => {},
   hasWhiteLabel: false,
+  tenantBranding: null,
+  tenantBarbershopName: null,
 });
 
 export const useBranding = () => useContext(BrandingContext);
@@ -99,7 +103,7 @@ const hexToHsl = (hex: string): string => {
 };
 
 // Apply branding colors as CSS variables
-const applyBrandingColors = (branding: SystemBranding) => {
+const applyBrandingColors = (branding: SystemBranding | CustomBranding) => {
   const root = document.documentElement;
   
   if (branding.primary_color) {
@@ -132,7 +136,7 @@ const applyBrandingColors = (branding: SystemBranding) => {
   }
   
   // Update page title
-  if (branding.system_name) {
+  if ('system_name' in branding && branding.system_name) {
     document.title = branding.system_name;
   }
 };
@@ -145,22 +149,88 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
   const { resolvedTheme } = useTheme();
   const [branding, setBranding] = useState<SystemBranding | null>(defaultBranding);
   const [customBranding, setCustomBranding] = useState<CustomBranding | null>(null);
+  const [tenantBranding, setTenantBranding] = useState<CustomBranding | null>(null);
+  const [tenantBarbershopName, setTenantBarbershopName] = useState<string | null>(null);
   const [hasWhiteLabel, setHasWhiteLabel] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Calculate effective branding (custom overrides system if white-label)
+  // Fetch tenant branding by domain (for unauthenticated users)
+  const fetchTenantBrandingByDomain = async () => {
+    try {
+      const hostname = window.location.hostname;
+      
+      // Skip for localhost and Lovable domains
+      if (
+        hostname === 'localhost' ||
+        hostname.includes('lovable.app') ||
+        hostname.includes('lovableproject.com')
+      ) {
+        return;
+      }
+      
+      // Extract subdomain if it's a pattern like *.barbersmart.app
+      let domainToCheck = hostname;
+      const mainDomains = ['barbersmart.app', 'barbersmart.com.br'];
+      for (const mainDomain of mainDomains) {
+        if (hostname.endsWith(`.${mainDomain}`)) {
+          domainToCheck = hostname.replace(`.${mainDomain}`, '');
+          break;
+        }
+      }
+      
+      // Fetch branding via RPC
+      const { data, error } = await supabase.rpc('get_tenant_branding_by_domain', {
+        domain_name: domainToCheck
+      });
+      
+      if (error) {
+        console.log('Tenant branding not found:', error.message);
+        return;
+      }
+      
+      if (data && typeof data === 'object') {
+        const brandingData = data as Record<string, any>;
+        
+        const customBrandingFromDomain: CustomBranding = {
+          system_name: brandingData.system_name,
+          tagline: brandingData.tagline,
+          logo_url: brandingData.logo_url,
+          logo_light_url: brandingData.logo_light_url,
+          logo_dark_url: brandingData.logo_dark_url,
+          favicon_url: brandingData.favicon_url,
+          primary_color: brandingData.primary_color,
+          secondary_color: brandingData.secondary_color,
+          accent_color: brandingData.accent_color,
+        };
+        
+        setTenantBranding(customBrandingFromDomain);
+        setTenantBarbershopName(brandingData.barbershop_name || null);
+        setHasWhiteLabel(brandingData.has_white_label === true);
+        
+        // Apply tenant branding immediately for login page
+        if (brandingData.has_white_label) {
+          applyBrandingColors(customBrandingFromDomain);
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching tenant branding:', err);
+    }
+  };
+
+  // Calculate effective branding (tenant > custom > system)
   const effectiveBranding: SystemBranding | null = branding ? {
     ...branding,
-    ...(hasWhiteLabel && customBranding ? {
-      system_name: customBranding.system_name || branding.system_name,
-      tagline: customBranding.tagline || branding.tagline,
-      logo_url: customBranding.logo_url || branding.logo_url,
-      logo_light_url: customBranding.logo_light_url || branding.logo_light_url,
-      logo_dark_url: customBranding.logo_dark_url || branding.logo_dark_url,
-      favicon_url: customBranding.favicon_url || branding.favicon_url,
-      primary_color: customBranding.primary_color || branding.primary_color,
-      secondary_color: customBranding.secondary_color || branding.secondary_color,
-      accent_color: customBranding.accent_color || branding.accent_color,
+    // Priority: tenantBranding (domain-based) > customBranding (user-based) > system branding
+    ...(hasWhiteLabel && (tenantBranding || customBranding) ? {
+      system_name: tenantBranding?.system_name || customBranding?.system_name || branding.system_name,
+      tagline: tenantBranding?.tagline || customBranding?.tagline || branding.tagline,
+      logo_url: tenantBranding?.logo_url || customBranding?.logo_url || branding.logo_url,
+      logo_light_url: tenantBranding?.logo_light_url || customBranding?.logo_light_url || branding.logo_light_url,
+      logo_dark_url: tenantBranding?.logo_dark_url || customBranding?.logo_dark_url || branding.logo_dark_url,
+      favicon_url: tenantBranding?.favicon_url || customBranding?.favicon_url || branding.favicon_url,
+      primary_color: tenantBranding?.primary_color || customBranding?.primary_color || branding.primary_color,
+      secondary_color: tenantBranding?.secondary_color || customBranding?.secondary_color || branding.secondary_color,
+      accent_color: tenantBranding?.accent_color || customBranding?.accent_color || branding.accent_color,
     } : {})
   } : null;
 
@@ -252,7 +322,6 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
       }
 
       // Check if barbershop (ou matriz) has white_label feature
-      // (some tenants store the subscription on the unidade instead of the matriz)
       const idsToCheck = [rootId];
       if (barbershop.id && barbershop.id !== rootId) {
         idsToCheck.push(barbershop.id);
@@ -278,7 +347,10 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
           : plan.feature_flags;
         setHasWhiteLabel(flags?.white_label === true);
       } else {
-        setHasWhiteLabel(false);
+        // Only reset if no tenant branding was found
+        if (!tenantBranding) {
+          setHasWhiteLabel(false);
+        }
       }
     } catch (err) {
       console.log('Error fetching barbershop branding:', err);
@@ -287,10 +359,16 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
 
   const fetchBranding = async () => {
     setLoading(true);
+    
+    // First, try to fetch tenant branding by domain (for login page)
+    await fetchTenantBrandingByDomain();
+    
+    // Then fetch system branding and user-specific branding
     await Promise.all([
       fetchSystemBranding(),
       fetchBarbershopBranding(),
     ]);
+    
     setLoading(false);
   };
 
@@ -318,6 +396,8 @@ export const BrandingProvider = ({ children }: BrandingProviderProps) => {
       loading, 
       refreshBranding,
       hasWhiteLabel,
+      tenantBranding,
+      tenantBarbershopName,
     }}>
       {children}
     </BrandingContext.Provider>
