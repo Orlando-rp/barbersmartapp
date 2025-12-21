@@ -136,9 +136,11 @@ const BarbershopBrandingConfig = () => {
   ) => {
     if (!file || !barbershopId) return;
 
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    const allowedTypes = type === 'favicon'
+      ? ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon']
+      : ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
     if (!allowedTypes.includes(file.type)) {
-      toast.error('Formato inválido. Use PNG, JPG, WebP ou SVG.');
+      toast.error(type === 'favicon' ? 'Formato inválido. Use PNG, ICO, WebP ou SVG.' : 'Formato inválido. Use PNG, JPG, WebP ou SVG.');
       return;
     }
 
@@ -387,7 +389,7 @@ const BarbershopBrandingConfig = () => {
                     accept="image/*"
                     className="hidden"
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
+                      const file = e.target.files?.[0]; e.currentTarget.value = '';
                       if (file) handleImageUpload(file, 'logo_light', setUploadingLogoLight);
                     }}
                   />
@@ -452,7 +454,7 @@ const BarbershopBrandingConfig = () => {
                     accept="image/*"
                     className="hidden"
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
+                      const file = e.target.files?.[0]; e.currentTarget.value = '';
                       if (file) handleImageUpload(file, 'logo_dark', setUploadingLogoDark);
                     }}
                   />
@@ -514,7 +516,7 @@ const BarbershopBrandingConfig = () => {
                     accept="image/*"
                     className="hidden"
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
+                      const file = e.target.files?.[0]; e.currentTarget.value = '';
                       if (file) handleImageUpload(file, 'favicon', setUploadingFavicon);
                     }}
                   />
