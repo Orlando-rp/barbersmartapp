@@ -51,7 +51,7 @@ interface BarbershopUnit {
 const Auth = () => {
   const navigate = useNavigate();
   const { user, signIn, refreshBarbershops } = useAuth();
-  const { branding } = useBranding();
+  const { effectiveBranding, currentLogoUrl, hasWhiteLabel, tenantBarbershopName } = useBranding();
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
   const [errors, setErrors] = useState<any>({});
@@ -814,7 +814,7 @@ const Auth = () => {
       }
 
       toast.success('Conta criada com sucesso!', {
-        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Bem-vindo ao ${branding?.system_name || 'BarberSmart'}!`,
+        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Bem-vindo ao ${effectiveBranding?.system_name || 'BarberSmart'}!`,
       });
 
       // Refresh barbershops in context
@@ -1882,10 +1882,10 @@ const Auth = () => {
       <Card className="w-full max-w-lg barbershop-card">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            {branding?.logo_url ? (
+            {currentLogoUrl ? (
               <img 
-                src={branding.logo_url} 
-                alt={branding.system_name || 'Logo'} 
+                src={currentLogoUrl} 
+                alt={effectiveBranding?.system_name || 'Logo'} 
                 className="h-16 w-16 rounded-full object-contain"
               />
             ) : (
@@ -1894,9 +1894,13 @@ const Auth = () => {
               </div>
             )}
           </div>
-          <CardTitle className="text-2xl">{branding?.system_name || 'BarberSmart'}</CardTitle>
+          <CardTitle className="text-2xl">
+            {hasWhiteLabel && tenantBarbershopName 
+              ? tenantBarbershopName 
+              : effectiveBranding?.system_name || 'BarberSmart'}
+          </CardTitle>
           <CardDescription>
-            {branding?.tagline || 'Sistema de gestão para barbearias'}
+            {effectiveBranding?.tagline || 'Sistema de gestão para barbearias'}
           </CardDescription>
         </CardHeader>
         <CardContent>

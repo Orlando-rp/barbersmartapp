@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { useBranding } from '@/contexts/BrandingContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Phone, ArrowLeft, MessageCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Phone, ArrowLeft, MessageCircle, CheckCircle2, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Step = 'phone' | 'otp' | 'success';
@@ -15,6 +16,7 @@ type Step = 'phone' | 'otp' | 'success';
 export default function ClientAuth() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { effectiveBranding, currentLogoUrl, hasWhiteLabel, tenantBarbershopName } = useBranding();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -177,19 +179,30 @@ export default function ClientAuth() {
     }
   };
 
+  // Get display name - prioritize tenant branding
+  const displayName = hasWhiteLabel && tenantBarbershopName 
+    ? tenantBarbershopName 
+    : effectiveBranding?.system_name || 'BarberSmart';
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
             {step === 'success' ? (
               <CheckCircle2 className="h-6 w-6 text-primary" />
+            ) : currentLogoUrl ? (
+              <img 
+                src={currentLogoUrl} 
+                alt={displayName} 
+                className="h-12 w-12 object-contain"
+              />
             ) : (
-              <MessageCircle className="h-6 w-6 text-primary" />
+              <Scissors className="h-6 w-6 text-primary" />
             )}
           </div>
           <CardTitle>
-            {step === 'phone' && 'Área do Cliente'}
+            {step === 'phone' && `Área do Cliente${hasWhiteLabel && tenantBarbershopName ? ` - ${tenantBarbershopName}` : ''}`}
             {step === 'otp' && 'Digite o código'}
             {step === 'success' && 'Bem-vindo!'}
           </CardTitle>
