@@ -102,6 +102,38 @@ const hexToHsl = (hex: string): string => {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 };
 
+// Update favicon dynamically
+const updateFavicon = (faviconUrl: string) => {
+  // Update or create the main favicon
+  let favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+  if (favicon) {
+    favicon.href = faviconUrl;
+  } else {
+    favicon = document.createElement('link');
+    favicon.rel = 'icon';
+    favicon.href = faviconUrl;
+    document.head.appendChild(favicon);
+  }
+
+  // Update shortcut icon for older browsers
+  let shortcutIcon = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement;
+  if (shortcutIcon) {
+    shortcutIcon.href = faviconUrl;
+  }
+
+  // Update apple-touch-icon for iOS
+  let appleTouchIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
+  if (appleTouchIcon) {
+    appleTouchIcon.href = faviconUrl;
+  }
+
+  // Update PWA icons if they exist
+  const pwa192 = document.querySelector("link[rel='icon'][sizes='192x192']") as HTMLLinkElement;
+  const pwa512 = document.querySelector("link[rel='icon'][sizes='512x512']") as HTMLLinkElement;
+  if (pwa192) pwa192.href = faviconUrl;
+  if (pwa512) pwa512.href = faviconUrl;
+};
+
 // Apply branding colors as CSS variables
 const applyBrandingColors = (branding: SystemBranding | CustomBranding) => {
   const root = document.documentElement;
@@ -124,15 +156,7 @@ const applyBrandingColors = (branding: SystemBranding | CustomBranding) => {
   
   // Update favicon if provided
   if (branding.favicon_url) {
-    const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-    if (favicon) {
-      favicon.href = branding.favicon_url;
-    } else {
-      const newFavicon = document.createElement('link');
-      newFavicon.rel = 'icon';
-      newFavicon.href = branding.favicon_url;
-      document.head.appendChild(newFavicon);
-    }
+    updateFavicon(branding.favicon_url);
   }
   
   // Update page title
