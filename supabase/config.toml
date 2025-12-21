@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.suggest-reschedule-noshow]
 verify_jwt = false
+
+[functions.cancel-pending-reschedules]
+verify_jwt = false
