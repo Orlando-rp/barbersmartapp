@@ -7,12 +7,17 @@ import { OptimizeOptions, OptimizedImageResult } from '@/types/landing-page';
 export const loadImage = (file: File | Blob): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    
     img.onload = () => {
-      URL.revokeObjectURL(img.src);
+      URL.revokeObjectURL(objectUrl);
       resolve(img);
     };
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Falha ao carregar imagem para otimização'));
+    };
+    img.src = objectUrl;
   });
 };
 

@@ -169,23 +169,27 @@ export const BrandingConfig = () => {
     try {
       setUploadingLogo(true);
       
-      // Compress image before upload (skip SVG)
       let fileToUpload: Blob = file;
       let finalExt = file.name.split('.').pop() || 'png';
+      const skipCompression = file.type === 'image/svg+xml';
 
-      if (file.type !== 'image/svg+xml') {
-        const optimized = await optimizeImage(file, {
-          maxWidth: 512,
-          maxHeight: 512,
-          quality: 85,
-          format: 'webp',
-          generateThumbnail: false,
-        });
-        
-        fileToUpload = optimized.optimizedBlob;
-        finalExt = optimized.metadata.format;
-        
-        console.log(`Logo otimizado: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+      if (!skipCompression) {
+        try {
+          const optimized = await optimizeImage(file, {
+            maxWidth: 512,
+            maxHeight: 512,
+            quality: 85,
+            format: 'webp',
+            generateThumbnail: false,
+          });
+          
+          fileToUpload = optimized.optimizedBlob;
+          finalExt = optimized.metadata.format;
+          
+          console.log(`Logo otimizado: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+        } catch (compressionError) {
+          console.warn('Compressão falhou, enviando arquivo original:', compressionError);
+        }
       }
 
       const fileName = `branding/saas/logo-${Date.now()}.${finalExt}`;
@@ -220,23 +224,28 @@ export const BrandingConfig = () => {
     try {
       setUploadingFavicon(true);
       
-      // Compress image before upload (skip SVG)
       let fileToUpload: Blob = file;
       let finalExt = file.name.split('.').pop() || 'png';
+      const isIcoFile = file.name.toLowerCase().endsWith('.ico');
+      const skipCompression = file.type === 'image/svg+xml' || isIcoFile;
 
-      if (file.type !== 'image/svg+xml') {
-        const optimized = await optimizeImage(file, {
-          maxWidth: 128,
-          maxHeight: 128,
-          quality: 90,
-          format: 'webp',
-          generateThumbnail: false,
-        });
-        
-        fileToUpload = optimized.optimizedBlob;
-        finalExt = optimized.metadata.format;
-        
-        console.log(`Favicon otimizado: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+      if (!skipCompression) {
+        try {
+          const optimized = await optimizeImage(file, {
+            maxWidth: 128,
+            maxHeight: 128,
+            quality: 90,
+            format: 'webp',
+            generateThumbnail: false,
+          });
+          
+          fileToUpload = optimized.optimizedBlob;
+          finalExt = optimized.metadata.format;
+          
+          console.log(`Favicon otimizado: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+        } catch (compressionError) {
+          console.warn('Compressão falhou, enviando arquivo original:', compressionError);
+        }
       }
 
       const fileName = `branding/saas/favicon-${Date.now()}.${finalExt}`;
