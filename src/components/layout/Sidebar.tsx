@@ -277,7 +277,7 @@ const Sidebar = () => {
 
   return (
     <div className={cn(
-      "h-screen bg-card border-r border-border transition-all duration-300 flex-col hidden lg:flex",
+      "h-screen bg-card border-r border-border transition-all duration-300 flex-col hidden lg:flex sticky top-0",
       collapsed ? "w-16" : "w-64"
     )}>
       {/* Logo + Toggle */}
