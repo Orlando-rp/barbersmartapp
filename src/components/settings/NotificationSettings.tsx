@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Bell, Save, MessageSquare, CheckCircle, XCircle, Clock, Star } from "lucide-react";
+import { Bell, Save, MessageSquare, CheckCircle, XCircle, Clock, Star, CalendarX2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface NotificationConfig {
@@ -22,6 +22,7 @@ interface NotificationSettingsData {
   appointment_cancelled: NotificationConfig;
   appointment_reminder: NotificationConfig;
   appointment_completed: NotificationConfig;
+  no_show_reschedule: NotificationConfig;
 }
 
 const defaultSettings: NotificationSettingsData = {
@@ -31,6 +32,7 @@ const defaultSettings: NotificationSettingsData = {
   appointment_cancelled: { enabled: true },
   appointment_reminder: { enabled: true, hours_before: 24 },
   appointment_completed: { enabled: true },
+  no_show_reschedule: { enabled: true },
 };
 
 const NotificationSettings = () => {
@@ -154,6 +156,13 @@ const NotificationSettings = () => {
       label: 'Pesquisa de Satisfação',
       description: 'Mensagem após conclusão do serviço',
       icon: Star,
+      hasHours: false,
+    },
+    {
+      key: 'no_show_reschedule' as const,
+      label: 'Sugestão de Reagendamento (No-Show)',
+      description: 'Envia sugestão automática de horários quando cliente não comparece',
+      icon: CalendarX2,
       hasHours: false,
     },
   ];
