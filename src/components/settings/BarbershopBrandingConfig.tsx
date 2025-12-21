@@ -176,6 +176,19 @@ const BarbershopBrandingConfig = () => {
         [fieldMap[type]]: publicUrl,
       }));
 
+      // Preview em tempo real do favicon na aba do navegador
+      if (type === 'favicon') {
+        const existingFavicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+        if (existingFavicon) {
+          existingFavicon.href = publicUrl;
+        } else {
+          const newFavicon = document.createElement('link');
+          newFavicon.rel = 'icon';
+          newFavicon.href = publicUrl;
+          document.head.appendChild(newFavicon);
+        }
+      }
+
       const labelMap: Record<string, string> = {
         logo_light: 'Logo (modo claro)',
         logo_dark: 'Logo (modo escuro)',
