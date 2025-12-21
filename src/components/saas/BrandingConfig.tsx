@@ -23,6 +23,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useBranding } from "@/contexts/BrandingContext";
+import { optimizeImage, formatFileSize } from "@/lib/imageOptimization";
 
 interface BrandingSettings {
   systemName: string;
@@ -168,12 +169,33 @@ export const BrandingConfig = () => {
     try {
       setUploadingLogo(true);
       
-      const fileExt = file.name.split('.').pop();
-      const fileName = `branding/saas/logo-${Date.now()}.${fileExt}`;
+      // Compress image before upload (skip SVG)
+      let fileToUpload: Blob = file;
+      let finalExt = file.name.split('.').pop() || 'png';
+
+      if (file.type !== 'image/svg+xml') {
+        const optimized = await optimizeImage(file, {
+          maxWidth: 512,
+          maxHeight: 512,
+          quality: 85,
+          format: 'webp',
+          generateThumbnail: false,
+        });
+        
+        fileToUpload = optimized.optimizedBlob;
+        finalExt = optimized.metadata.format;
+        
+        console.log(`Logo otimizado: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+      }
+
+      const fileName = `branding/saas/logo-${Date.now()}.${finalExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('landing-images')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, fileToUpload, { 
+          upsert: true,
+          contentType: file.type === 'image/svg+xml' ? 'image/svg+xml' : `image/${finalExt}`
+        });
 
       if (uploadError) throw uploadError;
 
@@ -198,12 +220,33 @@ export const BrandingConfig = () => {
     try {
       setUploadingFavicon(true);
       
-      const fileExt = file.name.split('.').pop();
-      const fileName = `branding/saas/favicon-${Date.now()}.${fileExt}`;
+      // Compress image before upload (skip SVG)
+      let fileToUpload: Blob = file;
+      let finalExt = file.name.split('.').pop() || 'png';
+
+      if (file.type !== 'image/svg+xml') {
+        const optimized = await optimizeImage(file, {
+          maxWidth: 128,
+          maxHeight: 128,
+          quality: 90,
+          format: 'webp',
+          generateThumbnail: false,
+        });
+        
+        fileToUpload = optimized.optimizedBlob;
+        finalExt = optimized.metadata.format;
+        
+        console.log(`Favicon otimizado: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+      }
+
+      const fileName = `branding/saas/favicon-${Date.now()}.${finalExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('landing-images')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, fileToUpload, { 
+          upsert: true,
+          contentType: file.type === 'image/svg+xml' ? 'image/svg+xml' : `image/${finalExt}`
+        });
 
       if (uploadError) throw uploadError;
 

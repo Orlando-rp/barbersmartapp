@@ -28,6 +28,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { optimizeImage, formatFileSize } from "@/lib/imageOptimization";
 
 interface CustomBranding {
   system_name?: string;
@@ -136,28 +137,51 @@ const BarbershopBrandingConfig = () => {
   ) => {
     if (!file || !barbershopId) return;
 
-    const allowedTypes = type === 'favicon'
-      ? ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon']
-      : ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif'];
     if (!allowedTypes.includes(file.type)) {
-      toast.error(type === 'favicon' ? 'Formato inválido. Use PNG, ICO, WebP ou SVG.' : 'Formato inválido. Use PNG, JPG, WebP ou SVG.');
+      toast.error('Formato inválido. Use PNG, JPG, WebP, GIF ou SVG.');
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Imagem muito grande. Máximo 2MB.');
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem muito grande. Máximo 5MB.');
       return;
     }
 
     setUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `branding/${barbershopId}/${type}-${Date.now()}.${fileExt}`;
+      // Compress image before upload (skip SVG)
+      let fileToUpload: Blob = file;
+      let finalExt = file.name.split('.').pop() || 'png';
 
-      const { error: uploadError, data } = await supabase.storage
+      if (file.type !== 'image/svg+xml') {
+        const maxSize = type === 'favicon' ? 128 : 512;
+        const optimized = await optimizeImage(file, {
+          maxWidth: maxSize,
+          maxHeight: maxSize,
+          quality: type === 'favicon' ? 90 : 85,
+          format: 'webp',
+          generateThumbnail: false,
+        });
+        
+        fileToUpload = optimized.optimizedBlob;
+        finalExt = optimized.metadata.format;
+        
+        const saved = optimized.metadata.originalSize - optimized.metadata.optimizedSize;
+        if (saved > 1024) {
+          console.log(`Imagem otimizada: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+        }
+      }
+
+      const fileName = `branding/${barbershopId}/${type}-${Date.now()}.${finalExt}`;
+
+      const { error: uploadError } = await supabase.storage
         .from('landing-images')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, fileToUpload, { 
+          upsert: true,
+          contentType: file.type === 'image/svg+xml' ? 'image/svg+xml' : `image/${finalExt}`
+        });
 
       if (uploadError) throw uploadError;
 
