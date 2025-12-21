@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.verify-dns]
 verify_jwt = false
+
+[functions.suggest-reschedule-noshow]
+verify_jwt = false
