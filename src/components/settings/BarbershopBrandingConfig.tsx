@@ -153,16 +153,16 @@ const BarbershopBrandingConfig = () => {
 
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${barbershopId}/${type}-${Date.now()}.${fileExt}`;
+      const fileName = `branding/${barbershopId}/${type}-${Date.now()}.${fileExt}`;
 
       const { error: uploadError, data } = await supabase.storage
-        .from('public-assets')
+        .from('landing-images')
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('public-assets')
+        .from('landing-images')
         .getPublicUrl(fileName);
 
       const fieldMap: Record<string, string> = {
