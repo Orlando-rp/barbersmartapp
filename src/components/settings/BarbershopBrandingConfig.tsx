@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Badge } from "@/components/ui/badge";
 import { 
   Palette, 
   Image as ImageIcon, 
@@ -17,12 +18,16 @@ import {
   Trash2,
   Sparkles,
   Sun,
-  Moon
+  Moon,
+  Crown,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useBranding } from "@/contexts/BrandingContext";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 interface CustomBranding {
   system_name?: string;
@@ -61,6 +66,7 @@ const BarbershopBrandingConfig = () => {
   const { barbershopId } = useAuth();
   const { refreshBranding } = useBranding();
   const { theme } = useTheme();
+  const { planName, hasFeature, loading: featuresLoading } = useFeatureFlags();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [branding, setBranding] = useState<CustomBranding>(defaultBranding);
@@ -226,6 +232,49 @@ const BarbershopBrandingConfig = () => {
         <CardDescription className="text-xs sm:text-sm">
           Personalize completamente a identidade visual do sistema
         </CardDescription>
+        
+        {/* Plan and Features Indicator */}
+        <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <Crown className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Plano Atual:</span>
+            <Badge variant="secondary" className="text-xs">
+              {featuresLoading ? "Carregando..." : (planName || "Free")}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              {hasFeature('white_label') ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <span className={hasFeature('white_label') ? 'text-foreground' : 'text-muted-foreground'}>
+                White Label
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {hasFeature('custom_domain') ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <span className={hasFeature('custom_domain') ? 'text-foreground' : 'text-muted-foreground'}>
+                Domínio Próprio
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {hasFeature('multi_unit') ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <span className={hasFeature('multi_unit') ? 'text-foreground' : 'text-muted-foreground'}>
+                Multi-unidade
+              </span>
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="identity" className="w-full">
