@@ -137,9 +137,11 @@ const BarbershopBrandingConfig = () => {
   ) => {
     if (!file || !barbershopId) return;
 
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Formato inválido. Use PNG, JPG, WebP, GIF ou SVG.');
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif', 'image/x-icon', 'image/vnd.microsoft.icon'];
+    const isIcoFile = file.name.toLowerCase().endsWith('.ico');
+    
+    if (!allowedTypes.includes(file.type) && !isIcoFile) {
+      toast.error('Formato inválido. Use PNG, JPG, WebP, GIF, SVG ou ICO.');
       return;
     }
 
@@ -151,26 +153,32 @@ const BarbershopBrandingConfig = () => {
     setUploading(true);
 
     try {
-      // Compress image before upload (skip SVG)
       let fileToUpload: Blob = file;
       let finalExt = file.name.split('.').pop() || 'png';
+      const skipCompression = file.type === 'image/svg+xml' || isIcoFile;
 
-      if (file.type !== 'image/svg+xml') {
-        const maxSize = type === 'favicon' ? 128 : 512;
-        const optimized = await optimizeImage(file, {
-          maxWidth: maxSize,
-          maxHeight: maxSize,
-          quality: type === 'favicon' ? 90 : 85,
-          format: 'webp',
-          generateThumbnail: false,
-        });
-        
-        fileToUpload = optimized.optimizedBlob;
-        finalExt = optimized.metadata.format;
-        
-        const saved = optimized.metadata.originalSize - optimized.metadata.optimizedSize;
-        if (saved > 1024) {
-          console.log(`Imagem otimizada: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+      if (!skipCompression) {
+        try {
+          const maxSize = type === 'favicon' ? 128 : 512;
+          const optimized = await optimizeImage(file, {
+            maxWidth: maxSize,
+            maxHeight: maxSize,
+            quality: type === 'favicon' ? 90 : 85,
+            format: 'webp',
+            generateThumbnail: false,
+          });
+          
+          fileToUpload = optimized.optimizedBlob;
+          finalExt = optimized.metadata.format;
+          
+          const saved = optimized.metadata.originalSize - optimized.metadata.optimizedSize;
+          if (saved > 1024) {
+            console.log(`Imagem otimizada: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+          }
+        } catch (compressionError) {
+          console.warn('Compressão falhou, enviando arquivo original:', compressionError);
+          // Fallback: use original file
+          fileToUpload = file;
         }
       }
 
