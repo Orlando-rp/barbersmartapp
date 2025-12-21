@@ -39,6 +39,7 @@ import { PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -328,68 +329,70 @@ const Sidebar = () => {
       )}
 
       {/* Navigation with Groups */}
-      <nav className="flex-1 px-2 overflow-y-auto py-2 space-y-1">
-        {groupedNavigation.map((group) => (
-          <div key={group.id}>
-            {collapsed ? (
-              // Collapsed mode: show items directly with tooltips
-              <div className="space-y-1">
-                {group.items.map((item) => (
-                  <Tooltip key={item.name} delayDuration={0}>
-                    <TooltipTrigger asChild>
+      <ScrollArea className="flex-1">
+        <nav className="px-2 py-2 space-y-1">
+          {groupedNavigation.map((group) => (
+            <div key={group.id}>
+              {collapsed ? (
+                // Collapsed mode: show items directly with tooltips
+                <div className="space-y-1">
+                  {group.items.map((item) => (
+                    <Tooltip key={item.name} delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <NavLink
+                          to={item.href}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center justify-center px-2 py-2.5 rounded-lg transition-colors",
+                              isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                            )
+                          }
+                        >
+                          <item.icon className="h-5 w-5" />
+                        </NavLink>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p>{item.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              ) : (
+                // Expanded mode: show collapsible groups
+                <Collapsible open={openGroups[group.id]} onOpenChange={() => toggleGroup(group.id)}>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors rounded-lg hover:bg-accent/50">
+                      <div className="flex items-center gap-2">
+                        <group.icon className="h-4 w-4" />
+                        <span>{group.name}</span>
+                      </div>
+                      <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", openGroups[group.id] && "rotate-180")} />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 mt-1">
+                    {group.items.map((item) => (
                       <NavLink
+                        key={item.name}
                         to={item.href}
+                        data-tour={item.tourId}
                         className={({ isActive }) =>
                           cn(
-                            "flex items-center justify-center px-2 py-2.5 rounded-lg transition-colors",
+                            "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ml-2",
                             isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                           )
                         }
                       >
-                        <item.icon className="h-5 w-5" />
+                        <item.icon className="h-4 w-4 mr-3" />
+                        <span>{item.name}</span>
                       </NavLink>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>{item.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            ) : (
-              // Expanded mode: show collapsible groups
-              <Collapsible open={openGroups[group.id]} onOpenChange={() => toggleGroup(group.id)}>
-                <CollapsibleTrigger asChild>
-                  <button className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors rounded-lg hover:bg-accent/50">
-                    <div className="flex items-center gap-2">
-                      <group.icon className="h-4 w-4" />
-                      <span>{group.name}</span>
-                    </div>
-                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", openGroups[group.id] && "rotate-180")} />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1 mt-1">
-                  {group.items.map((item) => (
-                    <NavLink
-                      key={item.name}
-                      to={item.href}
-                      data-tour={item.tourId}
-                      className={({ isActive }) =>
-                        cn(
-                          "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ml-2",
-                          isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                        )
-                      }
-                    >
-                      <item.icon className="h-4 w-4 mr-3" />
-                      <span>{item.name}</span>
-                    </NavLink>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-          </div>
-        ))}
-      </nav>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </div>
+          ))}
+        </nav>
+      </ScrollArea>
 
       {/* Bottom Info */}
       {!collapsed && (
