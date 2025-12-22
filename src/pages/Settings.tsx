@@ -124,6 +124,14 @@ const SettingsPage = () => {
 
   useEffect(() => {
     setSearchParams({ section: activeSection });
+    
+    // Sync mobile group with active section
+    const groupForSection = settingsGroups.find(group => 
+      group.sections.some(s => s.id === activeSection)
+    );
+    if (groupForSection) {
+      setActiveMobileGroup(groupForSection.label);
+    }
   }, [activeSection]);
 
   const fetchSettings = async () => {
