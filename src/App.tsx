@@ -7,6 +7,8 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "./contexts/AuthContext";
 import { BrandingProvider } from "./contexts/BrandingContext";
 import { AnimatedRoutes } from "./components/layout/AnimatedRoutes";
+import SubdomainRouter from "./components/routing/SubdomainRouter";
+import DynamicHead from "./components/DynamicHead";
 
 const queryClient = new QueryClient();
 
@@ -16,10 +18,13 @@ const App = () => (
       <BrandingProvider>
         <AuthProvider>
           <TooltipProvider>
+            <DynamicHead />
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <AnimatedRoutes />
+              <SubdomainRouter>
+                <AnimatedRoutes />
+              </SubdomainRouter>
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>

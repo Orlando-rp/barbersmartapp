@@ -1,9 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://nmsblmmhigwsevnqmhwn.supabase.co';
-const supabaseAnonKey = 'sb_publishable_tDfYcwUClvCdECz1NttPNw_GbBcs-8p';
+// Environment variables - configurable for self-hosting
+// IMPORTANT: When deploying externally, set these via environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nmsblmmhigwsevnqmhwn.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_tDfYcwUClvCdECz1NttPNw_GbBcs-8p';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Supabase environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) are required');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Export for use in tenant detection
+export const getSupabaseUrl = () => supabaseUrl;
 
 export type Database = {
   public: {

@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CustomBranding } from '@/contexts/BrandingContext';
+import { 
+  extractDomainToCheck, 
+  getEffectiveHostname, 
+  isIgnoredDomain 
+} from '@/lib/tenantConfig';
 
 interface TenantBrandingResult {
   branding: CustomBranding | null;
@@ -9,11 +14,16 @@ interface TenantBrandingResult {
   hasWhiteLabel: boolean;
   loading: boolean;
   detectedDomain: string | null;
+  error: string | null;
 }
 
 /**
- * Hook para detectar e buscar branding de tenant pelo domínio atual
- * Funciona mesmo antes do login do usuário
+ * Hook to detect and fetch tenant branding by current domain
+ * Works even before user login (for white-label login pages)
+ * 
+ * Supports:
+ * - Subdomains: barbearia1.barbersmart.app
+ * - Custom domains: minhabarbearia.com.br
  */
 export function useTenantBranding(): TenantBrandingResult {
   const [branding, setBranding] = useState<CustomBranding | null>(null);
@@ -22,45 +32,40 @@ export function useTenantBranding(): TenantBrandingResult {
   const [hasWhiteLabel, setHasWhiteLabel] = useState(false);
   const [loading, setLoading] = useState(true);
   const [detectedDomain, setDetectedDomain] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTenantBranding = async () => {
       setLoading(true);
+      setError(null);
       
       try {
-        const hostname = window.location.hostname;
+        const hostname = getEffectiveHostname();
         setDetectedDomain(hostname);
         
-        // Ignorar localhost e domínios do Lovable
-        if (
-          hostname === 'localhost' ||
-          hostname.includes('lovable.app') ||
-          hostname.includes('lovableproject.com')
-        ) {
+        // Skip tenant detection for ignored domains
+        if (isIgnoredDomain(hostname)) {
           setLoading(false);
           return;
         }
         
-        // Extrair subdomínio se for padrão *.barbersmart.app ou similar
-        let domainToCheck = hostname;
+        // Extract the domain to check against the database
+        const domainToCheck = extractDomainToCheck(hostname);
         
-        // Se for um subdomínio do sistema principal (ex: minhabarbearia.barbersmart.app)
-        // extrair apenas o subdomínio
-        const mainDomains = ['barbersmart.app', 'barbersmart.com.br'];
-        for (const mainDomain of mainDomains) {
-          if (hostname.endsWith(`.${mainDomain}`)) {
-            domainToCheck = hostname.replace(`.${mainDomain}`, '');
-            break;
-          }
+        if (!domainToCheck) {
+          // Main domain or ignored - no tenant branding
+          setLoading(false);
+          return;
         }
         
-        // Buscar branding pelo domínio usando RPC
-        const { data, error } = await supabase.rpc('get_tenant_branding_by_domain', {
+        // Fetch branding via RPC
+        const { data, error: rpcError } = await supabase.rpc('get_tenant_branding_by_domain', {
           domain_name: domainToCheck
         });
         
-        if (error) {
-          console.log('Tenant branding not found or error:', error.message);
+        if (rpcError) {
+          console.log('Tenant branding not found or error:', rpcError.message);
+          setError(rpcError.message);
           setLoading(false);
           return;
         }
@@ -68,7 +73,7 @@ export function useTenantBranding(): TenantBrandingResult {
         if (data && typeof data === 'object') {
           const brandingData = data as Record<string, any>;
           
-          // Extrair dados de branding
+          // Extract branding data
           const customBranding: CustomBranding = {
             system_name: brandingData.system_name,
             tagline: brandingData.tagline,
@@ -88,6 +93,7 @@ export function useTenantBranding(): TenantBrandingResult {
         }
       } catch (err) {
         console.error('Error fetching tenant branding:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);
       }
@@ -103,5 +109,6 @@ export function useTenantBranding(): TenantBrandingResult {
     hasWhiteLabel,
     loading,
     detectedDomain,
+    error,
   };
 }
