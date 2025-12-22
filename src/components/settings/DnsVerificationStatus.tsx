@@ -152,7 +152,7 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
     if (!domain?.custom_domain) return;
     
     setChecking(true);
-    setDnsRecords(records => records.map(r => ({ ...r, status: 'checking' as const })));
+    setDnsRecords(records => records.map(r => ({ ...r, status: 'checking' as const, foundValue: null })));
 
     try {
       // Call real DNS verification Edge Function
@@ -168,32 +168,38 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
 
       console.log('DNS verification result:', data);
 
-      // Update records based on real DNS check results
-      setDnsRecords(records => records.map(r => {
-        if (r.type === 'A' && r.name === '@') {
-          return { 
-            ...r, 
-            status: data.aRecord?.configured ? 'valid' : 'pending',
-            foundValue: data.aRecord?.value || null
-          };
-        }
-        if (r.type === 'A' && r.name === 'www') {
-          return { 
-            ...r, 
-            status: data.wwwRecord?.configured ? 'valid' : 'pending',
-            foundValue: data.wwwRecord?.value || null
-          };
-        }
-        if (r.type === 'TXT') {
-          return { 
-            ...r, 
-            status: data.txtRecord?.configured ? 'valid' : 'pending',
-            foundValue: data.txtRecord?.value || null
-          };
-        }
-        return r;
-      }));
+      const txtInfo = getTxtRecordName(domain.custom_domain);
 
+      // Create new array with updated values from response
+      const updatedRecords: DnsRecord[] = [
+        {
+          type: 'A',
+          name: '@',
+          displayName: '@',
+          value: '185.158.133.1',
+          foundValue: data.aRecord?.value || null,
+          status: data.aRecord?.configured ? 'valid' : 'pending'
+        },
+        {
+          type: 'A',
+          name: 'www',
+          displayName: 'www',
+          value: '185.158.133.1',
+          foundValue: data.wwwRecord?.value || null,
+          status: data.wwwRecord?.configured ? 'valid' : 'pending'
+        },
+        {
+          type: 'TXT',
+          name: txtInfo.name,
+          displayName: txtInfo.displayName,
+          value: domain.dns_verification_token || 'Gerando...',
+          foundValue: data.txtRecord?.value || null,
+          status: data.txtRecord?.configured ? 'valid' : 'pending'
+        }
+      ];
+
+      console.log('Updating DNS records with:', updatedRecords);
+      setDnsRecords(updatedRecords);
       setLastChecked(new Date());
       
       // Show appropriate toast based on overall status
@@ -201,12 +207,10 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
         toast.success("DNS verificado com sucesso! Todos os registros estão corretos.");
         refresh(); // Refresh domain data to get updated status
       } else if (data.overallStatus === 'partial') {
-        const configured = [];
         const pending = [];
-        if (data.aRecord?.configured) configured.push('A');
-        else pending.push('A');
-        if (data.txtRecord?.configured) configured.push('TXT');
-        else pending.push('TXT');
+        if (!data.aRecord?.configured) pending.push('A (@)');
+        if (!data.wwwRecord?.configured) pending.push('A (www)');
+        if (!data.txtRecord?.configured) pending.push('TXT');
         
         toast.info(`Parcialmente configurado. Faltam: ${pending.join(', ')}`);
       } else {
@@ -215,7 +219,7 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
     } catch (error) {
       console.error('Error checking DNS:', error);
       toast.error("Erro ao verificar DNS. Tente novamente.");
-      setDnsRecords(records => records.map(r => ({ ...r, status: 'pending' })));
+      setDnsRecords(records => records.map(r => ({ ...r, status: 'pending', foundValue: null })));
     } finally {
       setChecking(false);
     }
@@ -436,7 +440,7 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
         <CardContent className="space-y-3">
           {dnsRecords.map((record, index) => (
             <div
-              key={index}
+              key={`${record.type}-${record.name}-${record.status}-${record.foundValue || 'null'}`}
               className={`p-3 rounded-lg border space-y-2 ${
                 record.status === 'valid' 
                   ? 'bg-success/5 border-success/30' 
