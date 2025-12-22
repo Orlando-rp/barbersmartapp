@@ -14,6 +14,7 @@ import { RevenueWidget } from "@/components/dashboard/widgets/RevenueWidget";
 import { AppointmentsWidget } from "@/components/dashboard/widgets/AppointmentsWidget";
 import { ClientsWidget } from "@/components/dashboard/widgets/ClientsWidget";
 import { OccupancyWidget } from "@/components/dashboard/widgets/OccupancyWidget";
+import { WaitlistWidget } from "@/components/dashboard/widgets/WaitlistWidget";
 import { WidgetSelector, defaultWidgets, WidgetConfig } from "@/components/dashboard/WidgetSelector";
 import { DraggableWidgetGrid } from "@/components/dashboard/DraggableWidgetGrid";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
@@ -42,7 +43,7 @@ interface DashboardStats {
   retentionRate: number;
 }
 
-const defaultWidgetOrder = ['revenue', 'appointments', 'clients', 'occupancy'];
+const defaultWidgetOrder = ['revenue', 'appointments', 'clients', 'occupancy', 'waitlist'];
 
 const Index = () => {
   const { barbershopId, barbershops, selectedBarbershopId, activeBarbershopIds, user } = useAuth();
@@ -361,6 +362,8 @@ const Index = () => {
         return <ClientsWidget onRemove={customizeMode ? () => handleRemoveWidget('clients') : undefined} />;
       case 'occupancy':
         return <OccupancyWidget onRemove={customizeMode ? () => handleRemoveWidget('occupancy') : undefined} />;
+      case 'waitlist':
+        return <WaitlistWidget onRemove={customizeMode ? () => handleRemoveWidget('waitlist') : undefined} />;
       default:
         return null;
     }

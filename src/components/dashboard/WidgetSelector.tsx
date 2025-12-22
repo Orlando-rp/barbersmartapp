@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, DollarSign, Calendar, Users, Activity, TrendingUp } from "lucide-react";
+import { Plus, DollarSign, Calendar, Users, Activity, Clock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export interface WidgetConfig {
@@ -102,6 +102,13 @@ export const defaultWidgets: WidgetConfig[] = [
     name: 'Taxa de Ocupação',
     icon: Activity,
     description: 'Percentual de horários ocupados hoje',
+    enabled: true,
+  },
+  {
+    id: 'waitlist',
+    name: 'Lista de Espera',
+    icon: Clock,
+    description: 'Clientes aguardando horários disponíveis',
     enabled: true,
   },
 ];
