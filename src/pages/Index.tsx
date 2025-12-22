@@ -17,6 +17,7 @@ import { OccupancyWidget } from "@/components/dashboard/widgets/OccupancyWidget"
 import { WaitlistWidget } from "@/components/dashboard/widgets/WaitlistWidget";
 import { WidgetSelector, defaultWidgets, WidgetConfig, ColumnConfig } from "@/components/dashboard/WidgetSelector";
 import { DraggableWidgetGrid } from "@/components/dashboard/DraggableWidgetGrid";
+import { LayoutManager, DashboardLayout } from "@/components/dashboard/LayoutManager";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
 import { 
   Calendar, 
@@ -69,6 +70,15 @@ const Index = () => {
   const handleColumnsChange = (cols: ColumnConfig) => {
     setColumns(cols);
     localStorage.setItem('dashboard-columns', cols.toString());
+  };
+
+  const handleLoadLayout = (layout: DashboardLayout) => {
+    setWidgets(layout.widgets);
+    setWidgetOrder(layout.widgetOrder);
+    setColumns(layout.columns);
+    localStorage.setItem('dashboard-widgets', JSON.stringify(layout.widgets));
+    localStorage.setItem('dashboard-widget-order', JSON.stringify(layout.widgetOrder));
+    localStorage.setItem('dashboard-columns', layout.columns.toString());
   };
 
   // Visão consolidada quando múltiplas unidades selecionáveis e nenhuma selecionada
@@ -409,6 +419,12 @@ const Index = () => {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <LayoutManager
+                currentWidgets={widgets}
+                currentOrder={widgetOrder}
+                currentColumns={columns}
+                onLoadLayout={handleLoadLayout}
+              />
               <Button
                 variant={customizeMode ? "default" : "outline"}
                 size="sm"
