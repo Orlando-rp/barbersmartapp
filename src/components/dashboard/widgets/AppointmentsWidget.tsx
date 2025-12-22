@@ -124,7 +124,7 @@ export const AppointmentsWidget = ({
       onRemove={onRemove} 
       isUpdating={isUpdating}
     >
-      <div className="space-y-2 sm:space-y-3">
+      <div className="flex flex-col flex-1">
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs text-muted-foreground">Hoje</p>
@@ -143,26 +143,27 @@ export const AppointmentsWidget = ({
         </div>
 
         {/* Sparkline - Last 7 days */}
-        {sparklineData.length > 0 && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="cursor-help">
-                <Sparkline 
-                  data={sparklineData} 
-                  color={sparklineTrend === "up" ? "success" : sparklineTrend === "down" ? "destructive" : "primary"} 
-                  height={32}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">Agendamentos dos últimos 7 dias</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
+        <div className="flex-1 flex items-center py-2">
+          {sparklineData.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="cursor-help w-full">
+                  <Sparkline 
+                    data={sparklineData} 
+                    color={sparklineTrend === "up" ? "success" : sparklineTrend === "down" ? "destructive" : "primary"} 
+                    height={32}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Agendamentos dos últimos 7 dias</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
         
-        {nextAppointment && (
-          <div className="border-t border-border pt-2 sm:pt-3">
-            <p className="text-xs text-muted-foreground mb-1">Próximo</p>
+        <div className="border-t border-border pt-2 mt-auto">
+          {nextAppointment ? (
             <div className="flex items-center gap-2">
               <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               <span className="font-medium text-xs sm:text-sm">
@@ -172,8 +173,10 @@ export const AppointmentsWidget = ({
                 {nextAppointment.client_name}
               </span>
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-xs text-muted-foreground">Sem próximo agendamento</p>
+          )}
+        </div>
       </div>
     </DashboardWidget>
   );

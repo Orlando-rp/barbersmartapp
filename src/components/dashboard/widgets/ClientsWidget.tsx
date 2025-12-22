@@ -137,7 +137,7 @@ export const ClientsWidget = ({
       onRemove={onRemove} 
       isUpdating={isUpdating}
     >
-      <div className="space-y-2 sm:space-y-3">
+      <div className="flex flex-col flex-1">
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs text-muted-foreground">Total Ativos</p>
@@ -153,25 +153,27 @@ export const ClientsWidget = ({
         </div>
 
         {/* Sparkline - Last 7 days new clients */}
-        {sparklineData.length > 0 && sparklineData.some(v => v > 0) && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="cursor-help">
-                <Sparkline 
-                  data={sparklineData} 
-                  color={sparklineTrend === "up" ? "success" : "primary"} 
-                  height={32}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">Novos clientes nos últimos 7 dias</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
+        <div className="flex-1 flex items-center py-2">
+          {sparklineData.length > 0 && sparklineData.some(v => v > 0) && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="cursor-help w-full">
+                  <Sparkline 
+                    data={sparklineData} 
+                    color={sparklineTrend === "up" ? "success" : "primary"} 
+                    height={32}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Novos clientes nos últimos 7 dias</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
 
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border">
-          <span>Total cadastrados: {totalClients}</span>
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border mt-auto">
+          <span>Total: {totalClients}</span>
           {weekGrowth !== 0 && (
             <div className="flex items-center gap-1">
               {weekGrowth >= 0 ? (
