@@ -101,6 +101,7 @@ const SettingsPage = () => {
     const section = searchParams.get('section') as SettingsSection;
     return section || 'profile';
   });
+  const [activeMobileGroup, setActiveMobileGroup] = useState<string>('Básico');
   const [settings, setSettings] = useState<BarbershopSettings>({
     name: '',
     address: '',
@@ -199,6 +200,9 @@ const SettingsPage = () => {
 
   // Flat list for mobile navigation
   const allVisibleSections = visibleGroups.flatMap(group => group.sections);
+
+  // Get sections for the active mobile group
+  const mobileGroupSections = visibleGroups.find(g => g.label === activeMobileGroup)?.sections || [];
 
   const renderSectionContent = () => {
     if (loading) {
@@ -467,10 +471,31 @@ const SettingsPage = () => {
         </div>
 
         {/* Mobile Navigation */}
-        <div className="lg:hidden">
+        <div className="lg:hidden space-y-3">
+          {/* Group Filter Chips */}
+          <ScrollArea className="w-full">
+            <div className="flex gap-2 pb-1">
+              {visibleGroups.map((group) => (
+                <button
+                  key={group.label}
+                  onClick={() => setActiveMobileGroup(group.label)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border",
+                    activeMobileGroup === group.label
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                  )}
+                >
+                  {group.label}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+          
+          {/* Section Buttons within Selected Group */}
           <ScrollArea className="w-full">
             <div className="flex gap-2 pb-2">
-              {allVisibleSections.map((section) => {
+              {mobileGroupSections.map((section) => {
                 const Icon = section.icon;
                 return (
                   <button
