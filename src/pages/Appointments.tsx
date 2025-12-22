@@ -561,6 +561,30 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
     }
   };
 
+  const markAsPaid = async (appointmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ payment_status: 'paid_at_location' })
+        .eq('id', appointmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Pagamento registrado',
+        description: 'O agendamento foi marcado como pago no local.',
+      });
+
+      fetchAppointments();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao registrar pagamento',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Pull to refresh callback
   const handleRefresh = useCallback(async () => {
     await fetchAppointments();
@@ -773,6 +797,18 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                         <Edit className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                         Editar
                       </Button>
+                      {appointment.payment_status === 'pending' && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => markAsPaid(appointment.id)}
+                          className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9 bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                          <span className="hidden md:inline">Marcar Pago</span>
+                          <span className="md:hidden">Pago</span>
+                        </Button>
+                      )}
                       <Select
                         value={appointment.status}
                         onValueChange={(value) => updateStatus(appointment.id, value)}
