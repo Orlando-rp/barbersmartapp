@@ -1467,7 +1467,8 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
   const lastStep = totalSteps - 1;
   
   // Payment step index (different based on hasMultipleUnits)
-  const paymentStepIndex = hasMultipleUnits ? 5 : 4;
+  // Payment step is always step 5 (after client data step 4)
+  const paymentStepIndex = 5;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
@@ -1521,35 +1522,41 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
 
           {/* Progress Steps - Modern Style */}
           <div className="flex items-center justify-center gap-2 sm:gap-3">
-            {(hasMultipleUnits ? [0, 1, 2, 3, 4] : [1, 2, 3, 4]).map((s, index) => (
-              <div key={s} className="flex items-center">
-                <div
-                  className={`relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-medium text-sm transition-all duration-300 ${
-                    s === step 
-                      ? 'bg-accent text-accent-foreground shadow-lg shadow-accent/30 scale-110' 
-                      : s < step 
-                        ? 'bg-accent/20 text-accent' 
-                        : 'bg-muted/50 text-muted-foreground'
-                  }`}
-                >
-                  {s < step ? (
-                    <Check className="h-4 w-4 sm:h-5 sm:w-5" />
-                  ) : (
-                    <span>{hasMultipleUnits ? index + 1 : s}</span>
+            {(() => {
+              // Build steps array based on configuration
+              const baseSteps = hasMultipleUnits ? [0, 1, 2, 3, 4] : [1, 2, 3, 4];
+              const stepsArray = showPaymentStep ? [...baseSteps, paymentStepIndex] : baseSteps;
+              
+              return stepsArray.map((s, index) => (
+                <div key={s} className="flex items-center">
+                  <div
+                    className={`relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-medium text-sm transition-all duration-300 ${
+                      s === step 
+                        ? 'bg-accent text-accent-foreground shadow-lg shadow-accent/30 scale-110' 
+                        : s < step 
+                          ? 'bg-accent/20 text-accent' 
+                          : 'bg-muted/50 text-muted-foreground'
+                    }`}
+                  >
+                    {s < step ? (
+                      <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                    ) : (
+                      <span>{index + 1}</span>
+                    )}
+                  </div>
+                  {index < stepsArray.length - 1 && (
+                    <div className={`w-6 sm:w-10 h-0.5 mx-1 transition-colors ${
+                      s < step ? 'bg-accent' : 'bg-muted'
+                    }`} />
                   )}
                 </div>
-                {index < (hasMultipleUnits ? 4 : 3) && (
-                  <div className={`w-6 sm:w-10 h-0.5 mx-1 transition-colors ${
-                    s < step ? 'bg-accent' : 'bg-muted'
-                  }`} />
-                )}
-              </div>
-            ))}
+              ));
+            })()}
           </div>
           
           {/* Step Label */}
           <p className="text-center text-xs text-muted-foreground mt-3">
-            {stepLabels[hasMultipleUnits ? step : step - 1]}
+            {stepLabels[hasMultipleUnits ? step : step - 1] || stepLabels[stepLabels.length - 1]}
           </p>
         </div>
       </div>
@@ -1564,6 +1571,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
               {step === 2 && <><Scissors className="h-5 w-5 text-accent" /> Escolha o Serviço</>}
               {step === 3 && <><CalendarIcon className="h-5 w-5 text-accent" /> Data e Horário</>}
               {step === 4 && <><Phone className="h-5 w-5 text-accent" /> Seus Dados</>}
+              {step === paymentStepIndex && showPaymentStep && <><CreditCard className="h-5 w-5 text-accent" /> Forma de Pagamento</>}
             </CardTitle>
           </CardHeader>
           
@@ -2211,8 +2219,8 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                     (step === 1 && !selectedStaff) ||
                     (step === 2 && !selectedService) ||
                     (step === 3 && (!selectedDate || !selectedTime)) ||
-                    (step === 4 && !clientName) ||
-                    (step === 4 && !clientPhone)
+                    (step === 4 && (!clientName || !clientPhone)) ||
+                    (step === paymentStepIndex && showPaymentStep && !paymentMethod)
                   }
                   className="h-11 bg-accent hover:bg-accent/90 text-accent-foreground"
                 >
