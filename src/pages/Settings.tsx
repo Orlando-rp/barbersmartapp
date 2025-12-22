@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
 import DomainSettings from "@/components/settings/DomainSettings";
 import PortfolioGalleryManager from "@/components/settings/PortfolioGalleryManager";
@@ -481,14 +481,14 @@ const SettingsPage = () => {
         {/* Mobile Navigation */}
         <div className="lg:hidden space-y-3">
           {/* Group Filter Chips */}
-          <ScrollArea className="w-full">
-            <div className="flex gap-2 pb-1">
+          <ScrollArea className="w-full" type="scroll">
+            <div className="flex gap-2 pb-3">
               {visibleGroups.map((group) => (
                 <button
                   key={group.label}
                   onClick={() => setActiveMobileGroup(group.label)}
                   className={cn(
-                    "px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border",
+                    "px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border flex-shrink-0",
                     activeMobileGroup === group.label
                       ? "bg-primary text-primary-foreground border-primary shadow-sm"
                       : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
@@ -498,11 +498,12 @@ const SettingsPage = () => {
                 </button>
               ))}
             </div>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
           
           {/* Section Buttons within Selected Group */}
-          <ScrollArea className="w-full">
-            <div className="flex gap-2 pb-2">
+          <ScrollArea className="w-full" type="scroll">
+            <div className="flex gap-2 pb-3">
               {mobileGroupSections.map((section) => {
                 const Icon = section.icon;
                 return (
@@ -510,7 +511,7 @@ const SettingsPage = () => {
                     key={section.id}
                     onClick={() => setActiveSection(section.id)}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
+                      "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex-shrink-0",
                       activeSection === section.id
                         ? "bg-primary text-primary-foreground shadow-md"
                         : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -522,6 +523,7 @@ const SettingsPage = () => {
                 );
               })}
             </div>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
 
