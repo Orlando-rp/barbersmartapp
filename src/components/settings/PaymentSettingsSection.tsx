@@ -127,21 +127,23 @@ export default function PaymentSettingsSection() {
 
     setTesting(true);
     try {
-      // Test the access token by making a simple API call
-      const response = await fetch('https://api.mercadopago.com/users/me', {
-        headers: {
-          'Authorization': `Bearer ${settings.mercadopago_access_token}`
-        }
+      // Call Edge Function to test connection (avoids CORS)
+      const { data, error } = await supabase.functions.invoke('test-mercadopago-connection', {
+        body: { accessToken: settings.mercadopago_access_token }
       });
 
-      if (response.ok) {
+      if (error) throw error;
+
+      if (data?.success) {
         setConnectionStatus('connected');
-        toast.success('Conexão com Mercado Pago estabelecida!');
+        const userName = data.user?.nickname || data.user?.email || data.user?.first_name;
+        toast.success(`Conexão estabelecida! Conta: ${userName}`);
       } else {
         setConnectionStatus('error');
-        toast.error('Token inválido ou expirado');
+        toast.error(data?.error || 'Token inválido ou expirado');
       }
     } catch (error) {
+      console.error('Erro ao testar conexão:', error);
       setConnectionStatus('error');
       toast.error('Erro ao conectar com Mercado Pago');
     } finally {
