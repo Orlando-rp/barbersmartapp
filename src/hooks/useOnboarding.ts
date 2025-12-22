@@ -13,6 +13,7 @@ export function useOnboarding() {
       // Small delay to let the page render first
       const timer = setTimeout(() => {
         setShowTour(true);
+        setIsLoading(false);
       }, 1000);
       return () => clearTimeout(timer);
     }
