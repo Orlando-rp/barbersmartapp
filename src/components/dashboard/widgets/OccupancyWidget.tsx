@@ -142,7 +142,7 @@ export const OccupancyWidget = ({
       onRemove={onRemove} 
       isUpdating={isUpdating}
     >
-      <div className="space-y-2 sm:space-y-3">
+      <div className="flex flex-col flex-1">
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="font-bold text-lg sm:text-2xl">{occupancyRate.toFixed(0)}%</p>
@@ -162,29 +162,31 @@ export const OccupancyWidget = ({
           )}
         </div>
 
-        <Progress value={occupancyRate} className="h-1.5 sm:h-2" />
+        <Progress value={occupancyRate} className="h-1.5 sm:h-2 my-2" />
 
         {/* Sparkline - Last 7 days occupancy */}
-        {sparklineData.length > 0 && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="cursor-help">
-                <Sparkline 
-                  data={sparklineData} 
-                  color={sparklineColor} 
-                  height={32}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">Taxa de ocupação dos últimos 7 dias</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
+        <div className="flex-1 flex items-center">
+          {sparklineData.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="cursor-help w-full">
+                  <Sparkline 
+                    data={sparklineData} 
+                    color={sparklineColor} 
+                    height={32}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Taxa de ocupação dos últimos 7 dias</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
 
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{bookedSlots} agendamentos</span>
-          <span>{totalSlots} slots disponíveis</span>
+        <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t border-border mt-auto">
+          <span>{bookedSlots} agendados</span>
+          <span>{totalSlots} slots</span>
         </div>
       </div>
     </DashboardWidget>

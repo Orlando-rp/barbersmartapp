@@ -21,8 +21,8 @@ export const DashboardWidget = ({
   className,
   isUpdating = false
 }: DashboardWidgetProps) => {
-  return <Card className={cn("barbershop-card relative", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 sm:pb-4">
+  return <Card className={cn("barbershop-card relative h-full flex flex-col", className)}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 sm:pb-4 flex-shrink-0">
         <CardTitle className="font-semibold flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm truncate">
           {icon}
           <span className="truncate">{title}</span>
@@ -37,6 +37,6 @@ export const DashboardWidget = ({
             </Button>}
         </div>
       </CardHeader>
-      <CardContent className="p-3 sm:p-4 pt-0">{children}</CardContent>
+      <CardContent className="p-3 sm:p-4 pt-0 flex-1 flex flex-col">{children}</CardContent>
     </Card>;
 };

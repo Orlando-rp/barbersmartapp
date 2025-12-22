@@ -90,43 +90,39 @@ export const WaitlistWidget = ({ onRemove }: WaitlistWidgetProps) => {
     >
       <div 
         onClick={handleClick}
-        className="cursor-pointer group"
+        className="cursor-pointer group flex flex-col flex-1"
       >
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-2xl font-bold">{stats.waiting}</p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
             <p className="text-xs text-muted-foreground">Aguardando</p>
+            <p className="text-lg sm:text-2xl font-bold">{stats.waiting}</p>
           </div>
-          <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2">
-            <Bell className="h-3.5 w-3.5 text-amber-500" />
-            <div>
-              <p className="text-sm font-medium">{stats.notified}</p>
-              <p className="text-xs text-muted-foreground">Notificados</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-            <div>
-              <p className="text-sm font-medium">{stats.conversionRate}%</p>
-              <p className="text-xs text-muted-foreground">Conversão</p>
-            </div>
+          <div className="flex items-center gap-1">
+            <TrendingUp className="h-3 w-3 text-success" />
+            <span className="text-xs font-medium text-success">{stats.conversionRate}%</span>
           </div>
         </div>
 
-        {sparklineData.length > 0 && (
-          <div className="mt-4">
-            <Sparkline 
-              data={sparklineData} 
-              color="primary"
-              height={32}
-            />
-            <p className="text-xs text-muted-foreground mt-1">Últimos 7 dias</p>
+        {/* Sparkline */}
+        <div className="flex-1 flex items-center py-2">
+          {sparklineData.length > 0 && (
+            <div className="w-full">
+              <Sparkline 
+                data={sparklineData} 
+                color="primary"
+                height={32}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border mt-auto">
+          <div className="flex items-center gap-1">
+            <Bell className="h-3 w-3 text-amber-500" />
+            <span>{stats.notified} notificados</span>
           </div>
-        )}
+          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
       </div>
     </DashboardWidget>
   );
