@@ -1,0 +1,136 @@
+# =====================================================
+# BarberSmart - Docker Compose Configuration
+# =====================================================
+# Production deployment with Traefik reverse proxy
+# Supports wildcard subdomains and custom domains
+# =====================================================
+
+version: '3.8'
+
+services:
+  # ===================
+  # BarberSmart Frontend
+  # ===================
+  barbersmart:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+        - VITE_MAIN_DOMAINS=${VITE_MAIN_DOMAINS:-barbersmart.app,barbersmart.com.br}
+        - VITE_IGNORED_DOMAINS=${VITE_IGNORED_DOMAINS:-localhost}
+        - VITE_ENABLE_TENANT_DETECTION=${VITE_ENABLE_TENANT_DETECTION:-true}
+        - VITE_TRUST_PROXY_HEADERS=${VITE_TRUST_PROXY_HEADERS:-true}
+        - VITE_DEFAULT_SYSTEM_NAME=${VITE_DEFAULT_SYSTEM_NAME:-BarberSmart}
+        - VITE_DEFAULT_TAGLINE=${VITE_DEFAULT_TAGLINE:-Gestão Inteligente para Barbearias}
+        - VITE_ENABLE_PWA=${VITE_ENABLE_PWA:-true}
+    restart: unless-stopped
+    networks:
+      - web
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+      
+      # ===================
+      # Router for main domain
+      # ===================
+      - "traefik.http.routers.barbersmart-main.rule=Host(`barbersmart.app`) || Host(`www.barbersmart.app`) || Host(`barbersmart.com.br`) || Host(`www.barbersmart.com.br`)"
+      - "traefik.http.routers.barbersmart-main.entrypoints=websecure"
+      - "traefik.http.routers.barbersmart-main.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.barbersmart-main.service=barbersmart"
+      
+      # ===================
+      # Router for subdomains (wildcard)
+      # ===================
+      - "traefik.http.routers.barbersmart-subdomains.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.barbersmart.app`) || HostRegexp(`{subdomain:[a-z0-9-]+}.barbersmart.com.br`)"
+      - "traefik.http.routers.barbersmart-subdomains.entrypoints=websecure"
+      - "traefik.http.routers.barbersmart-subdomains.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.barbersmart-subdomains.tls.domains[0].main=barbersmart.app"
+      - "traefik.http.routers.barbersmart-subdomains.tls.domains[0].sans=*.barbersmart.app"
+      - "traefik.http.routers.barbersmart-subdomains.tls.domains[1].main=barbersmart.com.br"
+      - "traefik.http.routers.barbersmart-subdomains.tls.domains[1].sans=*.barbersmart.com.br"
+      - "traefik.http.routers.barbersmart-subdomains.service=barbersmart"
+      
+      # ===================
+      # Router for custom domains (catch-all)
+      # ===================
+      - "traefik.http.routers.barbersmart-custom.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.barbersmart-custom.entrypoints=websecure"
+      - "traefik.http.routers.barbersmart-custom.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.barbersmart-custom.priority=1"
+      - "traefik.http.routers.barbersmart-custom.service=barbersmart"
+      
+      # ===================
+      # Service configuration
+      # ===================
+      - "traefik.http.services.barbersmart.loadbalancer.server.port=80"
+      
+      # ===================
+      # Middleware for security headers
+      # ===================
+      - "traefik.http.middlewares.barbersmart-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.barbersmart-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.barbersmart-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.barbersmart-headers.headers.forceSTSHeader=true"
+
+  # ===================
+  # Traefik Reverse Proxy
+  # ===================
+  traefik:
+    image: traefik:v3.0
+    restart: unless-stopped
+    command:
+      # API and Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=web"
+      
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      
+      # Let's Encrypt - Production
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      
+      # For wildcard certificates, use DNS challenge instead:
+      # - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
+      # - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare"
+      
+      # Logging
+      - "--log.level=INFO"
+      - "--accesslog=true"
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - web
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/certs
+    environment:
+      # For Cloudflare DNS challenge (wildcard certs)
+      - CF_API_EMAIL=${CF_API_EMAIL:-}
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN:-}
+    labels:
+      # Dashboard
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${MAIN_DOMAIN:-barbersmart.app}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      # Basic auth for dashboard
+      - "traefik.http.routers.traefik.middlewares=traefik-auth"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH:-admin:$$apr1$$xyz$$abc}"
+
+networks:
+  web:
+    external: true
