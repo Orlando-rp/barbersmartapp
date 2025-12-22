@@ -29,6 +29,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
@@ -40,6 +41,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -105,6 +107,44 @@ const navGroups: Omit<NavGroup, "items">[] = [
   { id: "admin", name: "Administração", icon: Shield },
 ];
 
+// Hook para buscar contagem da lista de espera
+const useWaitlistCount = () => {
+  const { activeBarbershopIds } = useAuth();
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (activeBarbershopIds.length === 0) return;
+
+    const fetchCount = async () => {
+      const { count: waitingCount } = await supabase
+        .from("waitlist")
+        .select("*", { count: "exact", head: true })
+        .in("barbershop_id", activeBarbershopIds)
+        .eq("status", "waiting");
+      
+      setCount(waitingCount || 0);
+    };
+
+    fetchCount();
+
+    // Real-time subscription
+    const channel = supabase
+      .channel("waitlist-sidebar-badge")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "waitlist" },
+        () => fetchCount()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeBarbershopIds]);
+
+  return count;
+};
+
 // Mobile Sidebar using Sheet
 export const MobileSidebar = () => {
   const [open, setOpen] = useState(false);
@@ -114,6 +154,7 @@ export const MobileSidebar = () => {
   const { subscription, loading: subscriptionLoading } = useSubscription();
   const { hasPermission } = useRolePermissions();
   const location = useLocation();
+  const waitlistCount = useWaitlistCount();
 
   useEffect(() => {
     setOpen(false);
@@ -164,13 +205,20 @@ export const MobileSidebar = () => {
                 onClick={() => setOpen(false)}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors",
+                    "flex items-center justify-between px-3 py-3 text-sm font-medium rounded-lg transition-colors",
                     isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   )
                 }
               >
-                <item.icon className="h-5 w-5 mr-3" />
-                <span>{item.name}</span>
+                <div className="flex items-center">
+                  <item.icon className="h-5 w-5 mr-3" />
+                  <span>{item.name}</span>
+                </div>
+                {item.href === "/waitlist" && waitlistCount > 0 && (
+                  <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+                    {waitlistCount > 99 ? "99+" : waitlistCount}
+                  </Badge>
+                )}
               </NavLink>
             ))}
           </nav>
@@ -240,6 +288,7 @@ const Sidebar = () => {
   const { subscription, loading: subscriptionLoading } = useSubscription();
   const { hasPermission } = useRolePermissions();
   const location = useLocation();
+  const waitlistCount = useWaitlistCount();
 
   const filterNavItem = (item: NavItem) => {
     if (userRole === 'super_admin') return true;
@@ -343,16 +392,21 @@ const Sidebar = () => {
                           to={item.href}
                           className={({ isActive }) =>
                             cn(
-                              "flex items-center justify-center px-2 py-2.5 rounded-lg transition-colors",
+                              "flex items-center justify-center px-2 py-2.5 rounded-lg transition-colors relative",
                               isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                             )
                           }
                         >
                           <item.icon className="h-5 w-5" />
+                          {item.href === "/waitlist" && waitlistCount > 0 && (
+                            <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                              {waitlistCount > 9 ? "9+" : waitlistCount}
+                            </span>
+                          )}
                         </NavLink>
                       </TooltipTrigger>
                       <TooltipContent side="right">
-                        <p>{item.name}</p>
+                        <p>{item.name} {item.href === "/waitlist" && waitlistCount > 0 && `(${waitlistCount})`}</p>
                       </TooltipContent>
                     </Tooltip>
                   ))}
@@ -377,13 +431,20 @@ const Sidebar = () => {
                         data-tour={item.tourId}
                         className={({ isActive }) =>
                           cn(
-                            "flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ml-2",
+                            "flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ml-2",
                             isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                           )
                         }
                       >
-                        <item.icon className="h-4 w-4 mr-3" />
-                        <span>{item.name}</span>
+                        <div className="flex items-center">
+                          <item.icon className="h-4 w-4 mr-3" />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.href === "/waitlist" && waitlistCount > 0 && (
+                          <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+                            {waitlistCount > 99 ? "99+" : waitlistCount}
+                          </Badge>
+                        )}
                       </NavLink>
                     ))}
                   </CollapsibleContent>
