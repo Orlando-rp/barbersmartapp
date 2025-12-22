@@ -14,11 +14,14 @@ import PortfolioGalleryManager from "@/components/settings/PortfolioGalleryManag
 import NotificationSettings from "@/components/settings/NotificationSettings";
 import BarbershopBrandingConfig from "@/components/settings/BarbershopBrandingConfig";
 import RolePermissionsConfig from "@/components/settings/RolePermissionsConfig";
+import WhatsAppSettingsSection from "@/components/settings/WhatsAppSettingsSection";
+import ChatbotSettingsSection from "@/components/settings/ChatbotSettingsSection";
 import { FeatureGate } from "@/components/FeatureGate";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { 
   Save, User, Bell, Clock, Globe, Image, Sparkles, 
-  Shield, Settings, ChevronRight, Building2, Link2, RotateCcw, LayoutTemplate
+  Shield, Settings, ChevronRight, Building2, Link2, RotateCcw, LayoutTemplate,
+  MessageSquare, Bot, FileText
 } from "lucide-react";
 import LandingPageBuilder from "@/components/settings/LandingPageBuilder";
 import { toast } from "sonner";
@@ -39,7 +42,7 @@ interface BarbershopSettings {
   };
 }
 
-type SettingsSection = 'profile' | 'notifications' | 'hours' | 'domain' | 'portfolio' | 'landing' | 'branding' | 'permissions';
+type SettingsSection = 'profile' | 'notifications' | 'hours' | 'domain' | 'portfolio' | 'landing' | 'branding' | 'whatsapp' | 'chatbot' | 'audit' | 'permissions';
 
 const settingsSections = [
   { id: 'profile' as const, label: 'Perfil', icon: Building2, description: 'Dados da barbearia' },
@@ -49,6 +52,9 @@ const settingsSections = [
   { id: 'portfolio' as const, label: 'Portfólio', icon: Image, description: 'Galeria de fotos' },
   { id: 'landing' as const, label: 'Landing Page', icon: LayoutTemplate, description: 'Página pública' },
   { id: 'branding' as const, label: 'Marca', icon: Sparkles, description: 'Identidade visual' },
+  { id: 'whatsapp' as const, label: 'WhatsApp', icon: MessageSquare, description: 'APIs e integração' },
+  { id: 'chatbot' as const, label: 'Chatbot IA', icon: Bot, description: 'Assistente virtual' },
+  { id: 'audit' as const, label: 'Auditoria', icon: FileText, description: 'Logs de atividades' },
   { id: 'permissions' as const, label: 'Permissões', icon: Shield, description: 'Controle de acesso' },
 ];
 
@@ -149,7 +155,12 @@ const SettingsPage = () => {
   };
 
   const visibleSections = settingsSections.filter(section => {
+    // Permissões só para admin/super_admin
     if (section.id === 'permissions') {
+      return userRole === 'admin' || userRole === 'super_admin';
+    }
+    // Auditoria só para admin/super_admin
+    if (section.id === 'audit') {
       return userRole === 'admin' || userRole === 'super_admin';
     }
     return true;
@@ -337,6 +348,73 @@ const SettingsPage = () => {
               <p className="text-sm text-muted-foreground">Controle o acesso de cada função</p>
             </div>
             <RolePermissionsConfig />
+          </div>
+        );
+
+      case 'whatsapp':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Configurações WhatsApp</h2>
+              <p className="text-sm text-muted-foreground">Configure APIs de integração para mensagens</p>
+            </div>
+            <FeatureGate 
+              feature="whatsapp_notifications"
+              upgradeMessage="As notificações via WhatsApp não estão disponíveis no seu plano atual. Faça upgrade para enviar mensagens automáticas."
+            >
+              <WhatsAppSettingsSection />
+            </FeatureGate>
+          </div>
+        );
+
+      case 'chatbot':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Chatbot IA</h2>
+              <p className="text-sm text-muted-foreground">Configure o assistente virtual para WhatsApp</p>
+            </div>
+            <FeatureGate 
+              feature="whatsapp_chatbot"
+              upgradeMessage="O Chatbot IA não está disponível no seu plano atual. Faça upgrade para automatizar agendamentos via WhatsApp."
+            >
+              <ChatbotSettingsSection />
+            </FeatureGate>
+          </div>
+        );
+
+      case 'audit':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Logs de Auditoria</h2>
+              <p className="text-sm text-muted-foreground">Acompanhe atividades e alterações no sistema</p>
+            </div>
+            <FeatureGate 
+              feature="audit_logs"
+              upgradeMessage="Os logs de auditoria não estão disponíveis no seu plano atual. Faça upgrade para acompanhar todas as atividades."
+            >
+              <Card className="barbershop-card">
+                <CardContent className="pt-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-foreground">Ver Logs de Auditoria</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Acompanhe todas as alterações, acessos e atividades realizadas no sistema.
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate('/audit')}
+                      className="w-full sm:w-auto"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Abrir Auditoria
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </FeatureGate>
           </div>
         );
 
