@@ -44,18 +44,50 @@ interface BarbershopSettings {
 
 type SettingsSection = 'profile' | 'notifications' | 'hours' | 'domain' | 'portfolio' | 'landing' | 'branding' | 'whatsapp' | 'chatbot' | 'audit' | 'permissions';
 
-const settingsSections = [
-  { id: 'profile' as const, label: 'Perfil', icon: Building2, description: 'Dados da barbearia' },
-  { id: 'notifications' as const, label: 'Notificações', icon: Bell, description: 'WhatsApp e alertas' },
-  { id: 'hours' as const, label: 'Horários', icon: Clock, description: 'Funcionamento' },
-  { id: 'domain' as const, label: 'Domínio', icon: Globe, description: 'Link público' },
-  { id: 'portfolio' as const, label: 'Portfólio', icon: Image, description: 'Galeria de fotos' },
-  { id: 'landing' as const, label: 'Landing Page', icon: LayoutTemplate, description: 'Página pública' },
-  { id: 'branding' as const, label: 'Marca', icon: Sparkles, description: 'Identidade visual' },
-  { id: 'whatsapp' as const, label: 'WhatsApp', icon: MessageSquare, description: 'APIs e integração' },
-  { id: 'chatbot' as const, label: 'Chatbot IA', icon: Bot, description: 'Assistente virtual' },
-  { id: 'audit' as const, label: 'Auditoria', icon: FileText, description: 'Logs de atividades' },
-  { id: 'permissions' as const, label: 'Permissões', icon: Shield, description: 'Controle de acesso' },
+type SectionItem = {
+  id: SettingsSection;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+};
+
+type SectionGroup = {
+  label: string;
+  sections: SectionItem[];
+};
+
+const settingsGroups: SectionGroup[] = [
+  {
+    label: 'Básico',
+    sections: [
+      { id: 'profile', label: 'Perfil', icon: Building2, description: 'Dados da barbearia' },
+      { id: 'hours', label: 'Horários', icon: Clock, description: 'Funcionamento' },
+    ]
+  },
+  {
+    label: 'Aparência',
+    sections: [
+      { id: 'domain', label: 'Domínio', icon: Globe, description: 'Link público' },
+      { id: 'portfolio', label: 'Portfólio', icon: Image, description: 'Galeria de fotos' },
+      { id: 'landing', label: 'Landing Page', icon: LayoutTemplate, description: 'Página pública' },
+      { id: 'branding', label: 'Marca', icon: Sparkles, description: 'Identidade visual' },
+    ]
+  },
+  {
+    label: 'Comunicação',
+    sections: [
+      { id: 'notifications', label: 'Notificações', icon: Bell, description: 'Alertas e lembretes' },
+      { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, description: 'APIs e integração' },
+      { id: 'chatbot', label: 'Chatbot IA', icon: Bot, description: 'Assistente virtual' },
+    ]
+  },
+  {
+    label: 'Segurança',
+    sections: [
+      { id: 'audit', label: 'Auditoria', icon: FileText, description: 'Logs de atividades' },
+      { id: 'permissions', label: 'Permissões', icon: Shield, description: 'Controle de acesso' },
+    ]
+  },
 ];
 
 const SettingsPage = () => {
@@ -154,17 +186,19 @@ const SettingsPage = () => {
     }
   };
 
-  const visibleSections = settingsSections.filter(section => {
-    // Permissões só para admin/super_admin
-    if (section.id === 'permissions') {
-      return userRole === 'admin' || userRole === 'super_admin';
-    }
-    // Auditoria só para admin/super_admin
-    if (section.id === 'audit') {
-      return userRole === 'admin' || userRole === 'super_admin';
-    }
-    return true;
-  });
+  // Filter groups and sections based on role
+  const visibleGroups = settingsGroups.map(group => ({
+    ...group,
+    sections: group.sections.filter(section => {
+      if (section.id === 'permissions' || section.id === 'audit') {
+        return userRole === 'admin' || userRole === 'super_admin';
+      }
+      return true;
+    })
+  })).filter(group => group.sections.length > 0);
+
+  // Flat list for mobile navigation
+  const allVisibleSections = visibleGroups.flatMap(group => group.sections);
 
   const renderSectionContent = () => {
     if (loading) {
@@ -436,7 +470,7 @@ const SettingsPage = () => {
         <div className="lg:hidden">
           <ScrollArea className="w-full">
             <div className="flex gap-2 pb-2">
-              {visibleSections.map((section) => {
+              {allVisibleSections.map((section) => {
                 const Icon = section.icon;
                 return (
                   <button
@@ -463,36 +497,50 @@ const SettingsPage = () => {
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-64 shrink-0">
             <Card className="barbershop-card sticky top-6">
-              <CardContent className="p-2">
-                <nav className="space-y-1">
-                  {visibleSections.map((section) => {
-                    const Icon = section.icon;
-                    return (
-                      <button
-                        key={section.id}
-                        onClick={() => setActiveSection(section.id)}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all group",
-                          activeSection === section.id
-                            ? "bg-primary/10 text-primary font-medium"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                      >
-                        <Icon className={cn(
-                          "h-4 w-4 shrink-0",
-                          activeSection === section.id ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                        )} />
-                        <div className="flex-1 text-left">
-                          <div className="font-medium">{section.label}</div>
-                          <div className="text-xs text-muted-foreground">{section.description}</div>
-                        </div>
-                        <ChevronRight className={cn(
-                          "h-4 w-4 shrink-0 opacity-0 -translate-x-2 transition-all",
-                          activeSection === section.id && "opacity-100 translate-x-0 text-primary"
-                        )} />
-                      </button>
-                    );
-                  })}
+              <CardContent className="p-3">
+                <nav className="space-y-4">
+                  {visibleGroups.map((group, groupIndex) => (
+                    <div key={group.label}>
+                      {groupIndex > 0 && (
+                        <div className="border-t border-border mb-3" />
+                      )}
+                      <div className="px-3 mb-2">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          {group.label}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {group.sections.map((section) => {
+                          const Icon = section.icon;
+                          return (
+                            <button
+                              key={section.id}
+                              onClick={() => setActiveSection(section.id)}
+                              className={cn(
+                                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all group",
+                                activeSection === section.id
+                                  ? "bg-primary/10 text-primary font-medium"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                              )}
+                            >
+                              <Icon className={cn(
+                                "h-4 w-4 shrink-0",
+                                activeSection === section.id ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                              )} />
+                              <div className="flex-1 text-left">
+                                <div className="font-medium">{section.label}</div>
+                                <div className="text-xs text-muted-foreground">{section.description}</div>
+                              </div>
+                              <ChevronRight className={cn(
+                                "h-4 w-4 shrink-0 opacity-0 -translate-x-2 transition-all",
+                                activeSection === section.id && "opacity-100 translate-x-0 text-primary"
+                              )} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </nav>
               </CardContent>
             </Card>
