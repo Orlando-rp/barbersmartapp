@@ -21,8 +21,9 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { 
   Save, User, Bell, Clock, Globe, Image, Sparkles, 
   Shield, Settings, ChevronRight, Building2, Link2, RotateCcw, LayoutTemplate,
-  MessageSquare, Bot, FileText
+  MessageSquare, Bot, FileText, CreditCard
 } from "lucide-react";
+import PaymentSettingsSection from "@/components/settings/PaymentSettingsSection";
 import LandingPageBuilder from "@/components/settings/LandingPageBuilder";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -42,7 +43,7 @@ interface BarbershopSettings {
   };
 }
 
-type SettingsSection = 'profile' | 'notifications' | 'hours' | 'domain' | 'portfolio' | 'landing' | 'branding' | 'whatsapp' | 'chatbot' | 'audit' | 'permissions';
+type SettingsSection = 'profile' | 'notifications' | 'hours' | 'domain' | 'portfolio' | 'landing' | 'branding' | 'whatsapp' | 'chatbot' | 'payments' | 'audit' | 'permissions';
 
 type SectionItem = {
   id: SettingsSection;
@@ -79,6 +80,12 @@ const settingsGroups: SectionGroup[] = [
       { id: 'notifications', label: 'Notificações', icon: Bell, description: 'Alertas e lembretes' },
       { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, description: 'APIs e integração' },
       { id: 'chatbot', label: 'Chatbot IA', icon: Bot, description: 'Assistente virtual' },
+    ]
+  },
+  {
+    label: 'Pagamentos',
+    sections: [
+      { id: 'payments', label: 'Mercado Pago', icon: CreditCard, description: 'Pagamentos online' },
     ]
   },
   {
@@ -461,6 +468,17 @@ const SettingsPage = () => {
                 </CardContent>
               </Card>
             </FeatureGate>
+          </div>
+        );
+
+      case 'payments':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Configurações de Pagamento</h2>
+              <p className="text-sm text-muted-foreground">Configure integração com Mercado Pago</p>
+            </div>
+            <PaymentSettingsSection />
           </div>
         );
 

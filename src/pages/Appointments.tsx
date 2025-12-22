@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin } from "lucide-react";
+import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin, Wallet, CreditCard, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -35,6 +35,9 @@ interface Appointment {
   staff_avatar_url: string | null;
   barbershop_id: string;
   barbershop_name: string | null;
+  payment_status: 'pending' | 'paid_online' | 'paid_at_location' | 'partial' | 'refunded' | null;
+  payment_method_chosen: 'online' | 'at_location' | null;
+  payment_amount: number | null;
   staff: {
     name: string;
     avatar_url: string | null;
@@ -46,6 +49,34 @@ const statusConfig = {
   confirmado: { label: "Confirmado", variant: "default" as const },
   concluido: { label: "Concluído", variant: "outline" as const },
   cancelado: { label: "Cancelado", variant: "destructive" as const },
+};
+
+const paymentStatusConfig = {
+  pending: { 
+    label: "💰 A Cobrar", 
+    shortLabel: "Cobrar",
+    color: "text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-800"
+  },
+  paid_online: { 
+    label: "✅ Pago Online", 
+    shortLabel: "Pago",
+    color: "text-green-600 bg-green-50 border-green-200 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800"
+  },
+  paid_at_location: { 
+    label: "✅ Pago no Local", 
+    shortLabel: "Pago",
+    color: "text-green-600 bg-green-50 border-green-200 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800"
+  },
+  partial: { 
+    label: "⚠️ Sinal Pago", 
+    shortLabel: "Sinal",
+    color: "text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800"
+  },
+  refunded: { 
+    label: "↩️ Reembolsado", 
+    shortLabel: "Reemb.",
+    color: "text-gray-600 bg-gray-50 border-gray-200 dark:bg-gray-950/50 dark:text-gray-400 dark:border-gray-800"
+  }
 };
 
 const Appointments = () => {
@@ -174,7 +205,10 @@ const Appointments = () => {
           service_name,
           service_price,
           staff_id,
-          barbershop_id
+          barbershop_id,
+          payment_status,
+          payment_method_chosen,
+          payment_amount
         `)
         .in('barbershop_id', activeBarbershopIds)
         .order('appointment_date', { ascending: true })
@@ -663,12 +697,23 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                             <span>{appointment.client_phone}</span>
                           </div>
                         </div>
-                        <Badge 
-                          variant={statusConfig[appointment.status as keyof typeof statusConfig].variant}
-                          className="text-[10px] md:text-xs flex-shrink-0"
-                        >
-                          {statusConfig[appointment.status as keyof typeof statusConfig].label}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge 
+                            variant={statusConfig[appointment.status as keyof typeof statusConfig].variant}
+                            className="text-[10px] md:text-xs flex-shrink-0"
+                          >
+                            {statusConfig[appointment.status as keyof typeof statusConfig].label}
+                          </Badge>
+                          {appointment.payment_status && paymentStatusConfig[appointment.payment_status] && (
+                            <Badge 
+                              variant="outline"
+                              className={`text-[10px] md:text-xs flex-shrink-0 ${paymentStatusConfig[appointment.payment_status].color}`}
+                            >
+                              <span className="hidden md:inline">{paymentStatusConfig[appointment.payment_status].label}</span>
+                              <span className="md:hidden">{paymentStatusConfig[appointment.payment_status].shortLabel}</span>
+                            </Badge>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs md:text-sm">
