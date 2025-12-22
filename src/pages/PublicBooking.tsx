@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star, Bug, ChevronDown, ChevronUp, Copy, CheckCheck } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star, Bug, ChevronDown, ChevronUp, Copy, CheckCheck, CreditCard, Wallet } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -93,6 +93,13 @@ interface BusinessHours {
   close_time: string;
   break_start: string | null;
   break_end: string | null;
+}
+
+interface PaymentSettings {
+  allow_online_payment: boolean;
+  allow_pay_at_location: boolean;
+  require_deposit: boolean;
+  deposit_percentage: number;
 }
 
 const getStaffName = (staff: Staff | null): string => {
@@ -210,6 +217,11 @@ export default function PublicBooking() {
   const [submittingWaitlist, setSubmittingWaitlist] = useState(false);
   const [waitlistSuccess, setWaitlistSuccess] = useState(false);
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
+
+  // Payment state
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'at_location' | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   // Debug mode state
   const [debugMode, setDebugMode] = useState(false);
@@ -595,6 +607,20 @@ export default function PublicBooking() {
         .eq('barbershop_id', unitId);
       setBusinessHours(hoursData || []);
 
+      // Load payment settings
+      const { data: paySettings } = await supabase
+        .from('payment_settings')
+        .select('allow_online_payment, allow_pay_at_location, require_deposit, deposit_percentage')
+        .eq('barbershop_id', unitId)
+        .maybeSingle();
+
+      setPaymentSettings(paySettings || { 
+        allow_online_payment: false, 
+        allow_pay_at_location: true,
+        require_deposit: false,
+        deposit_percentage: 0
+      });
+
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
       addDebugError('loadBarbershopData:exception', {
@@ -884,11 +910,16 @@ export default function PublicBooking() {
       return;
     }
 
+    // Validate payment method if payment step is shown
+    const showPaymentStep = paymentSettings?.allow_online_payment && paymentSettings?.allow_pay_at_location;
+    if (showPaymentStep && !paymentMethod) {
+      toast({ title: 'Selecione a forma de pagamento', variant: 'destructive' });
+      return;
+    }
+
     try {
       setSubmitting(true);
 
-      // Use selectedUnit.id for proper unit assignment, fallback to barbershop.id (matriz)
-      // Never use barbershopId directly as it could be a subdomain string
       const effectiveUnitId = selectedUnit?.id || barbershop?.id;
       
       if (!effectiveUnitId) {
@@ -897,8 +928,7 @@ export default function PublicBooking() {
         return;
       }
 
-      // Usar RPC SECURITY DEFINER para criar agendamento de forma segura
-      // Isso permite inserção sem autenticação e cria cliente automaticamente
+      // Create appointment via RPC
       const { data: rpcResult, error: rpcError } = await supabase.rpc('create_public_appointment', {
         p_barbershop_id: effectiveUnitId,
         p_staff_id: selectedStaff.id,
@@ -915,11 +945,66 @@ export default function PublicBooking() {
 
       if (rpcError) throw rpcError;
       
-      // Verificar resposta da RPC
       if (!rpcResult?.success) {
         throw new Error(rpcResult?.error || 'Erro ao criar agendamento');
       }
 
+      const appointmentId = rpcResult?.appointment_id;
+
+      // Handle online payment
+      const shouldPayOnline = paymentMethod === 'online' || 
+        (paymentSettings?.allow_online_payment && !paymentSettings?.allow_pay_at_location);
+
+      if (shouldPayOnline && paymentSettings?.allow_online_payment && appointmentId) {
+        setProcessingPayment(true);
+        
+        try {
+          const { data: paymentData, error: paymentError } = await supabase.functions.invoke(
+            'create-payment-preference',
+            {
+              body: {
+                barbershopId: effectiveUnitId,
+                appointmentId,
+                serviceName: selectedService.name,
+                servicePrice: selectedService.price,
+                clientName: clientName.trim(),
+                clientEmail: clientEmail?.trim() || null,
+                depositOnly: paymentSettings.require_deposit
+              }
+            }
+          );
+          
+          if (paymentError || !paymentData?.initPoint) {
+            throw new Error(paymentError?.message || 'Erro ao criar pagamento');
+          }
+          
+          // Redirect to Mercado Pago
+          window.location.href = paymentData.initPoint;
+          return;
+        } catch (paymentErr: any) {
+          console.error('Erro ao criar pagamento:', paymentErr);
+          // If payment creation fails, still show success but inform user
+          toast({ 
+            title: 'Agendamento criado!', 
+            description: 'Houve um erro com o pagamento online. Por favor, pague no local.',
+          });
+        } finally {
+          setProcessingPayment(false);
+        }
+      }
+
+      // Update payment status for at_location or when only at_location is enabled
+      if (appointmentId && (!shouldPayOnline || paymentMethod === 'at_location')) {
+        await supabase
+          .from('appointments')
+          .update({
+            payment_status: 'pending',
+            payment_method_chosen: 'at_location'
+          })
+          .eq('id', appointmentId);
+      }
+
+      // Send WhatsApp notification
       try {
         const { data: whatsappConfig } = await supabase
           .from('whatsapp_config')
@@ -933,7 +1018,6 @@ export default function PublicBooking() {
           const staffName = getStaffName(selectedStaff);
           const formattedDate = format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
           
-          // Buscar nome preferido do cliente se ele já existe no sistema
           let clientDisplayName = clientName;
           const { data: existingClient } = await supabase
             .from('clients')
@@ -1357,10 +1441,33 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
     );
   }
 
-  const totalSteps = hasMultipleUnits ? 5 : 4;
-  const stepLabels = hasMultipleUnits 
-    ? ['Unidade', 'Profissional', 'Serviço', 'Data', 'Dados']
-    : ['Profissional', 'Serviço', 'Data', 'Dados'];
+  // Determine if payment step should be shown
+  const showPaymentStep = paymentSettings?.allow_online_payment && paymentSettings?.allow_pay_at_location;
+
+  // Calculate total steps and labels
+  const getStepsConfig = () => {
+    const baseSteps = hasMultipleUnits ? 5 : 4;
+    const baseLabels = hasMultipleUnits 
+      ? ['Unidade', 'Profissional', 'Serviço', 'Data', 'Dados']
+      : ['Profissional', 'Serviço', 'Data', 'Dados'];
+    
+    if (showPaymentStep) {
+      return {
+        totalSteps: baseSteps + 1,
+        stepLabels: [...baseLabels, 'Pagamento']
+      };
+    }
+    
+    return { totalSteps: baseSteps, stepLabels: baseLabels };
+  };
+
+  const { totalSteps, stepLabels } = getStepsConfig();
+  
+  // Last step for navigation - where confirm button appears
+  const lastStep = totalSteps - 1;
+  
+  // Payment step index (different based on hasMultipleUnits)
+  const paymentStepIndex = hasMultipleUnits ? 5 : 4;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
@@ -1957,6 +2064,112 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 </motion.div>
               </motion.div>
             )}
+
+            {/* Step 5: Payment Method Selection (conditional) */}
+            {step === paymentStepIndex && showPaymentStep && (
+              <motion.div
+                key="step-payment"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="space-y-4"
+              >
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold">Como você prefere pagar?</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Escolha a forma de pagamento
+                  </p>
+                </div>
+
+                <div className="grid gap-4">
+                  {/* Option: Pay Online */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 }}
+                    onClick={() => setPaymentMethod('online')}
+                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${
+                      paymentMethod === 'online'
+                        ? 'border-accent bg-accent/5 shadow-md'
+                        : 'border-border hover:border-accent/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                        <CreditCard className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold">Pagar Agora (Online)</h4>
+                        <p className="text-sm text-muted-foreground">
+                          PIX, Cartão de Crédito ou Débito
+                        </p>
+                        {paymentSettings?.require_deposit && (
+                          <Badge variant="secondary" className="mt-2">
+                            Sinal de {paymentSettings.deposit_percentage}%
+                          </Badge>
+                        )}
+                      </div>
+                      {paymentMethod === 'online' && (
+                        <Check className="h-5 w-5 text-accent" />
+                      )}
+                    </div>
+                  </motion.div>
+
+                  {/* Option: Pay at Location */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    onClick={() => setPaymentMethod('at_location')}
+                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${
+                      paymentMethod === 'at_location'
+                        ? 'border-accent bg-accent/5 shadow-md'
+                        : 'border-border hover:border-accent/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <Wallet className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold">Pagar no Local</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Dinheiro, Cartão ou PIX na barbearia
+                        </p>
+                      </div>
+                      {paymentMethod === 'at_location' && (
+                        <Check className="h-5 w-5 text-accent" />
+                      )}
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Payment Summary */}
+                <div className="mt-6 p-4 bg-muted/30 rounded-xl border">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">
+                      {paymentMethod === 'online' && paymentSettings?.require_deposit 
+                        ? `Sinal (${paymentSettings.deposit_percentage}%)` 
+                        : 'Valor Total'}
+                    </span>
+                    <span className="text-xl font-bold text-accent">
+                      R$ {paymentMethod === 'online' && paymentSettings?.require_deposit
+                        ? ((selectedService?.price || 0) * (paymentSettings?.deposit_percentage || 0) / 100).toFixed(2)
+                        : selectedService?.price.toFixed(2)
+                      }
+                    </span>
+                  </div>
+                  {paymentMethod === 'online' && paymentSettings?.require_deposit && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Restante de R$ {((selectedService?.price || 0) - ((selectedService?.price || 0) * (paymentSettings?.deposit_percentage || 0) / 100)).toFixed(2)} a pagar no local
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            )}
             </AnimatePresence>
 
             {/* Navigation Buttons */}
@@ -1987,7 +2200,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 Voltar
               </Button>
 
-              {step < 4 ? (
+              {step < lastStep ? (
                 <Button
                   onClick={() => {
                     setDirection(1);
@@ -1997,7 +2210,9 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                     (step === 0 && !selectedUnit) ||
                     (step === 1 && !selectedStaff) ||
                     (step === 2 && !selectedService) ||
-                    (step === 3 && (!selectedDate || !selectedTime))
+                    (step === 3 && (!selectedDate || !selectedTime)) ||
+                    (step === 4 && !clientName) ||
+                    (step === 4 && !clientPhone)
                   }
                   className="h-11 bg-accent hover:bg-accent/90 text-accent-foreground"
                 >
@@ -2007,15 +2222,21 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
               ) : (
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting || !clientName || !clientPhone}
+                  disabled={
+                    submitting || 
+                    processingPayment || 
+                    !clientName || 
+                    !clientPhone ||
+                    (showPaymentStep && !paymentMethod)
+                  }
                   className="h-11 bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]"
                 >
-                  {submitting ? (
+                  {submitting || processingPayment ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
                     <Check className="h-4 w-4 mr-2" />
                   )}
-                  Confirmar
+                  {processingPayment ? 'Redirecionando...' : 'Confirmar'}
                 </Button>
               )}
             </div>
