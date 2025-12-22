@@ -118,7 +118,9 @@ serve(async (req) => {
         .from('barbershop_domains')
         .update({
           dns_verified_at: new Date().toISOString(),
-          custom_domain_status: 'setting_up',
+          custom_domain_status: 'active',
+          primary_domain_type: 'custom',
+          ssl_status: 'active',
           updated_at: new Date().toISOString()
         })
         .eq('barbershop_id', barbershopId);
