@@ -1,0 +1,75 @@
+# =====================================================
+# BarberSmart - Docker Swarm Stack (App Only)
+# =====================================================
+# Use este arquivo se você JÁ TEM o Traefik rodando
+# Deploy: docker stack deploy -c docker-stack-app-only.yml barbersmart
+# =====================================================
+
+version: "3.8"
+
+services:
+  app:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-barbersmart/app}:${IMAGE_TAG:-latest}
+    networks:
+      - web
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+      labels:
+        # Traefik Configuration
+        - "traefik.enable=true"
+        - "traefik.docker.network=web"
+        
+        # Main Domain Router
+        - "traefik.http.routers.barbersmart-main.rule=Host(`${MAIN_DOMAIN}`) || Host(`www.${MAIN_DOMAIN}`)"
+        - "traefik.http.routers.barbersmart-main.entrypoints=websecure"
+        - "traefik.http.routers.barbersmart-main.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.barbersmart-main.priority=10"
+        
+        # Wildcard Subdomain Router
+        - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${MAIN_DOMAIN}`)"
+        - "traefik.http.routers.barbersmart-wildcard.entrypoints=websecure"
+        - "traefik.http.routers.barbersmart-wildcard.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.barbersmart-wildcard.priority=5"
+        
+        # Custom Domain Router (para domínios personalizados das barbearias)
+        - "traefik.http.routers.barbersmart-custom.rule=PathPrefix(`/`)"
+        - "traefik.http.routers.barbersmart-custom.entrypoints=websecure"
+        - "traefik.http.routers.barbersmart-custom.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.barbersmart-custom.priority=1"
+        
+        # Service Configuration
+        - "traefik.http.services.barbersmart.loadbalancer.server.port=80"
+        - "traefik.http.services.barbersmart.loadbalancer.healthcheck.path=/health"
+        - "traefik.http.services.barbersmart.loadbalancer.healthcheck.interval=30s"
+        - "traefik.http.services.barbersmart.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.barbersmart.loadbalancer.sticky.cookie.name=barbersmart_sticky"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  web:
+    external: true
