@@ -18,7 +18,8 @@ import {
   Clock,
   Server,
   Lock,
-  ExternalLink
+  ExternalLink,
+  Star
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/sonner";
@@ -63,7 +64,7 @@ const getTxtRecordName = (customDomain: string): { name: string; displayName: st
 };
 
 const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
-  const { domain, loading, refresh } = useBarbershopDomain();
+  const { domain, loading, refresh, getPrimaryUrl, getFullSubdomainUrl, getFullCustomDomainUrl } = useBarbershopDomain();
   const [checking, setChecking] = useState(false);
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([]);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
@@ -404,6 +405,101 @@ const DnsVerificationStatus = ({ onBack }: DnsVerificationStatusProps) => {
                 {domain.custom_domain_status === 'active' ? 'Ativo' : 'Pendente'}
               </p>
             </div>
+          </div>
+
+          <Separator className="my-4" />
+
+          {/* Primary Domain Indicator */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-warning" />
+              <span className="text-sm font-medium">Domínio Primário em Uso</span>
+            </div>
+            
+            <div className="grid gap-3 sm:grid-cols-2">
+              {/* Custom Domain */}
+              <div className={`p-3 rounded-lg border transition-all ${
+                domain.custom_domain && domain.custom_domain_status === 'active'
+                  ? 'bg-primary/10 border-primary ring-2 ring-primary/20'
+                  : 'bg-muted/50 border-border'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-medium">Domínio Próprio</span>
+                  </div>
+                  {domain.custom_domain && domain.custom_domain_status === 'active' && (
+                    <Badge variant="default" className="text-xs gap-1">
+                      <Star className="h-3 w-3" />
+                      Primário
+                    </Badge>
+                  )}
+                </div>
+                {domain.custom_domain ? (
+                  <div className="space-y-2">
+                    <code className="text-xs font-mono break-all block">{domain.custom_domain}</code>
+                    {domain.custom_domain_status === 'active' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => window.open(`https://${domain.custom_domain}`, '_blank')}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Abrir
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Não configurado</span>
+                )}
+              </div>
+
+              {/* Subdomain */}
+              <div className={`p-3 rounded-lg border transition-all ${
+                !domain.custom_domain || domain.custom_domain_status !== 'active'
+                  ? 'bg-primary/10 border-primary ring-2 ring-primary/20'
+                  : 'bg-muted/50 border-border'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Server className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-medium">Subdomínio</span>
+                  </div>
+                  {(!domain.custom_domain || domain.custom_domain_status !== 'active') && domain.subdomain && (
+                    <Badge variant="default" className="text-xs gap-1">
+                      <Star className="h-3 w-3" />
+                      Primário
+                    </Badge>
+                  )}
+                </div>
+                {domain.subdomain ? (
+                  <div className="space-y-2">
+                    <code className="text-xs font-mono break-all block">{getFullSubdomainUrl()}</code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => {
+                        const url = getFullSubdomainUrl();
+                        if (url) window.open(url, '_blank');
+                      }}
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Abrir
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Não configurado</span>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {domain.custom_domain && domain.custom_domain_status === 'active'
+                ? '✓ Seu domínio próprio está ativo e sendo usado como endereço principal.'
+                : '○ Quando o domínio próprio estiver ativo, ele será usado automaticamente como primário.'}
+            </p>
           </div>
         </CardContent>
       </Card>
