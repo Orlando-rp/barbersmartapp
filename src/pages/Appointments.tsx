@@ -7,7 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin, Wallet, CreditCard, CheckCircle2 } from "lucide-react";
+import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin, Wallet, CreditCard, CheckCircle2, Banknote, QrCode } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -92,6 +95,10 @@ const Appointments = () => {
   const [staff, setStaff] = useState<any[]>([]);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'pix'>('cash');
+  const [appointmentToPay, setAppointmentToPay] = useState<Appointment | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
   // Map barbershop IDs to names for quick lookup
   const barbershopNamesMap = new Map(barbershops.map(b => [b.id, b.name]));
@@ -561,20 +568,42 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
     }
   };
 
-  const markAsPaid = async (appointmentId: string) => {
+  const openPaymentModal = (appointment: Appointment) => {
+    setAppointmentToPay(appointment);
+    setSelectedPaymentMethod('cash');
+    setPaymentModalOpen(true);
+  };
+
+  const confirmPayment = async () => {
+    if (!appointmentToPay) return;
+    
+    setIsProcessingPayment(true);
     try {
+      const paymentMethodLabels = {
+        cash: 'Dinheiro',
+        card: 'Cartão',
+        pix: 'Pix'
+      };
+
       const { error } = await supabase
         .from('appointments')
-        .update({ payment_status: 'paid_at_location' })
-        .eq('id', appointmentId);
+        .update({ 
+          payment_status: 'paid_at_location',
+          notes: appointmentToPay.notes 
+            ? `${appointmentToPay.notes} | Pago via ${paymentMethodLabels[selectedPaymentMethod]}`
+            : `Pago via ${paymentMethodLabels[selectedPaymentMethod]}`
+        })
+        .eq('id', appointmentToPay.id);
 
       if (error) throw error;
 
       toast({
         title: 'Pagamento registrado',
-        description: 'O agendamento foi marcado como pago no local.',
+        description: `Agendamento marcado como pago via ${paymentMethodLabels[selectedPaymentMethod]}.`,
       });
 
+      setPaymentModalOpen(false);
+      setAppointmentToPay(null);
       fetchAppointments();
     } catch (error: any) {
       toast({
@@ -582,6 +611,8 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
         description: error.message,
         variant: 'destructive',
       });
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -801,7 +832,7 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => markAsPaid(appointment.id)}
+                          onClick={() => openPaymentModal(appointment)}
                           className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9 bg-green-600 hover:bg-green-700"
                         >
                           <CheckCircle2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
@@ -832,6 +863,83 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
         </div>
         </div>
       </PullToRefreshContainer>
+
+      {/* Modal de confirmação de pagamento */}
+      <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Registrar Pagamento</DialogTitle>
+            <DialogDescription>
+              {appointmentToPay && (
+                <span>
+                  Confirme o pagamento de{' '}
+                  <strong className="text-foreground">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(appointmentToPay.service_price)}
+                  </strong>{' '}
+                  para o serviço <strong className="text-foreground">{appointmentToPay.service_name}</strong>.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Label className="text-sm font-medium mb-3 block">Método de Pagamento</Label>
+            <RadioGroup
+              value={selectedPaymentMethod}
+              onValueChange={(value) => setSelectedPaymentMethod(value as 'cash' | 'card' | 'pix')}
+              className="grid grid-cols-3 gap-3"
+            >
+              <div>
+                <RadioGroupItem value="cash" id="cash" className="peer sr-only" />
+                <Label
+                  htmlFor="cash"
+                  className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-colors"
+                >
+                  <Banknote className="mb-2 h-6 w-6" />
+                  <span className="text-sm font-medium">Dinheiro</span>
+                </Label>
+              </div>
+              <div>
+                <RadioGroupItem value="card" id="card" className="peer sr-only" />
+                <Label
+                  htmlFor="card"
+                  className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-colors"
+                >
+                  <CreditCard className="mb-2 h-6 w-6" />
+                  <span className="text-sm font-medium">Cartão</span>
+                </Label>
+              </div>
+              <div>
+                <RadioGroupItem value="pix" id="pix" className="peer sr-only" />
+                <Label
+                  htmlFor="pix"
+                  className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-colors"
+                >
+                  <QrCode className="mb-2 h-6 w-6" />
+                  <span className="text-sm font-medium">Pix</span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setPaymentModalOpen(false)}
+              disabled={isProcessingPayment}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmPayment}
+              disabled={isProcessingPayment}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessingPayment ? 'Processando...' : 'Confirmar Pagamento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
