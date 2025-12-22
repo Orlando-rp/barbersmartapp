@@ -33,34 +33,35 @@ interface NavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  tourId?: string;
 }
 
 // Main bottom navigation items (always visible)
 const mainNavItems: NavItem[] = [
-  { name: "Início", href: "/", icon: Home },
-  { name: "Agenda", href: "/appointments", icon: Calendar },
-  { name: "Clientes", href: "/clients", icon: Users },
-  { name: "Financeiro", href: "/finance", icon: DollarSign },
+  { name: "Início", href: "/", icon: Home, tourId: "dashboard" },
+  { name: "Agenda", href: "/appointments", icon: Calendar, tourId: "appointments" },
+  { name: "Clientes", href: "/clients", icon: Users, tourId: "clients" },
+  { name: "Financeiro", href: "/finance", icon: DollarSign, tourId: "finance" },
 ];
 
 // Extended menu items
 const extendedNavItems: NavItem[] = [
-  { name: "Serviços", href: "/services", icon: Scissors },
-  { name: "Equipe", href: "/staff", icon: UserCog },
-  { name: "Relatórios", href: "/reports", icon: BarChart3 },
+  { name: "Serviços", href: "/services", icon: Scissors, tourId: "services" },
+  { name: "Equipe", href: "/staff", icon: UserCog, tourId: "staff" },
+  { name: "Relatórios", href: "/reports", icon: BarChart3, tourId: "reports" },
   { name: "Marketing", href: "/marketing", icon: MessageSquare },
   { name: "Avaliações", href: "/reviews", icon: StarIcon },
   { name: "Lista de Espera", href: "/waitlist", icon: ListChecks },
-  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare },
+  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, tourId: "whatsapp" },
   { name: "Chat WhatsApp", href: "/whatsapp-chat", icon: MessageCircle },
   { name: "Chatbot IA", href: "/chatbot", icon: Bot },
-  { name: "Horários", href: "/business-hours", icon: Clock },
+  { name: "Horários", href: "/business-hours", icon: Clock, tourId: "hours" },
   { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet },
   { name: "Minhas Unidades", href: "/barbershops", icon: Building2 },
   { name: "Multi-Unidade", href: "/multi-unit", icon: Building2 },
   { name: "Auditoria", href: "/audit", icon: Shield },
   { name: "Upgrade", href: "/upgrade", icon: Sparkles },
-  { name: "Configurações", href: "/settings", icon: Settings },
+  { name: "Configurações", href: "/settings", icon: Settings, tourId: "settings" },
   { name: "Admin SaaS", href: "/saas-admin", icon: Shield },
 ];
 
@@ -105,6 +106,7 @@ const BottomNavigation = () => {
             <NavLink
               key={item.name}
               to={item.href}
+              data-tour={item.tourId}
               className={({ isActive }) =>
                 cn(
                   "flex flex-col items-center justify-center flex-1 h-full py-1 transition-colors",

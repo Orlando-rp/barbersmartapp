@@ -14,7 +14,11 @@ import {
   ChevronRight,
   ChevronLeft,
   X,
-  Sparkles
+  Sparkles,
+  Scissors,
+  UserCog,
+  Clock,
+  Menu
 } from "lucide-react";
 
 interface TourStep {
@@ -23,7 +27,9 @@ interface TourStep {
   description: string;
   icon: React.ReactNode;
   targetSelector?: string;
+  mobileTargetSelector?: string;
   position: "center" | "top" | "bottom" | "left" | "right";
+  mobileHint?: string;
 }
 
 const tourSteps: TourStep[] = [
@@ -40,7 +46,9 @@ const tourSteps: TourStep[] = [
     description: "Aqui você tem uma visão geral do seu negócio: agendamentos do dia, receita, clientes e métricas importantes.",
     icon: <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />,
     targetSelector: '[data-tour="dashboard"]',
-    position: "right"
+    mobileTargetSelector: '[data-tour="dashboard"]',
+    position: "right",
+    mobileHint: "Toque em 'Início' na barra inferior"
   },
   {
     id: "appointments",
@@ -48,7 +56,9 @@ const tourSteps: TourStep[] = [
     description: "Gerencie todos os agendamentos da sua barbearia. Crie, edite e acompanhe o status de cada atendimento.",
     icon: <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />,
     targetSelector: '[data-tour="appointments"]',
-    position: "right"
+    mobileTargetSelector: '[data-tour="appointments"]',
+    position: "right",
+    mobileHint: "Toque em 'Agenda' na barra inferior"
   },
   {
     id: "clients",
@@ -56,7 +66,29 @@ const tourSteps: TourStep[] = [
     description: "Mantenha o cadastro completo dos seus clientes com histórico de atendimentos, preferências e contatos.",
     icon: <Users className="h-5 w-5 sm:h-6 sm:w-6" />,
     targetSelector: '[data-tour="clients"]',
-    position: "right"
+    mobileTargetSelector: '[data-tour="clients"]',
+    position: "right",
+    mobileHint: "Toque em 'Clientes' na barra inferior"
+  },
+  {
+    id: "services",
+    title: "Serviços",
+    description: "Cadastre seus cortes, barbas e combos com preços, duração e categorias personalizadas.",
+    icon: <Scissors className="h-5 w-5 sm:h-6 sm:w-6" />,
+    targetSelector: '[data-tour="services"]',
+    mobileTargetSelector: '[data-tour="services"]',
+    position: "right",
+    mobileHint: "Acesse via 'Mais' na barra inferior"
+  },
+  {
+    id: "staff",
+    title: "Equipe",
+    description: "Gerencie barbeiros, horários de trabalho e comissões de cada profissional da sua equipe.",
+    icon: <UserCog className="h-5 w-5 sm:h-6 sm:w-6" />,
+    targetSelector: '[data-tour="staff"]',
+    mobileTargetSelector: '[data-tour="staff"]',
+    position: "right",
+    mobileHint: "Acesse via 'Mais' na barra inferior"
   },
   {
     id: "finance",
@@ -64,7 +96,29 @@ const tourSteps: TourStep[] = [
     description: "Controle suas receitas e despesas, acompanhe o fluxo de caixa e gere relatórios financeiros detalhados.",
     icon: <DollarSign className="h-5 w-5 sm:h-6 sm:w-6" />,
     targetSelector: '[data-tour="finance"]',
-    position: "right"
+    mobileTargetSelector: '[data-tour="finance"]',
+    position: "right",
+    mobileHint: "Toque em 'Financeiro' na barra inferior"
+  },
+  {
+    id: "reports",
+    title: "Relatórios",
+    description: "Acompanhe métricas de desempenho, tendências do negócio e tome decisões baseadas em dados.",
+    icon: <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6" />,
+    targetSelector: '[data-tour="reports"]',
+    mobileTargetSelector: '[data-tour="reports"]',
+    position: "right",
+    mobileHint: "Acesse via 'Mais' na barra inferior"
+  },
+  {
+    id: "hours",
+    title: "Horários de Funcionamento",
+    description: "Configure os horários de funcionamento da barbearia, intervalos e folgas da equipe.",
+    icon: <Clock className="h-5 w-5 sm:h-6 sm:w-6" />,
+    targetSelector: '[data-tour="hours"]',
+    mobileTargetSelector: '[data-tour="hours"]',
+    position: "right",
+    mobileHint: "Acesse via 'Mais' na barra inferior"
   },
   {
     id: "whatsapp",
@@ -72,7 +126,9 @@ const tourSteps: TourStep[] = [
     description: "Envie notificações automáticas, lembretes de agendamento e comunique-se com seus clientes via WhatsApp.",
     icon: <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6" />,
     targetSelector: '[data-tour="whatsapp"]',
-    position: "right"
+    mobileTargetSelector: '[data-tour="whatsapp"]',
+    position: "right",
+    mobileHint: "Acesse via 'Mais' na barra inferior"
   },
   {
     id: "settings",
@@ -80,7 +136,9 @@ const tourSteps: TourStep[] = [
     description: "Personalize o sistema: horários de funcionamento, serviços, equipe, integrações e muito mais.",
     icon: <Settings className="h-5 w-5 sm:h-6 sm:w-6" />,
     targetSelector: '[data-tour="settings"]',
-    position: "right"
+    mobileTargetSelector: '[data-tour="settings"]',
+    position: "right",
+    mobileHint: "Acesse via 'Mais' na barra inferior"
   },
   {
     id: "complete",
@@ -108,19 +166,30 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
   // Em mobile, forçar centro se target não encontrado (sidebar oculta)
   const effectivePosition = isMobile && !targetRect ? "center" : step.position;
   const isCenterStep = effectivePosition === "center";
+  
+  // Verificar se deve mostrar dica mobile
+  const showMobileHint = isMobile && !targetRect && step.mobileHint;
 
   const updateTargetPosition = useCallback(() => {
-    if (step.targetSelector) {
-      const element = document.querySelector(step.targetSelector);
-      if (element) {
-        setTargetRect(element.getBoundingClientRect());
-      } else {
-        setTargetRect(null);
+    // Em mobile, tenta primeiro o seletor mobile, depois o normal
+    const selector = isMobile ? (step.mobileTargetSelector || step.targetSelector) : step.targetSelector;
+    
+    if (selector) {
+      const element = document.querySelector(selector) as HTMLElement | null;
+      // Verificar se elemento está visível (não está em sidebar oculta)
+      if (element && element.offsetParent !== null) {
+        const rect = element.getBoundingClientRect();
+        // Verificar se está dentro da viewport
+        if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+          setTargetRect(rect);
+          return;
+        }
       }
+      setTargetRect(null);
     } else {
       setTargetRect(null);
     }
-  }, [step.targetSelector]);
+  }, [step.targetSelector, step.mobileTargetSelector, isMobile]);
 
   useEffect(() => {
     updateTargetPosition();
@@ -237,7 +306,7 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
 
       {/* Spotlight hole - hidden on mobile when target not visible */}
       <AnimatePresence mode="wait">
-        {targetRect && !isCenterStep && !isMobile && (
+        {targetRect && !isCenterStep && (
           <motion.div
             key={step.id}
             initial={{ opacity: 0, scale: 0.8 }}
@@ -295,7 +364,15 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
 
             {/* Content */}
             <h3 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2 pr-6">{step.title}</h3>
-            <p className="text-muted-foreground text-xs sm:text-sm mb-4 sm:mb-6">{step.description}</p>
+            <p className="text-muted-foreground text-xs sm:text-sm mb-3 sm:mb-4">{step.description}</p>
+
+            {/* Mobile hint when element not visible */}
+            {showMobileHint && (
+              <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 rounded-lg p-2 mb-3">
+                <Menu className="h-4 w-4 shrink-0" />
+                <span>{step.mobileHint}</span>
+              </div>
+            )}
 
             {/* Progress dots */}
             <div className="flex justify-center gap-1 sm:gap-1.5 mb-3 sm:mb-4">

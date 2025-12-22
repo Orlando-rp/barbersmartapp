@@ -69,14 +69,14 @@ const navigation: NavItem[] = [
   { name: "Agendamentos", href: "/appointments", icon: Calendar, requiredFeature: 'appointments', permission: 'appointments', group: "operacoes", tourId: "appointments" },
   { name: "Lista de Espera", href: "/waitlist", icon: ListChecks, requiredFeature: 'waitlist', permission: 'waitlist', group: "operacoes" },
   { name: "Clientes", href: "/clients", icon: Users, requiredFeature: 'clients', permission: 'clients', group: "operacoes", tourId: "clients" },
-  { name: "Horários", href: "/business-hours", icon: Clock, requiredFeature: 'business_hours', permission: 'business_hours', group: "operacoes" },
+  { name: "Horários", href: "/business-hours", icon: Clock, requiredFeature: 'business_hours', permission: 'business_hours', group: "operacoes", tourId: "hours" },
   
   // Gestão
-  { name: "Serviços", href: "/services", icon: Scissors, requiredFeature: 'services', permission: 'services', group: "gestao" },
-  { name: "Equipe", href: "/staff", icon: UserCog, requiredFeature: 'staff_basic', permission: 'staff', group: "gestao" },
+  { name: "Serviços", href: "/services", icon: Scissors, requiredFeature: 'services', permission: 'services', group: "gestao", tourId: "services" },
+  { name: "Equipe", href: "/staff", icon: UserCog, requiredFeature: 'staff_basic', permission: 'staff', group: "gestao", tourId: "staff" },
   { name: "Financeiro", href: "/finance", icon: DollarSign, requiredFeature: 'finance_basic', permission: 'finance', group: "gestao", tourId: "finance" },
   { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet, requiredFeature: 'staff_earnings', permission: 'meus_ganhos', group: "gestao" },
-  { name: "Relatórios", href: "/reports", icon: BarChart3, requiredFeature: 'basic_reports', permission: 'reports', group: "gestao" },
+  { name: "Relatórios", href: "/reports", icon: BarChart3, requiredFeature: 'basic_reports', permission: 'reports', group: "gestao", tourId: "reports" },
   { name: "Minhas Unidades", href: "/barbershops", icon: Building2, adminOnly: true, group: "gestao" },
   { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit', group: "gestao" },
   { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit_reports', group: "gestao" },
