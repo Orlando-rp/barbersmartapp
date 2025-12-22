@@ -215,7 +215,12 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
     }
   };
 
-  const getTooltipPosition = () => {
+  const getTooltipPosition = (): React.CSSProperties => {
+    // Em mobile centralizado, não aplicar style (usar flexbox do container)
+    if (isMobile && isCenterStep) {
+      return {};
+    }
+    
     if (!targetRect || isCenterStep) {
       return {
         top: "50%",
@@ -228,9 +233,8 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const tooltipWidth = isMobile ? Math.min(320, viewportWidth - 32) : 320;
-    const tooltipHeight = 220;
+    const tooltipHeight = 280; // Altura mais realista
 
-    // Calcular posição base
     let top: number;
     let left: number;
     let transform = "";
@@ -241,7 +245,6 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
         left = targetRect.right + padding;
         transform = "translateY(-50%)";
         
-        // Se não couber à direita, mover para baixo
         if (left + tooltipWidth > viewportWidth - padding) {
           top = targetRect.bottom + padding;
           left = Math.max(padding, Math.min(targetRect.left, viewportWidth - tooltipWidth - padding));
@@ -253,7 +256,6 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
         left = targetRect.left - tooltipWidth - padding;
         transform = "translateY(-50%)";
         
-        // Se não couber à esquerda, mover para baixo
         if (left < padding) {
           top = targetRect.bottom + padding;
           left = Math.max(padding, Math.min(targetRect.left, viewportWidth - tooltipWidth - padding));
@@ -270,7 +272,6 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
         left = targetRect.left + targetRect.width / 2;
         transform = "translateX(-50%)";
         
-        // Se não couber acima, mover para baixo
         if (top < padding) {
           top = targetRect.bottom + padding;
         }
@@ -283,7 +284,6 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
         };
     }
 
-    // Garantir que fique dentro da viewport
     top = Math.max(padding, Math.min(top, viewportHeight - tooltipHeight - padding));
     
     return {
@@ -334,100 +334,110 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
           exit={{ opacity: 0, scale: 0.9, y: -10 }}
           transition={{ duration: 0.3 }}
           className={cn(
-            "absolute z-10",
-            isMobile && "px-4 w-full",
-            !isMobile && !isCenterStep && "w-80"
+            "z-10",
+            // Mobile centralizado: usar flexbox
+            isMobile && isCenterStep && "fixed inset-0 flex items-center justify-center p-4 pb-20",
+            // Mobile não centralizado: posicionar absolute
+            isMobile && !isCenterStep && "absolute px-4 w-full",
+            // Desktop não centralizado
+            !isMobile && !isCenterStep && "absolute w-80",
+            // Desktop centralizado
+            !isMobile && isCenterStep && "absolute"
           )}
           style={getTooltipPosition()}
         >
           <Card className={cn(
-            "p-4 sm:p-6 shadow-2xl border-primary/20",
+            "shadow-2xl border-primary/20 flex flex-col",
             isCenterStep && "text-center",
-            isMobile ? "w-full max-w-[calc(100vw-32px)]" : isCenterStep ? "max-w-md" : ""
+            // Mobile: card com max-height e scroll
+            isMobile 
+              ? "w-full max-w-sm max-h-[calc(100vh-120px)] p-4" 
+              : isCenterStep 
+                ? "max-w-md p-6" 
+                : "p-6"
           )}>
             {/* Close button */}
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-2 right-2 h-7 w-7 sm:h-8 sm:w-8"
+              className="absolute top-2 right-2 h-7 w-7 sm:h-8 sm:w-8 shrink-0"
               onClick={onSkip}
             >
               <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
 
-            {/* Icon */}
-            <div className={cn("mb-3 sm:mb-4", isCenterStep && "flex justify-center")}>
-              <div className="p-2 sm:p-3 rounded-full bg-primary/10 text-primary inline-flex">
-                {step.icon}
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {/* Icon */}
+              <div className={cn("mb-3 sm:mb-4", isCenterStep && "flex justify-center")}>
+                <div className="p-2 sm:p-3 rounded-full bg-primary/10 text-primary inline-flex">
+                  {step.icon}
+                </div>
               </div>
+
+              {/* Content */}
+              <h3 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2 pr-6">{step.title}</h3>
+              <p className="text-muted-foreground text-xs sm:text-sm mb-3 sm:mb-4">{step.description}</p>
+
+              {/* Mobile hint when element not visible */}
+              {showMobileHint && (
+                <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 rounded-lg p-2 mb-3">
+                  <Menu className="h-4 w-4 shrink-0" />
+                  <span>{step.mobileHint}</span>
+                </div>
+              )}
             </div>
 
-            {/* Content */}
-            <h3 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2 pr-6">{step.title}</h3>
-            <p className="text-muted-foreground text-xs sm:text-sm mb-3 sm:mb-4">{step.description}</p>
-
-            {/* Mobile hint when element not visible */}
-            {showMobileHint && (
-              <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 rounded-lg p-2 mb-3">
-                <Menu className="h-4 w-4 shrink-0" />
-                <span>{step.mobileHint}</span>
+            {/* Fixed footer area - always visible */}
+            <div className="shrink-0 pt-3 border-t border-border/50 mt-3">
+              {/* Progress dots */}
+              <div className="flex justify-center gap-1 sm:gap-1.5 mb-3">
+                {tourSteps.map((_, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all",
+                      index === currentStep 
+                        ? "w-5 bg-primary" 
+                        : index < currentStep 
+                          ? "w-1.5 bg-primary/50" 
+                          : "w-1.5 bg-muted"
+                    )}
+                  />
+                ))}
               </div>
-            )}
 
-            {/* Progress dots */}
-            <div className="flex justify-center gap-1 sm:gap-1.5 mb-3 sm:mb-4">
-              {tourSteps.map((_, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "h-1 sm:h-1.5 rounded-full transition-all",
-                    index === currentStep 
-                      ? "w-4 sm:w-6 bg-primary" 
-                      : index < currentStep 
-                        ? "w-1 sm:w-1.5 bg-primary/50" 
-                        : "w-1 sm:w-1.5 bg-muted"
-                  )}
-                />
-              ))}
-            </div>
-
-            {/* Navigation - responsive layout */}
-            <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-2 sm:gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onSkip}
-                className="text-muted-foreground text-xs sm:text-sm w-full sm:w-auto"
-              >
-                <span className="sm:hidden">Pular</span>
-                <span className="hidden sm:inline">Pular tour</span>
-              </Button>
-
-              <div className="flex gap-2 w-full sm:w-auto">
-                {!isFirstStep && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePrevious}
-                    className="flex-1 sm:flex-none text-xs sm:text-sm"
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
-                    <span className="hidden sm:inline">Anterior</span>
-                  </Button>
-                )}
+              {/* Navigation buttons */}
+              <div className="flex items-center justify-between gap-2">
                 <Button
+                  variant="ghost"
                   size="sm"
-                  onClick={handleNext}
-                  className="flex-1 sm:flex-none text-xs sm:text-sm"
+                  onClick={onSkip}
+                  className="text-muted-foreground text-xs"
                 >
-                  {isLastStep ? "Começar" : (
-                    <>
-                      <span className="hidden sm:inline">Próximo</span>
-                      <span className="sm:hidden">Avançar</span>
-                    </>
-                  )}
-                  {!isLastStep && <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:ml-1" />}
+                  Pular
                 </Button>
+
+                <div className="flex gap-2">
+                  {!isFirstStep && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePrevious}
+                      className="text-xs px-3"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={handleNext}
+                    className="text-xs px-4"
+                  >
+                    {isLastStep ? "Começar" : "Próximo"}
+                    {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
