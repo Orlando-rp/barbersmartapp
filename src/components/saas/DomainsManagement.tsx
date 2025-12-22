@@ -78,9 +78,16 @@ const DomainsManagement = () => {
     try {
       const updateData: Record<string, any> = { [field]: status };
       
+      // Quando domínio customizado fica ativo, definir como primário
       if (field === 'custom_domain_status' && status === 'active') {
         updateData.dns_verified_at = new Date().toISOString();
         updateData.ssl_status = 'active';
+        updateData.primary_domain_type = 'custom';
+      }
+      
+      // Quando domínio customizado é desativado, voltar para subdomínio como primário
+      if (field === 'custom_domain_status' && status !== 'active') {
+        updateData.primary_domain_type = 'subdomain';
       }
 
       const { error } = await supabase

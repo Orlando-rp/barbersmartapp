@@ -296,7 +296,8 @@ export const useBarbershopDomain = () => {
   };
 
   const getPrimaryUrl = (): string | null => {
-    if (domain?.primary_domain_type === 'custom' && domain.custom_domain_status === 'active') {
+    // Prioridade: domínio customizado ativo > subdomínio
+    if (domain?.custom_domain && domain.custom_domain_status === 'active') {
       return getFullCustomDomainUrl();
     }
     return getFullSubdomainUrl();
