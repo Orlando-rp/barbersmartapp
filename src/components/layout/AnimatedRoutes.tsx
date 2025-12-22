@@ -27,6 +27,7 @@ const WhatsAppSettings = lazy(() => import("../../pages/WhatsAppSettings"));
 const WhatsAppChat = lazy(() => import("../../pages/WhatsAppChat"));
 const Waitlist = lazy(() => import("../../pages/Waitlist"));
 const PublicBooking = lazy(() => import("../../pages/PublicBooking"));
+const BookingPaymentStatus = lazy(() => import("../../pages/BookingPaymentStatus"));
 const BarbershopLanding = lazy(() => import("../../pages/BarbershopLanding"));
 const MyEarnings = lazy(() => import("../../pages/MyEarnings"));
 const MultiUnitDashboard = lazy(() => import("../../pages/MultiUnitDashboard"));
@@ -59,6 +60,9 @@ export const AnimatedRoutes = () => {
         <Routes location={location}>
           {/* Public Routes */}
           <Route path="/agendar/:barbershopId" element={<PageTransition><PublicBooking /></PageTransition>} />
+          <Route path="/booking/success" element={<PageTransition><BookingPaymentStatus /></PageTransition>} />
+          <Route path="/booking/failure" element={<PageTransition><BookingPaymentStatus /></PageTransition>} />
+          <Route path="/booking/pending" element={<PageTransition><BookingPaymentStatus /></PageTransition>} />
           <Route path="/b/:barbershopId" element={<PageTransition><BarbershopLanding /></PageTransition>} />
           <Route path="/s/:subdomain" element={<PageTransition><BarbershopLanding /></PageTransition>} />
           <Route path="/privacy" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
