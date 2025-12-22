@@ -15,7 +15,7 @@ import { AppointmentsWidget } from "@/components/dashboard/widgets/AppointmentsW
 import { ClientsWidget } from "@/components/dashboard/widgets/ClientsWidget";
 import { OccupancyWidget } from "@/components/dashboard/widgets/OccupancyWidget";
 import { WaitlistWidget } from "@/components/dashboard/widgets/WaitlistWidget";
-import { WidgetSelector, defaultWidgets, WidgetConfig } from "@/components/dashboard/WidgetSelector";
+import { WidgetSelector, defaultWidgets, WidgetConfig, ColumnConfig } from "@/components/dashboard/WidgetSelector";
 import { DraggableWidgetGrid } from "@/components/dashboard/DraggableWidgetGrid";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
 import { 
@@ -60,7 +60,16 @@ const Index = () => {
     const saved = localStorage.getItem('dashboard-widget-order');
     return saved ? JSON.parse(saved) : defaultWidgetOrder;
   });
+  const [columns, setColumns] = useState<ColumnConfig>(() => {
+    const saved = localStorage.getItem('dashboard-columns');
+    return saved ? (parseInt(saved) as ColumnConfig) : 4;
+  });
   const [customizeMode, setCustomizeMode] = useState(false);
+
+  const handleColumnsChange = (cols: ColumnConfig) => {
+    setColumns(cols);
+    localStorage.setItem('dashboard-columns', cols.toString());
+  };
 
   // Visão consolidada quando múltiplas unidades selecionáveis e nenhuma selecionada
   const hasMultipleUnits = activeBarbershopIds.length > 1;
@@ -421,6 +430,8 @@ const Index = () => {
                 <WidgetSelector
                   widgets={widgets}
                   onToggleWidget={handleToggleWidget}
+                  columns={columns}
+                  onColumnsChange={handleColumnsChange}
                 />
               )}
               <AppointmentDialog>
@@ -444,6 +455,7 @@ const Index = () => {
           widgetOrder={widgetOrder}
           onReorder={handleReorderWidgets}
           isCustomizeMode={customizeMode}
+          columns={columns}
         >
           {renderWidget}
         </DraggableWidgetGrid>
