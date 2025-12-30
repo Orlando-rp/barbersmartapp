@@ -102,12 +102,17 @@ jobs:
     
     steps:
       - name: Trigger Portainer Stack Update
-        if: ${{ secrets.PORTAINER_WEBHOOK_URL != '' }}
+        env:
+          PORTAINER_WEBHOOK: ${{ secrets.PORTAINER_WEBHOOK_URL }}
         run: |
-          curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            --fail --silent --show-error
-          echo "✅ Portainer webhook triggered successfully"
+          if [ -n "$PORTAINER_WEBHOOK" ]; then
+            curl -X POST "$PORTAINER_WEBHOOK" \
+              -H "Content-Type: application/json" \
+              --fail --silent --show-error
+            echo "✅ Portainer webhook triggered successfully"
+          else
+            echo "⏭️ Portainer webhook not configured, skipping..."
+          fi
         continue-on-error: true
 
       - name: Deployment notification
