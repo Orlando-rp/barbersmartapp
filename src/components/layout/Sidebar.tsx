@@ -392,8 +392,8 @@ const Sidebar = () => {
                           to={item.href}
                           className={({ isActive }) =>
                             cn(
-                              "flex items-center justify-center px-2 py-2.5 rounded-lg transition-colors relative",
-                              isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                              "flex items-center justify-center px-2 py-2.5 rounded-lg transition-all duration-200 relative",
+                              isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-sidebar-icon hover:text-sidebar-icon-hover hover:bg-accent/10"
                             )
                           }
                         >
@@ -415,7 +415,7 @@ const Sidebar = () => {
                 // Expanded mode: show collapsible groups
                 <Collapsible open={openGroups[group.id]} onOpenChange={() => toggleGroup(group.id)}>
                   <CollapsibleTrigger asChild>
-                    <button className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors rounded-lg hover:bg-accent/50">
+                    <button className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-sidebar-icon uppercase tracking-wider hover:text-sidebar-icon-hover transition-colors rounded-lg hover:bg-accent/10">
                       <div className="flex items-center gap-2">
                         <group.icon className="h-4 w-4" />
                         <span>{group.name}</span>
@@ -431,13 +431,13 @@ const Sidebar = () => {
                         data-tour={item.tourId}
                         className={({ isActive }) =>
                           cn(
-                            "flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ml-2",
-                            isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                            "flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ml-2 group",
+                            isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-foreground/80 hover:text-foreground hover:bg-accent/10"
                           )
                         }
                       >
                         <div className="flex items-center">
-                          <item.icon className="h-4 w-4 mr-3" />
+                          <item.icon className="h-4 w-4 mr-3 text-sidebar-icon group-hover:text-sidebar-icon-hover transition-colors duration-200" />
                           <span>{item.name}</span>
                         </div>
                         {item.href === "/waitlist" && waitlistCount > 0 && (
