@@ -405,7 +405,7 @@ const Sidebar = () => {
                           )}
                         </NavLink>
                       </TooltipTrigger>
-                      <TooltipContent side="right">
+                      <TooltipContent side="right" className="z-[100]">
                         <p>{item.name} {item.href === "/waitlist" && waitlistCount > 0 && `(${waitlistCount})`}</p>
                       </TooltipContent>
                     </Tooltip>
