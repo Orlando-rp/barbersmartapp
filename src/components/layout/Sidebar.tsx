@@ -392,12 +392,12 @@ const Sidebar = () => {
                           to={item.href}
                           className={({ isActive }) =>
                             cn(
-                              "flex items-center justify-center px-2 py-2.5 rounded-lg transition-all duration-200 relative",
+                              "flex items-center justify-center px-2 py-2.5 rounded-lg transition-all duration-200 relative group",
                               isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-sidebar-icon hover:text-sidebar-icon-hover hover:bg-accent/10"
                             )
                           }
                         >
-                          <item.icon className="h-5 w-5" />
+                          <item.icon className="h-5 w-5 text-sidebar-icon group-hover:text-sidebar-icon-hover transition-colors" />
                           {item.href === "/waitlist" && waitlistCount > 0 && (
                             <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
                               {waitlistCount > 9 ? "9+" : waitlistCount}
