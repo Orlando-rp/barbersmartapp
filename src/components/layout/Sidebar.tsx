@@ -417,8 +417,14 @@ const Sidebar = () => {
                           )}
                         </NavLink>
                       </TooltipTrigger>
-                      <TooltipContent side="right" className="!z-[9999]">
-                        <p>{item.name} {item.href === "/waitlist" && waitlistCount > 0 && `(${waitlistCount})`}</p>
+                      <TooltipContent 
+                        side="right" 
+                        className="!z-[9999] bg-zinc-900 text-amber-100 border border-amber-500/40 shadow-[0_4px_20px_rgba(245,158,11,0.25)] backdrop-blur-sm px-3 py-2 font-medium"
+                      >
+                        <p className="flex items-center gap-1.5">
+                          <span className="text-amber-400">{item.icon && <item.icon className="h-3.5 w-3.5" />}</span>
+                          {item.name} {item.href === "/waitlist" && waitlistCount > 0 && <span className="text-amber-400 text-xs">({waitlistCount})</span>}
+                        </p>
                       </TooltipContent>
                     </Tooltip>
                   ))}
