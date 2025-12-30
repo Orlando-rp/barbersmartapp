@@ -393,15 +393,27 @@ const Sidebar = () => {
                           className={({ isActive }) =>
                             cn(
                               "flex items-center justify-center px-2 py-2.5 rounded-lg transition-all duration-200 relative group",
-                              isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-sidebar-icon hover:text-sidebar-icon-hover hover:bg-accent/10"
+                              isActive 
+                                ? "bg-primary/10 text-sidebar-icon-active" 
+                                : "text-sidebar-icon hover:text-sidebar-icon-hover hover:bg-accent/10"
                             )
                           }
                         >
-                          <item.icon className="h-5 w-5 text-sidebar-icon group-hover:text-sidebar-icon-hover transition-colors" />
-                          {item.href === "/waitlist" && waitlistCount > 0 && (
-                            <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
-                              {waitlistCount > 9 ? "9+" : waitlistCount}
-                            </span>
+                          {({ isActive }) => (
+                            <>
+                              {isActive && (
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-sidebar-icon-active to-primary rounded-r-full shadow-[0_0_8px_hsl(38,75%,50%,0.5)]" />
+                              )}
+                              <item.icon className={cn(
+                                "h-5 w-5 transition-colors",
+                                isActive ? "text-sidebar-icon-active" : "text-sidebar-icon group-hover:text-sidebar-icon-hover"
+                              )} />
+                              {item.href === "/waitlist" && waitlistCount > 0 && (
+                                <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                                  {waitlistCount > 9 ? "9+" : waitlistCount}
+                                </span>
+                              )}
+                            </>
                           )}
                         </NavLink>
                       </TooltipTrigger>
@@ -431,19 +443,31 @@ const Sidebar = () => {
                         data-tour={item.tourId}
                         className={({ isActive }) =>
                           cn(
-                            "flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ml-2 group",
-                            isActive ? "bg-primary text-primary-foreground shadow-soft" : "text-foreground/80 hover:text-foreground hover:bg-accent/10"
+                            "flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ml-2 group relative",
+                            isActive 
+                              ? "bg-primary/10 text-sidebar-icon-active" 
+                              : "text-foreground/80 hover:text-foreground hover:bg-accent/10"
                           )
                         }
                       >
-                        <div className="flex items-center">
-                          <item.icon className="h-4 w-4 mr-3 text-sidebar-icon group-hover:text-sidebar-icon-hover transition-colors duration-200" />
-                          <span>{item.name}</span>
-                        </div>
-                        {item.href === "/waitlist" && waitlistCount > 0 && (
-                          <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
-                            {waitlistCount > 99 ? "99+" : waitlistCount}
-                          </Badge>
+                        {({ isActive }) => (
+                          <>
+                            {isActive && (
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-sidebar-icon-active to-primary rounded-r-full shadow-[0_0_8px_hsl(38,75%,50%,0.5)]" />
+                            )}
+                            <div className="flex items-center">
+                              <item.icon className={cn(
+                                "h-4 w-4 mr-3 transition-colors duration-200",
+                                isActive ? "text-sidebar-icon-active" : "text-sidebar-icon group-hover:text-sidebar-icon-hover"
+                              )} />
+                              <span>{item.name}</span>
+                            </div>
+                            {item.href === "/waitlist" && waitlistCount > 0 && (
+                              <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+                                {waitlistCount > 99 ? "99+" : waitlistCount}
+                              </Badge>
+                            )}
+                          </>
                         )}
                       </NavLink>
                     ))}
