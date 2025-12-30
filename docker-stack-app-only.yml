@@ -4,14 +4,20 @@
 # Use este arquivo se você JÁ TEM o Traefik rodando
 # Deploy: docker stack deploy -c docker-stack-app-only.yml barbersmart
 # =====================================================
+#
+# VARIÁVEIS DE AMBIENTE (configurar no Portainer):
+# - MAIN_DOMAIN: domínio principal (ex: barsmart.app)
+# - DOCKERHUB_USERNAME: seu usuário do Docker Hub (ex: orlando-rp)
+#
+# =====================================================
 
 version: "3.8"
 
 services:
   app:
-    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-barbersmart/app}:${IMAGE_TAG:-latest}
+    image: docker.io/${DOCKERHUB_USERNAME:-orlando-rp}/barbersmartapp:${IMAGE_TAG:-latest}
     networks:
-      - web
+      - my_network
     deploy:
       replicas: 2
       update_config:
@@ -37,16 +43,16 @@ services:
       labels:
         # Traefik Configuration
         - "traefik.enable=true"
-        - "traefik.docker.network=web"
+        - "traefik.docker.network=my_network"
         
         # Main Domain Router
-        - "traefik.http.routers.barbersmart-main.rule=Host(`${MAIN_DOMAIN}`) || Host(`www.${MAIN_DOMAIN}`)"
+        - "traefik.http.routers.barbersmart-main.rule=Host(`${MAIN_DOMAIN:-barsmart.app}`) || Host(`www.${MAIN_DOMAIN:-barsmart.app}`)"
         - "traefik.http.routers.barbersmart-main.entrypoints=websecure"
         - "traefik.http.routers.barbersmart-main.tls.certresolver=letsencrypt"
         - "traefik.http.routers.barbersmart-main.priority=10"
         
         # Wildcard Subdomain Router
-        - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${MAIN_DOMAIN}`)"
+        - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${MAIN_DOMAIN:-barsmart.app}`)"
         - "traefik.http.routers.barbersmart-wildcard.entrypoints=websecure"
         - "traefik.http.routers.barbersmart-wildcard.tls.certresolver=letsencrypt"
         - "traefik.http.routers.barbersmart-wildcard.priority=5"
@@ -71,5 +77,5 @@ services:
       start_period: 10s
 
 networks:
-  web:
+  my_network:
     external: true

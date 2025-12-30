@@ -2,14 +2,15 @@
 
 ## Visão Geral
 
-Este guia explica como fazer deploy do BarberSmart usando Portainer com Docker Swarm.
+Este guia explica como fazer deploy do BarberSmart usando Portainer com Docker Swarm e Docker Hub.
 
 ## Pré-requisitos
 
 - Portainer CE/BE instalado e configurado
 - Docker Swarm inicializado (`docker swarm init`)
-- Acesso a um registry de imagens (GHCR, Docker Hub, etc.)
+- Conta no Docker Hub
 - Domínio configurado apontando para o servidor
+- Traefik já rodando na rede `my_network`
 
 ## Arquitetura
 
@@ -20,7 +21,7 @@ Este guia explica como fazer deploy do BarberSmart usando Portainer com Docker S
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Traefik (Reverse Proxy)                   │
+│              Traefik (já existente em my_network)            │
 │  - SSL/TLS automático via Let's Encrypt                      │
 │  - Roteamento por hostname                                   │
 │  - Load balancing                                            │
@@ -34,57 +35,44 @@ Este guia explica como fazer deploy do BarberSmart usando Portainer com Docker S
 └─────────────┘   └─────────────┘   └─────────────┘
 ```
 
-## Passo 1: Preparar a Imagem Docker
+## Passo 1: Configurar GitHub Secrets
 
-### Opção A: Build Local + Push Manual
+No seu repositório GitHub, vá para **Settings** → **Secrets and variables** → **Actions**.
+
+### Secrets (obrigatórios)
+
+| Nome | Descrição |
+|------|-----------|
+| `DOCKERHUB_USERNAME` | Seu usuário do Docker Hub |
+| `DOCKERHUB_TOKEN` | Token de acesso do Docker Hub (criar em dockerhub.com → Account Settings → Security → New Access Token) |
+| `VITE_SUPABASE_URL` | URL do seu projeto Supabase |
+| `VITE_SUPABASE_ANON_KEY` | Chave anônima do Supabase |
+| `PORTAINER_WEBHOOK_URL` | URL do webhook do Portainer (configurar no passo 4) |
+
+### Variables
+
+| Nome | Descrição |
+|------|-----------|
+| `VITE_MAIN_DOMAINS` | Domínio principal (ex: `barsmart.app`) |
+
+## Passo 2: Primeiro Build
+
+Faça um commit e push para a branch `main`:
 
 ```bash
-# Clone o repositório
-git clone https://github.com/seu-usuario/barbersmart.git
-cd barbersmart
-
-# Login no registry
-docker login ghcr.io -u SEU_USUARIO
-
-# Build com variáveis de ambiente
-docker build \
-  --build-arg VITE_SUPABASE_URL="https://xxx.supabase.co" \
-  --build-arg VITE_SUPABASE_ANON_KEY="sua-anon-key" \
-  --build-arg VITE_MAIN_DOMAINS="seudominio.com.br" \
-  -t ghcr.io/seu-usuario/barbersmart:latest .
-
-# Push para o registry
-docker push ghcr.io/seu-usuario/barbersmart:latest
+git add .
+git commit -m "Configurar CI/CD com Docker Hub"
+git push origin main
 ```
 
-### Opção B: CI/CD Automático (Recomendado)
+O GitHub Actions irá:
+1. Buildar a imagem
+2. Fazer push para Docker Hub
+3. A imagem estará disponível em `docker.io/SEU_USUARIO/barbersmartapp:latest`
 
-1. Configure os secrets no GitHub:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
+**Verificar:** Vá em **GitHub** → **Actions** e confirme que o workflow passou.
 
-2. Configure a variável:
-   - `VITE_MAIN_DOMAINS`
-
-3. Faça push para a branch `main` ou crie uma tag:
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
-
-4. O GitHub Actions irá buildar e fazer push automaticamente.
-
-## Passo 2: Criar a Rede no Portainer
-
-1. Acesse **Portainer** → **Networks**
-2. Clique em **Add network**
-3. Configure:
-   - **Name:** `web`
-   - **Driver:** `overlay`
-   - **Attachable:** ✅ Habilitado
-4. Clique em **Create the network**
-
-## Passo 3: Criar o Stack
+## Passo 3: Criar o Stack no Portainer
 
 ### 3.1 Acessar Stacks
 
@@ -97,31 +85,106 @@ docker push ghcr.io/seu-usuario/barbersmart:latest
 
 2. **Build method:** Web editor
 
-3. **Web editor:** Cole o conteúdo do arquivo `docker-stack.yml` ou `docker-stack-app-only.yml`
+3. **Web editor:** Cole o conteúdo abaixo:
+
+```yaml
+version: "3.8"
+
+services:
+  app:
+    image: docker.io/${DOCKERHUB_USERNAME}/barbersmartapp:${IMAGE_TAG:-latest}
+    networks:
+      - my_network
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=my_network"
+        - "traefik.http.routers.barbersmart-main.rule=Host(`${MAIN_DOMAIN}`) || Host(`www.${MAIN_DOMAIN}`)"
+        - "traefik.http.routers.barbersmart-main.entrypoints=websecure"
+        - "traefik.http.routers.barbersmart-main.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.barbersmart-main.priority=10"
+        - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${MAIN_DOMAIN}`)"
+        - "traefik.http.routers.barbersmart-wildcard.entrypoints=websecure"
+        - "traefik.http.routers.barbersmart-wildcard.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.barbersmart-wildcard.priority=5"
+        - "traefik.http.services.barbersmart.loadbalancer.server.port=80"
+        - "traefik.http.services.barbersmart.loadbalancer.healthcheck.path=/health"
+        - "traefik.http.services.barbersmart.loadbalancer.healthcheck.interval=30s"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  my_network:
+    external: true
+```
 
 ### 3.3 Variáveis de Ambiente
 
 Na seção **Environment variables**, adicione:
 
-| Nome | Valor | Descrição |
-|------|-------|-----------|
-| `REGISTRY` | `ghcr.io` | Registry da imagem |
-| `IMAGE_NAME` | `seu-usuario/barbersmart` | Nome da imagem |
-| `IMAGE_TAG` | `latest` | Tag da imagem |
-| `MAIN_DOMAIN` | `seudominio.com.br` | Domínio principal |
-| `ACME_EMAIL` | `seu@email.com` | Email para Let's Encrypt |
+| Nome | Valor |
+|------|-------|
+| `DOCKERHUB_USERNAME` | seu-usuario-dockerhub |
+| `MAIN_DOMAIN` | barsmart.app |
+| `IMAGE_TAG` | latest |
 
 ### 3.4 Deploy
 
 Clique em **Deploy the stack**
 
-## Passo 4: Verificar o Deploy
+## Passo 4: Configurar Auto-Deploy (Webhook)
+
+### 4.1 Habilitar Webhook no Portainer
+
+1. No Portainer, vá para o Stack `barbersmart`
+2. Na aba **Webhooks**, habilite o webhook
+3. Copie a URL do webhook (algo como `https://portainer.seudominio.com/api/stacks/webhooks/xxx`)
+
+### 4.2 Adicionar Webhook no GitHub
+
+1. No GitHub, vá para **Settings** → **Secrets** → **Actions**
+2. Adicione um novo secret:
+   - **Name:** `PORTAINER_WEBHOOK_URL`
+   - **Value:** URL copiada do Portainer
+
+Agora, cada push na `main` irá automaticamente:
+1. ✅ Buildar a imagem
+2. ✅ Fazer push para Docker Hub
+3. ✅ Chamar webhook do Portainer
+4. ✅ Portainer baixa nova imagem e faz rolling update
+
+## Passo 5: Verificar o Deploy
 
 ### Via Portainer
 
 1. Vá para **Services**
 2. Verifique se `barbersmart_app` está com status **Running**
-3. Verifique se as replicas estão healthy
+3. Verifique se as 2 réplicas estão healthy
 
 ### Via Terminal
 
@@ -138,26 +201,8 @@ docker service inspect barbersmart_app
 
 ### Via Browser
 
-1. Acesse `https://seudominio.com.br` - deve mostrar o dashboard/login
-2. Acesse `https://barbearia-teste.seudominio.com.br` - deve mostrar landing ou "não encontrado"
-
-## Passo 5: Configurar Auto-Deploy (Opcional)
-
-### Webhook do Portainer
-
-1. No Portainer, vá para o Stack `barbersmart`
-2. Na aba **Webhooks**, habilite o webhook
-3. Copie a URL do webhook
-4. No GitHub, vá para **Settings** → **Secrets** → **Actions**
-5. Adicione um secret:
-   - **Name:** `PORTAINER_WEBHOOK_URL`
-   - **Value:** URL copiada do Portainer
-
-Agora, cada push na `main` irá:
-1. Buildar a imagem
-2. Fazer push para o registry
-3. Triggerar o webhook do Portainer
-4. Portainer atualiza o stack automaticamente
+1. Acesse `https://barsmart.app` - deve mostrar o dashboard/login
+2. Acesse `https://teste.barsmart.app` - deve mostrar landing ou "tenant não encontrado"
 
 ## Comandos Úteis
 
@@ -170,7 +215,7 @@ docker service scale barbersmart_app=3
 # Ou no Portainer: Services → barbersmart_app → Scale
 ```
 
-### Atualizar Imagem
+### Atualizar Imagem Manualmente
 
 ```bash
 # Force update para puxar nova imagem
@@ -202,20 +247,26 @@ docker service logs barbersmart_app 2>&1 | grep -i error
 # Ver eventos do serviço
 docker service ps barbersmart_app --no-trunc
 
-# Verificar se a imagem existe
-docker pull ghcr.io/seu-usuario/barbersmart:latest
+# Verificar se a imagem existe no Docker Hub
+docker pull docker.io/seu-usuario/barbersmartapp:latest
 ```
+
+### Imagem não encontrada
+
+1. Verifique se o workflow do GitHub Actions passou
+2. Confirme que a imagem está no Docker Hub: `hub.docker.com/r/seu-usuario/barbersmartapp`
+3. Verifique se `DOCKERHUB_USERNAME` está correto no Portainer
 
 ### Certificado SSL não emitido
 
 1. Verifique se as portas 80 e 443 estão abertas no firewall
 2. Verifique os logs do Traefik:
    ```bash
-   docker service logs barbersmart_traefik -f
+   docker service logs traefik -f
    ```
 3. Confirme que o DNS está propagado:
    ```bash
-   dig seudominio.com.br
+   dig barsmart.app
    ```
 
 ### Health check falhando
@@ -235,16 +286,16 @@ docker exec $(docker ps -q -f name=barbersmart_app) curl -f http://localhost/hea
 
 ```
 barbersmart/
-├── Dockerfile              # Build da imagem
-├── docker-stack.yml        # Stack completo (app + traefik)
-├── docker-stack-app-only.yml # Apenas app (usa traefik existente)
-├── docker-compose.yml      # Para desenvolvimento local
+├── Dockerfile                    # Build da imagem
+├── docker-stack.yml              # Stack completo (app + traefik)
+├── docker-stack-app-only.yml     # Apenas app (usa traefik existente)
+├── docker-compose.yml            # Para desenvolvimento local
 ├── docker/
-│   ├── nginx.conf          # Config do Nginx
-│   └── .env.example        # Exemplo de variáveis
+│   ├── nginx.conf                # Config do Nginx
+│   └── .env.example              # Exemplo de variáveis
 └── .github/
     └── workflows/
-        └── build-push.yml  # CI/CD automático
+        └── build-push.yml        # CI/CD automático para Docker Hub
 ```
 
 ## Segurança
@@ -257,23 +308,13 @@ barbersmart/
 4. Configure rate limiting no Traefik
 5. Use certificados SSL em produção
 
-### Secrets Sensíveis
+### Tokens Docker Hub
 
-Para credenciais sensíveis, use Docker Secrets:
-
-```yaml
-secrets:
-  supabase_url:
-    external: true
-  supabase_key:
-    external: true
-```
-
-```bash
-# Criar secrets
-echo "https://xxx.supabase.co" | docker secret create supabase_url -
-echo "sua-anon-key" | docker secret create supabase_key -
-```
+Crie um Access Token em vez de usar sua senha:
+1. Acesse `hub.docker.com`
+2. Vá para **Account Settings** → **Security**
+3. Clique em **New Access Token**
+4. Use esse token como `DOCKERHUB_TOKEN` no GitHub
 
 ## Suporte
 

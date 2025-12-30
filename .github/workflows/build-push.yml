@@ -1,5 +1,5 @@
 # =====================================================
-# BarberSmart - Build & Push Docker Image
+# BarberSmart - Build & Push Docker Image to Docker Hub
 # =====================================================
 # Triggers:
 # - Push para main/master com tag
@@ -23,15 +23,12 @@ on:
         default: 'latest'
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/barbersmartapp
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout repository
@@ -40,12 +37,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Container Registry
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels)
         id: meta
@@ -71,7 +67,7 @@ jobs:
           build-args: |
             VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
-            VITE_MAIN_DOMAINS=${{ vars.VITE_MAIN_DOMAINS || 'barbersmart.app' }}
+            VITE_MAIN_DOMAINS=${{ vars.VITE_MAIN_DOMAINS || 'barsmart.app' }}
             VITE_ENABLE_TENANT_DETECTION=true
             VITE_ENABLE_PWA=true
           cache-from: type=gha
@@ -83,7 +79,7 @@ jobs:
           echo "## 🚀 Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Image Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry:** Docker Hub" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** ${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags:** " >> $GITHUB_STEP_SUMMARY
           echo '${{ steps.meta.outputs.tags }}' | tr ',' '\n' | while read tag; do
@@ -93,11 +89,11 @@ jobs:
           echo "### Deploy Command" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
-          echo "docker stack deploy -c docker-stack.yml barbersmart" >> $GITHUB_STEP_SUMMARY
+          echo "docker stack deploy -c docker-stack-app-only.yml barbersmart" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
   # =====================================================
-  # Optional: Auto-deploy to Portainer
+  # Auto-deploy to Portainer
   # =====================================================
   deploy-portainer:
     needs: build-and-push
