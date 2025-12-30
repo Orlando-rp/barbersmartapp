@@ -180,9 +180,9 @@
     --sidebar-border: 30 8% 18%;
     --sidebar-ring: 38 75% 50%;
     --sidebar: 30 10% 12%;
-    --sidebar-icon: 35 12% 70%;
-    --sidebar-icon-hover: 38 75% 55%;
-    --sidebar-icon-active: 38 80% 50%;
+    --sidebar-icon: 38 20% 80%;
+    --sidebar-icon-hover: 38 75% 60%;
+    --sidebar-icon-active: 38 80% 55%;
 
     /* Charts Dark */
     --chart-1: 38 75% 50%;
