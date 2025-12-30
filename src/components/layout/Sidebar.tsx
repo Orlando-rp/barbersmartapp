@@ -379,12 +379,12 @@ const Sidebar = () => {
 
       {/* Navigation with Groups */}
       <ScrollArea className="flex-1">
-        <nav className="px-2 py-2 space-y-1">
+        <nav className={cn("py-2 space-y-1", collapsed ? "px-0" : "px-2")}>
           {groupedNavigation.map((group) => (
             <div key={group.id}>
               {collapsed ? (
                 // Collapsed mode: show items directly with tooltips
-                <div className="space-y-1">
+                <div className="space-y-1 flex flex-col items-center">
                   {group.items.map((item) => (
                     <Tooltip key={item.name} delayDuration={0}>
                       <TooltipTrigger asChild>
