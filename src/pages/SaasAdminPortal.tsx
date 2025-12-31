@@ -78,6 +78,7 @@ import { WhatsAppStatusPanel } from "@/components/saas/WhatsAppStatusPanel";
 import { SocialAuthConfig } from "@/components/saas/SocialAuthConfig";
 import { BrandingConfig } from "@/components/saas/BrandingConfig";
 import DomainsManagement from "@/components/saas/DomainsManagement";
+import { GlobalPaymentConfig } from "@/components/saas/GlobalPaymentConfig";
 import { PlanFeaturesSelector, defaultPlanFeatures, featuresToStringArray, stringArrayToFeatures, type PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import {
   BarChart,
@@ -1299,6 +1300,13 @@ const SaasAdminPortal = () => {
                   🔐 Login Social (OAuth)
                 </h2>
                 <SocialAuthConfig />
+              </div>
+
+              <div className="border-t border-border pt-6 sm:pt-8">
+                <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
+                  💳 Gateways de Pagamento
+                </h2>
+                <GlobalPaymentConfig />
               </div>
             </div>
           </TabsContent>
