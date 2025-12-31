@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { MAIN_DOMAINS } from '@/lib/tenantConfig';
 
 export interface BarbershopDomain {
   id: string;
@@ -37,7 +38,8 @@ export interface BarbershopDomain {
   updated_at: string;
 }
 
-const BASE_DOMAIN = 'barbersmart.app';
+// Usar o primeiro domínio principal configurado ou fallback
+const BASE_DOMAIN = MAIN_DOMAINS[0] || 'barbersmart.app';
 
 export const useBarbershopDomain = () => {
   const { selectedBarbershopId, barbershopId, barbershops } = useAuth();
