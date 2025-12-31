@@ -191,13 +191,13 @@ const TermsOfService = () => {
               <li><strong>E-mail:</strong> suporte@barbersmart.app</li>
               <li><strong>Empresa:</strong> Sync Smart</li>
               <li><strong>Site:</strong> <a href="https://syncsmart.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">syncsmart.com.br</a></li>
-              <li><strong>Plataforma:</strong> BarberSmart</li>
+              <li><strong>Plataforma:</strong> Barber Smart</li>
             </ul>
           </section>
         </div>
 
         <div className="mt-12 pt-6 border-t text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} BarberSmart. Um produto <a href="https://syncsmart.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Sync Smart</a>. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} Barber Smart. Um produto <a href="https://syncsmart.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Sync Smart</a>. Todos os direitos reservados.</p>
         </div>
       </div>
     </div>

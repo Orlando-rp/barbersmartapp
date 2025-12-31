@@ -81,7 +81,7 @@ export const usePushNotifications = () => {
         
         // Mostrar notificação de teste
         showNotification({
-          title: 'BarberSmart',
+          title: 'Barber Smart',
           body: 'Notificações push ativadas com sucesso!',
           icon: '/favicon.ico',
         });

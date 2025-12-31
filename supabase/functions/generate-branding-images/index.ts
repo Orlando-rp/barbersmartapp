@@ -109,7 +109,7 @@ serve(async (req) => {
 
     const { 
       type = "all", 
-      brandName = "BarberSmart",
+      brandName = "Barber Smart",
       primaryColor = "#d4a574"
     }: GenerateRequest = await req.json();
 

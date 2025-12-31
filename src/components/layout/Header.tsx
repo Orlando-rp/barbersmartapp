@@ -84,7 +84,7 @@ const Header = () => {
               </div>
             )}
             <h1 className="text-base font-bold text-foreground hidden sm:block">
-              {effectiveBranding?.system_name || 'BarberSmart'}
+              {effectiveBranding?.system_name || 'Barber Smart'}
             </h1>
           </div>
           

@@ -1,6 +1,6 @@
-# 📘 BarberSmart – Database Documentation
+# 📘 Barber Smart – Database Documentation
 
-Documentação oficial do banco de dados do sistema **BarberSmart** — um sistema de gestão de barbearias com arquitetura **multi-tenant**, segurança avançada via **Row Level Security (RLS)** e integração total com Supabase Auth.
+Documentação oficial do banco de dados do sistema **Barber Smart** — um sistema de gestão de barbearias com arquitetura **multi-tenant**, segurança avançada via **Row Level Security (RLS)** e integração total com Supabase Auth.
 
 ---
 

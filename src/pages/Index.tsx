@@ -408,7 +408,7 @@ const Index = () => {
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
                 {userDisplayName 
                   ? `Bem-vindo, ${userDisplayName}!` 
-                  : `Bem-vindo ao ${branding?.system_name || 'BarberSmart'}!`
+                  : `Bem-vindo ao ${branding?.system_name || 'Barber Smart'}!`
                 } 👋
               </h1>
               <p className="text-muted-foreground text-sm lg:text-lg">

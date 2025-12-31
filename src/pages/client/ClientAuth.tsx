@@ -182,7 +182,7 @@ export default function ClientAuth() {
   // Get display name - prioritize tenant branding
   const displayName = hasWhiteLabel && tenantBarbershopName 
     ? tenantBarbershopName 
-    : effectiveBranding?.system_name || 'BarberSmart';
+    : effectiveBranding?.system_name || 'Barber Smart';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
