@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -15,14 +16,19 @@ import {
   AlertTriangle, 
   CheckCircle,
   Copy,
+  Check,
   ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 
 const CodeBlock = ({ children, language = "bash" }: { children: string; language?: string }) => {
+  const [copied, setCopied] = useState(false);
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(children);
+    setCopied(true);
     toast.success("Copiado para a área de transferência!");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -33,11 +39,15 @@ const CodeBlock = ({ children, language = "bash" }: { children: string; language
       <Button
         variant="outline"
         size="icon"
-        className="absolute top-2 right-2 h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-colors"
+        className={`absolute top-2 right-2 h-8 w-8 backdrop-blur-sm transition-all ${
+          copied 
+            ? "bg-success text-success-foreground border-success" 
+            : "bg-background/80 hover:bg-primary hover:text-primary-foreground"
+        }`}
         onClick={copyToClipboard}
         title="Copiar comando"
       >
-        <Copy className="h-4 w-4" />
+        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
       </Button>
     </div>
   );
