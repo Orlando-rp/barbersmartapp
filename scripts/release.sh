@@ -12,11 +12,14 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Get the release type from argument or ask
@@ -87,8 +90,156 @@ esac
 
 NEW_VERSION="$MAJOR.$MINOR.$PATCH"
 TAG_NAME="v$NEW_VERSION"
+DATE=$(date +"%Y-%m-%d")
 
 echo -e "${GREEN}🆕 Nova versão: $TAG_NAME${NC}"
+echo ""
+
+# Generate changelog
+echo -e "${CYAN}📋 Gerando changelog...${NC}"
+echo ""
+
+# Get the starting point (last tag)
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+# Initialize arrays for different commit types
+declare -a FEATURES=()
+declare -a FIXES=()
+declare -a BREAKING=()
+declare -a DOCS=()
+declare -a REFACTOR=()
+declare -a PERF=()
+declare -a CHORE=()
+declare -a OTHER=()
+
+# Determine range
+if [ -z "$LAST_TAG" ]; then
+    RANGE="HEAD"
+else
+    RANGE="$LAST_TAG..HEAD"
+fi
+
+# Parse commits
+while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    
+    HASH=$(echo "$line" | cut -d' ' -f1)
+    MSG=$(echo "$line" | cut -d' ' -f2-)
+    SHORT_HASH="${HASH:0:7}"
+    
+    # Check for breaking changes
+    if [[ "$MSG" =~ ^.*!: ]] || [[ "$MSG" =~ BREAKING ]]; then
+        BREAKING+=("- $MSG (\`$SHORT_HASH\`)")
+        continue
+    fi
+    
+    # Categorize by conventional commit prefix
+    case "$MSG" in
+        feat:*|feat\(*) 
+            CLEAN_MSG=$(echo "$MSG" | sed -E 's/^feat(\([^)]*\))?: //')
+            FEATURES+=("- $CLEAN_MSG (\`$SHORT_HASH\`)")
+            ;;
+        fix:*|fix\(*) 
+            CLEAN_MSG=$(echo "$MSG" | sed -E 's/^fix(\([^)]*\))?: //')
+            FIXES+=("- $CLEAN_MSG (\`$SHORT_HASH\`)")
+            ;;
+        docs:*|docs\(*) 
+            CLEAN_MSG=$(echo "$MSG" | sed -E 's/^docs(\([^)]*\))?: //')
+            DOCS+=("- $CLEAN_MSG (\`$SHORT_HASH\`)")
+            ;;
+        refactor:*|refactor\(*) 
+            CLEAN_MSG=$(echo "$MSG" | sed -E 's/^refactor(\([^)]*\))?: //')
+            REFACTOR+=("- $CLEAN_MSG (\`$SHORT_HASH\`)")
+            ;;
+        perf:*|perf\(*) 
+            CLEAN_MSG=$(echo "$MSG" | sed -E 's/^perf(\([^)]*\))?: //')
+            PERF+=("- $CLEAN_MSG (\`$SHORT_HASH\`)")
+            ;;
+        chore:*|chore\(*|build:*|ci:*) 
+            CLEAN_MSG=$(echo "$MSG" | sed -E 's/^(chore|build|ci)(\([^)]*\))?: //')
+            CHORE+=("- $CLEAN_MSG (\`$SHORT_HASH\`)")
+            ;;
+        *)
+            if [[ ! "$MSG" =~ ^Merge ]] && [[ ! "$MSG" =~ ^release ]]; then
+                OTHER+=("- $MSG (\`$SHORT_HASH\`)")
+            fi
+            ;;
+    esac
+done < <(git log --oneline $RANGE 2>/dev/null)
+
+# Build changelog content
+CHANGELOG_CONTENT=""
+
+if [ ${#BREAKING[@]} -gt 0 ]; then
+    CHANGELOG_CONTENT+="\n### ⚠️ BREAKING CHANGES\n\n"
+    for item in "${BREAKING[@]}"; do
+        CHANGELOG_CONTENT+="$item\n"
+    done
+fi
+
+if [ ${#FEATURES[@]} -gt 0 ]; then
+    CHANGELOG_CONTENT+="\n### ✨ Novas Funcionalidades\n\n"
+    for item in "${FEATURES[@]}"; do
+        CHANGELOG_CONTENT+="$item\n"
+    done
+fi
+
+if [ ${#FIXES[@]} -gt 0 ]; then
+    CHANGELOG_CONTENT+="\n### 🐛 Correções\n\n"
+    for item in "${FIXES[@]}"; do
+        CHANGELOG_CONTENT+="$item\n"
+    done
+fi
+
+if [ ${#PERF[@]} -gt 0 ]; then
+    CHANGELOG_CONTENT+="\n### ⚡ Performance\n\n"
+    for item in "${PERF[@]}"; do
+        CHANGELOG_CONTENT+="$item\n"
+    done
+fi
+
+if [ ${#REFACTOR[@]} -gt 0 ]; then
+    CHANGELOG_CONTENT+="\n### ♻️ Refatoração\n\n"
+    for item in "${REFACTOR[@]}"; do
+        CHANGELOG_CONTENT+="$item\n"
+    done
+fi
+
+if [ ${#DOCS[@]} -gt 0 ]; then
+    CHANGELOG_CONTENT+="\n### 📚 Documentação\n\n"
+    for item in "${DOCS[@]}"; do
+        CHANGELOG_CONTENT+="$item\n"
+    done
+fi
+
+if [ ${#CHORE[@]} -gt 0 ]; then
+    CHANGELOG_CONTENT+="\n### 🔧 Manutenção\n\n"
+    for item in "${CHORE[@]}"; do
+        CHANGELOG_CONTENT+="$item\n"
+    done
+fi
+
+if [ ${#OTHER[@]} -gt 0 ]; then
+    CHANGELOG_CONTENT+="\n### 📦 Outras Alterações\n\n"
+    for item in "${OTHER[@]}"; do
+        CHANGELOG_CONTENT+="$item\n"
+    done
+fi
+
+# Display changelog
+TOTAL=$((${#FEATURES[@]} + ${#FIXES[@]} + ${#BREAKING[@]} + ${#DOCS[@]} + ${#REFACTOR[@]} + ${#PERF[@]} + ${#CHORE[@]} + ${#OTHER[@]}))
+
+if [ $TOTAL -gt 0 ]; then
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
+    echo -e "$CHANGELOG_CONTENT"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${BLUE}📊 Total: $TOTAL alterações${NC}"
+    echo ""
+else
+    echo -e "${YELLOW}📭 Nenhuma alteração encontrada desde a última tag.${NC}"
+    CHANGELOG_CONTENT="\n_Nenhuma alteração registrada._\n"
+fi
 
 # Confirm
 read -p "Continuar com a release $TAG_NAME? (s/n): " confirm
@@ -97,7 +248,45 @@ if [[ "$confirm" != "s" && "$confirm" != "S" ]]; then
     exit 0
 fi
 
-# Update version in package.json (using node for cross-platform compatibility)
+# Update CHANGELOG.md
+CHANGELOG_FILE="CHANGELOG.md"
+NEW_ENTRY="## [$TAG_NAME] - $DATE\n$CHANGELOG_CONTENT\n"
+
+if [ -f "$CHANGELOG_FILE" ]; then
+    # Prepend new entry after the header
+    echo -e "${BLUE}📝 Atualizando CHANGELOG.md...${NC}"
+    
+    # Read existing content
+    EXISTING=$(cat "$CHANGELOG_FILE")
+    
+    # Check if there's a header
+    if [[ "$EXISTING" =~ ^#[[:space:]]+ ]]; then
+        # Extract header (first line) and rest
+        HEADER=$(echo "$EXISTING" | head -n 2)
+        REST=$(echo "$EXISTING" | tail -n +3)
+        
+        # Write new content
+        echo -e "$HEADER\n\n$NEW_ENTRY\n$REST" > "$CHANGELOG_FILE"
+    else
+        # No header, just prepend
+        echo -e "$NEW_ENTRY\n$EXISTING" > "$CHANGELOG_FILE"
+    fi
+else
+    # Create new changelog file
+    echo -e "${BLUE}📝 Criando CHANGELOG.md...${NC}"
+    cat > "$CHANGELOG_FILE" << EOF
+# Changelog
+
+Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
+
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
+e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
+
+$NEW_ENTRY
+EOF
+fi
+
+# Update version in package.json
 node -e "
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -106,12 +295,16 @@ fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
 console.log('✅ package.json atualizado');
 "
 
-# Commit version change
-git add package.json
+# Commit version change and changelog
+git add package.json CHANGELOG.md
 git commit -m "chore: release $TAG_NAME"
 
-# Create tag
-git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+# Create annotated tag with changelog
+TAG_MESSAGE="Release $TAG_NAME
+
+$(echo -e "$CHANGELOG_CONTENT" | sed 's/\\n/\n/g')"
+
+git tag -a "$TAG_NAME" -m "$TAG_MESSAGE"
 
 echo ""
 echo -e "${GREEN}✅ Tag $TAG_NAME criada localmente!${NC}"
@@ -125,11 +318,14 @@ if [[ "$do_push" == "s" || "$do_push" == "S" ]]; then
     git push origin HEAD
     git push origin "$TAG_NAME"
     
+    REPO_URL=$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/' | sed 's/\.git$//')
+    
     echo ""
     echo -e "${GREEN}🎉 Release $TAG_NAME publicada com sucesso!${NC}"
     echo -e "${BLUE}🚀 O deploy será iniciado automaticamente.${NC}"
     echo ""
-    echo "Acompanhe em: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/actions"
+    echo -e "Acompanhe em: ${CYAN}https://github.com/$REPO_URL/actions${NC}"
+    echo -e "Release: ${CYAN}https://github.com/$REPO_URL/releases/tag/$TAG_NAME${NC}"
 else
     echo ""
     echo -e "${YELLOW}📌 Tag criada mas NÃO enviada.${NC}"
