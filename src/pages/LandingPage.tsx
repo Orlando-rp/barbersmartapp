@@ -688,6 +688,73 @@ const LandingPage = () => {
         </motion.div>
       </section>
 
+      {/* Trusted By / Logos Section */}
+      <section className="py-16 px-4 border-b border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center text-white/40 text-sm mb-10 uppercase tracking-widest"
+          >
+            Mais de 500 barbearias confiam no BarberSmart
+          </motion.p>
+          
+          {/* Logo Marquee */}
+          <div className="relative overflow-hidden">
+            {/* Gradient masks */}
+            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10" />
+            
+            <motion.div
+              animate={{ x: [0, -1200] }}
+              transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+              className="flex items-center gap-16"
+            >
+              {/* First set of logos */}
+              {[
+                { name: "Barbearia Classic", icon: "✂️" },
+                { name: "The Barber House", icon: "🪒" },
+                { name: "Corte Certo", icon: "💈" },
+                { name: "Studio Barba", icon: "✨" },
+                { name: "Premium Cuts", icon: "👔" },
+                { name: "Old School Barber", icon: "🎩" },
+                { name: "Navalha de Ouro", icon: "⭐" },
+                { name: "Barbearia Elegance", icon: "💎" },
+              ].map((client, index) => (
+                <div 
+                  key={index} 
+                  className="flex items-center gap-3 text-white/30 hover:text-white/60 transition-colors whitespace-nowrap"
+                >
+                  <span className="text-2xl">{client.icon}</span>
+                  <span className="text-lg font-semibold tracking-tight">{client.name}</span>
+                </div>
+              ))}
+              
+              {/* Duplicate for seamless loop */}
+              {[
+                { name: "Barbearia Classic", icon: "✂️" },
+                { name: "The Barber House", icon: "🪒" },
+                { name: "Corte Certo", icon: "💈" },
+                { name: "Studio Barba", icon: "✨" },
+                { name: "Premium Cuts", icon: "👔" },
+                { name: "Old School Barber", icon: "🎩" },
+                { name: "Navalha de Ouro", icon: "⭐" },
+                { name: "Barbearia Elegance", icon: "💎" },
+              ].map((client, index) => (
+                <div 
+                  key={`dup-${index}`} 
+                  className="flex items-center gap-3 text-white/30 hover:text-white/60 transition-colors whitespace-nowrap"
+                >
+                  <span className="text-2xl">{client.icon}</span>
+                  <span className="text-lg font-semibold tracking-tight">{client.name}</span>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Bento Grid */}
       <section id="features" className="py-24 px-4">
         <div className="max-w-7xl mx-auto">
