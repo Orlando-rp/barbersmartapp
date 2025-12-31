@@ -324,8 +324,18 @@ const LandingPage = () => {
       </motion.nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-4 min-h-screen flex items-center">
-        <div className="max-w-7xl mx-auto">
+      <section className="relative pt-32 pb-20 px-4 min-h-screen flex items-center overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-fixed"
+          style={{ backgroundImage: 'url(/images/barbershop-hero.jpg)' }}
+        />
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/75" />
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-transparent to-[#0a0a0a]/90" />
+        
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <motion.div
@@ -706,9 +716,18 @@ const LandingPage = () => {
       </section>
 
       {/* How it Works */}
-      <section id="how-it-works" className="py-24 px-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent" />
-        <div className="max-w-7xl mx-auto relative">
+      <section id="how-it-works" className="py-24 px-4 relative overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(/images/barbershop-how-it-works.jpg)' }}
+        />
+        {/* Dark Overlay with blur effect */}
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-transparent to-[#0a0a0a]" />
+        
+        <div className="max-w-7xl mx-auto relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -906,8 +925,18 @@ const LandingPage = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-24 px-4">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-24 px-4 relative overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(/images/barbershop-testimonials.jpg)' }}
+        />
+        {/* Dark Overlay with sepia tint */}
+        <div className="absolute inset-0 bg-black/85" />
+        {/* Warm color overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-transparent to-amber-800/10" />
+        
+        <div className="max-w-7xl mx-auto relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -1020,10 +1049,19 @@ const LandingPage = () => {
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/20 via-amber-600/10 to-transparent border border-amber-500/30 p-12 text-center"
+            className="relative overflow-hidden rounded-3xl border border-amber-500/30 p-12 text-center"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent" />
-            <div className="relative">
+            {/* Background Image */}
+            <div 
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: 'url(/images/barbershop-cta.jpg)' }}
+            />
+            {/* Dark Overlay */}
+            <div className="absolute inset-0 bg-black/70" />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/30 via-amber-600/20 to-transparent" />
+            
+            <div className="relative z-10">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
