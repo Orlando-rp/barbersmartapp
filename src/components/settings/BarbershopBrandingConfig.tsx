@@ -21,7 +21,8 @@ import {
   Moon,
   Crown,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Square
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -36,6 +37,7 @@ interface CustomBranding {
   logo_url?: string;
   logo_light_url?: string;
   logo_dark_url?: string;
+  logo_icon_url?: string;
   favicon_url?: string;
   primary_color?: string;
   secondary_color?: string;
@@ -48,6 +50,7 @@ const defaultBranding: CustomBranding = {
   logo_url: "",
   logo_light_url: "",
   logo_dark_url: "",
+  logo_icon_url: "",
   favicon_url: "",
   primary_color: "#d4a574",
   secondary_color: "#1a1a2e",
@@ -73,10 +76,12 @@ const BarbershopBrandingConfig = () => {
   const [branding, setBranding] = useState<CustomBranding>(defaultBranding);
   const [uploadingLogoLight, setUploadingLogoLight] = useState(false);
   const [uploadingLogoDark, setUploadingLogoDark] = useState(false);
+  const [uploadingLogoIcon, setUploadingLogoIcon] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   
   const logoLightInputRef = useRef<HTMLInputElement>(null);
   const logoDarkInputRef = useRef<HTMLInputElement>(null);
+  const logoIconInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -132,7 +137,7 @@ const BarbershopBrandingConfig = () => {
 
   const handleImageUpload = async (
     file: File, 
-    type: 'logo_light' | 'logo_dark' | 'favicon',
+    type: 'logo_light' | 'logo_dark' | 'logo_icon' | 'favicon',
     setUploading: (v: boolean) => void
   ) => {
     if (!file || !barbershopId) return;
@@ -159,7 +164,7 @@ const BarbershopBrandingConfig = () => {
 
       if (!skipCompression) {
         try {
-          const maxSize = type === 'favicon' ? 128 : 512;
+          const maxSize = type === 'favicon' ? 128 : (type === 'logo_icon' ? 128 : 512);
           const optimized = await optimizeImage(file, {
             maxWidth: maxSize,
             maxHeight: maxSize,
@@ -200,6 +205,7 @@ const BarbershopBrandingConfig = () => {
       const fieldMap: Record<string, string> = {
         logo_light: 'logo_light_url',
         logo_dark: 'logo_dark_url',
+        logo_icon: 'logo_icon_url',
         favicon: 'favicon_url',
       };
 
@@ -224,6 +230,7 @@ const BarbershopBrandingConfig = () => {
       const labelMap: Record<string, string> = {
         logo_light: 'Logo (modo claro)',
         logo_dark: 'Logo (modo escuro)',
+        logo_icon: 'Logo Ícone',
         favicon: 'Favicon',
       };
 
@@ -236,10 +243,11 @@ const BarbershopBrandingConfig = () => {
     }
   };
 
-  const removeImage = (type: 'logo_light' | 'logo_dark' | 'favicon') => {
+  const removeImage = (type: 'logo_light' | 'logo_dark' | 'logo_icon' | 'favicon') => {
     const fieldMap: Record<string, string> = {
       logo_light: 'logo_light_url',
       logo_dark: 'logo_dark_url',
+      logo_icon: 'logo_icon_url',
       favicon: 'favicon_url',
     };
     
@@ -524,6 +532,71 @@ const BarbershopBrandingConfig = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeImage('logo_dark')}
+                        className="h-9 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Logo Icon Upload */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Square className="h-4 w-4 text-primary" />
+                <Label className="text-xs sm:text-sm">Logo Ícone (Quadrado)</Label>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div 
+                  className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors relative overflow-hidden bg-muted"
+                  onClick={() => logoIconInputRef.current?.click()}
+                >
+                  {uploadingLogoIcon ? (
+                    <LoadingSpinner size="sm" />
+                  ) : branding.logo_icon_url ? (
+                    <img 
+                      src={branding.logo_icon_url} 
+                      alt="Logo Ícone" 
+                      className="w-full h-full object-contain p-1"
+                    />
+                  ) : (
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                  )}
+                  <input
+                    ref={logoIconInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]; e.currentTarget.value = '';
+                      if (file) handleImageUpload(file, 'logo_icon', setUploadingLogoIcon);
+                    }}
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Ícone quadrado exibido na sidebar colapsada. Recomendado: 128x128px, PNG ou WebP.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => logoIconInputRef.current?.click()}
+                      disabled={uploadingLogoIcon}
+                      className="h-9"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload
+                    </Button>
+                    {branding.logo_icon_url && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeImage('logo_icon')}
                         className="h-9 text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
