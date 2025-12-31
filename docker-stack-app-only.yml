@@ -48,14 +48,14 @@ services:
         # Main Domain Router (domínio principal)
         - "traefik.http.routers.barbersmart-main.rule=Host(`${MAIN_DOMAIN:-barbersmart.app}`) || Host(`www.${MAIN_DOMAIN:-barbersmart.app}`)"
         - "traefik.http.routers.barbersmart-main.entrypoints=websecure"
-        - "traefik.http.routers.barbersmart-main.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.barbersmart-main.tls.certresolver=letsencryptresolver"
         - "traefik.http.routers.barbersmart-main.priority=10"
         
         # Wildcard Subdomain Router (subdomínios para tenants)
         # IMPORTANTE: Usa APENAS o domínio principal, não captura outros domínios do servidor
         - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${MAIN_DOMAIN:-barbersmart.app}`)"
         - "traefik.http.routers.barbersmart-wildcard.entrypoints=websecure"
-        - "traefik.http.routers.barbersmart-wildcard.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.barbersmart-wildcard.tls.certresolver=letsencryptresolver"
         - "traefik.http.routers.barbersmart-wildcard.priority=5"
         
         # Service Configuration
