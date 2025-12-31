@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getStaffAvatarUrl, getClientAvatarUrl } from "@/hooks/useAvatarUrl";
 import { cn } from "@/lib/utils";
 
@@ -30,12 +31,17 @@ interface SmartAvatarProps {
    * Root margin for intersection observer
    */
   rootMargin?: string;
+  /**
+   * Show skeleton while loading (default: true)
+   */
+  showSkeleton?: boolean;
 }
 
 /**
  * Smart Avatar component with:
  * - Automatic URL resolution for Supabase storage paths
  * - Lazy loading with Intersection Observer
+ * - Animated skeleton loading state
  * - Fallback support with text or custom content
  */
 export const SmartAvatar = ({
@@ -50,10 +56,12 @@ export const SmartAvatar = ({
   lazy = true,
   threshold = 0.1,
   rootMargin = "50px",
+  showSkeleton = true,
 }: SmartAvatarProps) => {
   const [isVisible, setIsVisible] = useState(!lazy);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLSpanElement>(null);
 
   // Resolve the avatar URL based on type
@@ -116,10 +124,26 @@ export const SmartAvatar = ({
   useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
+    setIsLoading(!!src);
   }, [src]);
 
+  // Determine if we should show skeleton
+  const shouldShowSkeleton = showSkeleton && isVisible && resolvedUrl && isLoading && !imageError;
+  const shouldShowFallback = !resolvedUrl || imageError || (!isLoading && !imageLoaded);
+
   return (
-    <Avatar ref={containerRef} className={className}>
+    <Avatar ref={containerRef} className={cn("relative", className)}>
+      {/* Skeleton loading state */}
+      {shouldShowSkeleton && (
+        <Skeleton 
+          className={cn(
+            "absolute inset-0 rounded-full",
+            "animate-pulse"
+          )} 
+        />
+      )}
+      
+      {/* Image */}
       {isVisible && resolvedUrl && !imageError && (
         <AvatarImage
           src={resolvedUrl}
@@ -129,14 +153,22 @@ export const SmartAvatar = ({
             imageLoaded ? "opacity-100" : "opacity-0",
             imageClassName
           )}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => setImageError(true)}
+          onLoad={() => {
+            setImageLoaded(true);
+            setIsLoading(false);
+          }}
+          onError={() => {
+            setImageError(true);
+            setIsLoading(false);
+          }}
         />
       )}
+      
+      {/* Fallback */}
       <AvatarFallback 
         className={cn(
           "transition-opacity duration-300",
-          imageLoaded && !imageError ? "opacity-0" : "opacity-100",
+          imageLoaded && !imageError ? "opacity-0" : shouldShowSkeleton ? "opacity-0" : "opacity-100",
           fallbackClassName
         )}
       >
