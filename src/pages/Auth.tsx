@@ -1881,7 +1881,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <Card className="w-full max-w-lg barbershop-card">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-4 animate-fade-in">
             {currentLogoUrl ? (
               <img 
                 src={currentLogoUrl} 

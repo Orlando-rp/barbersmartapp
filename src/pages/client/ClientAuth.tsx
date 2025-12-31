@@ -188,7 +188,7 @@ export default function ClientAuth() {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className={`mx-auto mb-4 flex items-center justify-center ${currentLogoUrl ? '' : 'h-12 w-12 rounded-full bg-primary/10'}`}>
+          <div className={`mx-auto mb-4 flex items-center justify-center animate-fade-in ${currentLogoUrl ? '' : 'h-12 w-12 rounded-full bg-primary/10'}`}>
             {step === 'success' ? (
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <CheckCircle2 className="h-6 w-6 text-primary" />
