@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeploymentGuide } from "./DeploymentGuide";
 import { ReleaseGuide } from "./ReleaseGuide";
+import { SelfHostingGuide } from "./SelfHostingGuide";
 import { ReleaseNotes } from "./ReleaseNotes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -8,6 +9,7 @@ import {
   Server, 
   Tag, 
   FileText,
+  HardDrive,
   ExternalLink 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +31,7 @@ export const DocumentationTab = () => {
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="hover:border-primary/50 transition-colors cursor-pointer">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
@@ -40,6 +42,20 @@ export const DocumentationTab = () => {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               Configuração de servidor, DNS e containers Docker
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <HardDrive className="h-5 w-5 text-warning" />
+              <CardTitle className="text-base">Self-Hosting</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Traefik, SSL e certificados wildcard
             </p>
           </CardContent>
         </Card>
@@ -61,7 +77,7 @@ export const DocumentationTab = () => {
         <Card className="hover:border-primary/50 transition-colors cursor-pointer">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-warning" />
+              <FileText className="h-5 w-5 text-muted-foreground" />
               <CardTitle className="text-base">Release Notes</CardTitle>
             </div>
           </CardHeader>
@@ -75,10 +91,14 @@ export const DocumentationTab = () => {
 
       {/* Tabs with Guides */}
       <Tabs defaultValue="deploy" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="deploy" className="gap-2">
             <Server className="h-4 w-4" />
             <span className="hidden sm:inline">Deploy</span>
+          </TabsTrigger>
+          <TabsTrigger value="selfhosting" className="gap-2">
+            <HardDrive className="h-4 w-4" />
+            <span className="hidden sm:inline">Self-Hosting</span>
           </TabsTrigger>
           <TabsTrigger value="releases" className="gap-2">
             <Tag className="h-4 w-4" />
@@ -86,12 +106,16 @@ export const DocumentationTab = () => {
           </TabsTrigger>
           <TabsTrigger value="notes" className="gap-2">
             <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Release Notes</span>
+            <span className="hidden sm:inline">Changelog</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="deploy">
           <DeploymentGuide />
+        </TabsContent>
+
+        <TabsContent value="selfhosting">
+          <SelfHostingGuide />
         </TabsContent>
 
         <TabsContent value="releases">
