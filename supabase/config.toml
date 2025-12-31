@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.uptime-recovery-alert]
 verify_jwt = false
+
+[functions.generate-sitemap]
+verify_jwt = false
