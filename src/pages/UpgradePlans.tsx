@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,12 +19,16 @@ import {
   Gift,
   Palette,
   Users,
-  Star
+  Star,
+  Package,
+  Settings
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useAddonModules, BundlePlan } from "@/hooks/useAddonModules";
 import { PlanFeatures, defaultPlanFeatures } from "@/components/saas/PlanFeaturesSelector";
+import { ModularPlanBuilder } from "@/components/pricing/ModularPlanBuilder";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +41,9 @@ interface Plan {
   max_staff: number;
   max_units: number;
   feature_flags: PlanFeatures;
+  is_bundle?: boolean;
+  highlight_text?: string;
+  discount_percentage?: number;
 }
 
 const featureDefinitions = [
@@ -51,11 +59,15 @@ const featureDefinitions = [
 ] as const;
 
 const UpgradePlans = () => {
+  const navigate = useNavigate();
   const { selectedBarbershopId } = useAuth();
   const { planName: currentPlanName } = useFeatureFlags();
+  const { bundlePlans, addons, loading: addonsLoading } = useAddonModules();
+  
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
+  const [showBuilder, setShowBuilder] = useState(false);
 
   useEffect(() => {
     fetchPlans();
@@ -65,10 +77,12 @@ const UpgradePlans = () => {
     try {
       setLoading(true);
       
-      // Fetch all plans
+      // Fetch bundle plans (pre-configured packages)
       const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
+        .eq('is_bundle', true)
+        .eq('active', true)
         .order('price', { ascending: true });
 
       if (plansError) throw plansError;
@@ -107,26 +121,38 @@ const UpgradePlans = () => {
   const handleSelectPlan = async (plan: Plan) => {
     if (plan.id === currentPlanId) return;
     
-    // For now, show interest - in a real implementation, this would integrate with a payment gateway
     toast.success(
       `Interesse no plano ${plan.name} registrado! Nossa equipe entrará em contato.`,
       { duration: 5000 }
     );
   };
 
-  const getPlanIcon = (index: number) => {
-    const icons = [Zap, Star, Crown, Sparkles];
-    return icons[index % icons.length];
+  const handleBuilderContinue = (selectedAddons: string[], billingPeriod: 'monthly' | 'annual') => {
+    setShowBuilder(false);
+    
+    const addonsNames = addons
+      .filter(a => selectedAddons.includes(a.slug))
+      .map(a => a.name)
+      .join(', ');
+    
+    toast.success(
+      `Interesse registrado! Plano personalizado com: ${addonsNames || 'Base'}. Nossa equipe entrará em contato.`,
+      { duration: 5000 }
+    );
   };
 
-  const getPlanColor = (index: number) => {
-    const colors = [
-      'from-muted/50 to-muted/30',
-      'from-primary/20 to-primary/10',
-      'from-warning/20 to-warning/10',
-      'from-success/20 to-success/10',
-    ];
-    return colors[index % colors.length];
+  const getPlanIcon = (plan: Plan) => {
+    if (plan.name === 'Essencial') return Zap;
+    if (plan.name === 'Profissional') return Star;
+    if (plan.name === 'Completo') return Crown;
+    return Sparkles;
+  };
+
+  const getPlanColor = (plan: Plan) => {
+    if (plan.name === 'Essencial') return 'from-blue-500/20 to-blue-600/10';
+    if (plan.name === 'Profissional') return 'from-amber-500/20 to-amber-600/10';
+    if (plan.name === 'Completo') return 'from-purple-500/20 to-purple-600/10';
+    return 'from-muted/50 to-muted/30';
   };
 
   if (loading) {
@@ -165,11 +191,11 @@ const UpgradePlans = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {plans.map((plan, index) => {
-              const PlanIcon = getPlanIcon(index);
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {plans.map((plan) => {
+              const PlanIcon = getPlanIcon(plan);
               const isCurrentPlan = plan.id === currentPlanId;
-              const isPopular = index === 1; // Mark second plan as popular
+              const isPopular = plan.name === 'Profissional';
               
               return (
                 <Card 
@@ -177,15 +203,20 @@ const UpgradePlans = () => {
                   className={cn(
                     "relative flex flex-col transition-all duration-300 hover:shadow-lg",
                     isCurrentPlan && "ring-2 ring-primary",
-                    isPopular && "border-primary"
+                    isPopular && "border-primary md:scale-105 z-10"
                   )}
                 >
-                  {/* Popular Badge */}
-                  {isPopular && (
+                  {/* Highlight Badge */}
+                  {plan.highlight_text && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary text-primary-foreground shadow-md">
+                      <Badge className={cn(
+                        "shadow-md",
+                        isPopular 
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-muted text-muted-foreground"
+                      )}>
                         <Star className="h-3 w-3 mr-1" />
-                        Mais Popular
+                        {plan.highlight_text}
                       </Badge>
                     </div>
                   )}
@@ -202,7 +233,7 @@ const UpgradePlans = () => {
 
                   <CardHeader className={cn(
                     "text-center rounded-t-lg bg-gradient-to-br",
-                    getPlanColor(index)
+                    getPlanColor(plan)
                   )}>
                     <div className="mx-auto w-12 h-12 rounded-full bg-background/80 flex items-center justify-center mb-2">
                       <PlanIcon className="h-6 w-6 text-primary" />
@@ -219,10 +250,18 @@ const UpgradePlans = () => {
                       <div className="flex items-baseline justify-center gap-1">
                         <span className="text-xs sm:text-sm text-muted-foreground">R$</span>
                         <span className="text-3xl sm:text-4xl font-bold text-foreground">
-                          {plan.price?.toFixed(0) || '0'}
+                          {plan.price?.toFixed(2).split('.')[0] || '0'}
+                        </span>
+                        <span className="text-lg text-muted-foreground">
+                          ,{plan.price?.toFixed(2).split('.')[1] || '00'}
                         </span>
                         <span className="text-xs sm:text-sm text-muted-foreground">/mês</span>
                       </div>
+                      {plan.discount_percentage && plan.discount_percentage > 0 && (
+                        <p className="text-xs text-success mt-1">
+                          Economia de {plan.discount_percentage}% vs. módulos avulsos
+                        </p>
+                      )}
                     </div>
 
                     {/* Limits */}
@@ -242,7 +281,7 @@ const UpgradePlans = () => {
                       <div className="flex justify-between text-xs sm:text-sm">
                         <span className="text-muted-foreground">Unidades</span>
                         <span className="font-medium">
-                          {plan.max_units === -1 ? 'Ilimitado' : plan.max_units}
+                          {plan.max_units === -1 ? 'Ilimitado' : plan.max_units || 1}
                         </span>
                       </div>
                     </div>
@@ -298,6 +337,32 @@ const UpgradePlans = () => {
             })}
           </div>
         )}
+
+        {/* Custom Plan Builder CTA */}
+        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+          <CardContent className="py-6 sm:py-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Settings className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold">Monte seu Plano Personalizado</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Escolha apenas os módulos que você precisa e pague só pelo que usar
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => setShowBuilder(true)}
+                className="gap-2 whitespace-nowrap"
+              >
+                <Package className="h-4 w-4" />
+                Personalizar Plano
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Comparison Table - Desktop */}
         {plans.length > 0 && (
@@ -359,7 +424,7 @@ const UpgradePlans = () => {
                           "text-center p-4 text-sm font-medium",
                           plan.id === currentPlanId && "bg-primary/5"
                         )}>
-                          {plan.max_units === -1 ? 'Ilimitado' : plan.max_units}
+                          {plan.max_units === -1 ? 'Ilimitado' : plan.max_units || 1}
                         </td>
                       ))}
                     </tr>
@@ -402,7 +467,7 @@ const UpgradePlans = () => {
                           "text-center p-4",
                           plan.id === currentPlanId && "bg-primary/5"
                         )}>
-                          <span className="text-lg font-bold">R$ {plan.price?.toFixed(0) || '0'}</span>
+                          <span className="text-lg font-bold">R$ {plan.price?.toFixed(2).replace('.', ',') || '0,00'}</span>
                         </td>
                       ))}
                     </tr>
@@ -414,11 +479,11 @@ const UpgradePlans = () => {
         )}
 
         {/* Contact Section */}
-        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+        <Card className="border-border">
           <CardContent className="py-6 sm:py-8 text-center">
-            <h3 className="text-lg sm:text-xl font-semibold mb-2">Precisa de um plano personalizado?</h3>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">Precisa de ajuda para escolher?</h3>
             <p className="text-sm sm:text-base text-muted-foreground mb-4">
-              Entre em contato conosco para criar um plano sob medida para sua barbearia
+              Nossa equipe está pronta para ajudar você a encontrar o plano perfeito
             </p>
             <Button variant="outline" className="gap-2">
               <MessageSquare className="h-4 w-4" />
@@ -427,6 +492,13 @@ const UpgradePlans = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modular Plan Builder Modal */}
+      <ModularPlanBuilder
+        isOpen={showBuilder}
+        onClose={() => setShowBuilder(false)}
+        onContinue={handleBuilderContinue}
+      />
     </Layout>
   );
 };
