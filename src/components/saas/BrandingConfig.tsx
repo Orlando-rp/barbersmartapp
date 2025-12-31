@@ -20,7 +20,10 @@ import {
   Type,
   Settings2,
   Sparkles,
-  Wand2
+  Wand2,
+  Sun,
+  Moon,
+  Trash2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -31,6 +34,8 @@ interface BrandingSettings {
   systemName: string;
   tagline: string;
   logoUrl: string;
+  logoLightUrl: string;
+  logoDarkUrl: string;
   faviconUrl: string;
   colors: {
     primary: string;
@@ -47,6 +52,8 @@ const defaultBranding: BrandingSettings = {
   systemName: 'BarberSmart',
   tagline: 'Gestão inteligente para sua barbearia',
   logoUrl: '',
+  logoLightUrl: '',
+  logoDarkUrl: '',
   faviconUrl: '',
   colors: {
     primary: '#3b5068',
@@ -66,6 +73,8 @@ export const BrandingConfig = () => {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingLogoLight, setUploadingLogoLight] = useState(false);
+  const [uploadingLogoDark, setUploadingLogoDark] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
 
@@ -94,6 +103,8 @@ export const BrandingConfig = () => {
           systemName: data.system_name || defaultBranding.systemName,
           tagline: data.tagline || defaultBranding.tagline,
           logoUrl: data.logo_url || '',
+          logoLightUrl: data.logo_light_url || '',
+          logoDarkUrl: data.logo_dark_url || '',
           faviconUrl: data.favicon_url || '',
           colors: {
             primary: data.primary_color || defaultBranding.colors.primary,
@@ -121,6 +132,8 @@ export const BrandingConfig = () => {
         system_name: config.systemName,
         tagline: config.tagline,
         logo_url: config.logoUrl || null,
+        logo_light_url: config.logoLightUrl || null,
+        logo_dark_url: config.logoDarkUrl || null,
         favicon_url: config.faviconUrl || null,
         primary_color: config.colors.primary,
         secondary_color: config.colors.secondary,
@@ -273,6 +286,112 @@ export const BrandingConfig = () => {
       toast.error("Erro ao enviar favicon");
     } finally {
       setUploadingFavicon(false);
+    }
+  };
+
+  const handleLogoLightUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingLogoLight(true);
+      
+      let fileToUpload: Blob = file;
+      let finalExt = file.name.split('.').pop() || 'png';
+      const skipCompression = file.type === 'image/svg+xml';
+
+      if (!skipCompression) {
+        try {
+          const optimized = await optimizeImage(file, {
+            maxWidth: 512,
+            maxHeight: 512,
+            quality: 85,
+            format: 'webp',
+            generateThumbnail: false,
+          });
+          
+          fileToUpload = optimized.optimizedBlob;
+          finalExt = optimized.metadata.format;
+        } catch (compressionError) {
+          console.warn('Compressão falhou, enviando arquivo original:', compressionError);
+        }
+      }
+
+      const fileName = `branding/saas/logo-light-${Date.now()}.${finalExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('landing-images')
+        .upload(fileName, fileToUpload, { 
+          upsert: true,
+          contentType: file.type === 'image/svg+xml' ? 'image/svg+xml' : `image/${finalExt}`
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('landing-images')
+        .getPublicUrl(fileName);
+
+      setConfig(prev => ({ ...prev, logoLightUrl: publicUrl }));
+      toast.success("Logo para tema claro enviado com sucesso!");
+    } catch (error) {
+      console.error('Erro ao enviar logo:', error);
+      toast.error("Erro ao enviar logo");
+    } finally {
+      setUploadingLogoLight(false);
+    }
+  };
+
+  const handleLogoDarkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingLogoDark(true);
+      
+      let fileToUpload: Blob = file;
+      let finalExt = file.name.split('.').pop() || 'png';
+      const skipCompression = file.type === 'image/svg+xml';
+
+      if (!skipCompression) {
+        try {
+          const optimized = await optimizeImage(file, {
+            maxWidth: 512,
+            maxHeight: 512,
+            quality: 85,
+            format: 'webp',
+            generateThumbnail: false,
+          });
+          
+          fileToUpload = optimized.optimizedBlob;
+          finalExt = optimized.metadata.format;
+        } catch (compressionError) {
+          console.warn('Compressão falhou, enviando arquivo original:', compressionError);
+        }
+      }
+
+      const fileName = `branding/saas/logo-dark-${Date.now()}.${finalExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('landing-images')
+        .upload(fileName, fileToUpload, { 
+          upsert: true,
+          contentType: file.type === 'image/svg+xml' ? 'image/svg+xml' : `image/${finalExt}`
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('landing-images')
+        .getPublicUrl(fileName);
+
+      setConfig(prev => ({ ...prev, logoDarkUrl: publicUrl }));
+      toast.success("Logo para tema escuro enviado com sucesso!");
+    } catch (error) {
+      console.error('Erro ao enviar logo:', error);
+      toast.error("Erro ao enviar logo");
+    } finally {
+      setUploadingLogoDark(false);
     }
   };
 
@@ -443,9 +562,106 @@ export const BrandingConfig = () => {
               </div>
             </CardHeader>
             <CardContent className="p-3 sm:p-6 pt-0 space-y-6">
-              {/* Logo */}
+              {/* Logo Modo Claro */}
               <div className="space-y-3">
-                <Label className="text-foreground text-sm">Logomarca Principal</Label>
+                <Label className="text-foreground text-sm flex items-center gap-2">
+                  <Sun className="h-4 w-4 text-amber-500" />
+                  Logo para Modo Claro
+                </Label>
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  <div className="w-24 h-24 border-2 border-dashed border-border rounded-lg flex items-center justify-center bg-white overflow-hidden">
+                    {config.logoLightUrl ? (
+                      <img src={config.logoLightUrl} alt="Logo Light" className="w-full h-full object-contain" />
+                    ) : (
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoLightUpload}
+                        disabled={uploadingLogoLight}
+                        className="bg-muted border-border text-foreground"
+                      />
+                      {config.logoLightUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setConfig(prev => ({ ...prev, logoLightUrl: '' }))}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {uploadingLogoLight && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Enviando...
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Logo exibido quando o tema claro está ativo
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Logo Modo Escuro */}
+              <div className="space-y-3">
+                <Label className="text-foreground text-sm flex items-center gap-2">
+                  <Moon className="h-4 w-4 text-indigo-400" />
+                  Logo para Modo Escuro
+                </Label>
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  <div className="w-24 h-24 border-2 border-dashed border-border rounded-lg flex items-center justify-center bg-slate-900 overflow-hidden">
+                    {config.logoDarkUrl ? (
+                      <img src={config.logoDarkUrl} alt="Logo Dark" className="w-full h-full object-contain" />
+                    ) : (
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoDarkUpload}
+                        disabled={uploadingLogoDark}
+                        className="bg-muted border-border text-foreground"
+                      />
+                      {config.logoDarkUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setConfig(prev => ({ ...prev, logoDarkUrl: '' }))}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {uploadingLogoDark && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Enviando...
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Logo exibido quando o tema escuro está ativo
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Logo Principal (Fallback) */}
+              <div className="space-y-3 pt-4 border-t border-border">
+                <Label className="text-foreground text-sm flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-warning" />
+                  Logomarca Principal (Fallback)
+                </Label>
                 <div className="flex flex-col sm:flex-row items-start gap-4">
                   <div className="w-24 h-24 border-2 border-dashed border-border rounded-lg flex items-center justify-center bg-muted overflow-hidden">
                     {config.logoUrl ? (
@@ -455,13 +671,25 @@ export const BrandingConfig = () => {
                     )}
                   </div>
                   <div className="flex-1 space-y-2">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      disabled={uploadingLogo}
-                      className="bg-muted border-border text-foreground"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={uploadingLogo}
+                        className="bg-muted border-border text-foreground"
+                      />
+                      {config.logoUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setConfig(prev => ({ ...prev, logoUrl: '' }))}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                     {uploadingLogo && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -469,14 +697,14 @@ export const BrandingConfig = () => {
                       </div>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Recomendado: PNG ou SVG transparente, 512x512px
+                      Usado quando não há logo específico para o tema. PNG ou SVG, 512x512px
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Favicon */}
-              <div className="space-y-3">
+              <div className="space-y-3 pt-4 border-t border-border">
                 <Label className="text-foreground text-sm">Favicon</Label>
                 <div className="flex flex-col sm:flex-row items-start gap-4">
                   <div className="w-16 h-16 border-2 border-dashed border-border rounded-lg flex items-center justify-center bg-muted overflow-hidden">
@@ -487,13 +715,25 @@ export const BrandingConfig = () => {
                     )}
                   </div>
                   <div className="flex-1 space-y-2">
-                    <Input
-                      type="file"
-                      accept="image/*,.ico"
-                      onChange={handleFaviconUpload}
-                      disabled={uploadingFavicon}
-                      className="bg-muted border-border text-foreground"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*,.ico"
+                        onChange={handleFaviconUpload}
+                        disabled={uploadingFavicon}
+                        className="bg-muted border-border text-foreground"
+                      />
+                      {config.faviconUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setConfig(prev => ({ ...prev, faviconUrl: '' }))}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                     {uploadingFavicon && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />
