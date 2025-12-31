@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Check, Star } from 'lucide-react';
 import { PlanFeatures } from './PlanFeaturesSelector';
 
@@ -57,19 +58,64 @@ export const PlanCardPreview = ({
   featureFlags,
   customFeatures
 }: PlanCardPreviewProps) => {
+  const [previewPeriod, setPreviewPeriod] = useState<'monthly' | 'annual'>('monthly');
   const features = getFeaturesList(featureFlags, maxStaff, customFeatures);
   const hasHighlight = !!highlightText;
 
+  // Calculate price based on preview period
+  const displayPrice = previewPeriod === 'annual' && discountPercentage 
+    ? price * (1 - discountPercentage / 100) 
+    : price;
+
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium text-foreground border-b pb-2 flex items-center gap-2">
-        <Star className="h-4 w-4 text-warning" />
-        Preview na Landing Page
-      </h3>
+      <div className="flex items-center justify-between border-b pb-2">
+        <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <Star className="h-4 w-4 text-warning" />
+          Preview na Landing Page
+        </h3>
+        
+        {/* Period Toggle */}
+        <div className="flex items-center gap-1 p-0.5 bg-muted rounded-lg text-xs">
+          <button
+            type="button"
+            onClick={() => setPreviewPeriod('monthly')}
+            className={`px-2.5 py-1 rounded-md transition-all ${
+              previewPeriod === 'monthly' 
+                ? 'bg-warning text-warning-foreground font-medium' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Mensal
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreviewPeriod('annual')}
+            className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
+              previewPeriod === 'annual' 
+                ? 'bg-warning text-warning-foreground font-medium' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Anual
+            {discountPercentage && discountPercentage > 0 && (
+              <span className={`text-[10px] px-1 py-0.5 rounded ${
+                previewPeriod === 'annual' 
+                  ? 'bg-black/20' 
+                  : 'bg-success/20 text-success'
+              }`}>
+                -{discountPercentage}%
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
       
       {/* Landing Page Preview (Dark Theme) */}
       <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/10">
-        <p className="text-[10px] text-white/40 mb-2 uppercase tracking-wide">Preview</p>
+        <p className="text-[10px] text-white/40 mb-2 uppercase tracking-wide">
+          Preview {previewPeriod === 'annual' ? '(Anual)' : '(Mensal)'}
+        </p>
         
         <div 
           className={`relative rounded-2xl p-5 backdrop-blur-xl transition-all ${
@@ -91,12 +137,12 @@ export const PlanCardPreview = ({
             </h4>
             <div className="flex items-baseline justify-center gap-1 mb-1">
               <span className="text-2xl font-bold text-white">
-                R$ {(price || 0).toFixed(0)}
+                R$ {displayPrice.toFixed(0)}
               </span>
               <span className="text-white/60 text-xs">
-                /{billingPeriod === 'yearly' ? 'ano' : 'mês'}
+                /{previewPeriod === 'annual' ? 'mês' : 'mês'}
               </span>
-              {discountPercentage && discountPercentage > 0 && (
+              {previewPeriod === 'annual' && discountPercentage && discountPercentage > 0 && (
                 <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
                   -{discountPercentage}%
                 </span>
@@ -123,6 +169,7 @@ export const PlanCardPreview = ({
           </ul>
           
           <button 
+            type="button"
             className={`w-full py-2 rounded-lg text-xs font-medium transition-all ${
               hasHighlight 
                 ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black' 
