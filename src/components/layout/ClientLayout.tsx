@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { getClientAvatarUrl } from '@/hooks/useAvatarUrl';
 
 interface ClientLayoutProps {
   children: ReactNode;
@@ -95,7 +96,7 @@ export const ClientLayout = ({ children }: ClientLayoutProps) => {
               <p className="text-xs text-muted-foreground">{client?.phone}</p>
             </div>
             <Avatar className="h-8 w-8">
-              <AvatarImage src={client?.avatar_url || undefined} />
+              <AvatarImage src={getClientAvatarUrl(client?.avatar_url) || undefined} />
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
 
@@ -110,7 +111,7 @@ export const ClientLayout = ({ children }: ClientLayoutProps) => {
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 pb-6 border-b">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={client?.avatar_url || undefined} />
+                      <AvatarImage src={getClientAvatarUrl(client?.avatar_url) || undefined} />
                       <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
                     <div>

@@ -184,7 +184,7 @@ export const LiveActivityFeed = () => {
                     {activity.user && (
                       <div className="flex items-center space-x-2">
                         <Avatar className="h-5 w-5">
-                          <AvatarImage src={activity.user.avatar} />
+                          <AvatarImage src={activity.user.avatar || undefined} />
                           <AvatarFallback className="text-xs">
                             {activity.user.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>

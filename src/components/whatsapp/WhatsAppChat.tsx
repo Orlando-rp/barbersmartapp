@@ -33,6 +33,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
+import { getClientAvatarUrl } from "@/hooks/useAvatarUrl";
 
 interface Message {
   id: string;
@@ -685,7 +686,7 @@ export const WhatsAppChat = () => {
                             className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
                           >
                             <Avatar className="h-10 w-10">
-                              {client.avatar_url && <AvatarImage src={client.avatar_url} />}
+                              {client.avatar_url && <AvatarImage src={getClientAvatarUrl(client.avatar_url) || undefined} />}
                               <AvatarFallback className="bg-primary/10 text-primary">
                                 {getInitials(client.name, client.phone)}
                               </AvatarFallback>
@@ -751,7 +752,7 @@ export const WhatsAppChat = () => {
                   onClick={() => setSelectedPhone(conv.phone_number)}
                 >
                   <Avatar className="h-10 w-10 shrink-0">
-                    {conv.avatar_url && <AvatarImage src={conv.avatar_url} />}
+                    {conv.avatar_url && <AvatarImage src={getClientAvatarUrl(conv.avatar_url) || undefined} />}
                     <AvatarFallback className="bg-primary/10 text-primary">
                       {getInitials(conv.contact_name, conv.phone_number)}
                     </AvatarFallback>

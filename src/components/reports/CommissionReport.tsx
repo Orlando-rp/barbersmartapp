@@ -49,6 +49,7 @@ import {
   Cell,
   Legend
 } from "recharts";
+import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
 
 interface StaffCommission {
   staffId: string;
@@ -480,7 +481,7 @@ export const CommissionReport = ({ period }: Props) => {
                   <div key={staff.staffId} className="border rounded-lg p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={staff.avatar} />
+                        <AvatarImage src={getStaffAvatarUrl(staff.avatar) || undefined} />
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
                           {staff.name.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
@@ -524,7 +525,7 @@ export const CommissionReport = ({ period }: Props) => {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={staff.avatar} />
+                            <AvatarImage src={getStaffAvatarUrl(staff.avatar) || undefined} />
                             <AvatarFallback className="bg-primary/10 text-primary">
                               {staff.name.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
