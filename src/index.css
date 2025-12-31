@@ -1,5 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Crimson+Pro:wght@400;500;600&display=swap');
 
+/* Posey Textured - Display Font */
+@font-face {
+  font-family: 'Posey Textured';
+  src: url('/fonts/Posey_Textured_Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -95,6 +104,7 @@
     --chart-5: 0 72% 50%;
 
     /* Typography */
+    --font-display: 'Posey Textured', 'Playfair Display', serif;
     --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
     --font-serif: 'Playfair Display', ui-serif, Georgia, serif;
     --font-mono: 'SF Mono', ui-monospace, monospace;
@@ -216,11 +226,17 @@
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  /* Headings with serif font for luxury feel */
-  h1, h2, h3 {
-    font-family: var(--font-serif);
+  /* Headings with Posey Textured for premium branding */
+  h1, h2 {
+    font-family: var(--font-display);
+    font-weight: normal;
+    letter-spacing: 0.02em;
+  }
+
+  h3, h4, h5, h6 {
+    font-family: var(--font-sans);
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
 
   /* Premium gradient classes */

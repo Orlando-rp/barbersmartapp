@@ -192,7 +192,7 @@ export const MobileSidebar = () => {
             <img 
               src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="h-8 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </div>
 
@@ -336,14 +336,14 @@ const Sidebar = () => {
           <img 
             src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
             alt={effectiveBranding?.system_name || 'Barber Smart'} 
-            className="h-8 w-auto max-w-[180px] object-contain"
+            className="h-12 w-auto max-w-[200px] object-contain"
           />
         ) : (
           <div className="flex items-center justify-center w-full">
             <img 
               src={currentLogoUrl || logoIcon} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="w-8 h-8 rounded-lg object-contain"
+              className="w-10 h-10 rounded-lg object-contain"
             />
           </div>
         )}
