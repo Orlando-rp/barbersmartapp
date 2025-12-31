@@ -60,7 +60,7 @@ export const useSubscription = () => {
         return;
       }
 
-      // Buscar assinatura em qualquer barbershop da hierarquia
+      // Buscar assinatura em qualquer barbershop da hierarquia (active ou trialing)
       const { data, error } = await supabase
         .from('subscriptions')
         .select(`
@@ -80,7 +80,7 @@ export const useSubscription = () => {
           )
         `)
         .in('barbershop_id', allRelatedIds)
-        .eq('status', 'active')
+        .in('status', ['active', 'trialing'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
