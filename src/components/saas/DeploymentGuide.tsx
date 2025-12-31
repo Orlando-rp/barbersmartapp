@@ -27,14 +27,15 @@ const CodeBlock = ({ children, language = "bash" }: { children: string; language
 
   return (
     <div className="relative group">
-      <pre className="bg-muted/50 border border-border rounded-lg p-4 overflow-x-auto text-sm font-mono">
+      <pre className="bg-muted/50 border border-border rounded-lg p-4 pr-12 overflow-x-auto text-sm font-mono">
         <code>{children}</code>
       </pre>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+        className="absolute top-2 right-2 h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground transition-colors"
         onClick={copyToClipboard}
+        title="Copiar comando"
       >
         <Copy className="h-4 w-4" />
       </Button>
