@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Camera, Trash2, Upload, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { invalidateAvatarCache } from "@/hooks/useAvatarUrl";
 
 interface ClientAvatarUploadProps {
   clientId: string;
@@ -122,6 +123,17 @@ export const ClientAvatarUpload = ({
 
       if (updateError) throw updateError;
 
+      // Invalidar cache do avatar antigo e novo
+      if (currentAvatarUrl && !currentAvatarUrl.startsWith('http')) {
+        const oldPath = currentAvatarUrl.includes('/') 
+          ? currentAvatarUrl.split('/').pop() 
+          : currentAvatarUrl;
+        if (oldPath) {
+          invalidateAvatarCache(oldPath, 'client-avatars');
+        }
+      }
+      invalidateAvatarCache(filePath, 'client-avatars');
+
       const publicUrl = getAvatarUrl(filePath);
       onAvatarUpdate(publicUrl);
 
@@ -150,7 +162,7 @@ export const ClientAvatarUpload = ({
     try {
       setDeleting(true);
 
-      // Deletar arquivo do storage
+      // Deletar arquivo do storage e invalidar cache
       if (!currentAvatarUrl.startsWith('http')) {
         const path = currentAvatarUrl.includes('/') 
           ? currentAvatarUrl.split('/').pop() 
@@ -159,6 +171,8 @@ export const ClientAvatarUpload = ({
           await supabase.storage
             .from('client-avatars')
             .remove([path]);
+          // Invalidar cache do avatar removido
+          invalidateAvatarCache(path, 'client-avatars');
         }
       }
 
