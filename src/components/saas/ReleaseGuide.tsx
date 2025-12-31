@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -13,29 +14,39 @@ import {
   FileText, 
   RotateCcw,
   Copy,
+  Check,
   Rocket,
   AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 
 const CodeBlock = ({ children }: { children: string }) => {
+  const [copied, setCopied] = useState(false);
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(children);
+    setCopied(true);
     toast.success("Copiado para a área de transferência!");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <div className="relative group">
-      <pre className="bg-muted/50 border border-border rounded-lg p-4 overflow-x-auto text-sm font-mono">
+      <pre className="bg-muted/50 border border-border rounded-lg p-4 pr-12 overflow-x-auto text-sm font-mono">
         <code>{children}</code>
       </pre>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+        className={`absolute top-2 right-2 h-8 w-8 backdrop-blur-sm transition-all ${
+          copied 
+            ? "bg-success text-success-foreground border-success" 
+            : "bg-background/80 hover:bg-primary hover:text-primary-foreground"
+        }`}
         onClick={copyToClipboard}
+        title="Copiar comando"
       >
-        <Copy className="h-4 w-4" />
+        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
       </Button>
     </div>
   );
