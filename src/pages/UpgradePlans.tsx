@@ -121,10 +121,8 @@ const UpgradePlans = () => {
   const handleSelectPlan = async (plan: Plan) => {
     if (plan.id === currentPlanId) return;
     
-    toast.success(
-      `Interesse no plano ${plan.name} registrado! Nossa equipe entrará em contato.`,
-      { duration: 5000 }
-    );
+    // Navigate to checkout page with plan ID
+    navigate(`/subscription/checkout?plan=${plan.id}`);
   };
 
   const handleBuilderContinue = (selectedAddons: string[], billingPeriod: 'monthly' | 'annual') => {
