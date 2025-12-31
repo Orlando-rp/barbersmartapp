@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { StaffAvatar } from "@/components/ui/smart-avatar";
 import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin, Wallet, CreditCard, CheckCircle2, Banknote, QrCode } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -21,7 +21,6 @@ import { ptBR } from "date-fns/locale";
 import { AppointmentsSkeleton } from "@/components/skeletons";
 import { IllustratedEmptyState } from "@/components/ui/illustrated-empty-state";
 import { PullToRefreshContainer } from "@/components/ui/pull-to-refresh";
-import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
 
 interface Appointment {
   id: string;
@@ -790,12 +789,14 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
 
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs md:text-sm">
                         <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6 md:h-8 md:w-8">
-                            <AvatarImage src={getStaffAvatarUrl(appointment.staff?.avatar_url) || undefined} alt={appointment.staff?.name || ''} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-[10px] md:text-xs">
-                              {appointment.staff?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-3 w-3 md:h-4 md:w-4" />}
-                            </AvatarFallback>
-                          </Avatar>
+                          <StaffAvatar 
+                            src={appointment.staff?.avatar_url}
+                            alt={appointment.staff?.name || ''}
+                            fallbackText={appointment.staff?.name}
+                            fallback={!appointment.staff?.name ? <User className="h-3 w-3 md:h-4 md:w-4" /> : undefined}
+                            className="h-6 w-6 md:h-8 md:w-8"
+                            fallbackClassName="bg-primary/10 text-primary text-[10px] md:text-xs"
+                          />
                           <span className="truncate">
                             <span className="hidden sm:inline">Barbeiro: </span>
                             <span className="font-medium">{appointment.staff?.name || 'Não especificado'}</span>

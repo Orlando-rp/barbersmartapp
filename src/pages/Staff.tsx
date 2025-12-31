@@ -3,12 +3,11 @@ import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, CheckCircle, XCircle, UserPlus, User, Building2 } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { StaffAvatar } from "@/components/ui/smart-avatar";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
-import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
 import {
   Table,
   TableBody,
@@ -502,12 +501,14 @@ const Staff = () => {
                       <CardContent className="p-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <Avatar className="h-9 w-9 shrink-0">
-                              <AvatarImage src={getStaffAvatarUrl(member.profiles?.avatar_url)} alt={member.profiles?.full_name} />
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                {member.profiles?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-3 w-3" />}
-                              </AvatarFallback>
-                            </Avatar>
+                            <StaffAvatar 
+                              src={member.profiles?.avatar_url}
+                              alt={member.profiles?.full_name}
+                              fallbackText={member.profiles?.full_name}
+                              fallback={!member.profiles?.full_name ? <User className="h-3 w-3" /> : undefined}
+                              className="h-9 w-9 shrink-0"
+                              fallbackClassName="bg-primary/10 text-primary text-xs"
+                            />
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-sm truncate">{member.profiles?.full_name || 'Nome não disponível'}</p>
                               <p className="text-xs text-muted-foreground truncate">{member.profiles?.phone || '-'}</p>
@@ -586,12 +587,14 @@ const Staff = () => {
                         <TableRow key={member.id}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={getStaffAvatarUrl(member.profiles?.avatar_url)} alt={member.profiles?.full_name} />
-                                <AvatarFallback className="bg-primary/10 text-primary">
-                                  {member.profiles?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || <User className="h-4 w-4" />}
-                                </AvatarFallback>
-                              </Avatar>
+                              <StaffAvatar 
+                                src={member.profiles?.avatar_url}
+                                alt={member.profiles?.full_name}
+                                fallbackText={member.profiles?.full_name}
+                                fallback={!member.profiles?.full_name ? <User className="h-4 w-4" /> : undefined}
+                                className="h-10 w-10"
+                                fallbackClassName="bg-primary/10 text-primary"
+                              />
                               <span className="truncate max-w-[150px]">{member.profiles?.full_name || 'Nome não disponível'}</span>
                             </div>
                           </TableCell>
