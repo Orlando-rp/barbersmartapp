@@ -5,6 +5,7 @@ import { Camera, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { invalidateAvatarCache } from "@/hooks/useAvatarUrl";
 
 interface AvatarUploadProps {
   currentAvatarUrl: string | null;
@@ -96,6 +97,12 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate }: AvatarUploadP
 
       if (updateError) throw updateError;
 
+      // Invalidar cache do avatar antigo e novo
+      if (currentAvatarUrl && !currentAvatarUrl.startsWith('http')) {
+        invalidateAvatarCache(currentAvatarUrl, 'avatars');
+      }
+      invalidateAvatarCache(filePath, 'avatars');
+
       const publicUrl = getAvatarUrl(filePath);
       if (publicUrl) {
         onAvatarUpdate(publicUrl);
@@ -141,6 +148,11 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate }: AvatarUploadP
         .eq('id', user.id);
 
       if (error) throw error;
+
+      // Invalidar cache do avatar removido
+      if (path && !path.startsWith('http')) {
+        invalidateAvatarCache(path, 'avatars');
+      }
 
       onAvatarUpdate('');
 
