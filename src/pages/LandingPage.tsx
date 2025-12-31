@@ -37,7 +37,7 @@ import {
   MessageSquare, 
   TrendingUp, 
   Users, 
-  Scissors, 
+  Scissors,
   Clock, 
   Bell, 
   BarChart3, 
@@ -53,6 +53,7 @@ import {
   CreditCard,
   Puzzle
 } from "lucide-react";
+import logoDark from "@/assets/logo-dark.png";
 import { PackageComparison } from "@/components/pricing/PackageComparison";
 import { ModularPlanBuilder } from "@/components/pricing/ModularPlanBuilder";
 import { Button } from "@/components/ui/button";
@@ -328,11 +329,12 @@ const LandingPage = () => {
         className="fixed top-0 left-0 right-0 z-50 px-4 py-4"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 px-6 py-3">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
-              <Scissors className="w-5 h-5 text-black" />
-            </div>
-            <span className="text-xl font-bold">BarberSmart</span>
+          <div className="flex items-center gap-3">
+            <img 
+              src={logoDark} 
+              alt="Barber Smart" 
+              className="h-10 w-auto object-contain"
+            />
           </div>
           <div className="hidden md:flex items-center gap-8">
             <button 

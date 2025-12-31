@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { User, LogOut, Settings as SettingsIcon, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
+import logoDark from "@/assets/logo-dark.png";
+import logoLight from "@/assets/logo-light.png";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -69,23 +71,12 @@ const Header = () => {
         {/* Logo + Barbershop Selector */}
         <div className="flex items-center gap-2 lg:gap-6">
           {/* Logo - Only visible on mobile/tablet, hidden on desktop where it's in sidebar */}
-          <div className="flex items-center space-x-2 lg:hidden">
-            {currentLogoUrl ? (
-              <img 
-                src={currentLogoUrl} 
-                alt={effectiveBranding?.system_name || 'Logo'} 
-                className="w-7 h-7 rounded-lg object-contain"
-              />
-            ) : (
-              <div className="w-7 h-7 gradient-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-xs">
-                  {effectiveBranding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
-                </span>
-              </div>
-            )}
-            <h1 className="text-base font-bold text-foreground hidden sm:block">
-              {effectiveBranding?.system_name || 'Barber Smart'}
-            </h1>
+          <div className="flex items-center lg:hidden">
+            <img 
+              src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
+              alt={effectiveBranding?.system_name || 'Barber Smart'} 
+              className="h-8 w-auto object-contain"
+            />
           </div>
           
           {/* Barbershop Selector */}
