@@ -267,11 +267,11 @@ const LandingPage = () => {
 
   const plans = [
     {
-      name: "Starter",
-      price: billingPeriod === 'monthly' ? "R$ 97" : "R$ 77",
-      description: "Para barbearias iniciando",
+      name: "Essencial",
+      price: billingPeriod === 'monthly' ? "R$ 49,90" : "R$ 39,90",
+      description: "Para barbearias pequenas",
       features: [
-        "Até 2 profissionais",
+        "Até 3 profissionais",
         "Agendamento online",
         "Notificações WhatsApp",
         "Gestão de clientes",
@@ -280,29 +280,29 @@ const LandingPage = () => {
     },
     {
       name: "Profissional",
-      price: billingPeriod === 'monthly' ? "R$ 197" : "R$ 157",
+      price: billingPeriod === 'monthly' ? "R$ 97,90" : "R$ 78,30",
       description: "Para barbearias em crescimento",
       features: [
-        "Até 10 profissionais",
+        "Até 8 profissionais",
         "Chatbot IA WhatsApp",
         "Gestão financeira completa",
-        "Programa de fidelidade",
+        "Campanhas de marketing",
         "Relatórios avançados",
-        "Marketing automatizado"
+        "Comissões automáticas"
       ],
       popular: true
     },
     {
-      name: "Enterprise",
-      price: billingPeriod === 'monthly' ? "R$ 397" : "R$ 317",
-      description: "Para redes de barbearias",
+      name: "Completo",
+      price: billingPeriod === 'monthly' ? "R$ 197,90" : "R$ 158,30",
+      description: "Tudo que você precisa",
       features: [
         "Profissionais ilimitados",
         "Múltiplas unidades",
-        "White-label completo",
-        "API personalizada",
-        "Suporte prioritário 24/7",
-        "Gestor de conta dedicado"
+        "Programa de fidelidade",
+        "Análises preditivas",
+        "Suporte prioritário",
+        "Todos os recursos"
       ]
     }
   ];
