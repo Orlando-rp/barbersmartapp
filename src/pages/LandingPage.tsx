@@ -861,7 +861,7 @@ const LandingPage = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 font-display">
               Tudo que você precisa.{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
                 Nada que você não precisa.
@@ -943,7 +943,7 @@ const LandingPage = () => {
             viewport={{ once: true }}
             className="text-center mb-8 sm:mb-16"
           >
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 font-display">
               Simples como deve ser
             </h2>
             <p className="text-white/60 text-sm sm:text-lg max-w-2xl mx-auto px-4">
@@ -990,7 +990,7 @@ const LandingPage = () => {
                 <MessageSquare className="w-4 h-4" />
                 Integração WhatsApp
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 font-display">
                 Seu assistente virtual{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">
                   24 horas por dia
@@ -1099,7 +1099,7 @@ const LandingPage = () => {
               </span>
             </motion.div>
 
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 font-display">
               Investimento que se paga
             </h2>
             <p className="text-white/60 text-sm sm:text-lg max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
@@ -1187,7 +1187,7 @@ const LandingPage = () => {
             viewport={{ once: true }}
             className="text-center mb-8 sm:mb-12"
           >
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 font-display">
               Quem usa, recomenda
             </h2>
             <p className="text-white/60 text-sm sm:text-lg">
@@ -1252,7 +1252,7 @@ const LandingPage = () => {
             viewport={{ once: true }}
             className="text-center mb-8 sm:mb-12"
           >
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 font-display">
               Perguntas Frequentes
             </h2>
             <p className="text-white/60 text-sm sm:text-lg">
@@ -1313,7 +1313,7 @@ const LandingPage = () => {
                 Comece grátis por 14 dias
               </motion.div>
               
-              <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
+              <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 font-display">
                 Pronto para transformar sua barbearia?
               </h2>
               <p className="text-white/60 text-sm sm:text-lg max-w-xl mx-auto mb-6 sm:mb-8">
