@@ -281,10 +281,27 @@ const LandingPage = () => {
   const landingLogo = effectiveBranding?.logo_dark_url || effectiveBranding?.logo_url || logoDark;
   const landingLogoMobile = effectiveBranding?.logo_dark_url || effectiveBranding?.logo_url || logoIcon;
 
-  // Fetch plans from database
+  // Cache constants
+  const PLANS_CACHE_KEY = 'landing_plans_cache';
+  const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
+  // Fetch plans from database with local cache
   useEffect(() => {
     const fetchPlans = async () => {
       try {
+        // Check cache first
+        const cachedData = localStorage.getItem(PLANS_CACHE_KEY);
+        if (cachedData) {
+          const { plans: cachedPlans, timestamp } = JSON.parse(cachedData);
+          const isExpired = Date.now() - timestamp > CACHE_DURATION_MS;
+          
+          if (!isExpired && cachedPlans?.length > 0) {
+            setDbPlans(cachedPlans);
+            setLoadingPlans(false);
+            return;
+          }
+        }
+
         setLoadingPlans(true);
         const { data, error } = await supabase
           .from('subscription_plans')
@@ -302,9 +319,24 @@ const LandingPage = () => {
             : defaultPlanFeatures
         }));
 
+        // Save to cache
+        localStorage.setItem(PLANS_CACHE_KEY, JSON.stringify({
+          plans: parsedPlans,
+          timestamp: Date.now()
+        }));
+
         setDbPlans(parsedPlans);
       } catch (error) {
         console.error('Erro ao buscar planos:', error);
+        
+        // Try to use stale cache on error
+        const cachedData = localStorage.getItem(PLANS_CACHE_KEY);
+        if (cachedData) {
+          const { plans: cachedPlans } = JSON.parse(cachedData);
+          if (cachedPlans?.length > 0) {
+            setDbPlans(cachedPlans);
+          }
+        }
       } finally {
         setLoadingPlans(false);
       }
