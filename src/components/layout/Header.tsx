@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { User, LogOut, Settings as SettingsIcon, Sun, Moon } from "lucide-react";
+import { User, LogOut, Settings as SettingsIcon, Sun, Moon, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import logoDark from "@/assets/logo-dark.png";
@@ -14,12 +14,38 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import BarbershopSelector from "./BarbershopSelector";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { CommandPaletteTrigger } from "./CommandPalette";
 import { useTheme } from "next-themes";
+
+interface ReleaseItem {
+  text: string;
+  hash: string | null;
+}
+
+interface Release {
+  version: string;
+  date: string | null;
+  sections: { [key: string]: ReleaseItem[] };
+}
+
+interface ReleaseNotesData {
+  releases: Release[];
+  latest: Release | null;
+  generated_at: string;
+}
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
@@ -28,12 +54,29 @@ const Header = () => {
   const navigate = useNavigate();
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileFullName, setProfileFullName] = useState<string | null>(null);
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
+  const [releaseData, setReleaseData] = useState<ReleaseNotesData | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.id) {
       fetchProfileData();
     }
+    fetchReleaseNotes();
   }, [user?.id]);
+
+  const fetchReleaseNotes = async () => {
+    try {
+      const response = await fetch('/release-notes.json');
+      if (response.ok) {
+        const data: ReleaseNotesData = await response.json();
+        setReleaseData(data);
+        setCurrentVersion(data.latest?.version || null);
+      }
+    } catch (error) {
+      console.error('Error fetching release notes:', error);
+    }
+  };
 
   const fetchProfileData = async () => {
     const { data } = await supabase
@@ -148,6 +191,15 @@ const Header = () => {
                 <SettingsIcon className="mr-2 h-4 w-4" />
                 <span>Configurações</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setReleaseNotesOpen(true)}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                <span>Novidades</span>
+                {currentVersion && (
+                  <Badge variant="secondary" className="ml-auto text-xs font-mono">
+                    {currentVersion}
+                  </Badge>
+                )}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => signOut()}>
                 <LogOut className="mr-2 h-4 w-4" />
@@ -155,6 +207,69 @@ const Header = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Release Notes Dialog */}
+          <Dialog open={releaseNotesOpen} onOpenChange={setReleaseNotesOpen}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl">Novidades</DialogTitle>
+                    <DialogDescription className="flex items-center gap-2">
+                      Histórico de atualizações
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <ScrollArea className="max-h-[60vh] pr-4">
+                {releaseData?.releases && releaseData.releases.length > 0 ? (
+                  <div className="space-y-6">
+                    {releaseData.releases.map((release, idx) => (
+                      <div key={idx} className="border-b border-border pb-4 last:border-0">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge variant={idx === 0 ? "default" : "secondary"} className="font-mono">
+                            {release.version}
+                          </Badge>
+                          {release.date && (
+                            <span className="text-sm text-muted-foreground">{release.date}</span>
+                          )}
+                          {idx === 0 && (
+                            <Badge variant="outline" className="text-xs">Atual</Badge>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {Object.entries(release.sections).map(([section, items]) => (
+                            items.length > 0 && (
+                              <div key={section}>
+                                <div className="text-sm font-medium mb-1.5">{section}</div>
+                                <ul className="pl-4 space-y-1">
+                                  {items.map((item, itemIdx) => (
+                                    <li key={itemIdx} className="text-sm text-muted-foreground flex items-start gap-2">
+                                      <span className="text-primary mt-0.5">•</span>
+                                      <span>{item.text}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">
+                    Nenhuma atualização disponível.
+                  </p>
+                )}
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </header>
