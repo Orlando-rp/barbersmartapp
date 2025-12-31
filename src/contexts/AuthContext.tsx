@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { clearAvatarCache } from '@/hooks/useAvatarCache';
 
 type UserRole = 'super_admin' | 'admin' | 'barbeiro' | 'recepcionista';
 
@@ -311,6 +312,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBarbershops([]);
       setSelectedBarbershopId(null);
       setNeedsProfileCompletion(false);
+      // Clear avatar cache for privacy
+      clearAvatarCache();
       toast({
         title: 'Logout realizado',
         description: 'Você saiu da sua conta com sucesso.',
