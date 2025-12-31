@@ -165,6 +165,8 @@ const BarbershopLanding = () => {
     const description = barbershop.settings?.description || 
       `${barbershop.name} - Agende seu horário online. Serviços de barbearia de qualidade em ${barbershop.city || barbershop.address}.`;
     
+    // OG Image dinâmica gerada pela edge function
+    const ogImageUrl = `https://nmsblmmhigwsevnqmhwn.supabase.co/functions/v1/og-image?id=${barbershop.id}`;
     const heroImage = landingConfig.hero_image_url || barbershop.logo_url;
     
     // Calcular faixa de preço
@@ -224,7 +226,7 @@ const BarbershopLanding = () => {
     return {
       title: `${barbershop.name} | Agende Online`,
       description: description.slice(0, 160),
-      image: heroImage,
+      image: ogImageUrl, // Usar OG image dinâmica
       siteName: barbershop.name,
       type: 'business.business' as const,
       businessName: barbershop.name,
