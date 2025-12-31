@@ -12,6 +12,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Initialize Supabase client
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  let deployId: string | null = null;
+
   try {
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
@@ -22,11 +29,6 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user from JWT
     const token = authHeader.replace('Bearer ', '');
@@ -94,6 +96,29 @@ serve(async (req) => {
       );
     }
 
+    // Insert deploy record with status 'triggered'
+    const { data: deployRecord, error: insertError } = await supabase
+      .from('deploy_history')
+      .insert({
+        tag,
+        status: 'triggered',
+        triggered_by: user.id,
+        skip_health_check: !!skip_health_check
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting deploy record:', insertError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create deploy record' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    deployId = deployRecord.id;
+    console.log(`Deploy record created: ${deployId}`);
+
     console.log(`Triggering workflow for ${githubOwner}/${githubRepo} with tag: ${tag}`);
 
     // Trigger GitHub Actions workflow
@@ -119,13 +144,20 @@ serve(async (req) => {
     console.log('GitHub API response status:', githubResponse.status);
 
     if (githubResponse.status === 204) {
+      // Update deploy record to success
+      await supabase
+        .from('deploy_history')
+        .update({ status: 'success' })
+        .eq('id', deployId);
+
       console.log('Workflow triggered successfully');
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: 'Deploy triggered successfully',
           tag: tag,
-          skip_health_check: !!skip_health_check
+          skip_health_check: !!skip_health_check,
+          deploy_id: deployId
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -141,15 +173,30 @@ serve(async (req) => {
       console.error('Could not read error body');
     }
 
+    // Update deploy record to error
+    await supabase
+      .from('deploy_history')
+      .update({ status: 'error', error_message: errorMessage })
+      .eq('id', deployId);
+
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: errorMessage, deploy_id: deployId }),
       { status: githubResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error in trigger-deploy function:', error);
+
+    // Update deploy record to error if we have an ID
+    if (deployId) {
+      await supabase
+        .from('deploy_history')
+        .update({ status: 'error', error_message: error.message })
+        .eq('id', deployId);
+    }
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message, deploy_id: deployId }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
