@@ -44,6 +44,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useTheme } from "next-themes";
+import logoDark from "@/assets/logo-dark.png";
+import logoLight from "@/assets/logo-light.png";
+import logoIcon from "@/assets/logo-barbersmart.png";
 
 interface NavItem {
   name: string;
@@ -154,6 +158,7 @@ export const MobileSidebar = () => {
   const { subscription, loading: subscriptionLoading } = useSubscription();
   const { hasPermission } = useRolePermissions();
   const location = useLocation();
+  const { theme } = useTheme();
   const waitlistCount = useWaitlistCount();
 
   useEffect(() => {
@@ -183,18 +188,11 @@ export const MobileSidebar = () => {
         <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
         <div className="flex flex-col h-full bg-card">
           <div className="flex items-center justify-between p-4 border-b border-border">
-            <div className="flex items-center space-x-2">
-              {currentLogoUrl ? (
-                <img src={currentLogoUrl} alt={effectiveBranding?.system_name || 'Logo'} className="w-8 h-8 rounded-lg object-contain" />
-              ) : (
-                <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-sm">
-                    {effectiveBranding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
-                  </span>
-                </div>
-              )}
-              <span className="font-bold text-lg">{effectiveBranding?.system_name || 'BarberSmart'}</span>
-            </div>
+            <img 
+              src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
+              alt={effectiveBranding?.system_name || 'Barber Smart'} 
+              className="h-8 w-auto object-contain"
+            />
           </div>
 
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -289,6 +287,7 @@ const Sidebar = () => {
   const { hasPermission } = useRolePermissions();
   const location = useLocation();
   const waitlistCount = useWaitlistCount();
+  const { theme } = useTheme();
 
   const filterNavItem = (item: NavItem) => {
     if (userRole === 'super_admin') return true;
@@ -333,29 +332,18 @@ const Sidebar = () => {
       {/* Logo + Toggle */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         {!collapsed ? (
-          <div className="flex items-center space-x-2 min-w-0">
-            {currentLogoUrl ? (
-              <img src={currentLogoUrl} alt={effectiveBranding?.system_name || 'Logo'} className="w-8 h-8 rounded-lg object-contain shrink-0" />
-            ) : (
-              <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center shrink-0">
-                <span className="text-primary-foreground font-bold text-sm">
-                  {effectiveBranding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
-                </span>
-              </div>
-            )}
-            <span className="font-bold text-lg truncate">{effectiveBranding?.system_name || 'BarberSmart'}</span>
-          </div>
+          <img 
+            src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
+            alt={effectiveBranding?.system_name || 'Barber Smart'} 
+            className="h-8 w-auto max-w-[180px] object-contain"
+          />
         ) : (
           <div className="flex items-center justify-center w-full">
-            {currentLogoUrl ? (
-              <img src={currentLogoUrl} alt={effectiveBranding?.system_name || 'Logo'} className="w-8 h-8 rounded-lg object-contain" />
-            ) : (
-              <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">
-                  {effectiveBranding?.system_name?.substring(0, 2).toUpperCase() || 'BS'}
-                </span>
-              </div>
-            )}
+            <img 
+              src={currentLogoUrl || logoIcon} 
+              alt={effectiveBranding?.system_name || 'Barber Smart'} 
+              className="w-8 h-8 rounded-lg object-contain"
+            />
           </div>
         )}
         <Button
