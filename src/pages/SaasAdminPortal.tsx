@@ -82,6 +82,7 @@ import DomainsManagement from "@/components/saas/DomainsManagement";
 import { GlobalPaymentConfig } from "@/components/saas/GlobalPaymentConfig";
 import { PlanFeaturesSelector, defaultPlanFeatures, featuresToStringArray, stringArrayToFeatures, type PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import { PlanCardPreview } from "@/components/saas/PlanCardPreview";
+import { ReleaseNotes } from "@/components/saas/ReleaseNotes";
 import {
   BarChart,
   Bar,
@@ -925,6 +926,9 @@ const SaasAdminPortal = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Release Notes */}
+              <ReleaseNotes />
             </div>
           </TabsContent>
 

@@ -1,0 +1,32 @@
+{
+  "releases": [
+    {
+      "version": "v1.0.0",
+      "date": "2024-01-01",
+      "sections": {
+        "✨ Novas Funcionalidades": [
+          { "text": "Lançamento inicial do BarberSmart", "hash": null },
+          { "text": "Sistema de agendamento completo", "hash": null },
+          { "text": "Gestão financeira integrada", "hash": null },
+          { "text": "Portal do cliente", "hash": null },
+          { "text": "Integração com WhatsApp", "hash": null }
+        ]
+      }
+    }
+  ],
+  "total": 1,
+  "latest": {
+    "version": "v1.0.0",
+    "date": "2024-01-01",
+    "sections": {
+      "✨ Novas Funcionalidades": [
+        { "text": "Lançamento inicial do BarberSmart", "hash": null },
+        { "text": "Sistema de agendamento completo", "hash": null },
+        { "text": "Gestão financeira integrada", "hash": null },
+        { "text": "Portal do cliente", "hash": null },
+        { "text": "Integração com WhatsApp", "hash": null }
+      ]
+    }
+  },
+  "generated_at": "2024-01-01T00:00:00.000Z"
+}
