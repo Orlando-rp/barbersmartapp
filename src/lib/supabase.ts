@@ -314,6 +314,19 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['waitlist']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['waitlist']['Insert']>;
       };
+      deploy_history: {
+        Row: {
+          id: string;
+          tag: string;
+          status: 'triggered' | 'success' | 'error';
+          triggered_by: string | null;
+          skip_health_check: boolean;
+          error_message: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['deploy_history']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['deploy_history']['Insert']>;
+      };
     };
   };
 };
