@@ -412,7 +412,7 @@ const LandingPage = () => {
               </motion.div>
             </div>
             
-            {/* Hero Visual */}
+            {/* Hero Visual - Animated Dashboard Demo */}
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
@@ -423,82 +423,189 @@ const LandingPage = () => {
                 {/* Glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-3xl blur-3xl" />
                 
-                {/* Dashboard mockup */}
-                <div className="relative bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl rounded-3xl border border-white/20 p-6 shadow-2xl">
+                {/* Dashboard mockup with animations */}
+                <div className="relative bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl rounded-3xl border border-white/20 p-5 shadow-2xl overflow-hidden">
+                  {/* Browser dots */}
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-3 h-3 rounded-full bg-red-500" />
                     <div className="w-3 h-3 rounded-full bg-yellow-500" />
                     <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <div className="ml-4 flex-1 h-6 bg-white/5 rounded-lg flex items-center px-3">
+                      <span className="text-[10px] text-white/40">barbersmart.app/dashboard</span>
+                    </div>
                   </div>
                   
-                  <div className="space-y-4">
-                    {/* Header */}
+                  <div className="space-y-3">
+                    {/* Header with animated notification */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600" />
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                          <Scissors className="w-4 h-4 text-black" />
+                        </div>
                         <div>
-                          <div className="h-4 w-32 bg-white/20 rounded" />
-                          <div className="h-3 w-24 bg-white/10 rounded mt-1" />
+                          <div className="text-sm font-semibold text-white">Barbearia Classic</div>
+                          <div className="text-[10px] text-white/50">Bem-vindo, Carlos!</div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-white/10" />
-                        <div className="w-8 h-8 rounded-lg bg-white/10" />
+                      <motion.div 
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                        className="relative"
+                      >
+                        <Bell className="w-5 h-5 text-white/60" />
+                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full" />
+                      </motion.div>
+                    </div>
+                    
+                    {/* Animated Stats row */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <motion.div 
+                        className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-xl p-3 border border-amber-500/20"
+                        animate={{ opacity: [0.8, 1, 0.8] }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                      >
+                        <div className="text-[10px] text-white/60 mb-1">Hoje</div>
+                        <div className="text-lg font-bold text-amber-500">12</div>
+                        <div className="text-[10px] text-white/50">agendamentos</div>
+                      </motion.div>
+                      <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                        <div className="text-[10px] text-white/60 mb-1">Semana</div>
+                        <div className="text-lg font-bold text-white">R$ 4.850</div>
+                        <div className="text-[10px] text-emerald-400">+18% ↑</div>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                        <div className="text-[10px] text-white/60 mb-1">Taxa</div>
+                        <div className="text-lg font-bold text-white">94%</div>
+                        <div className="text-[10px] text-white/50">presença</div>
                       </div>
                     </div>
                     
-                    {/* Stats row */}
-                    <div className="grid grid-cols-3 gap-3">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="bg-white/10 rounded-xl p-4">
-                          <div className="h-3 w-12 bg-white/20 rounded mb-2" />
-                          <div className="h-6 w-16 bg-amber-500/40 rounded" />
-                        </div>
-                      ))}
+                    {/* Animated appointments list */}
+                    <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-xs font-medium text-white">Próximos Agendamentos</div>
+                        <div className="text-[10px] text-amber-500">Ver todos</div>
+                      </div>
+                      <div className="space-y-2">
+                        {[
+                          { name: "João Silva", service: "Corte + Barba", time: "09:00", status: "now" },
+                          { name: "Pedro Santos", service: "Corte Degradê", time: "09:45", status: "next" },
+                          { name: "Lucas Oliveira", service: "Barba", time: "10:15", status: "upcoming" }
+                        ].map((apt, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 1 + i * 0.3, duration: 0.4 }}
+                            className={`flex items-center justify-between p-2 rounded-lg ${
+                              apt.status === 'now' 
+                                ? 'bg-amber-500/20 border border-amber-500/30' 
+                                : 'bg-white/5'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-white/20 to-white/10 flex items-center justify-center text-[10px] font-medium">
+                                {apt.name.charAt(0)}
+                              </div>
+                              <div>
+                                <div className="text-[11px] font-medium text-white">{apt.name}</div>
+                                <div className="text-[9px] text-white/50">{apt.service}</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`text-[11px] font-medium ${apt.status === 'now' ? 'text-amber-500' : 'text-white/70'}`}>
+                                {apt.time}
+                              </div>
+                              {apt.status === 'now' && (
+                                <motion.div 
+                                  animate={{ opacity: [1, 0.5, 1] }}
+                                  transition={{ duration: 1.5, repeat: Infinity }}
+                                  className="text-[9px] text-amber-500"
+                                >
+                                  Agora
+                                </motion.div>
+                              )}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
                     </div>
-                    
-                    {/* Calendar preview */}
-                    <div className="bg-white/10 rounded-xl p-4">
-                      <div className="h-4 w-24 bg-white/20 rounded mb-3" />
-                      <div className="grid grid-cols-7 gap-2">
-                        {Array.from({ length: 28 }).map((_, i) => (
-                          <div 
+
+                    {/* Mini calendar with animated highlight */}
+                    <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                      <div className="text-xs font-medium text-white mb-2">Dezembro 2024</div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, i) => (
+                          <div key={i} className="text-[8px] text-white/40 text-center">{day}</div>
+                        ))}
+                        {Array.from({ length: 31 }).map((_, i) => (
+                          <motion.div 
                             key={i} 
-                            className={`h-8 rounded-lg ${
-                              i === 12 || i === 15 || i === 18 
-                                ? 'bg-amber-500/40' 
-                                : 'bg-white/10'
-                            }`} 
-                          />
+                            className={`h-5 rounded text-[9px] flex items-center justify-center ${
+                              i === 14 
+                                ? 'bg-amber-500 text-black font-bold' 
+                                : [8, 10, 15, 17, 22, 24].includes(i)
+                                  ? 'bg-amber-500/30 text-white/80'
+                                  : 'bg-white/5 text-white/40'
+                            }`}
+                            animate={i === 14 ? { scale: [1, 1.1, 1] } : {}}
+                            transition={{ duration: 2, repeat: Infinity }}
+                          >
+                            {i + 1}
+                          </motion.div>
                         ))}
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                {/* Floating elements */}
+                {/* Floating WhatsApp notification */}
                 <motion.div
-                  animate={{ y: [0, -10, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute -top-6 -right-6 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-4 shadow-lg"
+                  initial={{ opacity: 0, scale: 0.8, x: 20 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  transition={{ delay: 2, duration: 0.5 }}
+                  className="absolute -top-4 -right-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-3 shadow-lg shadow-emerald-500/30"
                 >
-                  <MessageSquare className="w-6 h-6 text-white" />
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    className="flex items-center gap-2"
+                  >
+                    <MessageSquare className="w-5 h-5 text-white" />
+                    <div className="text-[10px] text-white font-medium">Nova mensagem!</div>
+                  </motion.div>
                 </motion.div>
                 
+                {/* Floating new appointment notification */}
                 <motion.div
-                  animate={{ y: [0, 10, 0] }}
-                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute -bottom-4 -left-6 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/20"
+                  initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: 3.5, duration: 0.5 }}
+                  className="absolute -bottom-3 -left-4 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-3 border border-white/20 shadow-xl"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                      <Bell className="w-5 h-5 text-amber-500" />
+                  <motion.div
+                    animate={{ y: [0, 5, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-amber-500" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium">Novo agendamento!</div>
-                      <div className="text-xs text-white/50">João - Corte + Barba</div>
+                      <div className="text-[11px] font-medium text-white">Novo agendamento!</div>
+                      <div className="text-[9px] text-white/50">Maria - 14:30 - Corte</div>
                     </div>
-                  </div>
+                  </motion.div>
+                </motion.div>
+
+                {/* Confirmation badge */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 5, duration: 0.3, type: "spring" }}
+                  className="absolute top-1/2 -right-8 bg-emerald-500 rounded-full p-2 shadow-lg shadow-emerald-500/30"
+                >
+                  <Check className="w-4 h-4 text-white" />
                 </motion.div>
               </div>
             </motion.div>
