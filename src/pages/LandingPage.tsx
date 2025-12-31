@@ -1,6 +1,7 @@
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useRef, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 // Parallax Background Component
 const ParallaxBackground = ({ 
@@ -62,12 +63,33 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { PackageComparison } from "@/components/pricing/PackageComparison";
 import { ModularPlanBuilder } from "@/components/pricing/ModularPlanBuilder";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { PlanFeatures, defaultPlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+
+interface DatabasePlan {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: number;
+  max_staff: number;
+  max_clients: number;
+  max_appointments_month: number;
+  max_units?: number;
+  features: string[];
+  feature_flags?: PlanFeatures;
+  is_bundle?: boolean;
+  is_base_plan?: boolean;
+  highlight_text?: string | null;
+  discount_percentage?: number;
+  billing_period?: string;
+}
 
 // Animated counter component
 const AnimatedCounter = ({ value, suffix = "" }: { value: number; suffix?: string }) => {
@@ -251,11 +273,45 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [showBuilder, setShowBuilder] = useState(false);
+  const [dbPlans, setDbPlans] = useState<DatabasePlan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
   const { effectiveBranding } = useBranding();
 
   // Para landing page com fundo escuro, usar logo_dark_url como prioridade
   const landingLogo = effectiveBranding?.logo_dark_url || effectiveBranding?.logo_url || logoDark;
   const landingLogoMobile = effectiveBranding?.logo_dark_url || effectiveBranding?.logo_url || logoIcon;
+
+  // Fetch plans from database
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setLoadingPlans(true);
+        const { data, error } = await supabase
+          .from('subscription_plans')
+          .select('*')
+          .eq('is_bundle', true)
+          .eq('active', true)
+          .order('price', { ascending: true });
+
+        if (error) throw error;
+
+        const parsedPlans = (data || []).map(plan => ({
+          ...plan,
+          feature_flags: plan.feature_flags 
+            ? (typeof plan.feature_flags === 'string' ? JSON.parse(plan.feature_flags) : plan.feature_flags)
+            : defaultPlanFeatures
+        }));
+
+        setDbPlans(parsedPlans);
+      } catch (error) {
+        console.error('Erro ao buscar planos:', error);
+      } finally {
+        setLoadingPlans(false);
+      }
+    };
+
+    fetchPlans();
+  }, []);
 
   const faqs = [
     {
@@ -280,47 +336,38 @@ const LandingPage = () => {
     }
   ];
 
-  const plans = [
-    {
-      name: "Essencial",
-      price: billingPeriod === 'monthly' ? "R$ 49,90" : "R$ 39,90",
-      description: "Para barbearias pequenas",
-      features: [
-        "Até 3 profissionais",
-        "Agendamento online",
-        "Notificações WhatsApp",
-        "Gestão de clientes",
-        "Relatórios básicos"
-      ]
-    },
-    {
-      name: "Profissional",
-      price: billingPeriod === 'monthly' ? "R$ 97,90" : "R$ 78,30",
-      description: "Para barbearias em crescimento",
-      features: [
-        "Até 8 profissionais",
-        "Chatbot IA WhatsApp",
-        "Gestão financeira completa",
-        "Campanhas de marketing",
-        "Relatórios avançados",
-        "Comissões automáticas"
-      ],
-      popular: true
-    },
-    {
-      name: "Completo",
-      price: billingPeriod === 'monthly' ? "R$ 197,90" : "R$ 158,30",
-      description: "Tudo que você precisa",
-      features: [
-        "Profissionais ilimitados",
-        "Múltiplas unidades",
-        "Programa de fidelidade",
-        "Análises preditivas",
-        "Suporte prioritário",
-        "Todos os recursos"
-      ]
+  // Helper to generate feature list from feature_flags
+  const getFeaturesList = (plan: DatabasePlan): string[] => {
+    const features: string[] = [];
+    
+    // Add limits as features
+    if (plan.max_staff === -1) {
+      features.push('Profissionais ilimitados');
+    } else if (plan.max_staff > 0) {
+      features.push(`Até ${plan.max_staff} profissionais`);
     }
-  ];
+    
+    // Add feature flags using correct property names
+    if (plan.feature_flags) {
+      if (plan.feature_flags.whatsapp_notifications) features.push('Notificações WhatsApp');
+      if (plan.feature_flags.whatsapp_chatbot) features.push('Chatbot IA WhatsApp');
+      if (plan.feature_flags.finance_advanced) features.push('Gestão financeira completa');
+      if (plan.feature_flags.marketing_campaigns) features.push('Campanhas de marketing');
+      if (plan.feature_flags.advanced_reports) features.push('Relatórios avançados');
+      if (plan.feature_flags.predictive_analytics) features.push('Análises preditivas');
+      if (plan.feature_flags.multi_unit) features.push('Múltiplas unidades');
+      if (plan.feature_flags.loyalty_program) features.push('Programa de fidelidade');
+      if (plan.feature_flags.priority_support) features.push('Suporte prioritário');
+      if (plan.feature_flags.commissions) features.push('Comissões automáticas');
+    }
+    
+    // Also include text features from array if exists
+    if (plan.features && plan.features.length > 0) {
+      features.push(...plan.features.filter(f => !features.includes(f)));
+    }
+    
+    return features.slice(0, 6); // Limit to 6 features for display
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
@@ -1144,27 +1191,39 @@ const LandingPage = () => {
             </div>
           </motion.div>
 
-          <PackageComparison 
-            plans={plans.map((plan, index) => ({
-              id: plan.name.toLowerCase(),
-              name: plan.name,
-              slug: plan.name.toLowerCase(),
-              description: plan.description,
-              price: parseFloat(plan.price.replace('R$ ', '').replace(',', '.')),
-              max_staff: index === 0 ? 3 : index === 1 ? 8 : -1,
-              max_clients: -1,
-              max_appointments_month: -1,
-              is_base_plan: false,
-              is_bundle: true,
-              discount_percentage: billingPeriod === 'annual' ? 20 : 0,
-              highlight_text: plan.popular ? 'Mais Popular' : null,
-              feature_flags: {} as any,
-              features: plan.features
-            }))}
-            billingPeriod={billingPeriod}
-            onSelectPlan={() => navigate('/auth?tab=signup')}
-            onCustomize={() => setShowBuilder(true)}
-          />
+          {loadingPlans ? (
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner size="lg" />
+            </div>
+          ) : dbPlans.length > 0 ? (
+            <PackageComparison 
+              plans={dbPlans.map((plan) => ({
+                id: plan.id,
+                name: plan.name,
+                slug: plan.slug,
+                description: plan.description || '',
+                price: billingPeriod === 'annual' && plan.discount_percentage 
+                  ? plan.price * (1 - plan.discount_percentage / 100)
+                  : plan.price,
+                max_staff: plan.max_staff,
+                max_clients: plan.max_clients,
+                max_appointments_month: plan.max_appointments_month,
+                is_base_plan: plan.is_base_plan || false,
+                is_bundle: plan.is_bundle || true,
+                discount_percentage: billingPeriod === 'annual' ? (plan.discount_percentage || 20) : 0,
+                highlight_text: plan.highlight_text || null,
+                feature_flags: plan.feature_flags || {} as any,
+                features: getFeaturesList(plan)
+              }))}
+              billingPeriod={billingPeriod}
+              onSelectPlan={(planSlug) => navigate(`/auth?tab=signup&plan=${planSlug}`)}
+              onCustomize={() => setShowBuilder(true)}
+            />
+          ) : (
+            <div className="text-center py-12 text-white/60">
+              Nenhum plano disponível no momento.
+            </div>
+          )}
 
           <ModularPlanBuilder 
             isOpen={showBuilder}
