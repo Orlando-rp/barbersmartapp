@@ -7,6 +7,7 @@ import FloatingActionButton from "./FloatingActionButton";
 import { CommandPalette } from "./CommandPalette";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { WhatsNewNotification } from "@/components/notifications/WhatsNewNotification";
 import { useOnboarding } from "@/hooks/useOnboarding";
 
 interface LayoutProps {
@@ -20,6 +21,9 @@ const Layout = ({ children }: LayoutProps) => {
     <div className="min-h-screen bg-background">
       {/* Global Command Palette (Ctrl+K) */}
       <CommandPalette />
+      
+      {/* What's New Notification */}
+      <WhatsNewNotification />
       
       {/* Onboarding Tour */}
       <AnimatePresence>

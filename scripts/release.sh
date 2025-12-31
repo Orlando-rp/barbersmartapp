@@ -295,8 +295,13 @@ fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
 console.log('✅ package.json atualizado');
 "
 
-# Commit version change and changelog
-git add package.json CHANGELOG.md
+# Generate release-notes.json for What's New notification
+echo -e "${BLUE}📋 Gerando release-notes.json...${NC}"
+chmod +x "$SCRIPT_DIR/generate-release-notes.sh" 2>/dev/null || true
+"$SCRIPT_DIR/generate-release-notes.sh" --json 2>/dev/null || echo -e "${YELLOW}⚠️  Não foi possível gerar release-notes.json${NC}"
+
+# Commit version change, changelog and release notes
+git add package.json CHANGELOG.md public/release-notes.json 2>/dev/null || git add package.json CHANGELOG.md
 git commit -m "chore: release $TAG_NAME"
 
 # Create annotated tag with changelog
