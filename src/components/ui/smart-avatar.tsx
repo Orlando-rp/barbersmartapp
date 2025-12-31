@@ -4,6 +4,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getStaffAvatarUrl, getClientAvatarUrl } from "@/hooks/useAvatarUrl";
 import { cn } from "@/lib/utils";
 
+export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+
+const sizeClasses: Record<AvatarSize, { container: string; text: string }> = {
+  xs: { container: "h-6 w-6", text: "text-[10px]" },
+  sm: { container: "h-8 w-8", text: "text-xs" },
+  md: { container: "h-10 w-10", text: "text-sm" },
+  lg: { container: "h-12 w-12", text: "text-base" },
+  xl: { container: "h-16 w-16", text: "text-lg" },
+  '2xl': { container: "h-20 w-20", text: "text-xl" },
+};
+
 interface SmartAvatarProps {
   src?: string | null;
   alt?: string;
@@ -12,6 +23,11 @@ interface SmartAvatarProps {
   className?: string;
   imageClassName?: string;
   fallbackClassName?: string;
+  /**
+   * Size of the avatar (xs, sm, md, lg, xl, 2xl)
+   * Default: 'md'
+   */
+  size?: AvatarSize;
   /**
    * Type of avatar - determines which storage bucket to use
    * 'staff' uses the 'avatars' bucket
@@ -39,6 +55,7 @@ interface SmartAvatarProps {
 
 /**
  * Smart Avatar component with:
+ * - Multiple size variants (xs, sm, md, lg, xl, 2xl)
  * - Automatic URL resolution for Supabase storage paths
  * - Lazy loading with Intersection Observer
  * - Animated skeleton loading state
@@ -52,6 +69,7 @@ export const SmartAvatar = ({
   className,
   imageClassName,
   fallbackClassName,
+  size = 'md',
   type = 'auto',
   lazy = true,
   threshold = 0.1,
@@ -63,6 +81,8 @@ export const SmartAvatar = ({
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLSpanElement>(null);
+
+  const sizeClass = sizeClasses[size];
 
   // Resolve the avatar URL based on type
   const resolvedUrl = (() => {
@@ -132,7 +152,7 @@ export const SmartAvatar = ({
   const shouldShowFallback = !resolvedUrl || imageError || (!isLoading && !imageLoaded);
 
   return (
-    <Avatar ref={containerRef} className={cn("relative", className)}>
+    <Avatar ref={containerRef} className={cn("relative", sizeClass.container, className)}>
       {/* Skeleton loading state */}
       {shouldShowSkeleton && (
         <Skeleton 
@@ -168,6 +188,7 @@ export const SmartAvatar = ({
       <AvatarFallback 
         className={cn(
           "transition-opacity duration-300",
+          sizeClass.text,
           imageLoaded && !imageError ? "opacity-0" : shouldShowSkeleton ? "opacity-0" : "opacity-100",
           fallbackClassName
         )}
