@@ -71,3 +71,9 @@ verify_jwt = false
 
 [functions.generate-branding-images]
 verify_jwt = true
+
+[functions.create-subscription-preference]
+verify_jwt = false
+
+[functions.subscription-webhook]
+verify_jwt = false
