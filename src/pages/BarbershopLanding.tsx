@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TemplateRenderer } from "@/components/landing-templates/TemplateRenderer";
 import { LandingPageConfig } from "@/types/landing-page";
+import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
 import {
   Calendar,
   Clock,
@@ -619,7 +620,7 @@ const BarbershopLanding = () => {
                 <Card key={member.id} className="text-center hover:shadow-lg transition-shadow">
                   <CardContent className="p-6">
                     <Avatar className="h-24 w-24 mx-auto mb-4">
-                      <AvatarImage src={member.avatar_url || undefined} />
+                      <AvatarImage src={getStaffAvatarUrl(member.avatar_url) || undefined} />
                       <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
                         {member.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                       </AvatarFallback>
