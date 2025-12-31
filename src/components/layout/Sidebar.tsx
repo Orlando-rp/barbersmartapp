@@ -97,6 +97,7 @@ const navigation: NavItem[] = [
   // Config
   { name: "Configurações", href: "/settings", icon: Settings, permission: 'settings', group: "config", tourId: "settings" },
   { name: "Auditoria", href: "/audit", icon: Shield, requiredFeature: 'audit_logs', permission: 'audit', group: "config" },
+  { name: "Minha Assinatura", href: "/subscription/manage", icon: Wallet, adminOnly: true, group: "config" },
   { name: "Upgrade", href: "/upgrade", icon: Sparkles, adminOnly: true, group: "config" },
   
   // Admin
