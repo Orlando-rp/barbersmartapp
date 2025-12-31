@@ -47,6 +47,17 @@ const Header = () => {
       setProfileFullName(data.full_name);
     }
   };
+
+  const getAvatarUrl = (path: string | null) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(path);
+    
+    return data.publicUrl;
+  };
   
   const getInitials = (name: string | null, email: string | null) => {
     if (name) {
@@ -111,7 +122,7 @@ const Header = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 lg:h-10 gap-1 lg:gap-2 px-1 lg:px-2">
                 <Avatar className="h-7 w-7 lg:h-8 lg:w-8">
-                  <AvatarImage src={profileAvatarUrl || user?.user_metadata?.avatar_url} alt={profileFullName || user?.email || ''} />
+                  <AvatarImage src={getAvatarUrl(profileAvatarUrl) || user?.user_metadata?.avatar_url} alt={profileFullName || user?.email || ''} />
                   <AvatarFallback className="bg-primary/10 text-primary text-xs lg:text-sm">
                     {getInitials(profileFullName, user?.email || null)}
                   </AvatarFallback>
