@@ -1,6 +1,37 @@
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useRef, useState, useEffect } from "react";
+
+// Parallax Background Component
+const ParallaxBackground = ({ 
+  imageUrl, 
+  speed = 0.3,
+  className = "" 
+}: { 
+  imageUrl: string; 
+  speed?: number;
+  className?: string;
+}) => {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"]
+  });
+  
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", `${speed * 100}%`]);
+  
+  return (
+    <div ref={ref} className="absolute inset-0 overflow-hidden">
+      <motion.div 
+        className={`absolute inset-0 bg-cover bg-center scale-110 ${className}`}
+        style={{ 
+          backgroundImage: `url(${imageUrl})`,
+          y 
+        }}
+      />
+    </div>
+  );
+};
 import { 
   Calendar, 
   MessageSquare, 
@@ -325,11 +356,8 @@ const LandingPage = () => {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-4 min-h-screen flex items-center overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-fixed"
-          style={{ backgroundImage: 'url(/images/barbershop-hero.jpg)' }}
-        />
+        {/* Parallax Background Image */}
+        <ParallaxBackground imageUrl="/images/barbershop-hero.jpg" speed={0.2} />
         {/* Dark Overlay */}
         <div className="absolute inset-0 bg-black/75" />
         {/* Gradient Overlay */}
@@ -717,11 +745,8 @@ const LandingPage = () => {
 
       {/* How it Works */}
       <section id="how-it-works" className="py-24 px-4 relative overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: 'url(/images/barbershop-how-it-works.jpg)' }}
-        />
+        {/* Parallax Background Image */}
+        <ParallaxBackground imageUrl="/images/barbershop-how-it-works.jpg" speed={0.25} />
         {/* Dark Overlay with blur effect */}
         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
         {/* Gradient Overlay */}
@@ -926,11 +951,8 @@ const LandingPage = () => {
 
       {/* Testimonials */}
       <section className="py-24 px-4 relative overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: 'url(/images/barbershop-testimonials.jpg)' }}
-        />
+        {/* Parallax Background Image */}
+        <ParallaxBackground imageUrl="/images/barbershop-testimonials.jpg" speed={0.2} />
         {/* Dark Overlay with sepia tint */}
         <div className="absolute inset-0 bg-black/85" />
         {/* Warm color overlay */}
@@ -1051,11 +1073,8 @@ const LandingPage = () => {
             viewport={{ once: true }}
             className="relative overflow-hidden rounded-3xl border border-amber-500/30 p-12 text-center"
           >
-            {/* Background Image */}
-            <div 
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: 'url(/images/barbershop-cta.jpg)' }}
-            />
+            {/* Parallax Background Image */}
+            <ParallaxBackground imageUrl="/images/barbershop-cta.jpg" speed={0.15} />
             {/* Dark Overlay */}
             <div className="absolute inset-0 bg-black/70" />
             {/* Gradient Overlay */}
