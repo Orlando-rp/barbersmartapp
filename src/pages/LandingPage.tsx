@@ -1260,7 +1260,7 @@ const LandingPage = () => {
             </div>
             
             <div className="flex flex-col items-center md:items-end gap-1 text-sm text-white/50">
-              <div>© {new Date().getFullYear()} BarberSmart. Todos os direitos reservados.</div>
+              <div>© {new Date().getFullYear()} Barber Smart. Todos os direitos reservados.</div>
               <div>
                 Desenvolvido por{" "}
                 <a 

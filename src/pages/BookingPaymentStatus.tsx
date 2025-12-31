@@ -252,7 +252,7 @@ export default function BookingPaymentStatus() {
           transition={{ delay: 0.8 }}
           className="text-center text-xs text-muted-foreground mt-6"
         >
-          Powered by BarberSmart
+          Powered by Barber Smart
         </motion.p>
       </motion.div>
     </div>

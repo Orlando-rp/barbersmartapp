@@ -924,7 +924,7 @@ const BarbershopLanding = () => {
             </a>
           </div>
           <p className="mt-2">
-            Powered by <span className="font-semibold text-foreground">BarberSmart</span>
+            Powered by <span className="font-semibold text-foreground">Barber Smart</span>
           </p>
         </div>
       </footer>

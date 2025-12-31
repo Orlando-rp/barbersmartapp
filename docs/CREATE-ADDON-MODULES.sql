@@ -1,6 +1,6 @@
 -- ==============================================================
 -- CREATE-ADDON-MODULES.sql
--- Sistema de Assinatura Modular - BarberSmart
+-- Sistema de Assinatura Modular - Barber Smart
 -- Criação de tabelas para módulos add-on e pacotes configuráveis
 -- ==============================================================
 

@@ -164,7 +164,7 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
       {!isCollapsed && (
         <div className="p-3 border-t border-border">
           <div className="text-xs text-muted-foreground text-center">
-            BarberSmart SaaS v1.0.0
+            Barber Smart SaaS v1.0.0
           </div>
         </div>
       )}

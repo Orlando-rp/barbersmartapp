@@ -1,4 +1,4 @@
-# Credenciais de Teste - BarberSmart
+# Credenciais de Teste - Barber Smart
 
 Este documento contém as credenciais dos usuários de teste criados no sistema.
 

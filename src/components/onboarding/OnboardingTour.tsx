@@ -35,7 +35,7 @@ interface TourStep {
 const tourSteps: TourStep[] = [
   {
     id: "welcome",
-    title: "Bem-vindo ao BarberSmart! 🎉",
+    title: "Bem-vindo ao Barber Smart! 🎉",
     description: "Vamos fazer um tour rápido pelas principais funcionalidades do sistema para você começar a usar com confiança.",
     icon: <Sparkles className="h-6 w-6 sm:h-8 sm:w-8" />,
     position: "center"

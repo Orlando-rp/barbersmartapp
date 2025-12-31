@@ -371,7 +371,7 @@ const CompleteProfile = () => {
 
       const unidadesCount = unitIds.length;
       toast.success('Perfil completo!', {
-        description: `Barbearia${unidadesCount > 0 ? ` + ${unidadesCount} unidade(s)` : ''} cadastrada(s). Bem-vindo ao ${branding?.system_name || 'BarberSmart'}!`,
+        description: `Barbearia${unidadesCount > 0 ? ` + ${unidadesCount} unidade(s)` : ''} cadastrada(s). Bem-vindo ao ${branding?.system_name || 'Barber Smart'}!`,
       });
 
       await refreshBarbershops();
