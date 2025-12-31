@@ -19,6 +19,7 @@ import { WidgetSelector, defaultWidgets, WidgetConfig, ColumnConfig } from "@/co
 import { DraggableWidgetGrid } from "@/components/dashboard/DraggableWidgetGrid";
 import { LayoutManager, DashboardLayout } from "@/components/dashboard/LayoutManager";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
+import { useAvatarPreload } from "@/hooks/useAvatarPreload";
 import { 
   Calendar, 
   Users, 
@@ -66,6 +67,16 @@ const Index = () => {
     return saved ? (parseInt(saved) as ColumnConfig) : 4;
   });
   const [customizeMode, setCustomizeMode] = useState(false);
+
+  // Preload critical avatars for better UX
+  useAvatarPreload({
+    currentUser: true,
+    todayStaff: true,
+    allStaff: false,
+    topClients: 10,
+    barbershopIds: activeBarbershopIds,
+    userId: user?.id,
+  });
 
   const handleColumnsChange = (cols: ColumnConfig) => {
     setColumns(cols);
