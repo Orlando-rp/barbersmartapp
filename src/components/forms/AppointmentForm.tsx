@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { StaffAvatar } from "@/components/ui/smart-avatar";
 import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,7 +20,6 @@ import { useBusinessHoursValidation } from "@/hooks/useBusinessHoursValidation";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { useStaffServices } from "@/hooks/useStaffServices";
 import { useSelectableUnits } from "@/hooks/useSelectableUnits";
-import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
 import { toast as sonnerToast } from "sonner";
 import { DayProps, DayContent } from "react-day-picker";
 
@@ -1204,12 +1203,13 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                     {staff.map((member) => (
                       <SelectItem key={member.id} value={member.id} className="text-sm">
                         <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6 flex-shrink-0">
-                            <AvatarImage src={getStaffAvatarUrl(member.avatar_url) || undefined} alt={member.name} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                              {member.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <StaffAvatar
+                            src={member.avatar_url}
+                            alt={member.name}
+                            fallbackText={member.name}
+                            className="h-6 w-6 flex-shrink-0"
+                            fallbackClassName="bg-primary/10 text-primary text-xs"
+                          />
                           <span>{member.name}</span>
                         </div>
                       </SelectItem>
@@ -1225,12 +1225,13 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 {/* Detalhes do profissional selecionado */}
                 {selectedBarberData && (
                   <div className="p-3 sm:p-4 rounded-lg border bg-muted/30 flex items-center gap-3">
-                    <Avatar className="h-12 w-12 flex-shrink-0">
-                      <AvatarImage src={getStaffAvatarUrl(selectedBarberData.avatar_url) || undefined} alt={selectedBarberData.name} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {selectedBarberData.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <StaffAvatar
+                      src={selectedBarberData.avatar_url}
+                      alt={selectedBarberData.name}
+                      fallbackText={selectedBarberData.name}
+                      className="h-12 w-12 flex-shrink-0"
+                      fallbackClassName="bg-primary/10 text-primary"
+                    />
                     <div>
                       <div className="font-medium text-sm sm:text-base">{selectedBarberData.name}</div>
                       <div className="text-xs text-muted-foreground">Profissional selecionado</div>

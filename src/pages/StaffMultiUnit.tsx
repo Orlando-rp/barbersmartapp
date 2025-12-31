@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
+import { StaffAvatar } from "@/components/ui/smart-avatar";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -373,12 +372,13 @@ const StaffMultiUnit = () => {
                   >
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={getStaffAvatarUrl(user.avatar_url) || undefined} alt={user.full_name} />
-                          <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
-                            {user.full_name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <StaffAvatar
+                          src={user.avatar_url}
+                          alt={user.full_name}
+                          fallbackText={user.full_name}
+                          className="h-12 w-12"
+                          fallbackClassName="bg-primary/10 text-primary font-bold text-lg"
+                        />
                         <div>
                           <h3 className="font-semibold text-foreground">{user.full_name}</h3>
                           <p className="text-sm text-muted-foreground">{user.phone}</p>

@@ -5,7 +5,7 @@ import { useBranding } from "@/contexts/BrandingContext";
 import logoDark from "@/assets/logo-dark.png";
 import logoLight from "@/assets/logo-light.png";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StaffAvatar } from "@/components/ui/smart-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,6 @@ import BarbershopSelector from "./BarbershopSelector";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { CommandPaletteTrigger } from "./CommandPalette";
 import { useTheme } from "next-themes";
-import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
 
 const Header = () => {
   const { user, signOut, userRole } = useAuth();
@@ -112,12 +111,14 @@ const Header = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 lg:h-10 gap-1 lg:gap-2 px-1 lg:px-2">
-                <Avatar className="h-7 w-7 lg:h-8 lg:w-8">
-                  <AvatarImage src={getStaffAvatarUrl(profileAvatarUrl) || user?.user_metadata?.avatar_url} alt={profileFullName || user?.email || ''} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs lg:text-sm">
-                    {getInitials(profileFullName, user?.email || null)}
-                  </AvatarFallback>
-                </Avatar>
+                <StaffAvatar
+                  src={profileAvatarUrl || user?.user_metadata?.avatar_url}
+                  alt={profileFullName || user?.email || ''}
+                  fallbackText={profileFullName || user?.email}
+                  className="h-7 w-7 lg:h-8 lg:w-8"
+                  fallbackClassName="bg-primary/10 text-primary text-xs lg:text-sm"
+                  lazy={false}
+                />
                 {/* Hide user info on mobile */}
                 <div className="hidden lg:flex flex-col items-start text-sm">
                   <span className="font-medium max-w-32 truncate">{profileFullName || user?.user_metadata?.full_name || user?.email}</span>

@@ -5,12 +5,11 @@ import { formatDuration } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StaffAvatar } from "@/components/ui/smart-avatar";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TemplateRenderer } from "@/components/landing-templates/TemplateRenderer";
 import { LandingPageConfig } from "@/types/landing-page";
-import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
 import {
   Calendar,
   Clock,
@@ -619,12 +618,12 @@ const BarbershopLanding = () => {
               {staff.map((member) => (
                 <Card key={member.id} className="text-center hover:shadow-lg transition-shadow">
                   <CardContent className="p-6">
-                    <Avatar className="h-24 w-24 mx-auto mb-4">
-                      <AvatarImage src={getStaffAvatarUrl(member.avatar_url) || undefined} />
-                      <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                        {member.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <StaffAvatar
+                      src={member.avatar_url}
+                      fallbackText={member.full_name}
+                      className="h-24 w-24 mx-auto mb-4"
+                      fallbackClassName="text-2xl bg-primary text-primary-foreground"
+                    />
                     <h3 className="font-semibold text-foreground mb-1">{member.full_name}</h3>
                     {member.specialties.length > 0 && (
                       <p className="text-sm text-muted-foreground">

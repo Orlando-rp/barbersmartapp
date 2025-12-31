@@ -12,11 +12,10 @@ import {
   X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ClientAvatar } from '@/components/ui/smart-avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { getClientAvatarUrl } from '@/hooks/useAvatarUrl';
 
 interface ClientLayoutProps {
   children: ReactNode;
@@ -95,10 +94,13 @@ export const ClientLayout = ({ children }: ClientLayoutProps) => {
               <p className="text-sm font-medium">{displayName}</p>
               <p className="text-xs text-muted-foreground">{client?.phone}</p>
             </div>
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={getClientAvatarUrl(client?.avatar_url) || undefined} />
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-            </Avatar>
+            <ClientAvatar
+              src={client?.avatar_url}
+              fallbackText={displayName}
+              className="h-8 w-8"
+              fallbackClassName="text-xs"
+              lazy={false}
+            />
 
             {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -110,10 +112,12 @@ export const ClientLayout = ({ children }: ClientLayoutProps) => {
               <SheetContent side="right" className="w-72">
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 pb-6 border-b">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={getClientAvatarUrl(client?.avatar_url) || undefined} />
-                      <AvatarFallback>{initials}</AvatarFallback>
-                    </Avatar>
+                    <ClientAvatar
+                      src={client?.avatar_url}
+                      fallbackText={displayName}
+                      className="h-12 w-12"
+                      lazy={false}
+                    />
                     <div>
                       <p className="font-medium">{displayName}</p>
                       <p className="text-sm text-muted-foreground">{client?.phone}</p>
