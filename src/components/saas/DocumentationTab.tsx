@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeploymentGuide } from "./DeploymentGuide";
 import { ReleaseGuide } from "./ReleaseGuide";
 import { SelfHostingGuide } from "./SelfHostingGuide";
+import { IntegrationsGuide } from "./IntegrationsGuide";
 import { ReleaseNotes } from "./ReleaseNotes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -10,10 +11,10 @@ import {
   Tag, 
   FileText,
   HardDrive,
-  ExternalLink 
+  ExternalLink,
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 export const DocumentationTab = () => {
   return (
     <div className="space-y-6">
@@ -31,7 +32,7 @@ export const DocumentationTab = () => {
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="hover:border-primary/50 transition-colors cursor-pointer">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
@@ -41,7 +42,7 @@ export const DocumentationTab = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Configuração de servidor, DNS e containers Docker
+              Servidor, DNS e Docker
             </p>
           </CardContent>
         </Card>
@@ -55,7 +56,21 @@ export const DocumentationTab = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Traefik, SSL e certificados wildcard
+              Traefik, SSL e wildcard
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-orange-500" />
+              <CardTitle className="text-base">Integrações</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              WhatsApp, pagamentos e APIs
             </p>
           </CardContent>
         </Card>
@@ -69,7 +84,7 @@ export const DocumentationTab = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Versionamento, changelog e processo de release
+              Versionamento e changelog
             </p>
           </CardContent>
         </Card>
@@ -83,7 +98,7 @@ export const DocumentationTab = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Histórico de versões e mudanças do sistema
+              Histórico de versões
             </p>
           </CardContent>
         </Card>
@@ -91,7 +106,7 @@ export const DocumentationTab = () => {
 
       {/* Tabs with Guides */}
       <Tabs defaultValue="deploy" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="deploy" className="gap-2">
             <Server className="h-4 w-4" />
             <span className="hidden sm:inline">Deploy</span>
@@ -99,6 +114,10 @@ export const DocumentationTab = () => {
           <TabsTrigger value="selfhosting" className="gap-2">
             <HardDrive className="h-4 w-4" />
             <span className="hidden sm:inline">Self-Hosting</span>
+          </TabsTrigger>
+          <TabsTrigger value="integrations" className="gap-2">
+            <Zap className="h-4 w-4" />
+            <span className="hidden sm:inline">Integrações</span>
           </TabsTrigger>
           <TabsTrigger value="releases" className="gap-2">
             <Tag className="h-4 w-4" />
@@ -116,6 +135,10 @@ export const DocumentationTab = () => {
 
         <TabsContent value="selfhosting">
           <SelfHostingGuide />
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          <IntegrationsGuide />
         </TabsContent>
 
         <TabsContent value="releases">
