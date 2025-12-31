@@ -5,10 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { BundlePlan } from '@/hooks/useAddonModules';
 
+interface ExtendedBundlePlan extends BundlePlan {
+  features?: string[];
+}
+
 interface PackageComparisonProps {
-  plans: BundlePlan[];
+  plans: ExtendedBundlePlan[];
   billingPeriod: 'monthly' | 'annual';
-  onSelectPlan: (plan: BundlePlan) => void;
+  onSelectPlan: (plan: ExtendedBundlePlan) => void;
   onCustomize: () => void;
 }
 
@@ -41,21 +45,27 @@ export const PackageComparison = ({
     return billingPeriod === 'annual' ? basePrice * 0.8 : basePrice;
   };
 
-  const getFeaturesList = (plan: BundlePlan): string[] => {
-    const features: string[] = [];
-    const flags = plan.feature_flags;
+  const getFeaturesList = (plan: ExtendedBundlePlan): string[] => {
+    // Use features array if provided (static data from LandingPage)
+    if (plan.features && plan.features.length > 0) {
+      return plan.features.slice(0, 6);
+    }
 
-    if (flags.appointments) features.push('Agendamentos ilimitados');
-    if (flags.whatsapp_notifications) features.push('Notificações WhatsApp');
-    if (flags.whatsapp_chatbot) features.push('Chatbot com IA');
-    if (flags.marketing_campaigns) features.push('Campanhas de marketing');
-    if (flags.marketing_coupons) features.push('Cupons de desconto');
-    if (flags.loyalty_program) features.push('Programa de fidelidade');
-    if (flags.commissions) features.push('Gestão de comissões');
-    if (flags.advanced_reports) features.push('Relatórios avançados');
-    if (flags.predictive_analytics) features.push('Análises preditivas');
-    if (flags.multi_unit) features.push('Multi-unidade');
-    if (flags.priority_support) features.push('Suporte prioritário');
+    // Otherwise, derive from feature_flags (dynamic data from database)
+    const features: string[] = [];
+    const flags = (plan.feature_flags || {}) as unknown as Record<string, boolean>;
+
+    if (flags['appointments']) features.push('Agendamentos ilimitados');
+    if (flags['whatsapp_notifications']) features.push('Notificações WhatsApp');
+    if (flags['whatsapp_chatbot']) features.push('Chatbot com IA');
+    if (flags['marketing_campaigns']) features.push('Campanhas de marketing');
+    if (flags['marketing_coupons']) features.push('Cupons de desconto');
+    if (flags['loyalty_program']) features.push('Programa de fidelidade');
+    if (flags['commissions']) features.push('Gestão de comissões');
+    if (flags['advanced_reports']) features.push('Relatórios avançados');
+    if (flags['predictive_analytics']) features.push('Análises preditivas');
+    if (flags['multi_unit']) features.push('Multi-unidade');
+    if (flags['priority_support']) features.push('Suporte prioritário');
 
     return features.slice(0, 6);
   };
