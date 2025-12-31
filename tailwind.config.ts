@@ -112,6 +112,11 @@ export default {
     			'2xl': 'var(--shadow-2xl)'
     		},
     		fontFamily: {
+    			display: [
+    				'Posey Textured',
+    				'Playfair Display',
+    				'serif'
+    			],
     			sans: [
     				'Outfit',
     				'ui-sans-serif',
