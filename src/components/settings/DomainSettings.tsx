@@ -159,6 +159,17 @@ const DomainSettings = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Alert when no subdomain configured */}
+      {!domain?.subdomain && !loading && (
+        <Alert className="border-amber-500/30 bg-amber-500/10">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-700">Configuração Necessária</AlertTitle>
+          <AlertDescription className="text-amber-700/80 text-xs">
+            Configure um identificador para sua barbearia para ter um link público de agendamento funcional.
+            Clique em "Link Personalizado" abaixo para configurar.
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Public Link Section - Always Functional */}
       {publicUrl && (
         <Card className="border-primary/20 bg-primary/5">

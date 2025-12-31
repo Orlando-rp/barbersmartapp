@@ -83,8 +83,13 @@ serve(async (req) => {
     }
 
     // Check TXT record for verification
+    // Para subdomínios (ex: app.barbeariadobob.com.br), o TXT deve ser _lovable.app.barbeariadobob.com.br
+    // Para domínios raiz (ex: minhabarbearia.com.br), o TXT deve ser _lovable.minhabarbearia.com.br
     if (verificationToken) {
-      const txtResponse = await queryDns(`_lovable.${domain}`, 'TXT');
+      const txtDomain = `_lovable.${domain}`;
+      console.log(`Checking TXT record at: ${txtDomain}`);
+      
+      const txtResponse = await queryDns(txtDomain, 'TXT');
       if (txtResponse?.Answer) {
         const txtRecords = txtResponse.Answer.filter(r => r.type === 16);
         // TXT records come with quotes, remove them

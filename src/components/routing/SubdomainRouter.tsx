@@ -50,19 +50,29 @@ export default function SubdomainRouter({ children }: SubdomainRouterProps) {
           return;
         }
         
-        const isActive = 
-          (domainRecord.subdomain === domainToCheck && domainRecord.subdomain_status === 'active') ||
-          (domainRecord.custom_domain === domainToCheck && domainRecord.custom_domain_status === 'active');
+        // Verificar se é custom domain ativo
+        const isCustomDomainActive = domainRecord.custom_domain === domainToCheck && 
+          domainRecord.custom_domain_status === 'active';
         
-        if (!isActive) {
+        // Verificar se é subdomain ativo
+        const isSubdomainActive = domainRecord.subdomain === domainToCheck && 
+          domainRecord.subdomain_status === 'active';
+        
+        if (!isCustomDomainActive && !isSubdomainActive) {
           setNotFound(true);
           setLoading(false);
           return;
         }
         
-        // Redirect to landing page using existing route
+        // Redirecionar para landing page
         if (window.location.pathname === '/') {
-          window.location.href = `/s/${domainRecord.subdomain || domainToCheck}`;
+          // Para custom domain, usar barbershop_id se não tiver subdomain configurado
+          if (isCustomDomainActive && !domainRecord.subdomain) {
+            window.location.href = `/b/${domainRecord.barbershop_id}`;
+            return;
+          }
+          // Para subdomain ou custom domain com subdomain, usar rota /s/
+          window.location.href = `/s/${domainRecord.subdomain}`;
           return;
         }
         
