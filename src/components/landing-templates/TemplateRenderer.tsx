@@ -74,17 +74,21 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
       global_styles.border_radius === 'lg' ? '1rem' : '9999px',
   } as React.CSSProperties;
 
-  // Load Google Fonts
-  const fonts = [global_styles.font_heading, global_styles.font_body].filter(Boolean);
+  // Load Google Fonts (exclude Posey Textured as it's locally hosted)
+  const fonts = [global_styles.font_heading, global_styles.font_body].filter(
+    (f) => f && f !== 'Posey Textured'
+  );
   const uniqueFonts = [...new Set(fonts)];
-  const fontUrl = `https://fonts.googleapis.com/css2?${uniqueFonts.map(f => `family=${f.replace(' ', '+')}:wght@400;500;600;700`).join('&')}&display=swap`;
+  const fontUrl = uniqueFonts.length > 0 
+    ? `https://fonts.googleapis.com/css2?${uniqueFonts.map(f => `family=${f.replace(' ', '+')}:wght@400;500;600;700`).join('&')}&display=swap`
+    : null;
 
   return (
     <>
       {/* Load fonts */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link href={fontUrl} rel="stylesheet" />
+      {fontUrl && <link href={fontUrl} rel="stylesheet" />}
 
       <div 
         className="landing-template min-h-screen"
