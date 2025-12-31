@@ -7,13 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ClientAvatar } from '@/components/ui/smart-avatar';
 import { User, Phone, Mail, Calendar, Bell, Save, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { getClientAvatarUrl } from '@/hooks/useAvatarUrl';
 
 export default function ClientProfile() {
   const { client, refreshClient } = useClientAuth();
@@ -86,10 +85,13 @@ export default function ClientProfile() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={getClientAvatarUrl(client?.avatar_url) || undefined} />
-                <AvatarFallback className="text-xl">{initials}</AvatarFallback>
-              </Avatar>
+              <ClientAvatar
+                src={client?.avatar_url}
+                fallbackText={displayName}
+                className="h-20 w-20"
+                fallbackClassName="text-xl"
+                lazy={false}
+              />
               <div>
                 <h2 className="text-xl font-semibold">{displayName}</h2>
                 <p className="text-muted-foreground">{client?.phone}</p>

@@ -11,12 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StaffAvatar } from "@/components/ui/smart-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, DollarSign, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { subDays, subMonths } from "date-fns";
-import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
 
 interface StaffPerformance {
   staffId: string;
@@ -223,12 +222,12 @@ export const TeamPerformance = ({ period }: Props) => {
               {performance.map((staff) => (
                 <div key={staff.staffId} className="border rounded-lg p-3 space-y-2">
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={getStaffAvatarUrl(staff.avatar) || undefined} />
-                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                        {staff.name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <StaffAvatar
+                      src={staff.avatar}
+                      fallbackText={staff.name}
+                      className="h-8 w-8"
+                      fallbackClassName="bg-primary/10 text-primary text-xs"
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{staff.name}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -274,15 +273,15 @@ export const TeamPerformance = ({ period }: Props) => {
               </TableHeader>
               <TableBody>
                 {performance.map((staff) => (
-                  <TableRow key={staff.staffId}>
+                    <TableRow key={staff.staffId}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={getStaffAvatarUrl(staff.avatar) || undefined} />
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {staff.name.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <StaffAvatar
+                          src={staff.avatar}
+                          fallbackText={staff.name}
+                          className="h-8 w-8"
+                          fallbackClassName="bg-primary/10 text-primary"
+                        />
                         <span className="font-medium">{staff.name}</span>
                       </div>
                     </TableCell>

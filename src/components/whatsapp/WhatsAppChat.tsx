@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ClientAvatar } from "@/components/ui/smart-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -33,7 +33,6 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
-import { getClientAvatarUrl } from "@/hooks/useAvatarUrl";
 
 interface Message {
   id: string;
@@ -685,12 +684,12 @@ export const WhatsAppChat = () => {
                             onClick={() => startChatWithClient(client)}
                             className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
                           >
-                            <Avatar className="h-10 w-10">
-                              {client.avatar_url && <AvatarImage src={getClientAvatarUrl(client.avatar_url) || undefined} />}
-                              <AvatarFallback className="bg-primary/10 text-primary">
-                                {getInitials(client.name, client.phone)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <ClientAvatar
+                              src={client.avatar_url}
+                              fallbackText={client.name || client.phone}
+                              className="h-10 w-10"
+                              fallbackClassName="bg-primary/10 text-primary"
+                            />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm truncate">{client.name}</p>
                               <p className="text-xs text-muted-foreground">{client.phone}</p>
@@ -751,12 +750,12 @@ export const WhatsAppChat = () => {
                   className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
                   onClick={() => setSelectedPhone(conv.phone_number)}
                 >
-                  <Avatar className="h-10 w-10 shrink-0">
-                    {conv.avatar_url && <AvatarImage src={getClientAvatarUrl(conv.avatar_url) || undefined} />}
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {getInitials(conv.contact_name, conv.phone_number)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <ClientAvatar
+                    src={conv.avatar_url}
+                    fallbackText={conv.contact_name || conv.phone_number}
+                    className="h-10 w-10 shrink-0"
+                    fallbackClassName="bg-primary/10 text-primary"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center gap-2">
                       <div className="flex items-center gap-2 min-w-0">
@@ -839,11 +838,13 @@ export const WhatsAppChat = () => {
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {getInitials(selectedConversation?.contact_name || null, selectedPhone)}
-                </AvatarFallback>
-              </Avatar>
+              <ClientAvatar
+                src={selectedConversation?.avatar_url}
+                fallbackText={selectedConversation?.contact_name || selectedPhone || ''}
+                className="h-10 w-10"
+                fallbackClassName="bg-primary/10 text-primary"
+                lazy={false}
+              />
               <div className="flex-1">
                 <h3 className="font-medium">
                   {selectedConversation?.contact_name || `+${selectedPhone}`}
