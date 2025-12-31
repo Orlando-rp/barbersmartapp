@@ -72,7 +72,7 @@ export const Breadcrumbs = () => {
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link to="/" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/dashboard" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
               <Home className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only">Início</span>
             </Link>

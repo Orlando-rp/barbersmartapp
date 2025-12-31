@@ -64,7 +64,7 @@ export const CommandPalette = () => {
 
   // Navigation items
   const navigationItems: CommandItem[] = [
-    { id: "dashboard", name: "Dashboard", icon: Home, action: () => handleNavigation("/"), keywords: ["início", "home"], group: "navigation" },
+    { id: "dashboard", name: "Dashboard", icon: Home, action: () => handleNavigation("/dashboard"), keywords: ["início", "home"], group: "navigation" },
     { id: "appointments", name: "Agendamentos", icon: Calendar, action: () => handleNavigation("/appointments"), keywords: ["agenda", "horários", "marcação"], group: "navigation" },
     { id: "clients", name: "Clientes", icon: Users, action: () => handleNavigation("/clients"), keywords: ["cliente", "contatos"], group: "navigation" },
     { id: "services", name: "Serviços", icon: Scissors, action: () => handleNavigation("/services"), keywords: ["corte", "barba", "serviço"], group: "navigation" },
