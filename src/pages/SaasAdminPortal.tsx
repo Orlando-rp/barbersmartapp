@@ -69,6 +69,7 @@ import {
   Link,
   Unlink,
   BookOpen,
+  Rocket,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -85,6 +86,7 @@ import { PlanFeaturesSelector, defaultPlanFeatures, featuresToStringArray, strin
 import { PlanCardPreview } from "@/components/saas/PlanCardPreview";
 import { ReleaseNotes } from "@/components/saas/ReleaseNotes";
 import { DocumentationTab } from "@/components/saas/DocumentationTab";
+import DeployPanel from "@/components/saas/DeployPanel";
 import {
   BarChart,
   Bar,
@@ -866,6 +868,10 @@ const SaasAdminPortal = () => {
               <Globe className="h-4 w-4 mr-2" />
               Domínios
             </TabsTrigger>
+            <TabsTrigger value="deploy" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
+              <Rocket className="h-4 w-4 mr-2" />
+              Deploy
+            </TabsTrigger>
             <TabsTrigger value="docs" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
               <BookOpen className="h-4 w-4 mr-2" />
               Documentação
@@ -1395,6 +1401,11 @@ const SaasAdminPortal = () => {
           {/* Domains Tab */}
           <TabsContent value="domains">
             <DomainsManagement />
+          </TabsContent>
+
+          {/* Deploy Tab */}
+          <TabsContent value="deploy">
+            <DeployPanel />
           </TabsContent>
 
           {/* Documentation Tab */}
