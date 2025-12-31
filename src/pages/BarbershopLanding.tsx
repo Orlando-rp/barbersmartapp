@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { formatDuration } from "@/lib/utils";
@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TemplateRenderer } from "@/components/landing-templates/TemplateRenderer";
 import { LandingPageConfig } from "@/types/landing-page";
+import { useDynamicSEO } from "@/hooks/useDynamicSEO";
 import {
   Calendar,
   Clock,
@@ -119,6 +120,12 @@ const dayNames: Record<string, string> = {
   sunday: "Domingo",
 };
 
+// Helper to get day of week name for Schema.org
+const getDayOfWeekName = (dayNumber: number): string => {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[dayNumber] || 'Monday';
+};
+
 // Helper to check if config uses new template system
 const isNewTemplateConfig = (config: any): config is LandingPageConfig => {
   return config && typeof config === 'object' && 'template_id' in config && config.sections?.length > 0;
@@ -150,6 +157,86 @@ const BarbershopLanding = () => {
     show_gallery: true,
   });
   const [notFound, setNotFound] = useState(false);
+
+  // SEO dinâmico baseado nos dados da barbearia
+  const seoData = useMemo(() => {
+    if (!barbershop) return null;
+    
+    const description = barbershop.settings?.description || 
+      `${barbershop.name} - Agende seu horário online. Serviços de barbearia de qualidade em ${barbershop.city || barbershop.address}.`;
+    
+    const heroImage = landingConfig.hero_image_url || barbershop.logo_url;
+    
+    // Calcular faixa de preço
+    const prices = services.map(s => s.price).filter(p => p > 0);
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+    const priceRange = minPrice > 0 ? `R$ ${minPrice.toFixed(0)} - R$ ${maxPrice.toFixed(0)}` : undefined;
+    
+    // Schema.org com dados completos
+    const structuredData = {
+      '@context': 'https://schema.org',
+      '@type': 'BarberShop',
+      name: barbershop.name,
+      description: description,
+      url: window.location.href,
+      ...(heroImage && { image: heroImage }),
+      ...(barbershop.address && {
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: barbershop.address,
+          addressLocality: barbershop.city,
+          addressRegion: barbershop.state,
+          addressCountry: 'BR',
+        }
+      }),
+      ...(barbershop.phone && { telephone: barbershop.phone }),
+      ...(barbershop.email && { email: barbershop.email }),
+      ...(priceRange && { priceRange }),
+      ...(averageRating > 0 && {
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: averageRating.toFixed(1),
+          reviewCount: reviews.length,
+          bestRating: 5,
+          worstRating: 1,
+        }
+      }),
+      ...(businessHours.length > 0 && {
+        openingHoursSpecification: businessHours
+          .filter(h => h.is_open)
+          .map(h => ({
+            '@type': 'OpeningHoursSpecification',
+            dayOfWeek: getDayOfWeekName(h.day_of_week),
+            opens: h.open_time,
+            closes: h.close_time,
+          }))
+      }),
+      ...(barbershop.latitude && barbershop.longitude && {
+        geo: {
+          '@type': 'GeoCoordinates',
+          latitude: barbershop.latitude,
+          longitude: barbershop.longitude,
+        }
+      }),
+    };
+    
+    return {
+      title: `${barbershop.name} | Agende Online`,
+      description: description.slice(0, 160),
+      image: heroImage,
+      siteName: barbershop.name,
+      type: 'business.business' as const,
+      businessName: barbershop.name,
+      address: barbershop.address,
+      phone: barbershop.phone,
+      priceRange,
+      structuredData,
+    };
+  }, [barbershop, services, reviews, averageRating, businessHours, landingConfig]);
+
+  // Aplicar SEO dinâmico
+  useDynamicSEO(seoData);
 
   useEffect(() => {
     loadBarbershopData();
