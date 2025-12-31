@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { getClientAvatarUrl } from '@/hooks/useAvatarUrl';
 
 export default function ClientProfile() {
   const { client, refreshClient } = useClientAuth();
@@ -86,7 +87,7 @@ export default function ClientProfile() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={client?.avatar_url || undefined} />
+                <AvatarImage src={getClientAvatarUrl(client?.avatar_url) || undefined} />
                 <AvatarFallback className="text-xl">{initials}</AvatarFallback>
               </Avatar>
               <div>
