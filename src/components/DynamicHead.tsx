@@ -8,9 +8,11 @@ import { DEFAULT_SYSTEM_NAME, DEFAULT_TAGLINE } from '@/lib/tenantConfig';
  * Updates:
  * - Document title
  * - Favicon
+ * - Apple Touch Icons (PWA)
  * - Meta description
  * - Open Graph tags
  * - Theme color
+ * - PWA app name
  */
 export default function DynamicHead() {
   const { effectiveBranding, hasWhiteLabel, tenantBarbershopName } = useBranding();
@@ -19,9 +21,13 @@ export default function DynamicHead() {
     // Get effective values
     const systemName = effectiveBranding?.system_name || tenantBarbershopName || DEFAULT_SYSTEM_NAME;
     const tagline = effectiveBranding?.tagline || DEFAULT_TAGLINE;
+    const logoIconUrl = effectiveBranding?.logo_icon_url;
     const faviconUrl = effectiveBranding?.favicon_url;
     const logoUrl = effectiveBranding?.logo_url;
     const primaryColor = effectiveBranding?.primary_color || '#d4a574';
+
+    // Prioridade para ícones do PWA: logo_icon_url > favicon_url > logo_url
+    const pwaIconUrl = logoIconUrl || faviconUrl || logoUrl;
 
     // Update document title
     document.title = systemName;
@@ -34,29 +40,33 @@ export default function DynamicHead() {
     updateMetaTag('og:description', tagline, 'property');
     updateMetaTag('og:site_name', systemName, 'property');
     
-    if (logoUrl) {
-      updateMetaTag('og:image', logoUrl, 'property');
+    if (pwaIconUrl) {
+      updateMetaTag('og:image', pwaIconUrl, 'property');
     }
 
     // Update Twitter Card tags
     updateMetaTag('twitter:title', systemName);
     updateMetaTag('twitter:description', tagline);
     
-    if (logoUrl) {
-      updateMetaTag('twitter:image', logoUrl);
+    if (pwaIconUrl) {
+      updateMetaTag('twitter:image', pwaIconUrl);
     }
 
     // Update theme color
     updateMetaTag('theme-color', primaryColor);
 
-    // Update favicon
-    if (faviconUrl) {
-      updateFavicon(faviconUrl);
+    // Update PWA app names
+    updateMetaTag('apple-mobile-web-app-title', systemName);
+    updateMetaTag('application-name', systemName);
+
+    // Update favicon - priorizar logo_icon_url para melhor aparência
+    if (pwaIconUrl) {
+      updateFavicon(pwaIconUrl);
     }
 
-    // Update apple-touch-icon
-    if (logoUrl) {
-      updateAppleTouchIcon(logoUrl);
+    // Update Apple Touch Icons (PWA icons) - priorizar logo_icon_url
+    if (pwaIconUrl) {
+      updateAppleTouchIcons(pwaIconUrl);
     }
 
   }, [effectiveBranding, hasWhiteLabel, tenantBarbershopName]);
@@ -84,35 +94,64 @@ function updateMetaTag(name: string, content: string, attribute: 'name' | 'prope
  * Helper to update favicon
  */
 function updateFavicon(url: string) {
-  // Update main favicon
-  let favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-  if (favicon) {
-    favicon.href = url;
-  } else {
-    favicon = document.createElement('link');
-    favicon.rel = 'icon';
-    favicon.href = url;
-    document.head.appendChild(favicon);
-  }
+  // Update all favicon variants
+  const faviconSelectors = [
+    "link[rel='icon']",
+    "link[rel='shortcut icon']",
+    "link[rel='icon'][type='image/png']"
+  ];
 
-  // Update shortcut icon
-  const shortcut = document.querySelector("link[rel='shortcut icon']") as HTMLLinkElement;
-  if (shortcut) {
-    shortcut.href = url;
+  faviconSelectors.forEach(selector => {
+    const link = document.querySelector(selector) as HTMLLinkElement;
+    if (link) {
+      link.href = url;
+    }
+  });
+
+  // Ensure at least one main favicon exists
+  let mainFavicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+  if (!mainFavicon) {
+    mainFavicon = document.createElement('link');
+    mainFavicon.rel = 'icon';
+    mainFavicon.href = url;
+    document.head.appendChild(mainFavicon);
   }
 }
 
 /**
- * Helper to update apple-touch-icon
+ * Helper to update all Apple Touch Icons for PWA
  */
-function updateAppleTouchIcon(url: string) {
-  let icon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
-  if (icon) {
-    icon.href = url;
+function updateAppleTouchIcons(url: string) {
+  // Update existing Apple Touch Icons with sizes
+  const appleTouchIconSizes = ['152x152', '180x180', '167x167'];
+  
+  appleTouchIconSizes.forEach(size => {
+    let icon = document.querySelector(`link[rel='apple-touch-icon'][sizes='${size}']`) as HTMLLinkElement;
+    if (icon) {
+      icon.href = url;
+    } else {
+      icon = document.createElement('link');
+      icon.rel = 'apple-touch-icon';
+      icon.setAttribute('sizes', size);
+      icon.href = url;
+      document.head.appendChild(icon);
+    }
+  });
+
+  // Update generic Apple Touch Icon (without size)
+  let genericIcon = document.querySelector("link[rel='apple-touch-icon']:not([sizes])") as HTMLLinkElement;
+  if (genericIcon) {
+    genericIcon.href = url;
   } else {
-    icon = document.createElement('link');
-    icon.rel = 'apple-touch-icon';
-    icon.href = url;
-    document.head.appendChild(icon);
+    genericIcon = document.createElement('link');
+    genericIcon.rel = 'apple-touch-icon';
+    genericIcon.href = url;
+    document.head.appendChild(genericIcon);
+  }
+
+  // Update Apple Touch Startup Image (splash screen)
+  const splashScreen = document.querySelector("link[rel='apple-touch-startup-image']") as HTMLLinkElement;
+  if (splashScreen) {
+    splashScreen.href = url;
   }
 }
