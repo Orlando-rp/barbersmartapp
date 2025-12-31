@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getClientAvatarUrl } from "@/hooks/useAvatarUrl";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -528,11 +529,7 @@ const Clients = () => {
                   <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
                     <Avatar className="h-8 w-8 md:h-12 md:w-12 shrink-0">
                       <AvatarImage 
-                        src={client.avatar_url ? (
-                          client.avatar_url.startsWith('http') 
-                            ? client.avatar_url 
-                            : supabase.storage.from('client-avatars').getPublicUrl(client.avatar_url).data.publicUrl
-                        ) : undefined} 
+                        src={getClientAvatarUrl(client.avatar_url) || undefined} 
                         alt={client.name} 
                       />
                       <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs md:text-sm">
