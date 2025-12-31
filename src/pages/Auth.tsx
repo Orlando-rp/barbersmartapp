@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/contexts/BrandingContext';
 import { supabase } from '@/lib/supabase';
@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { PlanSelectionStep } from '@/components/auth/PlanSelectionStep';
 
 interface SocialProviders {
   google: { enabled: boolean };
@@ -50,8 +51,12 @@ interface BarbershopUnit {
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, signIn, refreshBarbershops } = useAuth();
   const { effectiveBranding, currentLogoUrl, hasWhiteLabel, tenantBarbershopName } = useBranding();
+  
+  // Get plan parameter from URL (from landing page)
+  const preSelectedPlan = searchParams.get('plan');
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
   const [errors, setErrors] = useState<any>({});
@@ -113,6 +118,10 @@ const Auth = () => {
   const [barbershopUnits, setBarbershopUnits] = useState<BarbershopUnit[]>([
     { id: '1', name: '', address: '', phone: '', email: '', isPrimary: true }
   ]);
+
+  // Step 3: Plan selection
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [selectedPlanSlug, setSelectedPlanSlug] = useState<string>('');
 
   // Current unit being edited
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
@@ -637,6 +646,16 @@ const Auth = () => {
     }
   };
 
+  const handleStep2Next = () => {
+    if (!validateUnits()) return;
+    setSignupStep(3);
+  };
+
+  const handlePlanSelect = (planId: string, planSlug: string) => {
+    setSelectedPlanId(planId);
+    setSelectedPlanSlug(planSlug);
+  };
+
   const updateCurrentUnit = (field: keyof BarbershopUnit, value: string | boolean) => {
     setBarbershopUnits(prev => prev.map((unit, idx) => 
       idx === currentUnitIndex ? { ...unit, [field]: value } : unit
@@ -692,11 +711,13 @@ const Auth = () => {
     return true;
   };
 
-  const handleSignupComplete = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignupComplete = async () => {
     setErrors({});
     
-    if (!validateUnits()) return;
+    if (!selectedPlanId) {
+      toast.error('Selecione um plano para continuar');
+      return;
+    }
     
     setLoading(true);
 
@@ -813,8 +834,30 @@ const Auth = () => {
         }
       }
 
+      // 6. Create subscription with 14-day trial for the primary barbershop
+      if (primaryBarbershopId && selectedPlanId) {
+        const trialEndDate = new Date();
+        trialEndDate.setDate(trialEndDate.getDate() + 14);
+
+        const { error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .insert({
+            barbershop_id: primaryBarbershopId,
+            plan_id: selectedPlanId,
+            status: 'trialing',
+            trial_ends_at: trialEndDate.toISOString(),
+            current_period_start: new Date().toISOString(),
+            current_period_end: trialEndDate.toISOString(),
+          });
+
+        if (subscriptionError) {
+          console.error('Erro ao criar subscription:', subscriptionError);
+          // Continue anyway - subscription can be added later
+        }
+      }
+
       toast.success('Conta criada com sucesso!', {
-        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Bem-vindo ao ${effectiveBranding?.system_name || 'BarberSmart'}!`,
+        description: `${barbershopUnits.length} unidade(s) cadastrada(s). Trial de 14 dias ativado!`,
       });
 
       // Refresh barbershops in context
@@ -1527,16 +1570,21 @@ const Auth = () => {
 
   const renderSignupStep1 = () => (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-medium">
+      <div className="flex items-center gap-2 mb-4 text-xs sm:text-sm overflow-x-auto">
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground text-xs sm:text-sm font-medium shrink-0">
           1
         </div>
-        <span className="font-medium">Seus dados</span>
-        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-sm font-medium">
+        <span className="font-medium shrink-0">Dados</span>
+        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted text-muted-foreground text-xs sm:text-sm font-medium shrink-0">
           2
         </div>
-        <span className="text-muted-foreground">Barbearias</span>
+        <span className="text-muted-foreground shrink-0">Barbearias</span>
+        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted text-muted-foreground text-xs sm:text-sm font-medium shrink-0">
+          3
+        </div>
+        <span className="text-muted-foreground shrink-0">Plano</span>
       </div>
 
       <div className="space-y-2">
@@ -1719,17 +1767,22 @@ const Auth = () => {
   );
 
   const renderSignupStep2 = () => (
-    <form onSubmit={handleSignupComplete} className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary text-sm font-medium">
-          <Check className="h-4 w-4" />
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-4 text-xs sm:text-sm overflow-x-auto">
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/20 text-primary text-xs sm:text-sm font-medium shrink-0">
+          <Check className="h-3 w-3 sm:h-4 sm:w-4" />
         </div>
-        <span className="text-muted-foreground">Seus dados</span>
-        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-medium">
+        <span className="text-muted-foreground shrink-0">Dados</span>
+        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground text-xs sm:text-sm font-medium shrink-0">
           2
         </div>
-        <span className="font-medium">Barbearias</span>
+        <span className="font-medium shrink-0">Barbearias</span>
+        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted text-muted-foreground text-xs sm:text-sm font-medium shrink-0">
+          3
+        </div>
+        <span className="text-muted-foreground shrink-0">Plano</span>
       </div>
 
       {/* Unit tabs */}
@@ -1870,11 +1923,41 @@ const Auth = () => {
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
         </Button>
-        <Button type="submit" className="flex-1" disabled={loading}>
-          {loading ? 'Criando conta...' : `Criar Conta (${barbershopUnits.length} unidade${barbershopUnits.length > 1 ? 's' : ''})`}
+        <Button type="button" className="flex-1" onClick={handleStep2Next} disabled={loading}>
+          Próximo <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
-    </form>
+    </div>
+  );
+
+  const renderSignupStep3 = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-4 text-xs sm:text-sm overflow-x-auto">
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/20 text-primary text-xs sm:text-sm font-medium shrink-0">
+          <Check className="h-3 w-3 sm:h-4 sm:w-4" />
+        </div>
+        <span className="text-muted-foreground shrink-0">Dados</span>
+        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/20 text-primary text-xs sm:text-sm font-medium shrink-0">
+          <Check className="h-3 w-3 sm:h-4 sm:w-4" />
+        </div>
+        <span className="text-muted-foreground shrink-0">Barbearias</span>
+        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground text-xs sm:text-sm font-medium shrink-0">
+          3
+        </div>
+        <span className="font-medium shrink-0">Plano</span>
+      </div>
+
+      <PlanSelectionStep
+        selectedPlanId={selectedPlanId}
+        onSelectPlan={handlePlanSelect}
+        onBack={() => setSignupStep(2)}
+        onComplete={handleSignupComplete}
+        loading={loading}
+        preSelectedPlanSlug={preSelectedPlan}
+      />
+    </div>
   );
 
   return (
@@ -2040,8 +2123,10 @@ const Auth = () => {
                 renderWhatsAppSignup()
               ) : signupStep === 1 ? (
                 signupMethod === 'whatsapp' && signupOtpStep === 'details' ? renderWhatsAppSignup() : renderSignupStep1()
-              ) : (
+              ) : signupStep === 2 ? (
                 renderSignupStep2()
+              ) : (
+                renderSignupStep3()
               )}
             </TabsContent>
           </Tabs>
