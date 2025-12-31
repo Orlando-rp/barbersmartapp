@@ -1,73 +1,130 @@
-# Welcome to your Lovable project
+# BarberSmart
 
-## Project info
+![Version](https://img.shields.io/github/v/release/seu-usuario/barbersmart?label=vers%C3%A3o&color=8B5CF6)
+![License](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
+![Build](https://img.shields.io/github/actions/workflow/status/seu-usuario/barbersmart/build-push.yml?label=build)
+![Docker](https://img.shields.io/docker/v/seu-usuario/barbersmartapp?label=docker&color=2496ED)
 
-**URL**: https://lovable.dev/projects/d7d3f7bb-7e01-497c-925a-df1aa3ec8da6
+> 🚀 Plataforma SaaS completa para gestão de barbearias
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## ✨ Funcionalidades
 
-**Use Lovable**
+- 📅 **Agendamento Inteligente** - Sistema de agendamento online com integração WhatsApp
+- 💰 **Gestão Financeira** - Controle de receitas, despesas e comissões
+- 👥 **Gestão de Equipe** - Perfis, horários e métricas de desempenho
+- 📱 **Portal do Cliente** - Agendamento self-service para clientes
+- 🤖 **Chatbot IA** - Atendimento automatizado via WhatsApp
+- 🏢 **Multi-unidade** - Suporte para redes de barbearias
+- 📊 **Relatórios** - Análises e insights do negócio
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/d7d3f7bb-7e01-497c-925a-df1aa3ec8da6) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ Tecnologias
 
-**Use your preferred IDE**
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- **Backend:** Supabase (PostgreSQL, Auth, Edge Functions)
+- **Infraestrutura:** Docker, GitHub Actions, Portainer
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🚀 Início Rápido
 
-Follow these steps:
+### Desenvolvimento Local
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+```bash
+# Clonar repositório
 git clone <YOUR_GIT_URL>
+cd barbersmart
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Instalar dependências
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Iniciar servidor de desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Docker
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# Build e run
+docker compose up -d
 
-**Use GitHub Codespaces**
+# Ou usando imagem do Docker Hub
+docker pull seu-usuario/barbersmartapp:latest
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## 📦 Deploy
 
-This project is built with:
+### Deploy Controlado por Tags
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+O deploy é disparado apenas quando uma tag de versão é criada:
 
-## How can I deploy this project?
+```bash
+# Instalar hooks de validação (primeira vez)
+chmod +x scripts/setup-hooks.sh
+./scripts/setup-hooks.sh
 
-Simply open [Lovable](https://lovable.dev/projects/d7d3f7bb-7e01-497c-925a-df1aa3ec8da6) and click on Share -> Publish.
+# Criar release
+chmod +x scripts/release.sh
+./scripts/release.sh
+```
 
-## Can I connect a custom domain to my Lovable project?
+O script irá:
+1. ✅ Validar commits (Conventional Commits)
+2. ✅ Gerar changelog automaticamente
+3. ✅ Atualizar versão no package.json
+4. ✅ Criar tag e fazer push
+5. ✅ Disparar build e deploy via GitHub Actions
 
-Yes, you can!
+### Tipos de Release
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+| Comando | Descrição | Exemplo |
+|---------|-----------|---------|
+| `./scripts/release.sh patch` | Correções | v1.0.0 → v1.0.1 |
+| `./scripts/release.sh minor` | Novas funcionalidades | v1.0.0 → v1.1.0 |
+| `./scripts/release.sh major` | Breaking changes | v1.0.0 → v2.0.0 |
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+---
+
+## 📝 Conventional Commits
+
+Todas as mensagens de commit devem seguir o padrão:
+
+```
+<tipo>(<escopo>): <descrição>
+```
+
+**Tipos:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`
+
+**Exemplos:**
+```bash
+feat: adicionar login com Google
+fix(auth): corrigir token expirado
+docs: atualizar README
+```
+
+---
+
+## 📚 Documentação
+
+- [Guia de Release](docs/RELEASE-GUIDE.md)
+- [Arquitetura Multi-tenant](docs/MULTI-TENANT-ARCHITECTURE.md)
+- [Self-Hosting](docs/SELF-HOSTING-GUIDE.md)
+- [Configuração WhatsApp](docs/WHATSAPP-SETUP-INSTRUCTIONS.md)
+
+---
+
+## 🔗 Links
+
+- **Lovable:** [Abrir no Editor](https://lovable.dev/projects/d7d3f7bb-7e01-497c-925a-df1aa3ec8da6)
+- **Changelog:** [Ver atualizações](CHANGELOG.md)
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
