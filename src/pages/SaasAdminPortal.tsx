@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { invalidatePlansCache } from "@/lib/plansCache";
 import SaasAdminLayout from "@/components/layout/SaasAdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -528,6 +529,9 @@ const SaasAdminPortal = () => {
         if (error) throw error;
         toast.success('Plano criado');
       }
+
+      // Invalidate landing page cache so changes appear immediately
+      invalidatePlansCache();
 
       setPlanDialogOpen(false);
       setSelectedPlan(null);
