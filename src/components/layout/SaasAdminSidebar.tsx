@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranding } from "@/contexts/BrandingContext";
 
 interface NavItem {
   name: string;
@@ -49,6 +50,8 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
   const { signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const { effectiveBranding, currentLogoUrl } = useBranding();
+  const systemName = effectiveBranding?.system_name || "Admin SaaS";
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -76,8 +79,31 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
         <div className="flex items-center justify-between">
           {!isCollapsed && (
             <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-warning" />
-              <span className="font-bold text-foreground">Admin SaaS</span>
+              {currentLogoUrl ? (
+                <img 
+                  src={currentLogoUrl} 
+                  alt={systemName} 
+                  className="h-8 w-auto max-w-[140px] object-contain" 
+                />
+              ) : (
+                <>
+                  <Shield className="h-6 w-6 text-warning" />
+                  <span className="font-bold text-foreground">Admin SaaS</span>
+                </>
+              )}
+            </div>
+          )}
+          {isCollapsed && !isMobile && (
+            <div className="flex items-center justify-center w-full">
+              {currentLogoUrl ? (
+                <img 
+                  src={currentLogoUrl} 
+                  alt={systemName} 
+                  className="h-8 w-8 object-contain" 
+                />
+              ) : (
+                <Shield className="h-6 w-6 text-warning" />
+              )}
             </div>
           )}
           {!isMobile && (
@@ -164,7 +190,7 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
       {!isCollapsed && (
         <div className="p-3 border-t border-border">
           <div className="text-xs text-muted-foreground text-center">
-            Barber Smart SaaS v1.0.0
+            {systemName} v1.0.0
           </div>
         </div>
       )}
