@@ -283,6 +283,8 @@ const Sidebar = () => {
   
   const { barbershops, userRole } = useAuth();
   const { effectiveBranding, currentLogoUrl } = useBranding();
+  const logoIconUrl = effectiveBranding?.logo_icon_url;
+  const faviconUrl = effectiveBranding?.favicon_url;
   const { hasFeature } = useFeatureFlags();
   const { subscription, loading: subscriptionLoading } = useSubscription();
   const { hasPermission } = useRolePermissions();
@@ -341,7 +343,7 @@ const Sidebar = () => {
         ) : (
           <div className="flex items-center justify-center w-full">
             <img 
-              src={currentLogoUrl || logoIcon} 
+              src={logoIconUrl || faviconUrl || currentLogoUrl || logoIcon} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
               className="w-10 h-10 rounded-lg object-contain"
             />
