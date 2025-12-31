@@ -335,17 +335,19 @@ const Sidebar = () => {
       {/* Logo + Toggle */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         {!collapsed ? (
-          <img 
-            src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
-            alt={effectiveBranding?.system_name || 'Barber Smart'} 
-            className="h-12 w-auto max-w-[200px] object-contain"
-          />
+          <div className="flex items-center justify-center flex-1">
+            <img 
+              src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
+              alt={effectiveBranding?.system_name || 'Barber Smart'} 
+              className="h-14 w-auto max-w-[200px] object-contain mx-auto"
+            />
+          </div>
         ) : (
           <div className="flex items-center justify-center w-full">
             <img 
               src={logoIconUrl || faviconUrl || currentLogoUrl || logoIcon} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="w-10 h-10 rounded-lg object-contain"
+              className="w-11 h-11 rounded-lg object-contain"
             />
           </div>
         )}
