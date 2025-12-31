@@ -77,3 +77,12 @@ verify_jwt = false
 
 [functions.subscription-webhook]
 verify_jwt = false
+
+[functions.notify-subscription-expiring]
+verify_jwt = false
+
+[functions.uptime-monitor]
+verify_jwt = false
+
+[functions.uptime-recovery-alert]
+verify_jwt = false
