@@ -51,9 +51,13 @@ import {
   Zap,
   Building2,
   CreditCard,
-  Puzzle
+  Puzzle,
+  Menu,
+  X
 } from "lucide-react";
 import logoDark from "@/assets/logo-dark.png";
+import logoIcon from "@/assets/logo-icon.png";
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { PackageComparison } from "@/components/pricing/PackageComparison";
 import { ModularPlanBuilder } from "@/components/pricing/ModularPlanBuilder";
 import { Button } from "@/components/ui/button";
@@ -326,14 +330,19 @@ const LandingPage = () => {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="fixed top-0 left-0 right-0 z-50 px-4 py-4"
+        className="fixed top-0 left-0 right-0 z-50 px-2 sm:px-4 py-2 sm:py-4"
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 px-6 py-3">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between bg-white/5 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/10 px-3 sm:px-6 py-2 sm:py-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <img 
               src={logoDark} 
               alt="Barber Smart" 
-              className="h-10 w-auto object-contain"
+              className="h-8 sm:h-10 w-auto object-contain hidden sm:block"
+            />
+            <img 
+              src={logoIcon} 
+              alt="Barber Smart" 
+              className="h-8 w-auto object-contain sm:hidden"
             />
           </div>
           <div className="hidden md:flex items-center gap-8">
@@ -362,7 +371,9 @@ const LandingPage = () => {
               FAQ
             </button>
           </div>
-          <div className="flex items-center gap-3">
+          
+          {/* Desktop buttons */}
+          <div className="hidden md:flex items-center gap-3">
             <Button 
               variant="ghost" 
               className="text-white/80 hover:text-white hover:bg-white/10"
@@ -377,11 +388,91 @@ const LandingPage = () => {
               Começar Grátis
             </Button>
           </div>
+
+          {/* Mobile menu */}
+          <div className="flex md:hidden items-center gap-2">
+            <Button 
+              size="sm"
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold text-xs px-3"
+              onClick={() => navigate('/auth?tab=signup')}
+            >
+              Começar
+            </Button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="bg-[#0a0a0a] border-white/10 w-72">
+                <div className="flex flex-col gap-6 mt-8">
+                  <img 
+                    src={logoDark} 
+                    alt="Barber Smart" 
+                    className="h-10 w-auto object-contain"
+                  />
+                  <nav className="flex flex-col gap-4">
+                    <SheetClose asChild>
+                      <button 
+                        onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="text-white/70 hover:text-white transition-colors text-left py-2 border-b border-white/10"
+                      >
+                        Recursos
+                      </button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <button 
+                        onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="text-white/70 hover:text-white transition-colors text-left py-2 border-b border-white/10"
+                      >
+                        Como Funciona
+                      </button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <button 
+                        onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="text-white/70 hover:text-white transition-colors text-left py-2 border-b border-white/10"
+                      >
+                        Planos
+                      </button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <button 
+                        onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="text-white/70 hover:text-white transition-colors text-left py-2 border-b border-white/10"
+                      >
+                        FAQ
+                      </button>
+                    </SheetClose>
+                  </nav>
+                  <div className="flex flex-col gap-3 mt-4">
+                    <SheetClose asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full border-white/20 text-white hover:bg-white/10"
+                        onClick={() => navigate('/auth')}
+                      >
+                        Entrar
+                      </Button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <Button 
+                        className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
+                        onClick={() => navigate('/auth?tab=signup')}
+                      >
+                        Começar Grátis
+                      </Button>
+                    </SheetClose>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </motion.nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-4 min-h-screen flex items-center overflow-hidden">
+      <section className="relative pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 min-h-screen flex items-center overflow-hidden">
         {/* Parallax Background Image */}
         <ParallaxBackground imageUrl="/images/barbershop-hero.jpg" speed={0.2} />
         {/* Dark Overlay */}
@@ -389,16 +480,16 @@ const LandingPage = () => {
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-transparent to-[#0a0a0a]/90" />
         
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
+        <div className="max-w-7xl mx-auto relative z-10 w-full">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div className="text-center lg:text-left">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 text-sm font-medium mb-6"
+                className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs sm:text-sm font-medium mb-4 sm:mb-6"
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                 Inteligência Artificial Integrada
               </motion.div>
               
@@ -406,7 +497,7 @@ const LandingPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight mb-4 sm:mb-6"
               >
                 Sua Barbearia no{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600">
@@ -418,7 +509,7 @@ const LandingPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-lg md:text-xl text-white/60 max-w-xl mb-8"
+                className="text-base sm:text-lg md:text-xl text-white/60 max-w-xl mx-auto lg:mx-0 mb-6 sm:mb-8"
               >
                 Agendamento inteligente, WhatsApp automatizado e gestão completa. 
                 Enquanto você foca nos cortes, a gente cuida do resto.
@@ -428,20 +519,20 @@ const LandingPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="flex flex-col sm:flex-row gap-4 mb-12"
+                className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 sm:mb-12 justify-center lg:justify-start"
               >
                 <Button 
                   size="lg"
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold text-lg px-8 h-14 rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 transition-all duration-300"
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold text-base sm:text-lg px-6 sm:px-8 h-12 sm:h-14 rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 transition-all duration-300"
                   onClick={() => navigate('/auth?tab=signup')}
                 >
                   Começar Grátis
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
                 </Button>
                 <Button 
                   size="lg"
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10 text-lg px-8 h-14 rounded-xl bg-white/5 backdrop-blur"
+                  className="border-white/20 text-white hover:bg-white/10 text-base sm:text-lg px-6 sm:px-8 h-12 sm:h-14 rounded-xl bg-white/5 backdrop-blur"
                   onClick={() => navigate('/auth')}
                 >
                   Acessar Sistema
@@ -453,25 +544,25 @@ const LandingPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
-                className="grid grid-cols-3 gap-8"
+                className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8"
               >
-                <div>
-                  <div className="text-3xl md:text-4xl font-bold text-white">
+                <div className="text-center lg:text-left">
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
                     <AnimatedCounter value={500} suffix="+" />
                   </div>
-                  <div className="text-white/50 text-sm mt-1">Barbearias</div>
+                  <div className="text-white/50 text-xs sm:text-sm mt-1">Barbearias</div>
                 </div>
-                <div>
-                  <div className="text-3xl md:text-4xl font-bold text-white">
+                <div className="text-center lg:text-left">
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
                     <AnimatedCounter value={50} suffix="k+" />
                   </div>
-                  <div className="text-white/50 text-sm mt-1">Agendamentos</div>
+                  <div className="text-white/50 text-xs sm:text-sm mt-1">Agendamentos</div>
                 </div>
-                <div>
-                  <div className="text-3xl md:text-4xl font-bold text-white">
+                <div className="text-center lg:text-left">
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
                     <AnimatedCounter value={98} suffix="%" />
                   </div>
-                  <div className="text-white/50 text-sm mt-1">Satisfação</div>
+                  <div className="text-white/50 text-xs sm:text-sm mt-1">Satisfação</div>
                 </div>
               </motion.div>
             </div>
@@ -837,7 +928,7 @@ const LandingPage = () => {
       </section>
 
       {/* How it Works */}
-      <section id="how-it-works" className="py-24 px-4 relative overflow-hidden">
+      <section id="how-it-works" className="py-12 sm:py-24 px-4 relative overflow-hidden">
         {/* Parallax Background Image */}
         <ParallaxBackground imageUrl="/images/barbershop-how-it-works.jpg" speed={0.25} />
         {/* Dark Overlay with blur effect */}
@@ -850,12 +941,12 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-8 sm:mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
               Simples como deve ser
             </h2>
-            <p className="text-white/60 text-lg max-w-2xl mx-auto">
+            <p className="text-white/60 text-sm sm:text-lg max-w-2xl mx-auto px-4">
               Em poucos minutos você está pronto para receber agendamentos
             </p>
           </motion.div>
@@ -981,37 +1072,37 @@ const LandingPage = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-4 relative">
+      <section id="pricing" className="py-12 sm:py-24 px-4 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent" />
         <div className="max-w-7xl mx-auto relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-8 sm:mb-12"
           >
             {/* Free Trial Banner */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              className="inline-flex items-center gap-3 px-6 py-3 mb-8 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 rounded-full"
+              className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 mb-6 sm:mb-8 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 rounded-full"
             >
-              <div className="flex items-center justify-center w-8 h-8 bg-emerald-500 rounded-full">
-                <Sparkles className="w-4 h-4 text-black" />
+              <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 bg-emerald-500 rounded-full">
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-black" />
               </div>
-              <span className="text-emerald-400 font-semibold">
+              <span className="text-emerald-400 font-semibold text-sm sm:text-base">
                 14 dias grátis em todos os planos
               </span>
-              <span className="text-white/60 text-sm">
+              <span className="text-white/60 text-xs sm:text-sm hidden sm:inline">
                 Sem cartão de crédito
               </span>
             </motion.div>
 
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
               Investimento que se paga
             </h2>
-            <p className="text-white/60 text-lg max-w-2xl mx-auto mb-8">
+            <p className="text-white/60 text-sm sm:text-lg max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
               Escolha o plano ideal para o tamanho do seu negócio. <span className="text-emerald-400 font-medium">Teste grátis por 14 dias!</span>
             </p>
 
@@ -1081,7 +1172,7 @@ const LandingPage = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-24 px-4 relative overflow-hidden">
+      <section className="py-12 sm:py-24 px-4 relative overflow-hidden">
         {/* Parallax Background Image */}
         <ParallaxBackground imageUrl="/images/barbershop-testimonials.jpg" speed={0.2} />
         {/* Dark Overlay with sepia tint */}
@@ -1094,17 +1185,17 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-8 sm:mb-12"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
               Quem usa, recomenda
             </h2>
-            <p className="text-white/60 text-lg">
-              Veja o que nossos clientes dizem sobre o BarberSmart
+            <p className="text-white/60 text-sm sm:text-lg">
+              Veja o que nossos clientes dizem sobre o Barber Smart
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             {[
               {
                 name: "Carlos Silva",
@@ -1153,19 +1244,19 @@ const LandingPage = () => {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-24 px-4">
+      <section id="faq" className="py-12 sm:py-24 px-4">
         <div className="max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-8 sm:mb-12"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
               Perguntas Frequentes
             </h2>
-            <p className="text-white/60 text-lg">
-              Tire suas dúvidas sobre o BarberSmart
+            <p className="text-white/60 text-sm sm:text-lg">
+              Tire suas dúvidas sobre o Barber Smart
             </p>
           </motion.div>
 
@@ -1196,13 +1287,13 @@ const LandingPage = () => {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-4">
+      <section className="py-12 sm:py-24 px-4">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="relative overflow-hidden rounded-3xl border border-amber-500/30 p-12 text-center"
+            className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-amber-500/30 p-6 sm:p-12 text-center"
           >
             {/* Parallax Background Image */}
             <ParallaxBackground imageUrl="/images/barbershop-cta.jpg" speed={0.15} />
@@ -1216,17 +1307,17 @@ const LandingPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 text-amber-500 text-sm font-medium mb-6"
+                className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-amber-500/20 text-amber-500 text-xs sm:text-sm font-medium mb-4 sm:mb-6"
               >
-                <Zap className="w-4 h-4" />
+                <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
                 Comece grátis por 14 dias
               </motion.div>
               
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
                 Pronto para transformar sua barbearia?
               </h2>
-              <p className="text-white/60 text-lg max-w-xl mx-auto mb-8">
-                Junte-se a mais de 500 barbearias que já usam o BarberSmart para crescer seus negócios.
+              <p className="text-white/60 text-sm sm:text-lg max-w-xl mx-auto mb-6 sm:mb-8">
+                Junte-se a mais de 500 barbearias que já usam o Barber Smart para crescer seus negócios.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -1245,23 +1336,25 @@ const LandingPage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 border-t border-white/10">
+      <footer className="py-8 sm:py-12 px-4 border-t border-white/10">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
-                <Scissors className="w-4 h-4 text-black" />
-              </div>
-              <span className="font-bold">BarberSmart</span>
+              <img 
+                src={logoIcon} 
+                alt="Barber Smart" 
+                className="h-8 w-auto object-contain"
+              />
+              <span className="font-bold">Barber Smart</span>
             </div>
             
-            <div className="flex items-center gap-8 text-sm text-white/50">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-white/50">
               <a href="/privacy" className="hover:text-white transition-colors">Privacidade</a>
               <a href="/terms" className="hover:text-white transition-colors">Termos</a>
               <a href="mailto:contato@barbersmart.app" className="hover:text-white transition-colors">Contato</a>
             </div>
             
-            <div className="flex flex-col items-center md:items-end gap-1 text-sm text-white/50">
+            <div className="flex flex-col items-center md:items-end gap-1 text-xs sm:text-sm text-white/50 text-center md:text-right">
               <div>© {new Date().getFullYear()} Barber Smart. Todos os direitos reservados.</div>
               <div>
                 Desenvolvido por{" "}
