@@ -282,6 +282,42 @@ docker exec $(docker ps -q -f name=barbersmart_app) curl -f http://localhost/hea
 2. Confirme que o status é `active`
 3. Verifique se `verified_at` não é null
 
+### ⚠️ Conflito de Roteamento - Outros serviços inacessíveis
+
+Se outros serviços (Portainer, n8n, etc.) ficarem inacessíveis após deploy do BarberSmart:
+
+**Causa comum:** Router catch-all (`PathPrefix('/')`) sem filtro de Host captura todas as requisições.
+
+**Diagnóstico:**
+```bash
+# Ver labels do serviço
+docker service inspect barbersmart_app | grep -i "traefik"
+
+# Se aparecer algo como:
+# "traefik.http.routers.XXX.rule": "PathPrefix(`/`)"
+# com priority baixa (1), esse é o problema
+```
+
+**Solução:** 
+- Remover routers com `PathPrefix('/')` sem Host filter
+- Usar apenas routers com `Host()` ou `HostRegexp()` específicos
+- Garantir que o BarberSmart só responda pelo seu domínio principal e subdomínios
+
+**Estrutura correta de labels:**
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.docker.network=my_network"
+  # Router para domínio principal APENAS
+  - "traefik.http.routers.barbersmart-main.rule=Host(`barsmart.app`) || Host(`www.barsmart.app`)"
+  - "traefik.http.routers.barbersmart-main.priority=10"
+  # Router para subdomínios APENAS do domínio principal
+  - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.barsmart.app`)"
+  - "traefik.http.routers.barbersmart-wildcard.priority=5"
+  # NÃO usar: PathPrefix('/') sem Host filter
+```
+
+
 ## Estrutura de Arquivos
 
 ```
