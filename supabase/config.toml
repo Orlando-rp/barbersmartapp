@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.test-mercadopago-connection]
 verify_jwt = false
+
+[functions.generate-branding-images]
+verify_jwt = true

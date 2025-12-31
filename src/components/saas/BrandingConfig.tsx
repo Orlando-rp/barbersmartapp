@@ -18,7 +18,9 @@ import {
   RefreshCw,
   Image as ImageIcon,
   Type,
-  Settings2
+  Settings2,
+  Sparkles,
+  Wand2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -65,6 +67,7 @@ export const BrandingConfig = () => {
   const [loading, setLoading] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -283,6 +286,44 @@ export const BrandingConfig = () => {
     }));
   };
 
+  const generateBrandingWithAI = async () => {
+    try {
+      setGeneratingAI(true);
+      toast.info("Gerando logomarcas com IA... Isso pode levar alguns segundos.");
+
+      const { data, error } = await supabase.functions.invoke('generate-branding-images', {
+        body: {
+          type: 'all',
+          brandName: config.systemName || 'BarberSmart',
+          primaryColor: config.colors.primary || '#d4a574'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.images) {
+        setConfig(prev => ({
+          ...prev,
+          logoUrl: data.images.logo_url || prev.logoUrl,
+          faviconUrl: data.images.favicon_url || prev.faviconUrl,
+        }));
+        
+        // Reload config to get logo_dark_url
+        await loadConfig();
+        await refreshBranding();
+        
+        toast.success("Logomarcas geradas com sucesso! Clique em Salvar para aplicar.");
+      } else {
+        throw new Error(data?.error || 'Erro desconhecido');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar branding com IA:', error);
+      toast.error(`Erro ao gerar imagens: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -372,13 +413,34 @@ export const BrandingConfig = () => {
         <TabsContent value="images">
           <Card className="bg-card border-border">
             <CardHeader className="p-3 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
-                <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
-                Logomarca e Ícones
-              </CardTitle>
-              <CardDescription className="text-muted-foreground text-xs sm:text-sm">
-                Imagens da marca
-              </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
+                    <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+                    Logomarca e Ícones
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground text-xs sm:text-sm">
+                    Imagens da marca
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={generateBrandingWithAI}
+                  disabled={generatingAI}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                >
+                  {generatingAI ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Gerar com IA
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-3 sm:p-6 pt-0 space-y-6">
               {/* Logo */}
