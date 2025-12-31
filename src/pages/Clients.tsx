@@ -5,11 +5,10 @@ import { ClientDialog } from "@/components/dialogs/ClientDialog";
 import { ClientImportDialog } from "@/components/dialogs/ClientImportDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ClientAvatar } from "@/components/ui/smart-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getClientAvatarUrl } from "@/hooks/useAvatarUrl";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -527,15 +526,13 @@ const Clients = () => {
                   className="flex items-center justify-between p-2 md:p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors gap-2"
                 >
                   <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
-                    <Avatar className="h-8 w-8 md:h-12 md:w-12 shrink-0">
-                      <AvatarImage 
-                        src={getClientAvatarUrl(client.avatar_url) || undefined} 
-                        alt={client.name} 
-                      />
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs md:text-sm">
-                        {client.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <ClientAvatar 
+                      src={client.avatar_url}
+                      alt={client.name}
+                      fallbackText={client.name}
+                      className="h-8 w-8 md:h-12 md:w-12 shrink-0"
+                      fallbackClassName="bg-primary/10 text-primary font-semibold text-xs md:text-sm"
+                    />
                     
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground text-sm md:text-base flex items-center gap-2">
