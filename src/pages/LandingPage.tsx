@@ -331,10 +331,30 @@ const LandingPage = () => {
             <span className="text-xl font-bold">BarberSmart</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-white/70 hover:text-white transition-colors text-sm">Recursos</a>
-            <a href="#how-it-works" className="text-white/70 hover:text-white transition-colors text-sm">Como Funciona</a>
-            <a href="#pricing" className="text-white/70 hover:text-white transition-colors text-sm">Planos</a>
-            <a href="#faq" className="text-white/70 hover:text-white transition-colors text-sm">FAQ</a>
+            <button 
+              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+              className="text-white/70 hover:text-white transition-colors text-sm"
+            >
+              Recursos
+            </button>
+            <button 
+              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+              className="text-white/70 hover:text-white transition-colors text-sm"
+            >
+              Como Funciona
+            </button>
+            <button 
+              onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+              className="text-white/70 hover:text-white transition-colors text-sm"
+            >
+              Planos
+            </button>
+            <button 
+              onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })}
+              className="text-white/70 hover:text-white transition-colors text-sm"
+            >
+              FAQ
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <Button 
