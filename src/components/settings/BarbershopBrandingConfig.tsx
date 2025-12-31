@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { optimizeImage, formatFileSize } from "@/lib/imageOptimization";
+import { PWAInstallPreview } from "./PWAInstallPreview";
 
 interface CustomBranding {
   system_name?: string;
@@ -666,6 +667,28 @@ const BarbershopBrandingConfig = () => {
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* PWA Preview */}
+            <div className="space-y-3">
+              <Label className="text-xs sm:text-sm">Preview do App Instalado</Label>
+              <p className="text-xs text-muted-foreground">
+                Veja como seu app aparecerá na tela inicial do celular dos clientes quando instalado como PWA.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-6 items-center justify-center p-4 bg-muted/30 rounded-lg">
+                <PWAInstallPreview 
+                  customIconUrl={branding.logo_icon_url || branding.favicon_url}
+                  customAppName={branding.system_name}
+                  variant="dark"
+                />
+                <PWAInstallPreview 
+                  customIconUrl={branding.logo_icon_url || branding.favicon_url}
+                  customAppName={branding.system_name}
+                  variant="light"
+                />
               </div>
             </div>
           </TabsContent>

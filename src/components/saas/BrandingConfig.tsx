@@ -30,6 +30,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useBranding } from "@/contexts/BrandingContext";
 import { optimizeImage, formatFileSize } from "@/lib/imageOptimization";
+import { PWAInstallPreview } from "@/components/settings/PWAInstallPreview";
 
 interface BrandingSettings {
   systemName: string;
@@ -852,6 +853,26 @@ export const BrandingConfig = () => {
                       Recomendado: ICO ou PNG, 32x32px ou 64x64px
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* PWA Preview */}
+              <div className="space-y-3 pt-4 border-t border-border">
+                <Label className="text-foreground text-sm">Preview do App Instalado (PWA)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Visualize como o sistema aparecerá na tela inicial do celular quando instalado como PWA.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-6 items-center justify-center p-4 bg-muted/30 rounded-lg">
+                  <PWAInstallPreview 
+                    customIconUrl={config.logoIconUrl || config.faviconUrl}
+                    customAppName={config.systemName}
+                    variant="dark"
+                  />
+                  <PWAInstallPreview 
+                    customIconUrl={config.logoIconUrl || config.faviconUrl}
+                    customAppName={config.systemName}
+                    variant="light"
+                  />
                 </div>
               </div>
             </CardContent>
