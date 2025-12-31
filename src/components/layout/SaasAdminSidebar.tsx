@@ -55,7 +55,7 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
   };
 
   const handleBackToApp = () => {
-    navigate('/');
+    navigate('/dashboard');
   };
 
   const handleNavClick = (tab: string) => {
