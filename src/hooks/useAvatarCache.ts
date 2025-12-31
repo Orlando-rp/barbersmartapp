@@ -1,16 +1,61 @@
 /**
  * Global avatar cache system
  * Stores loaded avatar URLs to prevent reloading when navigating between pages
+ * Persists to sessionStorage for cross-reload persistence
  */
 
-// Global cache - persists across component mounts/unmounts
-const avatarCache = new Map<string, {
+const STORAGE_KEY = 'avatar-cache';
+
+type CacheEntry = {
   status: 'loading' | 'loaded' | 'error';
-  dataUrl?: string; // Optional: store as data URL for instant display
-}>();
+};
+
+// Global cache - persists across component mounts/unmounts
+const avatarCache = new Map<string, CacheEntry>();
 
 // Set of URLs currently being preloaded
 const preloadingUrls = new Set<string>();
+
+/**
+ * Load cache from sessionStorage on initialization
+ */
+const loadCacheFromStorage = (): void => {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as Record<string, CacheEntry>;
+      Object.entries(parsed).forEach(([url, entry]) => {
+        // Only restore loaded/error states, not loading
+        if (entry.status === 'loaded' || entry.status === 'error') {
+          avatarCache.set(url, entry);
+        }
+      });
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+};
+
+/**
+ * Save cache to sessionStorage
+ */
+const saveCacheToStorage = (): void => {
+  try {
+    const toStore: Record<string, CacheEntry> = {};
+    avatarCache.forEach((entry, url) => {
+      // Only persist loaded/error states
+      if (entry.status === 'loaded' || entry.status === 'error') {
+        toStore[url] = entry;
+      }
+    });
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+  } catch (e) {
+    // Ignore storage errors (quota exceeded, etc.)
+  }
+};
+
+// Initialize cache from storage
+loadCacheFromStorage();
 
 /**
  * Check if an avatar URL is already cached and loaded
@@ -36,6 +81,7 @@ export const getAvatarCacheStatus = (url: string | null | undefined): 'loading' 
 export const markAvatarLoaded = (url: string): void => {
   avatarCache.set(url, { status: 'loaded' });
   preloadingUrls.delete(url);
+  saveCacheToStorage();
 };
 
 /**
@@ -44,6 +90,7 @@ export const markAvatarLoaded = (url: string): void => {
 export const markAvatarError = (url: string): void => {
   avatarCache.set(url, { status: 'error' });
   preloadingUrls.delete(url);
+  saveCacheToStorage();
 };
 
 /**
@@ -120,6 +167,11 @@ export const preloadAvatars = async (urls: (string | null | undefined)[]): Promi
 export const clearAvatarCache = (): void => {
   avatarCache.clear();
   preloadingUrls.clear();
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch (e) {
+    // Ignore storage errors
+  }
 };
 
 /**
