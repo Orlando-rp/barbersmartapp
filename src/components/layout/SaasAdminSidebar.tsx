@@ -78,20 +78,20 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
     )}>
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
+        <div className={cn("flex items-center", isCollapsed ? "justify-center" : "justify-center flex-1")}>
           {!isCollapsed && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center flex-1">
               {currentLogoUrl ? (
                 <img 
                   src={currentLogoUrl} 
                   alt={systemName} 
-                  className="h-8 w-auto max-w-[140px] object-contain" 
+                  className="h-12 w-auto max-w-[180px] object-contain mx-auto" 
                 />
               ) : (
-                <>
-                  <Shield className="h-6 w-6 text-warning" />
-                  <span className="font-bold text-foreground">Admin SaaS</span>
-                </>
+                <div className="flex items-center justify-center gap-2">
+                  <Shield className="h-8 w-8 text-warning" />
+                  <span className="text-xl font-bold text-foreground">Admin SaaS</span>
+                </div>
               )}
             </div>
           )}
@@ -101,22 +101,22 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
                 <img 
                   src={logoIconUrl} 
                   alt={systemName} 
-                  className="h-8 w-8 object-contain" 
+                  className="h-10 w-10 rounded-lg object-contain" 
                 />
               ) : faviconUrl ? (
                 <img 
                   src={faviconUrl} 
                   alt={systemName} 
-                  className="h-8 w-8 object-contain" 
+                  className="h-10 w-10 rounded-lg object-contain" 
                 />
               ) : currentLogoUrl ? (
                 <img 
                   src={currentLogoUrl} 
                   alt={systemName} 
-                  className="h-8 w-8 object-contain" 
+                  className="h-10 w-10 rounded-lg object-contain" 
                 />
               ) : (
-                <Shield className="h-6 w-6 text-warning" />
+                <Shield className="h-8 w-8 text-warning" />
               )}
             </div>
           )}
