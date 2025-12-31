@@ -51,17 +51,11 @@ services:
         - "traefik.http.routers.barbersmart-main.tls.certresolver=letsencrypt"
         - "traefik.http.routers.barbersmart-main.priority=10"
         
-        # Wildcard Subdomain Router
-        - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${MAIN_DOMAIN:-barsmart.app}`)"
+        # Wildcard Subdomain Router (exclui subdomínios de infra)
+        - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${MAIN_DOMAIN:-barsmart.app}`) && !Host(`portainer.${MAIN_DOMAIN:-barsmart.app}`) && !Host(`traefik.${MAIN_DOMAIN:-barsmart.app}`)"
         - "traefik.http.routers.barbersmart-wildcard.entrypoints=websecure"
         - "traefik.http.routers.barbersmart-wildcard.tls.certresolver=letsencrypt"
         - "traefik.http.routers.barbersmart-wildcard.priority=5"
-        
-        # Custom Domain Router (para domínios personalizados das barbearias)
-        - "traefik.http.routers.barbersmart-custom.rule=PathPrefix(`/`)"
-        - "traefik.http.routers.barbersmart-custom.entrypoints=websecure"
-        - "traefik.http.routers.barbersmart-custom.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.barbersmart-custom.priority=1"
         
         # Service Configuration
         - "traefik.http.services.barbersmart.loadbalancer.server.port=80"
