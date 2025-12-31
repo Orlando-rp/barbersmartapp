@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { clearAvatarCache } from '@/hooks/useAvatarCache';
 
 interface Client {
   id: string;
@@ -126,6 +127,8 @@ export const ClientAuthProvider = ({ children }: { children: ReactNode }) => {
     setSession(null);
     setClient(null);
     setBarbershop(null);
+    // Clear avatar cache for privacy
+    clearAvatarCache();
   };
 
   const refreshClient = async () => {
