@@ -29,15 +29,16 @@ const TermsOfService = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">1. Aceitação dos Termos</h2>
             <p>
-              Ao acessar e utilizar a plataforma BarberSmart, você concorda com estes Termos de Serviço 
-              e nossa Política de Privacidade. Se você não concordar com algum termo, não utilize nossos serviços.
+              Ao acessar e utilizar a plataforma BarberSmart, um serviço da <strong>Sync Smart</strong> (
+              <a href="https://syncsmart.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">syncsmart.com.br</a>
+              ), você concorda com estes Termos de Serviço e nossa Política de Privacidade. Se você não concordar com algum termo, não utilize nossos serviços.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">2. Descrição do Serviço</h2>
             <p>
-              A BarberSmart é uma plataforma SaaS (Software como Serviço) de gestão para barbearias que oferece:
+              O BarberSmart é uma plataforma SaaS (Software como Serviço) de gestão para barbearias, desenvolvida e operada pela <strong>Sync Smart</strong>, que oferece:
             </p>
             <ul className="list-disc pl-6 space-y-2 mt-2">
               <li>Sistema de agendamento online integrado com WhatsApp.</li>
@@ -97,7 +98,7 @@ const TermsOfService = () => {
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">6. Propriedade Intelectual</h2>
             <p>
               Todo o conteúdo da plataforma BarberSmart, incluindo software, design, textos, gráficos, 
-              logos e marcas são de propriedade exclusiva da BarberSmart ou licenciados para nós. 
+              logos e marcas são de propriedade exclusiva da <strong>Sync Smart</strong> ou licenciados para nós. 
               Você não pode copiar, modificar, distribuir ou criar obras derivadas sem autorização.
             </p>
             <p className="mt-4">
@@ -188,13 +189,15 @@ const TermsOfService = () => {
             </p>
             <ul className="list-none mt-2 space-y-1">
               <li><strong>E-mail:</strong> suporte@barbersmart.app</li>
+              <li><strong>Empresa:</strong> Sync Smart</li>
+              <li><strong>Site:</strong> <a href="https://syncsmart.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">syncsmart.com.br</a></li>
               <li><strong>Plataforma:</strong> BarberSmart</li>
             </ul>
           </section>
         </div>
 
         <div className="mt-12 pt-6 border-t text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} BarberSmart. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} BarberSmart. Um produto <a href="https://syncsmart.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Sync Smart</a>. Todos os direitos reservados.</p>
         </div>
       </div>
     </div>
