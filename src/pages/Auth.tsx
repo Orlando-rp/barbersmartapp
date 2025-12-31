@@ -1886,7 +1886,7 @@ const Auth = () => {
               <img 
                 src={currentLogoUrl} 
                 alt={effectiveBranding?.system_name || 'Logo'} 
-                className="h-16 w-16 rounded-full object-contain"
+                className="h-20 w-auto object-contain"
               />
             ) : (
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
