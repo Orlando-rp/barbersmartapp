@@ -129,6 +129,10 @@ interface Plan {
   features: string[];
   feature_flags?: PlanFeatures;
   active: boolean;
+  is_bundle?: boolean;
+  is_base_plan?: boolean;
+  highlight_text?: string;
+  discount_percentage?: number;
 }
 
 interface SystemMessage {
@@ -198,6 +202,10 @@ const SaasAdminPortal = () => {
     features: '',
     feature_flags: defaultPlanFeatures as PlanFeatures,
     active: true,
+    is_bundle: true,
+    is_base_plan: false,
+    highlight_text: '',
+    discount_percentage: 0,
   });
 
   const [messageForm, setMessageForm] = useState({
@@ -488,9 +496,21 @@ const SaasAdminPortal = () => {
       setSaving(true);
 
       const planData = {
-        ...planForm,
+        name: planForm.name,
+        slug: planForm.slug,
+        description: planForm.description,
+        price: planForm.price,
+        billing_period: planForm.billing_period,
+        max_staff: planForm.max_staff,
+        max_clients: planForm.max_clients,
+        max_appointments_month: planForm.max_appointments_month,
         features: planForm.features.split('\n').filter(f => f.trim()),
         feature_flags: planForm.feature_flags,
+        active: planForm.active,
+        is_bundle: planForm.is_bundle,
+        is_base_plan: planForm.is_base_plan,
+        highlight_text: planForm.highlight_text || null,
+        discount_percentage: planForm.discount_percentage || 0,
       };
 
       if (selectedPlan) {
@@ -600,6 +620,10 @@ const SaasAdminPortal = () => {
         features: (plan.features || []).join('\n'),
         feature_flags: plan.feature_flags || stringArrayToFeatures(plan.features || []),
         active: plan.active,
+        is_bundle: plan.is_bundle ?? true,
+        is_base_plan: plan.is_base_plan ?? false,
+        highlight_text: plan.highlight_text || '',
+        discount_percentage: plan.discount_percentage || 0,
       });
     } else {
       setSelectedPlan(null);
@@ -615,6 +639,10 @@ const SaasAdminPortal = () => {
         features: '',
         feature_flags: defaultPlanFeatures,
         active: true,
+        is_bundle: true,
+        is_base_plan: false,
+        highlight_text: '',
+        discount_percentage: 0,
       });
     }
     setPlanDialogOpen(true);
@@ -1160,7 +1188,9 @@ const SaasAdminPortal = () => {
               <CardHeader className="p-3 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <CardTitle className="text-sm sm:text-base">Planos de Assinatura</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Gerencie os planos disponíveis</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Gerencie os planos disponíveis • {plans.filter(p => p.is_bundle).length} exibidos na landing page
+                  </CardDescription>
                 </div>
                 <Button onClick={() => openPlanDialog()} className="bg-warning hover:bg-warning/90 text-warning-foreground w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
@@ -1168,23 +1198,59 @@ const SaasAdminPortal = () => {
                 </Button>
               </CardHeader>
               <CardContent className="p-3 sm:p-6 pt-0">
+                {/* Warning if no bundle plans */}
+                {plans.filter(p => p.is_bundle && p.active).length === 0 && plans.length > 0 && (
+                  <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                    <p className="text-xs sm:text-sm text-warning">
+                      Nenhum plano está configurado para exibição na landing page. Ative "Exibir na Landing" em pelo menos um plano.
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {plans.map((plan) => (
-                    <Card key={plan.id} className={`relative ${!plan.active ? 'opacity-60' : ''}`}>
-                      <CardHeader className="p-3 sm:p-6">
-                        <div className="flex items-center justify-between">
+                    <Card key={plan.id} className={`relative ${!plan.active ? 'opacity-60' : ''} ${plan.highlight_text ? 'ring-2 ring-warning' : ''}`}>
+                      {/* Highlight Badge */}
+                      {plan.highlight_text && (
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
+                          <Badge className="bg-warning text-warning-foreground text-xs px-2 shadow-md">
+                            ⭐ {plan.highlight_text}
+                          </Badge>
+                        </div>
+                      )}
+                      <CardHeader className="p-3 sm:p-6 pt-4">
+                        <div className="flex items-center justify-between flex-wrap gap-1">
                           <CardTitle className="text-sm sm:text-lg">{plan.name}</CardTitle>
-                          {!plan.active && <Badge variant="secondary" className="text-xs">Inativo</Badge>}
+                          <div className="flex gap-1 flex-wrap">
+                            {plan.is_bundle && (
+                              <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                                Landing
+                              </Badge>
+                            )}
+                            {plan.is_base_plan && (
+                              <Badge variant="outline" className="text-[10px]">
+                                Base
+                              </Badge>
+                            )}
+                            {!plan.active && <Badge variant="secondary" className="text-[10px]">Inativo</Badge>}
+                          </div>
                         </div>
                         <CardDescription className="text-xs sm:text-sm">{plan.description}</CardDescription>
                       </CardHeader>
                       <CardContent className="p-3 sm:p-6 pt-0">
-                        <p className="text-xl sm:text-3xl font-bold text-warning mb-3 sm:mb-4">
-                          R$ {plan.price.toFixed(0)}
-                          <span className="text-xs sm:text-sm text-muted-foreground font-normal">
-                            /{plan.billing_period === 'monthly' ? 'mês' : 'ano'}
-                          </span>
-                        </p>
+                        <div className="flex items-baseline gap-2 mb-3 sm:mb-4">
+                          <p className="text-xl sm:text-3xl font-bold text-warning">
+                            R$ {plan.price.toFixed(0)}
+                            <span className="text-xs sm:text-sm text-muted-foreground font-normal">
+                              /{plan.billing_period === 'monthly' ? 'mês' : 'ano'}
+                            </span>
+                          </p>
+                          {plan.discount_percentage && plan.discount_percentage > 0 && (
+                            <Badge variant="secondary" className="text-[10px] bg-success/10 text-success">
+                              -{plan.discount_percentage}%
+                            </Badge>
+                          )}
+                        </div>
                         <div className="space-y-1 text-xs sm:text-sm text-muted-foreground">
                           <p>👥 {plan.max_staff} profissionais</p>
                           <p>📋 {plan.max_clients} clientes</p>
@@ -1398,6 +1464,56 @@ const SaasAdminPortal = () => {
                   placeholder="Outros recursos personalizados (um por linha)"
                   className="text-sm"
                 />
+              </div>
+
+              {/* Display Settings */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-foreground border-b pb-2">Configurações de Exibição</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+                    <Switch 
+                      checked={planForm.is_bundle} 
+                      onCheckedChange={(v) => setPlanForm({ ...planForm, is_bundle: v })} 
+                    />
+                    <div>
+                      <Label className="text-sm font-medium">Exibir na Landing Page</Label>
+                      <p className="text-xs text-muted-foreground">Plano aparecerá para contratação</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+                    <Switch 
+                      checked={planForm.is_base_plan} 
+                      onCheckedChange={(v) => setPlanForm({ ...planForm, is_base_plan: v })} 
+                    />
+                    <div>
+                      <Label className="text-sm font-medium">Plano Base (Interno)</Label>
+                      <p className="text-xs text-muted-foreground">Uso interno do sistema</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Texto de Destaque</Label>
+                    <Input 
+                      value={planForm.highlight_text} 
+                      onChange={(e) => setPlanForm({ ...planForm, highlight_text: e.target.value })} 
+                      placeholder="Ex: Mais Popular, Melhor Custo-Benefício"
+                    />
+                    <p className="text-xs text-muted-foreground">Aparece como badge no card do plano</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>% de Economia</Label>
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      max="100"
+                      value={planForm.discount_percentage} 
+                      onChange={(e) => setPlanForm({ ...planForm, discount_percentage: parseInt(e.target.value) || 0 })} 
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground">Mostra badge de desconto</p>
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
