@@ -58,6 +58,7 @@ import {
 import logoDark from "@/assets/logo-dark.png";
 import logoIcon from "@/assets/logo-icon.png";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { useBranding } from "@/contexts/BrandingContext";
 import { PackageComparison } from "@/components/pricing/PackageComparison";
 import { ModularPlanBuilder } from "@/components/pricing/ModularPlanBuilder";
 import { Button } from "@/components/ui/button";
@@ -250,6 +251,11 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [showBuilder, setShowBuilder] = useState(false);
+  const { effectiveBranding } = useBranding();
+
+  // Para landing page com fundo escuro, usar logo_dark_url como prioridade
+  const landingLogo = effectiveBranding?.logo_dark_url || effectiveBranding?.logo_url || logoDark;
+  const landingLogoMobile = effectiveBranding?.logo_dark_url || effectiveBranding?.logo_url || logoIcon;
 
   const faqs = [
     {
@@ -335,12 +341,12 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto flex items-center justify-between bg-white/5 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/10 px-3 sm:px-6 py-2 sm:py-3">
           <div className="flex items-center gap-2 sm:gap-3">
             <img 
-              src={logoDark} 
+              src={landingLogo} 
               alt="Barber Smart" 
               className="h-8 sm:h-10 w-auto object-contain hidden sm:block"
             />
             <img 
-              src={logoIcon} 
+              src={landingLogoMobile} 
               alt="Barber Smart" 
               className="h-8 w-auto object-contain sm:hidden"
             />
@@ -407,7 +413,7 @@ const LandingPage = () => {
               <SheetContent side="right" className="bg-[#0a0a0a] border-white/10 w-72">
                 <div className="flex flex-col gap-6 mt-8">
                   <img 
-                    src={logoDark} 
+                    src={landingLogo} 
                     alt="Barber Smart" 
                     className="h-10 w-auto object-contain"
                   />
