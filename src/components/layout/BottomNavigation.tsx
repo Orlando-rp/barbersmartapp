@@ -38,7 +38,7 @@ interface NavItem {
 
 // Main bottom navigation items (always visible)
 const mainNavItems: NavItem[] = [
-  { name: "Início", href: "/", icon: Home, tourId: "dashboard" },
+  { name: "Início", href: "/dashboard", icon: Home, tourId: "dashboard" },
   { name: "Agenda", href: "/appointments", icon: Calendar, tourId: "appointments" },
   { name: "Clientes", href: "/clients", icon: Users, tourId: "clients" },
   { name: "Financeiro", href: "/finance", icon: DollarSign, tourId: "finance" },

@@ -71,7 +71,7 @@ interface NavGroup {
 
 const navigation: NavItem[] = [
   // Operações
-  { name: "Dashboard", href: "/", icon: Home, permission: 'dashboard', group: "operacoes", tourId: "dashboard" },
+  { name: "Dashboard", href: "/dashboard", icon: Home, permission: 'dashboard', group: "operacoes", tourId: "dashboard" },
   { name: "Agendamentos", href: "/appointments", icon: Calendar, requiredFeature: 'appointments', permission: 'appointments', group: "operacoes", tourId: "appointments" },
   { name: "Lista de Espera", href: "/waitlist", icon: ListChecks, requiredFeature: 'waitlist', permission: 'waitlist', group: "operacoes" },
   { name: "Clientes", href: "/clients", icon: Users, requiredFeature: 'clients', permission: 'clients', group: "operacoes", tourId: "clients" },
