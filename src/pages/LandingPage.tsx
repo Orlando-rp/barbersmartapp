@@ -988,11 +988,29 @@ const LandingPage = () => {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
+            {/* Free Trial Banner */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="inline-flex items-center gap-3 px-6 py-3 mb-8 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 rounded-full"
+            >
+              <div className="flex items-center justify-center w-8 h-8 bg-emerald-500 rounded-full">
+                <Sparkles className="w-4 h-4 text-black" />
+              </div>
+              <span className="text-emerald-400 font-semibold">
+                14 dias grátis em todos os planos
+              </span>
+              <span className="text-white/60 text-sm">
+                Sem cartão de crédito
+              </span>
+            </motion.div>
+
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Investimento que se paga
             </h2>
             <p className="text-white/60 text-lg max-w-2xl mx-auto mb-8">
-              Escolha o plano ideal para o tamanho do seu negócio
+              Escolha o plano ideal para o tamanho do seu negócio. <span className="text-emerald-400 font-medium">Teste grátis por 14 dias!</span>
             </p>
 
             {/* Billing Toggle */}
