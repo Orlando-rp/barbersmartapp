@@ -1,25 +1,27 @@
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { motion, useInView } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { useRef, useState, useEffect } from "react";
 import { 
   Calendar, 
   MessageSquare, 
   TrendingUp, 
   Users, 
-  Smartphone, 
-  Shield, 
-  Zap, 
-  BarChart3, 
+  Scissors, 
   Clock, 
+  Bell, 
+  BarChart3, 
+  Shield, 
+  Smartphone,
+  Check,
   Star,
-  CheckCircle2,
   ArrowRight,
-  Scissors,
+  ChevronDown,
+  Sparkles,
+  Zap,
   Building2,
-  Bot,
   CreditCard
-} from 'lucide-react';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -27,318 +29,706 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+// Animated counter component
+const AnimatedCounter = ({ value, suffix = "" }: { value: number; suffix?: string }) => {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+
+  useEffect(() => {
+    if (isInView) {
+      const duration = 2000;
+      const steps = 60;
+      const increment = value / steps;
+      let current = 0;
+      const timer = setInterval(() => {
+        current += increment;
+        if (current >= value) {
+          setCount(value);
+          clearInterval(timer);
+        } else {
+          setCount(Math.floor(current));
+        }
+      }, duration / steps);
+      return () => clearInterval(timer);
+    }
+  }, [isInView, value]);
+
+  return <span ref={ref}>{count.toLocaleString('pt-BR')}{suffix}</span>;
+};
+
+// Bento Grid Feature Card
+const BentoCard = ({ 
+  icon: Icon, 
+  title, 
+  description, 
+  className = "",
+  delay = 0 
+}: { 
+  icon: React.ElementType; 
+  title: string; 
+  description: string; 
+  className?: string;
+  delay?: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.5, delay }}
+    className={`group relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 hover:bg-white/10 transition-all duration-500 hover:border-amber-500/30 hover:shadow-[0_0_40px_rgba(212,168,83,0.15)] ${className}`}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    <div className="relative z-10">
+      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mb-4 shadow-lg shadow-amber-500/25 group-hover:shadow-amber-500/40 transition-shadow duration-500">
+        <Icon className="w-6 h-6 text-black" />
+      </div>
+      <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
+      <p className="text-white/60 text-sm leading-relaxed">{description}</p>
+    </div>
+  </motion.div>
+);
+
+// Timeline Step Component
+const TimelineStep = ({ 
+  number, 
+  title, 
+  description, 
+  delay 
+}: { 
+  number: number; 
+  title: string; 
+  description: string; 
+  delay: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.6, delay }}
+    className="flex flex-col items-center text-center"
+  >
+    <div className="relative mb-6">
+      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-2xl font-bold text-black shadow-lg shadow-amber-500/30">
+        {number}
+      </div>
+      <div className="absolute -inset-2 rounded-full bg-amber-500/20 animate-pulse" />
+    </div>
+    <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
+    <p className="text-white/60 max-w-xs">{description}</p>
+  </motion.div>
+);
+
+// Pricing Card Component
+const PricingCard = ({
+  name,
+  price,
+  description,
+  features,
+  popular = false,
+  delay = 0,
+  onSelect
+}: {
+  name: string;
+  price: string;
+  description: string;
+  features: string[];
+  popular?: boolean;
+  delay?: number;
+  onSelect: () => void;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.5, delay }}
+    className={`relative rounded-2xl p-8 ${
+      popular 
+        ? 'bg-gradient-to-b from-amber-500/20 to-transparent border-2 border-amber-500/50 shadow-[0_0_60px_rgba(212,168,83,0.2)]' 
+        : 'bg-white/5 border border-white/10'
+    } backdrop-blur-xl`}
+  >
+    {popular && (
+      <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-black text-sm font-semibold">
+        Mais Popular
+      </div>
+    )}
+    <div className="text-center mb-6">
+      <h3 className="text-xl font-semibold text-white mb-2">{name}</h3>
+      <div className="flex items-baseline justify-center gap-1 mb-2">
+        <span className="text-4xl font-bold text-white">{price}</span>
+        <span className="text-white/60">/mês</span>
+      </div>
+      <p className="text-white/60 text-sm">{description}</p>
+    </div>
+    <ul className="space-y-3 mb-8">
+      {features.map((feature, index) => (
+        <li key={index} className="flex items-start gap-3 text-white/80">
+          <Check className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <span className="text-sm">{feature}</span>
+        </li>
+      ))}
+    </ul>
+    <Button 
+      onClick={onSelect}
+      className={`w-full ${
+        popular 
+          ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold' 
+          : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+      }`}
+    >
+      Começar Agora
+    </Button>
+  </motion.div>
+);
+
+// WhatsApp Message Bubble
+const WhatsAppBubble = ({ 
+  message, 
+  isUser = false, 
+  delay 
+}: { 
+  message: string; 
+  isUser?: boolean; 
+  delay: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, x: isUser ? 20 : -20 }}
+    whileInView={{ opacity: 1, x: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.4, delay }}
+    className={`max-w-[80%] p-3 rounded-2xl text-sm ${
+      isUser 
+        ? 'bg-emerald-600 text-white ml-auto rounded-br-md' 
+        : 'bg-white/10 text-white/90 rounded-bl-md'
+    }`}
+  >
+    {message}
+  </motion.div>
+);
+
 const LandingPage = () => {
   const navigate = useNavigate();
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
 
-  const features = [
+  const faqs = [
     {
-      icon: Calendar,
-      title: 'Agendamento Inteligente',
-      description: 'Sistema de agendamento online 24/7 integrado com WhatsApp. Seus clientes agendam quando quiserem.'
+      question: "Quanto tempo leva para configurar?",
+      answer: "Em menos de 10 minutos você tem sua barbearia configurada e pronta para receber agendamentos. Nosso assistente de configuração guia você em cada passo."
     },
     {
-      icon: MessageSquare,
-      title: 'WhatsApp Automatizado',
-      description: 'Confirmações, lembretes e mensagens de pós-atendimento automáticas via WhatsApp.'
+      question: "Preciso ter conhecimento técnico?",
+      answer: "Não! O BarberSmart foi criado para ser simples e intuitivo. Se você sabe usar WhatsApp, sabe usar nosso sistema."
     },
     {
-      icon: Bot,
-      title: 'Chatbot com IA',
-      description: 'Atendimento automatizado para agendamentos e dúvidas. Funciona 24 horas por dia.'
+      question: "Como funciona o chatbot do WhatsApp?",
+      answer: "Nosso chatbot com IA responde automaticamente as mensagens dos clientes, agenda horários, envia lembretes e confirmações. Tudo sem você precisar fazer nada."
     },
     {
-      icon: TrendingUp,
-      title: 'Gestão Financeira',
-      description: 'Controle de receitas, despesas, comissões e relatórios completos do seu negócio.'
+      question: "Posso cancelar a qualquer momento?",
+      answer: "Sim! Não há fidelidade ou multa. Você pode cancelar sua assinatura a qualquer momento diretamente no sistema."
     },
     {
-      icon: Building2,
-      title: 'Multi-unidade',
-      description: 'Gerencie múltiplas unidades em uma única plataforma com visão consolidada.'
-    },
-    {
-      icon: Users,
-      title: 'CRM de Clientes',
-      description: 'Histórico completo, preferências e programa de fidelidade para cada cliente.'
+      question: "Funciona para redes com várias unidades?",
+      answer: "Sim! Temos planos específicos para redes de barbearias com gestão centralizada, relatórios consolidados e controle de múltiplas unidades."
     }
-  ];
-
-  const benefits = [
-    'Reduza faltas em até 70% com lembretes automáticos',
-    'Economize 10+ horas por semana em tarefas administrativas',
-    'Aumente a retenção de clientes com programa de fidelidade',
-    'Tenha controle total das comissões da equipe',
-    'Relatórios detalhados para tomar decisões estratégicas',
-    'Landing page profissional para sua barbearia'
   ];
 
   const plans = [
     {
-      name: 'Básico',
-      price: 'R$ 97',
-      period: '/mês',
-      description: 'Ideal para barbearias iniciando',
+      name: "Starter",
+      price: billingPeriod === 'monthly' ? "R$ 97" : "R$ 77",
+      description: "Para barbearias iniciando",
       features: [
-        'Agendamento online',
-        'Até 2 profissionais',
-        'Notificações WhatsApp',
-        'Gestão de clientes',
-        'Relatórios básicos'
-      ],
-      popular: false
+        "Até 2 profissionais",
+        "Agendamento online",
+        "Notificações WhatsApp",
+        "Gestão de clientes",
+        "Relatórios básicos"
+      ]
     },
     {
-      name: 'Profissional',
-      price: 'R$ 197',
-      period: '/mês',
-      description: 'Para barbearias em crescimento',
+      name: "Profissional",
+      price: billingPeriod === 'monthly' ? "R$ 197" : "R$ 157",
+      description: "Para barbearias em crescimento",
       features: [
-        'Tudo do plano Básico',
-        'Até 5 profissionais',
-        'Chatbot com IA',
-        'Gestão financeira completa',
-        'Programa de fidelidade',
-        'Marketing automatizado'
+        "Até 10 profissionais",
+        "Chatbot IA WhatsApp",
+        "Gestão financeira completa",
+        "Programa de fidelidade",
+        "Relatórios avançados",
+        "Marketing automatizado"
       ],
       popular: true
     },
     {
-      name: 'Premium',
-      price: 'R$ 397',
-      period: '/mês',
-      description: 'Para redes de barbearias',
+      name: "Enterprise",
+      price: billingPeriod === 'monthly' ? "R$ 397" : "R$ 317",
+      description: "Para redes de barbearias",
       features: [
-        'Tudo do plano Profissional',
-        'Profissionais ilimitados',
-        'Multi-unidade',
-        'White label',
-        'API de integração',
-        'Suporte prioritário'
-      ],
-      popular: false
+        "Profissionais ilimitados",
+        "Múltiplas unidades",
+        "White-label completo",
+        "API personalizada",
+        "Suporte prioritário 24/7",
+        "Gestor de conta dedicado"
+      ]
     }
-  ];
-
-  const faqs = [
-    {
-      question: 'Preciso ter conhecimento técnico para usar?',
-      answer: 'Não! O BarberSmart foi desenvolvido para ser extremamente intuitivo. Qualquer pessoa consegue usar em poucos minutos, e oferecemos suporte completo para ajudar na configuração inicial.'
-    },
-    {
-      question: 'Como funciona a integração com WhatsApp?',
-      answer: 'Integramos diretamente com a API oficial do WhatsApp Business. Todas as mensagens são enviadas automaticamente: confirmações, lembretes, agradecimentos e mais.'
-    },
-    {
-      question: 'Posso testar antes de assinar?',
-      answer: 'Sim! Oferecemos 14 dias de teste grátis com acesso a todas as funcionalidades. Não precisa de cartão de crédito para começar.'
-    },
-    {
-      question: 'Consigo migrar meus dados de outro sistema?',
-      answer: 'Sim, nossa equipe ajuda na importação de dados de clientes, agendamentos e histórico de outros sistemas ou planilhas.'
-    },
-    {
-      question: 'O sistema funciona offline?',
-      answer: 'O BarberSmart é um sistema web otimizado que funciona em qualquer dispositivo. Algumas funcionalidades básicas funcionam offline e sincronizam quando a conexão é restabelecida.'
-    }
-  ];
-
-  const stats = [
-    { value: '500+', label: 'Barbearias' },
-    { value: '50.000+', label: 'Agendamentos/mês' },
-    { value: '98%', label: 'Satisfação' },
-    { value: '-70%', label: 'Faltas' }
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
+      {/* Animated Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-amber-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-amber-500/5 rounded-full blur-[150px]" />
+      </div>
+
+      {/* Navbar */}
+      <motion.nav
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="fixed top-0 left-0 right-0 z-50 px-4 py-4"
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 px-6 py-3">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
-              <Scissors className="h-5 w-5 text-accent-foreground" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+              <Scissors className="w-5 h-5 text-black" />
             </div>
-            <span className="font-serif text-xl font-semibold">BarberSmart</span>
+            <span className="text-xl font-bold">BarberSmart</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#features" className="text-white/70 hover:text-white transition-colors text-sm">Recursos</a>
+            <a href="#how-it-works" className="text-white/70 hover:text-white transition-colors text-sm">Como Funciona</a>
+            <a href="#pricing" className="text-white/70 hover:text-white transition-colors text-sm">Planos</a>
+            <a href="#faq" className="text-white/70 hover:text-white transition-colors text-sm">FAQ</a>
           </div>
           <div className="flex items-center gap-3">
             <Button 
               variant="ghost" 
+              className="text-white/80 hover:text-white hover:bg-white/10"
               onClick={() => navigate('/auth')}
-              className="hidden sm:flex"
             >
-              Acessar Sistema
+              Entrar
             </Button>
             <Button 
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold"
               onClick={() => navigate('/auth?tab=signup')}
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
             >
               Começar Grátis
             </Button>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Hero Section */}
-      <section className="pt-24 pb-16 md:pt-32 md:pb-24 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium mb-6">
-              <Zap className="h-4 w-4" />
-              Gestão inteligente para barbearias modernas
-            </span>
-            
-            <h1 className="text-4xl md:text-6xl font-serif font-bold tracking-tight mb-6">
-              Transforme sua Barbearia com{' '}
-              <span className="text-accent">Tecnologia</span>
-            </h1>
-            
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Agendamento online, WhatsApp automatizado, gestão financeira e muito mais. 
-              Tudo que você precisa para crescer seu negócio em uma única plataforma.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg"
-                onClick={() => navigate('/auth?tab=signup')}
-                className="bg-accent text-accent-foreground hover:bg-accent/90 text-lg px-8 h-14 shadow-gold"
+      <section className="relative pt-32 pb-20 px-4 min-h-screen flex items-center">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 text-sm font-medium mb-6"
               >
-                Teste Grátis por 14 Dias
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button 
-                size="lg"
-                variant="outline"
-                onClick={() => navigate('/auth')}
-                className="text-lg px-8 h-14"
+                <Sparkles className="w-4 h-4" />
+                Inteligência Artificial Integrada
+              </motion.div>
+              
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6"
               >
-                Já sou cliente
-              </Button>
+                Sua Barbearia no{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600">
+                  Piloto Automático
+                </span>
+              </motion.h1>
+              
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-lg md:text-xl text-white/60 max-w-xl mb-8"
+              >
+                Agendamento inteligente, WhatsApp automatizado e gestão completa. 
+                Enquanto você foca nos cortes, a gente cuida do resto.
+              </motion.p>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="flex flex-col sm:flex-row gap-4 mb-12"
+              >
+                <Button 
+                  size="lg"
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold text-lg px-8 h-14 rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 transition-all duration-300"
+                  onClick={() => navigate('/auth?tab=signup')}
+                >
+                  Começar Grátis
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/10 text-lg px-8 h-14 rounded-xl bg-white/5 backdrop-blur"
+                  onClick={() => navigate('/auth')}
+                >
+                  Acessar Sistema
+                </Button>
+              </motion.div>
+              
+              {/* Stats */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="grid grid-cols-3 gap-8"
+              >
+                <div>
+                  <div className="text-3xl md:text-4xl font-bold text-white">
+                    <AnimatedCounter value={500} suffix="+" />
+                  </div>
+                  <div className="text-white/50 text-sm mt-1">Barbearias</div>
+                </div>
+                <div>
+                  <div className="text-3xl md:text-4xl font-bold text-white">
+                    <AnimatedCounter value={50} suffix="k+" />
+                  </div>
+                  <div className="text-white/50 text-sm mt-1">Agendamentos</div>
+                </div>
+                <div>
+                  <div className="text-3xl md:text-4xl font-bold text-white">
+                    <AnimatedCounter value={98} suffix="%" />
+                  </div>
+                  <div className="text-white/50 text-sm mt-1">Satisfação</div>
+                </div>
+              </motion.div>
             </div>
             
-            <p className="text-sm text-muted-foreground mt-4">
-              Sem necessidade de cartão de crédito
-            </p>
-          </motion.div>
-
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16"
-          >
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-accent">{stat.value}</div>
-                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 md:py-24 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
-              Tudo que sua barbearia precisa
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Funcionalidades completas para automatizar e profissionalizar seu negócio
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="p-6 h-full hover:shadow-medium transition-all duration-300 border-border/50 bg-card/80">
-                  <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center mb-4">
-                    <feature.icon className="h-6 w-6 text-accent" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-16 md:py-24 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Hero Visual */}
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="relative hidden lg:block"
+            >
+              <div className="relative">
+                {/* Glow effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-3xl blur-3xl" />
+                
+                {/* Dashboard mockup */}
+                <div className="relative bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl rounded-3xl border border-white/20 p-6 shadow-2xl">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600" />
+                        <div>
+                          <div className="h-4 w-32 bg-white/20 rounded" />
+                          <div className="h-3 w-24 bg-white/10 rounded mt-1" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-white/10" />
+                        <div className="w-8 h-8 rounded-lg bg-white/10" />
+                      </div>
+                    </div>
+                    
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="bg-white/10 rounded-xl p-4">
+                          <div className="h-3 w-12 bg-white/20 rounded mb-2" />
+                          <div className="h-6 w-16 bg-amber-500/40 rounded" />
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Calendar preview */}
+                    <div className="bg-white/10 rounded-xl p-4">
+                      <div className="h-4 w-24 bg-white/20 rounded mb-3" />
+                      <div className="grid grid-cols-7 gap-2">
+                        {Array.from({ length: 28 }).map((_, i) => (
+                          <div 
+                            key={i} 
+                            className={`h-8 rounded-lg ${
+                              i === 12 || i === 15 || i === 18 
+                                ? 'bg-amber-500/40' 
+                                : 'bg-white/10'
+                            }`} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Floating elements */}
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -top-6 -right-6 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-4 shadow-lg"
+                >
+                  <MessageSquare className="w-6 h-6 text-white" />
+                </motion.div>
+                
+                <motion.div
+                  animate={{ y: [0, 10, 0] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -bottom-4 -left-6 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                      <Bell className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">Novo agendamento!</div>
+                      <div className="text-xs text-white/50">João - Corte + Barba</div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+        
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        >
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="flex flex-col items-center gap-2 text-white/40"
+          >
+            <span className="text-xs">Scroll</span>
+            <ChevronDown className="w-5 h-5" />
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* Features Bento Grid */}
+      <section id="features" className="py-24 px-4">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Tudo que você precisa.{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
+                Nada que você não precisa.
+              </span>
+            </h2>
+            <p className="text-white/60 text-lg max-w-2xl mx-auto">
+              Ferramentas poderosas e simples de usar para transformar a gestão da sua barbearia.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <BentoCard
+              icon={Calendar}
+              title="Agenda Inteligente"
+              description="Controle total dos agendamentos com visualização por dia, semana ou mês. Evite conflitos e maximize sua agenda."
+              className="lg:col-span-2"
+              delay={0.1}
+            />
+            <BentoCard
+              icon={MessageSquare}
+              title="WhatsApp Automatizado"
+              description="Chatbot com IA que agenda, confirma e lembra seus clientes automaticamente."
+              delay={0.2}
+            />
+            <BentoCard
+              icon={TrendingUp}
+              title="Gestão Financeira"
+              description="Controle receitas, despesas e comissões em um só lugar."
+              delay={0.3}
+            />
+            <BentoCard
+              icon={Users}
+              title="Gestão de Equipe"
+              description="Horários, folgas e desempenho de cada profissional."
+              delay={0.4}
+            />
+            <BentoCard
+              icon={BarChart3}
+              title="Relatórios Avançados"
+              description="Insights poderosos para tomar decisões baseadas em dados reais."
+              className="lg:col-span-2"
+              delay={0.5}
+            />
+            <BentoCard
+              icon={Smartphone}
+              title="Multi-plataforma"
+              description="Acesse de qualquer dispositivo, a qualquer hora, de qualquer lugar."
+              delay={0.6}
+            />
+            <BentoCard
+              icon={Shield}
+              title="Dados Seguros"
+              description="Criptografia de ponta e backups automáticos para sua tranquilidade."
+              delay={0.7}
+            />
+            <BentoCard
+              icon={Building2}
+              title="Multi-unidades"
+              description="Gerencie várias unidades em um painel centralizado."
+              delay={0.8}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* How it Works */}
+      <section id="how-it-works" className="py-24 px-4 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent" />
+        <div className="max-w-7xl mx-auto relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Simples como deve ser
+            </h2>
+            <p className="text-white/60 text-lg max-w-2xl mx-auto">
+              Em poucos minutos você está pronto para receber agendamentos
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8 md:gap-4 relative">
+            {/* Connection lines */}
+            <div className="hidden md:block absolute top-8 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+            
+            <TimelineStep
+              number={1}
+              title="Configure em minutos"
+              description="Cadastre sua barbearia, serviços e equipe de forma simples e rápida"
+              delay={0.1}
+            />
+            <TimelineStep
+              number={2}
+              title="Clientes agendam online"
+              description="Compartilhe seu link de agendamento ou deixe o chatbot fazer o trabalho"
+              delay={0.3}
+            />
+            <TimelineStep
+              number={3}
+              title="Foque no que importa"
+              description="Enquanto você corta cabelo, o sistema cuida de todo o resto"
+              delay={0.5}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* WhatsApp Section */}
+      <section className="py-24 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
             >
-              <h2 className="text-3xl md:text-4xl font-serif font-bold mb-6">
-                Por que escolher o BarberSmart?
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-sm font-medium mb-6">
+                <MessageSquare className="w-4 h-4" />
+                Integração WhatsApp
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6">
+                Seu assistente virtual{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">
+                  24 horas por dia
+                </span>
               </h2>
-              <p className="text-muted-foreground text-lg mb-8">
-                Desenvolvido por quem entende de barbearias, para resolver os problemas reais do seu dia a dia.
+              <p className="text-white/60 text-lg mb-8">
+                Nosso chatbot com inteligência artificial atende seus clientes pelo WhatsApp, 
+                agenda horários, envia lembretes e confirma presenças. Tudo automaticamente.
               </p>
-              
-              <div className="space-y-4">
-                {benefits.map((benefit, index) => (
-                  <motion.div
-                    key={index}
+              <ul className="space-y-4">
+                {[
+                  "Agendamento por conversa natural",
+                  "Lembretes automáticos 24h antes",
+                  "Confirmação de presença",
+                  "Reagendamento sem complicação"
+                ].map((item, i) => (
+                  <motion.li
+                    key={i}
                     initial={{ opacity: 0, x: -20 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
-                    className="flex items-start gap-3"
+                    transition={{ delay: 0.2 + i * 0.1 }}
+                    className="flex items-center gap-3"
                   >
-                    <CheckCircle2 className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
-                    <span className="text-foreground">{benefit}</span>
-                  </motion.div>
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <Check className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <span className="text-white/80">{item}</span>
+                  </motion.li>
                 ))}
-              </div>
+              </ul>
             </motion.div>
 
+            {/* WhatsApp Chat Mockup */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
               className="relative"
             >
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 p-8 flex items-center justify-center">
-                <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
-                  <div className="bg-card rounded-xl p-4 shadow-soft">
-                    <Clock className="h-8 w-8 text-accent mb-2" />
-                    <div className="text-2xl font-bold">10h+</div>
-                    <div className="text-sm text-muted-foreground">Economizadas/semana</div>
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 rounded-3xl blur-3xl" />
+              <div className="relative bg-gradient-to-b from-[#1f2c33] to-[#0b141a] rounded-3xl border border-white/10 p-4 max-w-sm mx-auto shadow-2xl">
+                {/* WhatsApp Header */}
+                <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                    <Scissors className="w-5 h-5 text-black" />
                   </div>
-                  <div className="bg-card rounded-xl p-4 shadow-soft">
-                    <TrendingUp className="h-8 w-8 text-accent mb-2" />
-                    <div className="text-2xl font-bold">+40%</div>
-                    <div className="text-sm text-muted-foreground">Mais agendamentos</div>
+                  <div>
+                    <div className="font-medium text-white">Barbearia Classic</div>
+                    <div className="text-xs text-emerald-400">online</div>
                   </div>
-                  <div className="bg-card rounded-xl p-4 shadow-soft">
-                    <Star className="h-8 w-8 text-accent mb-2" />
-                    <div className="text-2xl font-bold">4.9</div>
-                    <div className="text-sm text-muted-foreground">Avaliação média</div>
-                  </div>
-                  <div className="bg-card rounded-xl p-4 shadow-soft">
-                    <Shield className="h-8 w-8 text-accent mb-2" />
-                    <div className="text-2xl font-bold">100%</div>
-                    <div className="text-sm text-muted-foreground">Dados seguros</div>
-                  </div>
+                </div>
+                
+                {/* Chat Messages */}
+                <div className="py-4 space-y-3">
+                  <WhatsAppBubble 
+                    message="Olá! Gostaria de agendar um corte para amanhã" 
+                    isUser 
+                    delay={0.3}
+                  />
+                  <WhatsAppBubble 
+                    message="Olá! 😊 Claro, temos horários disponíveis amanhã. Qual horário você prefere?" 
+                    delay={0.5}
+                  />
+                  <WhatsAppBubble 
+                    message="Às 15h pode ser?" 
+                    isUser 
+                    delay={0.7}
+                  />
+                  <WhatsAppBubble 
+                    message="Perfeito! ✅ Agendei seu corte para amanhã às 15h com o Carlos. Vou te enviar um lembrete!" 
+                    delay={0.9}
+                  />
                 </div>
               </div>
             </motion.div>
@@ -347,61 +737,126 @@ const LandingPage = () => {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-16 md:py-24 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
-              Planos para cada fase do seu negócio
+      <section id="pricing" className="py-24 px-4 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent" />
+        <div className="max-w-7xl mx-auto relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Investimento que se paga
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Escolha o plano ideal e comece a transformar sua barbearia hoje
+            <p className="text-white/60 text-lg max-w-2xl mx-auto mb-8">
+              Escolha o plano ideal para o tamanho do seu negócio
             </p>
-          </div>
 
-          <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+            {/* Billing Toggle */}
+            <div className="inline-flex items-center gap-4 p-1.5 bg-white/5 rounded-xl border border-white/10">
+              <button
+                onClick={() => setBillingPeriod('monthly')}
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+                  billingPeriod === 'monthly' 
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black' 
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Mensal
+              </button>
+              <button
+                onClick={() => setBillingPeriod('annual')}
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                  billingPeriod === 'annual' 
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black' 
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Anual
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  billingPeriod === 'annual' 
+                    ? 'bg-black/20 text-black' 
+                    : 'bg-emerald-500/20 text-emerald-400'
+                }`}>
+                  -20%
+                </span>
+              </button>
+            </div>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {plans.map((plan, index) => (
+              <PricingCard 
+                key={plan.name} 
+                {...plan} 
+                delay={index * 0.1} 
+                onSelect={() => navigate('/auth?tab=signup')}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-24 px-4">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Quem usa, recomenda
+            </h2>
+            <p className="text-white/60 text-lg">
+              Veja o que nossos clientes dizem sobre o BarberSmart
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                name: "Carlos Silva",
+                role: "Barbearia Classic",
+                content: "Reduzi 80% do tempo que gastava com agendamentos. O chatbot é incrível!",
+                rating: 5
+              },
+              {
+                name: "André Oliveira",
+                role: "The Barber House",
+                content: "Finalmente um sistema que entende a rotina de uma barbearia. Muito prático!",
+                rating: 5
+              },
+              {
+                name: "Ricardo Santos",
+                role: "Rede Corte Certo",
+                content: "Gerenciar 5 unidades nunca foi tão fácil. Relatórios consolidados são um diferencial.",
+                rating: 5
+              }
+            ].map((testimonial, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
               >
-                <Card className={`p-6 h-full relative ${plan.popular ? 'border-accent shadow-gold' : 'border-border/50'}`}>
-                  {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="bg-accent text-accent-foreground text-xs font-semibold px-3 py-1 rounded-full">
-                        Mais Popular
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
-                    <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-4xl font-bold">{plan.price}</span>
-                      <span className="text-muted-foreground">{plan.period}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
+                <div className="flex gap-1 mb-4">
+                  {Array.from({ length: testimonial.rating }).map((_, i) => (
+                    <Star key={i} className="w-5 h-5 text-amber-500 fill-amber-500" />
+                  ))}
+                </div>
+                <p className="text-white/80 mb-6">&ldquo;{testimonial.content}&rdquo;</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600" />
+                  <div>
+                    <div className="font-medium text-white">{testimonial.name}</div>
+                    <div className="text-sm text-white/50">{testimonial.role}</div>
                   </div>
-
-                  <ul className="space-y-3 mb-6">
-                    {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-accent flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button 
-                    className={`w-full ${plan.popular ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`}
-                    variant={plan.popular ? 'default' : 'outline'}
-                    onClick={() => navigate('/auth?tab=signup')}
-                  >
-                    Começar Agora
-                  </Button>
-                </Card>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -409,100 +864,109 @@ const LandingPage = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-16 md:py-24 px-4">
-        <div className="container mx-auto max-w-3xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
+      <section id="faq" className="py-24 px-4">
+        <div className="max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Perguntas Frequentes
             </h2>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-white/60 text-lg">
               Tire suas dúvidas sobre o BarberSmart
             </p>
-          </div>
+          </motion.div>
 
           <Accordion type="single" collapsible className="space-y-4">
             {faqs.map((faq, index) => (
-              <AccordionItem 
-                key={index} 
-                value={`item-${index}`}
-                className="bg-card border border-border/50 rounded-lg px-6"
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
               >
-                <AccordionTrigger className="text-left hover:no-underline">
-                  {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
+                <AccordionItem 
+                  value={`item-${index}`}
+                  className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-6 overflow-hidden"
+                >
+                  <AccordionTrigger className="text-left text-white hover:text-amber-500 py-5">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-white/60 pb-5">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              </motion.div>
             ))}
           </Accordion>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 md:py-24 px-4 bg-primary text-primary-foreground">
-        <div className="container mx-auto max-w-4xl text-center">
+      {/* Final CTA */}
+      <section className="py-24 px-4">
+        <div className="max-w-4xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/20 via-amber-600/10 to-transparent border border-amber-500/30 p-12 text-center"
           >
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
-              Pronto para transformar sua barbearia?
-            </h2>
-            <p className="text-lg opacity-90 mb-8 max-w-2xl mx-auto">
-              Junte-se a centenas de barbearias que já estão crescendo com o BarberSmart. 
-              Comece seu teste grátis hoje mesmo.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg"
-                onClick={() => navigate('/auth?tab=signup')}
-                className="bg-accent text-accent-foreground hover:bg-accent/90 text-lg px-8 h-14"
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent" />
+            <div className="relative">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 text-amber-500 text-sm font-medium mb-6"
               >
-                Começar Teste Grátis
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button 
-                size="lg"
-                variant="outline"
-                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 text-lg px-8 h-14"
-                onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre o BarberSmart', '_blank')}
-              >
-                <MessageSquare className="mr-2 h-5 w-5" />
-                Falar com Especialista
-              </Button>
+                <Zap className="w-4 h-4" />
+                Comece grátis por 14 dias
+              </motion.div>
+              
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">
+                Pronto para transformar sua barbearia?
+              </h2>
+              <p className="text-white/60 text-lg max-w-xl mx-auto mb-8">
+                Junte-se a mais de 500 barbearias que já usam o BarberSmart para crescer seus negócios.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  size="lg"
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold text-lg px-8 h-14 rounded-xl shadow-lg shadow-amber-500/25"
+                  onClick={() => navigate('/auth?tab=signup')}
+                >
+                  Criar Conta Grátis
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </div>
             </div>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 border-t border-border">
-        <div className="container mx-auto max-w-6xl">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+      <footer className="py-12 px-4 border-t border-white/10">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
-                <Scissors className="h-4 w-4 text-accent-foreground" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                <Scissors className="w-4 h-4 text-black" />
               </div>
-              <span className="font-serif font-semibold">BarberSmart</span>
+              <span className="font-bold">BarberSmart</span>
             </div>
             
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <button onClick={() => navigate('/privacy')} className="hover:text-foreground transition-colors">
-                Privacidade
-              </button>
-              <button onClick={() => navigate('/terms')} className="hover:text-foreground transition-colors">
-                Termos de Uso
-              </button>
-              <button onClick={() => navigate('/auth')} className="hover:text-foreground transition-colors">
-                Login
-              </button>
+            <div className="flex items-center gap-8 text-sm text-white/50">
+              <a href="/privacy" className="hover:text-white transition-colors">Privacidade</a>
+              <a href="/terms" className="hover:text-white transition-colors">Termos</a>
+              <a href="mailto:contato@barbersmart.app" className="hover:text-white transition-colors">Contato</a>
             </div>
             
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-white/50">
               © {new Date().getFullYear()} BarberSmart. Todos os direitos reservados.
             </div>
           </div>
