@@ -18,6 +18,7 @@ import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check,
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getStaffAvatarUrl } from '@/hooks/useAvatarUrl';
 import { 
   DAY_OF_WEEK_MAP, 
   DayName,
@@ -112,10 +113,13 @@ const getStaffName = (staff: Staff | null): string => {
 
 const getStaffAvatar = (staff: Staff | null): string | null => {
   if (!staff?.profiles) return null;
+  let avatarPath: string | null = null;
   if (Array.isArray(staff.profiles)) {
-    return staff.profiles[0]?.avatar_url || null;
+    avatarPath = staff.profiles[0]?.avatar_url || null;
+  } else {
+    avatarPath = staff.profiles.avatar_url || null;
   }
-  return staff.profiles.avatar_url || null;
+  return getStaffAvatarUrl(avatarPath);
 };
 
 const getStaffInitials = (staff: Staff | null): string => {
