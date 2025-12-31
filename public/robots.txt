@@ -1,3 +1,5 @@
+# robots.txt for BarberSmart
+
 User-agent: Googlebot
 Allow: /
 
@@ -12,3 +14,13 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /cliente/auth
+Disallow: /saas-admin
+Disallow: /debug
+Disallow: /complete-profile
+Disallow: /subscription
+
+# Sitemap dinâmico
+Sitemap: https://nmsblmmhigwsevnqmhwn.supabase.co/functions/v1/generate-sitemap
