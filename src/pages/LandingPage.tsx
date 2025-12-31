@@ -1347,11 +1347,11 @@ const LandingPage = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
             <div className="flex items-center gap-2">
               <img 
-                src={logoIcon} 
+                src={landingLogoMobile} 
                 alt="Barber Smart" 
                 className="h-8 w-auto object-contain"
               />
-              <span className="font-bold">Barber Smart</span>
+              <span className="font-bold">{effectiveBranding?.system_name || "Barber Smart"}</span>
             </div>
             
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-white/50">
