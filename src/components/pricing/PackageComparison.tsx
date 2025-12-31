@@ -184,6 +184,13 @@ export const PackageComparison = ({
                 ))}
               </div>
 
+              {/* Trial Info */}
+              <div className="text-center mb-4 py-2 px-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                <span className="text-emerald-400 text-sm font-medium">
+                  14 dias grátis
+                </span>
+              </div>
+
               {/* CTA */}
               <Button
                 onClick={() => onSelectPlan(plan)}
@@ -194,7 +201,7 @@ export const PackageComparison = ({
                     : "bg-white/10 hover:bg-white/20 text-white"
                 )}
               >
-                Começar agora
+                Testar Grátis
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </motion.div>
