@@ -53,15 +53,6 @@ services:
       - "traefik.http.routers.barbersmart-subdomains.service=barbersmart"
       
       # ===================
-      # Router for custom domains (catch-all)
-      # ===================
-      - "traefik.http.routers.barbersmart-custom.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.barbersmart-custom.entrypoints=websecure"
-      - "traefik.http.routers.barbersmart-custom.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.barbersmart-custom.priority=1"
-      - "traefik.http.routers.barbersmart-custom.service=barbersmart"
-      
-      # ===================
       # Service configuration
       # ===================
       - "traefik.http.services.barbersmart.loadbalancer.server.port=80"

@@ -53,7 +53,7 @@ No seu repositório GitHub, vá para **Settings** → **Secrets and variables** 
 
 | Nome | Descrição |
 |------|-----------|
-| `VITE_MAIN_DOMAINS` | Domínio principal (ex: `barsmart.app`) |
+| `VITE_MAIN_DOMAINS` | Domínio principal (ex: `barbersmart.app`) |
 
 ## Passo 2: Primeiro Build
 
@@ -150,7 +150,7 @@ Na seção **Environment variables**, adicione:
 | Nome | Valor |
 |------|-------|
 | `DOCKERHUB_USERNAME` | seu-usuario-dockerhub |
-| `MAIN_DOMAIN` | barsmart.app |
+| `MAIN_DOMAIN` | barbersmart.app |
 | `IMAGE_TAG` | latest |
 
 ### 3.4 Deploy
@@ -201,8 +201,8 @@ docker service inspect barbersmart_app
 
 ### Via Browser
 
-1. Acesse `https://barsmart.app` - deve mostrar o dashboard/login
-2. Acesse `https://teste.barsmart.app` - deve mostrar landing ou "tenant não encontrado"
+1. Acesse `https://barbersmart.app` - deve mostrar o dashboard/login
+2. Acesse `https://teste.barbersmart.app` - deve mostrar landing ou "tenant não encontrado"
 
 ## Comandos Úteis
 
@@ -266,7 +266,7 @@ docker pull docker.io/seu-usuario/barbersmartapp:latest
    ```
 3. Confirme que o DNS está propagado:
    ```bash
-   dig barsmart.app
+   dig barbersmart.app
    ```
 
 ### Health check falhando
@@ -309,10 +309,10 @@ labels:
   - "traefik.enable=true"
   - "traefik.docker.network=my_network"
   # Router para domínio principal APENAS
-  - "traefik.http.routers.barbersmart-main.rule=Host(`barsmart.app`) || Host(`www.barsmart.app`)"
+  - "traefik.http.routers.barbersmart-main.rule=Host(`barbersmart.app`) || Host(`www.barbersmart.app`)"
   - "traefik.http.routers.barbersmart-main.priority=10"
   # Router para subdomínios APENAS do domínio principal
-  - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.barsmart.app`)"
+  - "traefik.http.routers.barbersmart-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.barbersmart.app`)"
   - "traefik.http.routers.barbersmart-wildcard.priority=5"
   # NÃO usar: PathPrefix('/') sem Host filter
 ```
