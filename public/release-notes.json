@@ -1,8 +1,24 @@
 {
   "releases": [
     {
+      "version": "v1.1.0",
+      "date": "2025-01-15",
+      "sections": {
+        "✨ Novas Funcionalidades": [
+          { "text": "Notificação de novidades quando há nova versão", "hash": null },
+          { "text": "Gerador automático de release notes", "hash": null },
+          { "text": "Deploy controlado por tags de versão", "hash": null },
+          { "text": "Git hooks para validação de commits", "hash": null }
+        ],
+        "🔧 Manutenção": [
+          { "text": "Workflow otimizado para CI/CD", "hash": null },
+          { "text": "Cache de planos na landing page", "hash": null }
+        ]
+      }
+    },
+    {
       "version": "v1.0.0",
-      "date": "2024-01-01",
+      "date": "2025-01-01",
       "sections": {
         "✨ Novas Funcionalidades": [
           { "text": "Lançamento inicial do BarberSmart", "hash": null },
@@ -14,19 +30,22 @@
       }
     }
   ],
-  "total": 1,
+  "total": 2,
   "latest": {
-    "version": "v1.0.0",
-    "date": "2024-01-01",
+    "version": "v1.1.0",
+    "date": "2025-01-15",
     "sections": {
       "✨ Novas Funcionalidades": [
-        { "text": "Lançamento inicial do BarberSmart", "hash": null },
-        { "text": "Sistema de agendamento completo", "hash": null },
-        { "text": "Gestão financeira integrada", "hash": null },
-        { "text": "Portal do cliente", "hash": null },
-        { "text": "Integração com WhatsApp", "hash": null }
+        { "text": "Notificação de novidades quando há nova versão", "hash": null },
+        { "text": "Gerador automático de release notes", "hash": null },
+        { "text": "Deploy controlado por tags de versão", "hash": null },
+        { "text": "Git hooks para validação de commits", "hash": null }
+      ],
+      "🔧 Manutenção": [
+        { "text": "Workflow otimizado para CI/CD", "hash": null },
+        { "text": "Cache de planos na landing page", "hash": null }
       ]
     }
   },
-  "generated_at": "2024-01-01T00:00:00.000Z"
+  "generated_at": "2025-01-15T12:00:00.000Z"
 }
