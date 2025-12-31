@@ -1361,7 +1361,7 @@ const LandingPage = () => {
             </div>
             
             <div className="flex flex-col items-center md:items-end gap-1 text-xs sm:text-sm text-white/50 text-center md:text-right">
-              <div>© {new Date().getFullYear()} Barber Smart. Todos os direitos reservados.</div>
+              <div>© {new Date().getFullYear()} {effectiveBranding?.system_name || "Barber Smart"}. Todos os direitos reservados.</div>
               <div>
                 Desenvolvido por{" "}
                 <a 
