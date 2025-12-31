@@ -1,7 +1,8 @@
 import { ReactNode, useState } from "react";
 import SaasAdminSidebar from "./SaasAdminSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { Shield, Menu, X } from "lucide-react";
+import { useBranding } from "@/contexts/BrandingContext";
+import { Shield, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -14,6 +15,8 @@ interface SaasAdminLayoutProps {
 const SaasAdminLayout = ({ children, activeTab = "overview", onTabChange }: SaasAdminLayoutProps) => {
   const { userRole } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { effectiveBranding, currentLogoUrl } = useBranding();
+  const systemName = effectiveBranding?.system_name || "Admin SaaS";
 
   // Verificação de acesso
   if (userRole !== 'super_admin') {
@@ -44,8 +47,18 @@ const SaasAdminLayout = ({ children, activeTab = "overview", onTabChange }: Saas
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-warning" />
-            <span className="font-bold text-foreground">Admin SaaS</span>
+            {currentLogoUrl ? (
+              <img 
+                src={currentLogoUrl} 
+                alt={systemName} 
+                className="h-8 w-auto max-w-[120px] object-contain" 
+              />
+            ) : (
+              <>
+                <Shield className="h-6 w-6 text-warning" />
+                <span className="font-bold text-foreground">Admin SaaS</span>
+              </>
+            )}
           </div>
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
