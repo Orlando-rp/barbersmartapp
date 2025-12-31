@@ -50,8 +50,11 @@ import {
   Sparkles,
   Zap,
   Building2,
-  CreditCard
+  CreditCard,
+  Puzzle
 } from "lucide-react";
+import { PackageComparison } from "@/components/pricing/PackageComparison";
+import { ModularPlanBuilder } from "@/components/pricing/ModularPlanBuilder";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -241,6 +244,7 @@ const WhatsAppBubble = ({
 const LandingPage = () => {
   const navigate = useNavigate();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [showBuilder, setShowBuilder] = useState(false);
 
   const faqs = [
     {
@@ -1023,16 +1027,36 @@ const LandingPage = () => {
             </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {plans.map((plan, index) => (
-              <PricingCard 
-                key={plan.name} 
-                {...plan} 
-                delay={index * 0.1} 
-                onSelect={() => navigate('/auth?tab=signup')}
-              />
-            ))}
-          </div>
+          <PackageComparison 
+            plans={plans.map((plan, index) => ({
+              id: plan.name.toLowerCase(),
+              name: plan.name,
+              slug: plan.name.toLowerCase(),
+              description: plan.description,
+              price: parseFloat(plan.price.replace('R$ ', '').replace(',', '.')),
+              max_staff: index === 0 ? 3 : index === 1 ? 8 : -1,
+              max_clients: -1,
+              max_appointments_month: -1,
+              is_base_plan: false,
+              is_bundle: true,
+              discount_percentage: billingPeriod === 'annual' ? 20 : 0,
+              highlight_text: plan.popular ? 'Mais Popular' : null,
+              feature_flags: {} as any,
+              features: plan.features
+            }))}
+            billingPeriod={billingPeriod}
+            onSelectPlan={() => navigate('/auth?tab=signup')}
+            onCustomize={() => setShowBuilder(true)}
+          />
+
+          <ModularPlanBuilder 
+            isOpen={showBuilder}
+            onClose={() => setShowBuilder(false)}
+            onContinue={() => {
+              setShowBuilder(false);
+              navigate('/auth?tab=signup');
+            }}
+          />
         </div>
       </section>
 
