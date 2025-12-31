@@ -8,6 +8,71 @@ Para fazer deploy, você precisa criar uma tag de versão (ex: `v1.0.0`).
 
 ---
 
+## Configuração Inicial (Uma vez)
+
+### Instalar Git Hooks
+
+Os hooks garantem qualidade do código e padronização de commits:
+
+```bash
+# Dar permissão e instalar
+chmod +x scripts/setup-hooks.sh
+./scripts/setup-hooks.sh
+```
+
+Isso instala:
+- **commit-msg**: Valida mensagens no padrão Conventional Commits
+- **pre-commit**: Verifica código (debugger, secrets, arquivos grandes)
+
+---
+
+## Conventional Commits
+
+Todas as mensagens de commit devem seguir o padrão:
+
+```
+<tipo>(<escopo>): <descrição>
+
+[corpo opcional]
+
+[rodapé opcional]
+```
+
+### Tipos Disponíveis
+
+| Tipo | Descrição | Exemplo |
+|------|-----------|---------|
+| `feat` | Nova funcionalidade | `feat: adicionar login com Google` |
+| `fix` | Correção de bug | `fix(auth): corrigir token expirado` |
+| `docs` | Documentação | `docs: atualizar README` |
+| `style` | Formatação | `style: corrigir indentação` |
+| `refactor` | Refatoração | `refactor: extrair componente` |
+| `perf` | Performance | `perf: otimizar query SQL` |
+| `test` | Testes | `test: adicionar testes de login` |
+| `build` | Build/deps | `build: atualizar React` |
+| `ci` | CI/CD | `ci: adicionar cache no workflow` |
+| `chore` | Outras | `chore: limpar arquivos temp` |
+
+### Breaking Changes
+
+Use `!` antes de `:` para indicar mudanças incompatíveis:
+
+```bash
+feat!: alterar formato de resposta da API
+```
+
+### Escopo (Opcional)
+
+Indica a área afetada:
+
+```bash
+fix(appointments): corrigir horário duplicado
+feat(whatsapp): adicionar chatbot
+docs(api): documentar endpoints
+```
+
+---
+
 ## Métodos de Release
 
 ### Método 1: Script Automático (Recomendado)

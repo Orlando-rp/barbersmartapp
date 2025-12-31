@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# =====================================================
+# BarberSmart - Commit Message Validation Hook
+# =====================================================
+# Valida se a mensagem de commit segue o padrão Conventional Commits
+# https://www.conventionalcommits.org/
+# =====================================================
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# Get the commit message
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip merge commits
+if [[ "$COMMIT_MSG" =~ ^Merge ]]; then
+    exit 0
+fi
+
+# Skip if message starts with "fixup!" or "squash!"
+if [[ "$COMMIT_MSG" =~ ^(fixup!|squash!) ]]; then
+    exit 0
+fi
+
+# Conventional Commits pattern
+# type(scope)?: subject
+# Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_-]+\))?(!)?: .{1,100}$"
+
+# First line of commit message
+FIRST_LINE=$(echo "$COMMIT_MSG" | head -n 1)
+
+if [[ ! "$FIRST_LINE" =~ $PATTERN ]]; then
+    echo ""
+    echo -e "${RED}═══════════════════════════════════════════════════════════${NC}"
+    echo -e "${RED}❌ COMMIT REJEITADO: Mensagem não segue o padrão${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${YELLOW}Sua mensagem:${NC}"
+    echo -e "  ${CYAN}$FIRST_LINE${NC}"
+    echo ""
+    echo -e "${GREEN}Formato esperado:${NC}"
+    echo -e "  ${CYAN}<tipo>(<escopo>): <descrição>${NC}"
+    echo ""
+    echo -e "${BLUE}Tipos válidos:${NC}"
+    echo -e "  ${GREEN}feat${NC}     - Nova funcionalidade"
+    echo -e "  ${GREEN}fix${NC}      - Correção de bug"
+    echo -e "  ${GREEN}docs${NC}     - Apenas documentação"
+    echo -e "  ${GREEN}style${NC}    - Formatação (não afeta código)"
+    echo -e "  ${GREEN}refactor${NC} - Refatoração de código"
+    echo -e "  ${GREEN}perf${NC}     - Melhoria de performance"
+    echo -e "  ${GREEN}test${NC}     - Adição/correção de testes"
+    echo -e "  ${GREEN}build${NC}    - Build system ou dependências"
+    echo -e "  ${GREEN}ci${NC}       - Configuração de CI"
+    echo -e "  ${GREEN}chore${NC}    - Outras mudanças"
+    echo -e "  ${GREEN}revert${NC}   - Reverter commit anterior"
+    echo ""
+    echo -e "${BLUE}Exemplos válidos:${NC}"
+    echo -e "  ${CYAN}feat: adicionar login com Google${NC}"
+    echo -e "  ${CYAN}fix(auth): corrigir token expirado${NC}"
+    echo -e "  ${CYAN}docs: atualizar README${NC}"
+    echo -e "  ${CYAN}feat!: alterar API de autenticação${NC} (breaking change)"
+    echo ""
+    echo -e "${YELLOW}Dica: Use '!' antes de ':' para indicar breaking changes${NC}"
+    echo ""
+    exit 1
+fi
+
+# Check subject length (should be <= 72 characters for first line)
+SUBJECT_LENGTH=${#FIRST_LINE}
+if [ $SUBJECT_LENGTH -gt 72 ]; then
+    echo ""
+    echo -e "${YELLOW}⚠️  AVISO: Primeira linha muito longa ($SUBJECT_LENGTH caracteres)${NC}"
+    echo -e "  Recomendado: máximo 72 caracteres"
+    echo ""
+fi
+
+# Check if subject starts with lowercase (convention)
+SUBJECT=$(echo "$FIRST_LINE" | sed -E 's/^[a-z]+(\([^)]*\))?(!)?: //')
+FIRST_CHAR=$(echo "$SUBJECT" | cut -c1)
+
+if [[ "$FIRST_CHAR" =~ [A-Z] ]]; then
+    echo -e "${YELLOW}💡 Dica: A descrição deve começar com letra minúscula${NC}"
+    # Not blocking, just a suggestion
+fi
+
+echo -e "${GREEN}✅ Commit válido!${NC}"
+exit 0
