@@ -793,9 +793,9 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                             src={appointment.staff?.avatar_url}
                             alt={appointment.staff?.name || ''}
                             fallbackText={appointment.staff?.name}
-                            fallback={!appointment.staff?.name ? <User className="h-3 w-3 md:h-4 md:w-4" /> : undefined}
-                            className="h-6 w-6 md:h-8 md:w-8"
-                            fallbackClassName="bg-primary/10 text-primary text-[10px] md:text-xs"
+                            fallback={!appointment.staff?.name ? <User className="h-3 w-3" /> : undefined}
+                            size="xs"
+                            fallbackClassName="bg-primary/10 text-primary"
                           />
                           <span className="truncate">
                             <span className="hidden sm:inline">Barbeiro: </span>

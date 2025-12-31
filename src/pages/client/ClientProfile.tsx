@@ -88,8 +88,7 @@ export default function ClientProfile() {
               <ClientAvatar
                 src={client?.avatar_url}
                 fallbackText={displayName}
-                className="h-20 w-20"
-                fallbackClassName="text-xl"
+                size="2xl"
                 lazy={false}
               />
               <div>

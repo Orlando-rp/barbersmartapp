@@ -530,8 +530,9 @@ const Clients = () => {
                       src={client.avatar_url}
                       alt={client.name}
                       fallbackText={client.name}
-                      className="h-8 w-8 md:h-12 md:w-12 shrink-0"
-                      fallbackClassName="bg-primary/10 text-primary font-semibold text-xs md:text-sm"
+                      size="sm"
+                      className="shrink-0 md:h-12 md:w-12"
+                      fallbackClassName="bg-primary/10 text-primary font-semibold"
                     />
                     
                     <div className="flex-1 min-w-0">

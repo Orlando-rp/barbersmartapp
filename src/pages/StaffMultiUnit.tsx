@@ -376,8 +376,8 @@ const StaffMultiUnit = () => {
                           src={user.avatar_url}
                           alt={user.full_name}
                           fallbackText={user.full_name}
-                          className="h-12 w-12"
-                          fallbackClassName="bg-primary/10 text-primary font-bold text-lg"
+                          size="lg"
+                          fallbackClassName="bg-primary/10 text-primary font-bold"
                         />
                         <div>
                           <h3 className="font-semibold text-foreground">{user.full_name}</h3>

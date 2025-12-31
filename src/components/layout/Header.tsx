@@ -115,8 +115,8 @@ const Header = () => {
                   src={profileAvatarUrl || user?.user_metadata?.avatar_url}
                   alt={profileFullName || user?.email || ''}
                   fallbackText={profileFullName || user?.email}
-                  className="h-7 w-7 lg:h-8 lg:w-8"
-                  fallbackClassName="bg-primary/10 text-primary text-xs lg:text-sm"
+                  size="sm"
+                  fallbackClassName="bg-primary/10 text-primary"
                   lazy={false}
                 />
                 {/* Hide user info on mobile */}
