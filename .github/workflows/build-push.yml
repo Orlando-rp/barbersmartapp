@@ -258,7 +258,168 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Checked at:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
 
-      - name: Notify on Failure
+      - name: Notify Discord on Failure
+        if: ${{ steps.health_primary.outputs.health_status == 'degraded' && secrets.DISCORD_WEBHOOK_URL != '' }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "🚨 Health Check Failed",
+                "description": "O deploy foi concluído, mas alguns endpoints não estão respondendo corretamente.",
+                "color": 15158332,
+                "fields": [
+                  {
+                    "name": "📦 Versão",
+                    "value": "${{ github.ref_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "🔗 Commit",
+                    "value": "[`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})",
+                    "inline": true
+                  },
+                  {
+                    "name": "⚙️ Workflow",
+                    "value": "[Ver logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+                    "inline": true
+                  }
+                ],
+                "footer": {
+                  "text": "BarberSmart CI/CD"
+                },
+                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+              }]
+            }' \
+            "$DISCORD_WEBHOOK_URL"
+
+      - name: Notify Slack on Failure
+        if: ${{ steps.health_primary.outputs.health_status == 'degraded' && secrets.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d '{
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚨 Health Check Failed",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "O deploy foi concluído, mas alguns endpoints não estão respondendo corretamente."
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*📦 Versão:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*🔗 Commit:*\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                    }
+                  ]
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "Ver Logs",
+                        "emoji": true
+                      },
+                      "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }' \
+            "$SLACK_WEBHOOK_URL"
+
+      - name: Notify Success Discord
+        if: ${{ steps.health_primary.outputs.health_status == 'healthy' && secrets.DISCORD_WEBHOOK_URL != '' }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "✅ Deploy Successful",
+                "description": "A aplicação foi implantada e está respondendo corretamente.",
+                "color": 3066993,
+                "fields": [
+                  {
+                    "name": "📦 Versão",
+                    "value": "${{ github.ref_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "🔗 Commit",
+                    "value": "[`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})",
+                    "inline": true
+                  }
+                ],
+                "footer": {
+                  "text": "BarberSmart CI/CD"
+                },
+                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+              }]
+            }' \
+            "$DISCORD_WEBHOOK_URL"
+
+      - name: Notify Success Slack
+        if: ${{ steps.health_primary.outputs.health_status == 'healthy' && secrets.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d '{
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ Deploy Successful",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "A aplicação foi implantada e está respondendo corretamente."
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*📦 Versão:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*🔗 Commit:*\n<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                    }
+                  ]
+                }
+              ]
+            }' \
+            "$SLACK_WEBHOOK_URL"
+
+      - name: Log Warning if No Webhook Configured
         if: ${{ steps.health_primary.outputs.health_status == 'degraded' }}
         run: |
           echo "::warning::Health check detected degraded status. Some endpoints may not be responding correctly."
