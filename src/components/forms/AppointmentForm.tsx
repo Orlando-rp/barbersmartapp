@@ -20,6 +20,7 @@ import { useBusinessHoursValidation } from "@/hooks/useBusinessHoursValidation";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
 import { useStaffServices } from "@/hooks/useStaffServices";
 import { useSelectableUnits } from "@/hooks/useSelectableUnits";
+import { getStaffAvatarUrl } from "@/hooks/useAvatarUrl";
 import { toast as sonnerToast } from "sonner";
 import { DayProps, DayContent } from "react-day-picker";
 
@@ -1203,8 +1204,8 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                     {staff.map((member) => (
                       <SelectItem key={member.id} value={member.id} className="text-sm">
                         <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6 flex-shrink-0">
-                            <AvatarImage src={member.avatar_url} alt={member.name} />
+                      <Avatar className="h-6 w-6 flex-shrink-0">
+                            <AvatarImage src={getStaffAvatarUrl(member.avatar_url) || undefined} alt={member.name} />
                             <AvatarFallback className="bg-primary/10 text-primary text-xs">
                               {member.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                             </AvatarFallback>
@@ -1225,7 +1226,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 {selectedBarberData && (
                   <div className="p-3 sm:p-4 rounded-lg border bg-muted/30 flex items-center gap-3">
                     <Avatar className="h-12 w-12 flex-shrink-0">
-                      <AvatarImage src={selectedBarberData.avatar_url} alt={selectedBarberData.name} />
+                      <AvatarImage src={getStaffAvatarUrl(selectedBarberData.avatar_url) || undefined} alt={selectedBarberData.name} />
                       <AvatarFallback className="bg-primary/10 text-primary">
                         {selectedBarberData.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                       </AvatarFallback>
