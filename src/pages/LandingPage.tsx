@@ -1217,8 +1217,19 @@ const LandingPage = () => {
               <a href="mailto:contato@barbersmart.app" className="hover:text-white transition-colors">Contato</a>
             </div>
             
-            <div className="text-sm text-white/50">
-              © {new Date().getFullYear()} BarberSmart. Todos os direitos reservados.
+            <div className="flex flex-col items-center md:items-end gap-1 text-sm text-white/50">
+              <div>© {new Date().getFullYear()} BarberSmart. Todos os direitos reservados.</div>
+              <div>
+                Desenvolvido por{" "}
+                <a 
+                  href="https://syncsmart.com.br" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-amber-400 hover:text-amber-300 transition-colors font-medium"
+                >
+                  Sync Smart
+                </a>
+              </div>
             </div>
           </div>
         </div>

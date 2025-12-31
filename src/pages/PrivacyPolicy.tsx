@@ -29,7 +29,9 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">1. Introdução</h2>
             <p>
-              A BarberSmart ("nós", "nosso" ou "plataforma") está comprometida em proteger sua privacidade. 
+              O BarberSmart é um produto desenvolvido e operado pela <strong>Sync Smart</strong> (
+              <a href="https://syncsmart.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">syncsmart.com.br</a>
+              ). A Sync Smart ("nós", "nosso" ou "empresa") está comprometida em proteger sua privacidade. 
               Esta Política de Privacidade explica como coletamos, usamos, divulgamos e protegemos suas 
               informações quando você utiliza nossa plataforma de gestão para barbearias.
             </p>
@@ -147,13 +149,15 @@ const PrivacyPolicy = () => {
             </p>
             <ul className="list-none mt-2 space-y-1">
               <li><strong>E-mail:</strong> privacidade@barbersmart.app</li>
+              <li><strong>Empresa:</strong> Sync Smart</li>
+              <li><strong>Site:</strong> <a href="https://syncsmart.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">syncsmart.com.br</a></li>
               <li><strong>Plataforma:</strong> BarberSmart</li>
             </ul>
           </section>
         </div>
 
         <div className="mt-12 pt-6 border-t text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} BarberSmart. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} BarberSmart. Um produto <a href="https://syncsmart.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Sync Smart</a>. Todos os direitos reservados.</p>
         </div>
       </div>
     </div>
