@@ -19,6 +19,7 @@ import { WidgetSelector, defaultWidgets, WidgetConfig, ColumnConfig } from "@/co
 import { DraggableWidgetGrid } from "@/components/dashboard/DraggableWidgetGrid";
 import { LayoutManager, DashboardLayout } from "@/components/dashboard/LayoutManager";
 import { PublicBookingLink } from "@/components/settings/PublicBookingLink";
+import { TrialBanner } from "@/components/dashboard/TrialBanner";
 import { useAvatarPreload } from "@/hooks/useAvatarPreload";
 import { 
   Calendar, 
@@ -412,6 +413,8 @@ const Index = () => {
   return (
     <Layout>
       <div className="space-y-4 lg:space-y-6">
+        {/* Trial Banner */}
+        <TrialBanner />
         {/* Welcome Section */}
         <div className="gradient-subtle p-4 lg:p-6 rounded-xl border border-border">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
