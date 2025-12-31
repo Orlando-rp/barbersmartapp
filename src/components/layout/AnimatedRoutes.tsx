@@ -7,6 +7,7 @@ import { PageLoader } from '../ui/page-loader';
 import { PageTransition } from './PageTransition';
 
 // Lazy load all pages for code splitting
+const LandingPage = lazy(() => import("../../pages/LandingPage"));
 const Index = lazy(() => import("../../pages/Index"));
 const Auth = lazy(() => import("../../pages/Auth"));
 const Debug = lazy(() => import("../../pages/Debug"));
@@ -59,6 +60,7 @@ export const AnimatedRoutes = () => {
       <Suspense fallback={<PageLoader />} key={location.pathname}>
         <Routes location={location}>
           {/* Public Routes */}
+          <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
           <Route path="/agendar/:barbershopId" element={<PageTransition><PublicBooking /></PageTransition>} />
           <Route path="/booking/success" element={<PageTransition><BookingPaymentStatus /></PageTransition>} />
           <Route path="/booking/failure" element={<PageTransition><BookingPaymentStatus /></PageTransition>} />
@@ -82,8 +84,8 @@ export const AnimatedRoutes = () => {
           <Route path="/cliente/avaliacoes" element={<ClientProtectedRoute><PageTransition><ClientReviews /></PageTransition></ClientProtectedRoute>} />
           
           {/* Protected Routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><PageTransition><Index /></PageTransition></ProtectedRoute>} />
           <Route path="/debug" element={<ProtectedRoute><PageTransition><Debug /></PageTransition></ProtectedRoute>} />
-          <Route path="/" element={<ProtectedRoute><PageTransition><Index /></PageTransition></ProtectedRoute>} />
           <Route path="/appointments" element={<ProtectedRoute><PageTransition><Appointments /></PageTransition></ProtectedRoute>} />
           <Route path="/clients" element={<ProtectedRoute><PageTransition><Clients /></PageTransition></ProtectedRoute>} />
           <Route path="/services" element={<ProtectedRoute><PageTransition><Services /></PageTransition></ProtectedRoute>} />

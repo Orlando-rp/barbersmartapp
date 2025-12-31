@@ -37,13 +37,13 @@ export const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteP
 
   // Verificar permissão específica passada como prop
   if (requiredPermission && !hasPermission(requiredPermission)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   // Verificar permissão baseada na rota atual
   const routePermission = ROUTE_PERMISSIONS[location.pathname];
   if (routePermission && !hasPermission(routePermission)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -82,7 +82,7 @@ export const RoleProtectedRoute = ({ children, allowedRoles }: RoleProtectedRout
 
   // Verificar se o role do usuário está na lista de permitidos
   if (!userRole || !allowedRoles.includes(userRole)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

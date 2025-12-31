@@ -119,7 +119,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [user, navigate]);
 
@@ -311,7 +311,7 @@ const Auth = () => {
         // Usuário existente
         toast.success('Login realizado!');
         await refreshBarbershops();
-        navigate('/');
+        navigate('/dashboard');
       }
     } catch (error: any) {
       console.error('Erro ao verificar OTP:', error);
