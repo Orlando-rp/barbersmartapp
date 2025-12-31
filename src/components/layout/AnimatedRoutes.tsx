@@ -41,6 +41,7 @@ const CompleteProfile = lazy(() => import("../../pages/CompleteProfile"));
 const UpgradePlans = lazy(() => import("../../pages/UpgradePlans"));
 const SubscriptionCheckout = lazy(() => import("../../pages/SubscriptionCheckout"));
 const SubscriptionSuccess = lazy(() => import("../../pages/SubscriptionSuccess"));
+const SubscriptionManagement = lazy(() => import("../../pages/SubscriptionManagement"));
 const PrivacyPolicy = lazy(() => import("../../pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("../../pages/TermsOfService"));
 const Install = lazy(() => import("../../pages/Install"));
@@ -115,6 +116,7 @@ export const AnimatedRoutes = () => {
           <Route path="/upgrade" element={<AdminRoute><PageTransition><UpgradePlans /></PageTransition></AdminRoute>} />
           <Route path="/subscription/checkout" element={<ProtectedRoute><PageTransition><SubscriptionCheckout /></PageTransition></ProtectedRoute>} />
           <Route path="/subscription/success" element={<PageTransition><SubscriptionSuccess /></PageTransition>} />
+          <Route path="/subscription/manage" element={<ProtectedRoute><PageTransition><SubscriptionManagement /></PageTransition></ProtectedRoute>} />
           
           {/* Super Admin Only Routes */}
           <Route path="/saas-admin" element={<SuperAdminRoute><PageTransition><SaasAdminPortal /></PageTransition></SuperAdminRoute>} />
