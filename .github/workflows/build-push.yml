@@ -67,7 +67,7 @@ jobs:
           build-args: |
             VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
-            VITE_MAIN_DOMAINS=${{ vars.VITE_MAIN_DOMAINS || 'barsmart.app' }}
+            VITE_MAIN_DOMAINS=${{ vars.VITE_MAIN_DOMAINS || 'barbersmart.app,barbersmart.com.br' }}
             VITE_ENABLE_TENANT_DETECTION=true
             VITE_ENABLE_PWA=true
           cache-from: type=gha
