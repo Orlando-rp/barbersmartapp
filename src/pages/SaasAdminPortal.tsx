@@ -80,6 +80,7 @@ import { BrandingConfig } from "@/components/saas/BrandingConfig";
 import DomainsManagement from "@/components/saas/DomainsManagement";
 import { GlobalPaymentConfig } from "@/components/saas/GlobalPaymentConfig";
 import { PlanFeaturesSelector, defaultPlanFeatures, featuresToStringArray, stringArrayToFeatures, type PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
+import { PlanCardPreview } from "@/components/saas/PlanCardPreview";
 import {
   BarChart,
   Bar,
@@ -1515,6 +1516,21 @@ const SaasAdminPortal = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Live Preview */}
+              {planForm.is_bundle && (
+                <PlanCardPreview
+                  name={planForm.name}
+                  description={planForm.description}
+                  price={planForm.price}
+                  billingPeriod={planForm.billing_period}
+                  maxStaff={planForm.max_staff}
+                  highlightText={planForm.highlight_text}
+                  discountPercentage={planForm.discount_percentage}
+                  featureFlags={planForm.feature_flags}
+                  customFeatures={planForm.features}
+                />
+              )}
 
               <div className="flex items-center gap-2">
                 <Switch checked={planForm.active} onCheckedChange={(v) => setPlanForm({ ...planForm, active: v })} />
