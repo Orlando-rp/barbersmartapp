@@ -2,6 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getStaffAvatarUrl, getClientAvatarUrl } from "@/hooks/useAvatarUrl";
+import { 
+  isAvatarCached, 
+  markAvatarLoaded, 
+  markAvatarError,
+  markAvatarLoading,
+  getAvatarCacheStatus 
+} from "@/hooks/useAvatarCache";
 import { cn } from "@/lib/utils";
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
@@ -76,12 +83,7 @@ export const SmartAvatar = ({
   rootMargin = "50px",
   showSkeleton = true,
 }: SmartAvatarProps) => {
-  const [isVisible, setIsVisible] = useState(!lazy);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLSpanElement>(null);
-
   const sizeClass = sizeClasses[size];
 
   // Resolve the avatar URL based on type
@@ -98,6 +100,16 @@ export const SmartAvatar = ({
       return getStaffAvatarUrl(src);
     }
   })();
+
+  // Check if image is already cached
+  const isCached = isAvatarCached(resolvedUrl);
+  const cacheStatus = getAvatarCacheStatus(resolvedUrl);
+
+  // Initialize states based on cache
+  const [isVisible, setIsVisible] = useState(!lazy || isCached);
+  const [imageLoaded, setImageLoaded] = useState(isCached);
+  const [imageError, setImageError] = useState(cacheStatus === 'error');
+  const [isLoading, setIsLoading] = useState(!isCached && cacheStatus !== 'error');
 
   // Generate fallback text from alt or fallbackText
   const getFallbackContent = () => {
@@ -142,13 +154,26 @@ export const SmartAvatar = ({
 
   // Reset states when src changes
   useEffect(() => {
-    setImageLoaded(false);
-    setImageError(false);
-    setIsLoading(!!src);
-  }, [src]);
+    const cached = isAvatarCached(resolvedUrl);
+    const status = getAvatarCacheStatus(resolvedUrl);
+    
+    setImageLoaded(cached);
+    setImageError(status === 'error');
+    setIsLoading(!cached && status !== 'error' && !!src);
+    
+    // If cached, make visible immediately
+    if (cached) {
+      setIsVisible(true);
+    }
+    
+    // Mark as loading in cache if not cached
+    if (resolvedUrl && !cached && status !== 'error') {
+      markAvatarLoading(resolvedUrl);
+    }
+  }, [src, resolvedUrl]);
 
   // Determine if we should show skeleton
-  const shouldShowSkeleton = showSkeleton && isVisible && resolvedUrl && isLoading && !imageError;
+  const shouldShowSkeleton = showSkeleton && isVisible && resolvedUrl && isLoading && !imageError && !isCached;
   const shouldShowFallback = !resolvedUrl || imageError || (!isLoading && !imageLoaded);
 
   return (
@@ -170,16 +195,22 @@ export const SmartAvatar = ({
           alt={alt}
           className={cn(
             "transition-opacity duration-300",
-            imageLoaded ? "opacity-100" : "opacity-0",
+            imageLoaded || isCached ? "opacity-100" : "opacity-0",
             imageClassName
           )}
           onLoad={() => {
             setImageLoaded(true);
             setIsLoading(false);
+            if (resolvedUrl) {
+              markAvatarLoaded(resolvedUrl);
+            }
           }}
           onError={() => {
             setImageError(true);
             setIsLoading(false);
+            if (resolvedUrl) {
+              markAvatarError(resolvedUrl);
+            }
           }}
         />
       )}
