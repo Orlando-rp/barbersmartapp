@@ -9,6 +9,7 @@ export interface SystemBranding {
   logo_url: string | null;
   logo_light_url?: string | null;
   logo_dark_url?: string | null;
+  logo_icon_url?: string | null;
   favicon_url: string | null;
   primary_color: string;
   secondary_color: string;
@@ -22,6 +23,7 @@ export interface CustomBranding {
   logo_url?: string;
   logo_light_url?: string;
   logo_dark_url?: string;
+  logo_icon_url?: string;
   favicon_url?: string;
   primary_color?: string;
   secondary_color?: string;

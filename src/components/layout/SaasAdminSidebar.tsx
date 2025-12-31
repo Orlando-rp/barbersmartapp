@@ -52,6 +52,8 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
   const navigate = useNavigate();
   const { effectiveBranding, currentLogoUrl } = useBranding();
   const systemName = effectiveBranding?.system_name || "Admin SaaS";
+  const logoIconUrl = effectiveBranding?.logo_icon_url;
+  const faviconUrl = effectiveBranding?.favicon_url;
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -95,7 +97,19 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
           )}
           {isCollapsed && !isMobile && (
             <div className="flex items-center justify-center w-full">
-              {currentLogoUrl ? (
+              {logoIconUrl ? (
+                <img 
+                  src={logoIconUrl} 
+                  alt={systemName} 
+                  className="h-8 w-8 object-contain" 
+                />
+              ) : faviconUrl ? (
+                <img 
+                  src={faviconUrl} 
+                  alt={systemName} 
+                  className="h-8 w-8 object-contain" 
+                />
+              ) : currentLogoUrl ? (
                 <img 
                   src={currentLogoUrl} 
                   alt={systemName} 

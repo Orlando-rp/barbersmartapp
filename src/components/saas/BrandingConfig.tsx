@@ -23,7 +23,8 @@ import {
   Wand2,
   Sun,
   Moon,
-  Trash2
+  Trash2,
+  Square
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ interface BrandingSettings {
   logoUrl: string;
   logoLightUrl: string;
   logoDarkUrl: string;
+  logoIconUrl: string;
   faviconUrl: string;
   colors: {
     primary: string;
@@ -54,6 +56,7 @@ const defaultBranding: BrandingSettings = {
   logoUrl: '',
   logoLightUrl: '',
   logoDarkUrl: '',
+  logoIconUrl: '',
   faviconUrl: '',
   colors: {
     primary: '#3b5068',
@@ -75,6 +78,7 @@ export const BrandingConfig = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingLogoLight, setUploadingLogoLight] = useState(false);
   const [uploadingLogoDark, setUploadingLogoDark] = useState(false);
+  const [uploadingLogoIcon, setUploadingLogoIcon] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
 
@@ -105,6 +109,7 @@ export const BrandingConfig = () => {
           logoUrl: data.logo_url || '',
           logoLightUrl: data.logo_light_url || '',
           logoDarkUrl: data.logo_dark_url || '',
+          logoIconUrl: data.logo_icon_url || '',
           faviconUrl: data.favicon_url || '',
           colors: {
             primary: data.primary_color || defaultBranding.colors.primary,
@@ -134,6 +139,7 @@ export const BrandingConfig = () => {
         logo_url: config.logoUrl || null,
         logo_light_url: config.logoLightUrl || null,
         logo_dark_url: config.logoDarkUrl || null,
+        logo_icon_url: config.logoIconUrl || null,
         favicon_url: config.faviconUrl || null,
         primary_color: config.colors.primary,
         secondary_color: config.colors.secondary,
@@ -392,6 +398,61 @@ export const BrandingConfig = () => {
       toast.error("Erro ao enviar logo");
     } finally {
       setUploadingLogoDark(false);
+    }
+  };
+
+  const handleLogoIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingLogoIcon(true);
+      
+      let fileToUpload: Blob = file;
+      let finalExt = file.name.split('.').pop() || 'png';
+      const skipCompression = file.type === 'image/svg+xml';
+
+      if (!skipCompression) {
+        try {
+          const optimized = await optimizeImage(file, {
+            maxWidth: 128,
+            maxHeight: 128,
+            quality: 90,
+            format: 'webp',
+            generateThumbnail: false,
+          });
+          
+          fileToUpload = optimized.optimizedBlob;
+          finalExt = optimized.metadata.format;
+          
+          console.log(`Logo ícone otimizado: ${formatFileSize(optimized.metadata.originalSize)} → ${formatFileSize(optimized.metadata.optimizedSize)} (${optimized.metadata.compressionRatio}% menor)`);
+        } catch (compressionError) {
+          console.warn('Compressão falhou, enviando arquivo original:', compressionError);
+        }
+      }
+
+      const fileName = `branding/saas/logo-icon-${Date.now()}.${finalExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('landing-images')
+        .upload(fileName, fileToUpload, { 
+          upsert: true,
+          contentType: file.type === 'image/svg+xml' ? 'image/svg+xml' : `image/${finalExt}`
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('landing-images')
+        .getPublicUrl(fileName);
+
+      setConfig(prev => ({ ...prev, logoIconUrl: publicUrl }));
+      toast.success("Logo ícone enviado com sucesso!");
+    } catch (error) {
+      console.error('Erro ao enviar logo ícone:', error);
+      toast.error("Erro ao enviar logo ícone");
+    } finally {
+      setUploadingLogoIcon(false);
     }
   };
 
@@ -698,6 +759,53 @@ export const BrandingConfig = () => {
                     )}
                     <p className="text-xs text-muted-foreground">
                       Usado quando não há logo específico para o tema. PNG ou SVG, 512x512px
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Logo Ícone (Quadrado) */}
+              <div className="space-y-3 pt-4 border-t border-border">
+                <Label className="text-foreground text-sm flex items-center gap-2">
+                  <Square className="h-4 w-4 text-purple-500" />
+                  Logo Ícone (Quadrado)
+                </Label>
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  <div className="w-20 h-20 border-2 border-dashed border-border rounded-lg flex items-center justify-center bg-muted overflow-hidden">
+                    {config.logoIconUrl ? (
+                      <img src={config.logoIconUrl} alt="Logo Ícone" className="w-full h-full object-contain" />
+                    ) : (
+                      <Square className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoIconUpload}
+                        disabled={uploadingLogoIcon}
+                        className="bg-muted border-border text-foreground"
+                      />
+                      {config.logoIconUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setConfig(prev => ({ ...prev, logoIconUrl: '' }))}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {uploadingLogoIcon && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Enviando...
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Ícone quadrado para sidebar colapsada e PWA. 128x128px recomendado.
                     </p>
                   </div>
                 </div>
