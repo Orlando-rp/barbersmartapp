@@ -1894,11 +1894,13 @@ const Auth = () => {
               </div>
             )}
           </div>
-          <CardTitle className="text-2xl">
-            {hasWhiteLabel && tenantBarbershopName 
-              ? tenantBarbershopName 
-              : effectiveBranding?.system_name || 'BarberSmart'}
-          </CardTitle>
+          {!currentLogoUrl && (
+            <CardTitle className="text-2xl">
+              {hasWhiteLabel && tenantBarbershopName 
+                ? tenantBarbershopName 
+                : effectiveBranding?.system_name || 'BarberSmart'}
+            </CardTitle>
+          )}
           <CardDescription>
             {effectiveBranding?.tagline || 'Sistema de gestão para barbearias'}
           </CardDescription>

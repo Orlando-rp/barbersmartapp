@@ -202,7 +202,7 @@ export default function ClientAuth() {
             )}
           </div>
           <CardTitle>
-            {step === 'phone' && `Área do Cliente${hasWhiteLabel && tenantBarbershopName ? ` - ${tenantBarbershopName}` : ''}`}
+            {step === 'phone' && (currentLogoUrl ? 'Área do Cliente' : `Área do Cliente${hasWhiteLabel && tenantBarbershopName ? ` - ${tenantBarbershopName}` : ''}`)}
             {step === 'otp' && 'Digite o código'}
             {step === 'success' && 'Bem-vindo!'}
           </CardTitle>
