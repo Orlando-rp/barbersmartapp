@@ -18,8 +18,8 @@ const defaultGlobalStyles: GlobalStyles = {
   accent_color: '210 40% 96.1%',
   background_color: '0 0% 100%',
   text_color: '222.2 84% 4.9%',
-  font_heading: 'Playfair Display',
-  font_body: 'Inter',
+  font_heading: 'Posey Textured',
+  font_body: 'Outfit',
   border_radius: 'md',
 };
 
