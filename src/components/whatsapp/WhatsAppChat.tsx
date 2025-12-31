@@ -687,7 +687,7 @@ export const WhatsAppChat = () => {
                             <ClientAvatar
                               src={client.avatar_url}
                               fallbackText={client.name || client.phone}
-                              className="h-10 w-10"
+                              size="md"
                               fallbackClassName="bg-primary/10 text-primary"
                             />
                             <div className="flex-1 min-w-0">

@@ -506,8 +506,9 @@ const Staff = () => {
                               alt={member.profiles?.full_name}
                               fallbackText={member.profiles?.full_name}
                               fallback={!member.profiles?.full_name ? <User className="h-3 w-3" /> : undefined}
-                              className="h-9 w-9 shrink-0"
-                              fallbackClassName="bg-primary/10 text-primary text-xs"
+                              size="sm"
+                              className="shrink-0"
+                              fallbackClassName="bg-primary/10 text-primary"
                             />
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-sm truncate">{member.profiles?.full_name || 'Nome não disponível'}</p>
@@ -592,7 +593,7 @@ const Staff = () => {
                                 alt={member.profiles?.full_name}
                                 fallbackText={member.profiles?.full_name}
                                 fallback={!member.profiles?.full_name ? <User className="h-4 w-4" /> : undefined}
-                                className="h-10 w-10"
+                                size="md"
                                 fallbackClassName="bg-primary/10 text-primary"
                               />
                               <span className="truncate max-w-[150px]">{member.profiles?.full_name || 'Nome não disponível'}</span>

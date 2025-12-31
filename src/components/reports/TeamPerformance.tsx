@@ -225,8 +225,8 @@ export const TeamPerformance = ({ period }: Props) => {
                     <StaffAvatar
                       src={staff.avatar}
                       fallbackText={staff.name}
-                      className="h-8 w-8"
-                      fallbackClassName="bg-primary/10 text-primary text-xs"
+                      size="sm"
+                      fallbackClassName="bg-primary/10 text-primary"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{staff.name}</p>

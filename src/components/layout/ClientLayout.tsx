@@ -97,8 +97,7 @@ export const ClientLayout = ({ children }: ClientLayoutProps) => {
             <ClientAvatar
               src={client?.avatar_url}
               fallbackText={displayName}
-              className="h-8 w-8"
-              fallbackClassName="text-xs"
+              size="sm"
               lazy={false}
             />
 

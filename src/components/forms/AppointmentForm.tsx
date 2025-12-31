@@ -1207,8 +1207,9 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                             src={member.avatar_url}
                             alt={member.name}
                             fallbackText={member.name}
-                            className="h-6 w-6 flex-shrink-0"
-                            fallbackClassName="bg-primary/10 text-primary text-xs"
+                            size="xs"
+                            className="flex-shrink-0"
+                            fallbackClassName="bg-primary/10 text-primary"
                           />
                           <span>{member.name}</span>
                         </div>
