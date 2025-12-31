@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Check, Star, Zap, Crown, ArrowRight } from 'lucide-react';
+import { Check, Star, Zap, Crown, ArrowRight, Puzzle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -57,12 +57,19 @@ export const PackageComparison = ({
     if (flags.multi_unit) features.push('Multi-unidade');
     if (flags.priority_support) features.push('Suporte prioritário');
 
-    return features.slice(0, 6); // Limit to 6 features for display
+    return features.slice(0, 6);
   };
+
+  const customizeBenefits = [
+    'Selecione módulos individuais',
+    'Pague apenas pelo que usa',
+    'Adicione recursos a qualquer momento',
+    'Sem recursos desnecessários'
+  ];
 
   return (
     <div className="space-y-8">
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         {plans.map((plan, index) => {
           const Icon = planIcons[plan.slug] || Zap;
           const displayPrice = getDisplayPrice(plan);
@@ -183,27 +190,79 @@ export const PackageComparison = ({
             </motion.div>
           );
         })}
-      </div>
 
-      {/* Customize Option */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="text-center"
-      >
-        <p className="text-white/50 mb-3">
-          Quer escolher apenas os recursos que você precisa?
-        </p>
-        <Button
-          variant="outline"
-          onClick={onCustomize}
-          className="border-white/20 text-white hover:bg-white/10"
+        {/* Customize Plan Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: plans.length * 0.1 }}
+          className="relative flex flex-col rounded-2xl border-2 border-dashed border-emerald-500/40 bg-gradient-to-br from-emerald-500/15 to-teal-600/10 p-6 transition-all hover:border-emerald-500/60"
         >
-          Monte seu plano personalizado
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
-      </motion.div>
+          {/* Badge */}
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+            <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg">
+              <Puzzle className="w-3 h-3 mr-1" />
+              Flexível
+            </Badge>
+          </div>
+
+          {/* Icon & Name */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <Puzzle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">Monte seu Plano</h3>
+              <p className="text-sm text-white/50">Escolha apenas o que precisa</p>
+            </div>
+          </div>
+
+          {/* Price */}
+          <div className="mb-6">
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm text-white/40">A partir de</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm text-white/40">R$</span>
+              <span className="text-4xl font-bold text-white">29</span>
+              <span className="text-lg text-white/60">,90</span>
+              <span className="text-sm text-white/40">/mês</span>
+            </div>
+            <div className="text-xs text-emerald-400 mt-1">
+              + módulos selecionados
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className="mb-6 p-3 bg-white/5 rounded-xl">
+            <div className="text-center">
+              <div className="text-sm text-white/70">
+                Combine recursos conforme sua necessidade
+              </div>
+            </div>
+          </div>
+
+          {/* Benefits */}
+          <div className="space-y-2 mb-6 flex-1">
+            {customizeBenefits.map((benefit, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <Check className="w-4 h-4 shrink-0 text-emerald-500" />
+                <span className="text-white/80">{benefit}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <Button
+            onClick={onCustomize}
+            className="w-full h-12 font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white transition-all"
+          >
+            Personalizar
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </motion.div>
+      </div>
     </div>
   );
 };
