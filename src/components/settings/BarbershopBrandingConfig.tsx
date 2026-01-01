@@ -672,6 +672,98 @@ const BarbershopBrandingConfig = () => {
 
             <Separator />
 
+            {/* Landing Page Preview */}
+            <div className="space-y-3">
+              <Label className="text-xs sm:text-sm">Preview na Landing Page</Label>
+              <p className="text-xs text-muted-foreground">
+                Veja como seus logos aparecerão na landing page da barbearia em diferentes fundos.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Dark Background Preview */}
+                <div className="relative overflow-hidden rounded-lg border">
+                  <div 
+                    className="p-6 min-h-[140px] flex flex-col items-center justify-center"
+                    style={{ backgroundColor: branding.secondary_color || '#1a1a2e' }}
+                  >
+                    {branding.logo_light_url ? (
+                      <img 
+                        src={branding.logo_light_url} 
+                        alt="Logo Modo Escuro" 
+                        className="h-12 sm:h-16 w-auto object-contain mb-2"
+                      />
+                    ) : branding.logo_dark_url ? (
+                      <img 
+                        src={branding.logo_dark_url} 
+                        alt="Logo Fallback" 
+                        className="h-12 sm:h-16 w-auto object-contain mb-2 opacity-50"
+                      />
+                    ) : (
+                      <div className="h-12 sm:h-16 w-32 bg-white/10 rounded flex items-center justify-center mb-2">
+                        <ImageIcon className="h-6 w-6 text-white/30" />
+                      </div>
+                    )}
+                    <span className="text-white text-sm font-semibold">
+                      {branding.system_name || 'Nome da Barbearia'}
+                    </span>
+                    {branding.tagline && (
+                      <span className="text-white/70 text-xs mt-1">{branding.tagline}</span>
+                    )}
+                  </div>
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="secondary" className="text-[10px] bg-black/50 text-white border-0">
+                      <Moon className="h-3 w-3 mr-1" />
+                      Fundo Escuro
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Light Background Preview */}
+                <div className="relative overflow-hidden rounded-lg border">
+                  <div 
+                    className="p-6 min-h-[140px] flex flex-col items-center justify-center bg-white"
+                  >
+                    {branding.logo_dark_url ? (
+                      <img 
+                        src={branding.logo_dark_url} 
+                        alt="Logo Modo Claro" 
+                        className="h-12 sm:h-16 w-auto object-contain mb-2"
+                      />
+                    ) : branding.logo_light_url ? (
+                      <img 
+                        src={branding.logo_light_url} 
+                        alt="Logo Fallback" 
+                        className="h-12 sm:h-16 w-auto object-contain mb-2 opacity-50"
+                      />
+                    ) : (
+                      <div className="h-12 sm:h-16 w-32 bg-gray-100 rounded flex items-center justify-center mb-2">
+                        <ImageIcon className="h-6 w-6 text-gray-300" />
+                      </div>
+                    )}
+                    <span className="text-gray-900 text-sm font-semibold">
+                      {branding.system_name || 'Nome da Barbearia'}
+                    </span>
+                    {branding.tagline && (
+                      <span className="text-gray-500 text-xs mt-1">{branding.tagline}</span>
+                    )}
+                  </div>
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="secondary" className="text-[10px]">
+                      <Sun className="h-3 w-3 mr-1" />
+                      Fundo Claro
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              {(!branding.logo_light_url || !branding.logo_dark_url) && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/30 p-2 rounded">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                  Dica: Envie ambos os logos (claro e escuro) para melhor visualização em diferentes temas.
+                </p>
+              )}
+            </div>
+
+            <Separator />
+
             {/* PWA Preview */}
             <div className="space-y-3">
               <Label className="text-xs sm:text-sm">Preview do App Instalado</Label>
