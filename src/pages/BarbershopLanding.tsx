@@ -44,7 +44,29 @@ interface Barbershop {
     facebook?: string;
     whatsapp?: string;
   };
+  custom_branding?: {
+    logo_url?: string;
+    logo_light_url?: string;
+    logo_dark_url?: string;
+    logo_icon_url?: string;
+    favicon_url?: string;
+    system_name?: string;
+    tagline?: string;
+    primary_color?: string;
+    secondary_color?: string;
+    accent_color?: string;
+  };
 }
+
+// Helper to get effective logo from custom_branding or fallback to logo_url
+const getEffectiveLogo = (barbershop: Barbershop): string | undefined => {
+  const branding = barbershop.custom_branding;
+  return branding?.logo_dark_url 
+    || branding?.logo_light_url 
+    || branding?.logo_url 
+    || barbershop.logo_url 
+    || undefined;
+};
 
 interface Service {
   id: string;
@@ -443,7 +465,9 @@ const BarbershopLanding = () => {
         barbershopId={barbershop.id}
         barbershopData={{
           name: barbershop.name,
-          logo_url: barbershop.logo_url || undefined,
+          logo_url: getEffectiveLogo(barbershop),
+          logo_light_url: barbershop.custom_branding?.logo_light_url,
+          logo_dark_url: barbershop.custom_branding?.logo_dark_url,
           address: barbershop.address,
           city: barbershop.city,
           state: barbershop.state,

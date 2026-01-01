@@ -10,10 +10,25 @@ interface HeroSectionProps {
   barbershopData: {
     name: string;
     logo_url?: string;
+    logo_light_url?: string;
+    logo_dark_url?: string;
   };
   bookingUrl: string;
   isPreview?: boolean;
 }
+
+// Helper to get the appropriate logo based on text color
+const getLogoForTheme = (
+  barbershopData: HeroSectionProps['barbershopData'],
+  textColor: 'light' | 'dark'
+): string | undefined => {
+  if (textColor === 'light') {
+    // Light text means dark background, use light logo variant
+    return barbershopData.logo_light_url || barbershopData.logo_url;
+  }
+  // Dark text means light background, use dark logo variant
+  return barbershopData.logo_dark_url || barbershopData.logo_url;
+};
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
   section,
@@ -114,9 +129,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               backgroundColor: settings.background_value ? `hsl(${settings.background_value})` : 'hsl(var(--landing-primary))'
             }}
           >
-            {settings.show_logo && barbershopData.logo_url && (
+            {settings.show_logo && getLogoForTheme(barbershopData, settings.text_color || 'light') && (
               <img
-                src={barbershopData.logo_url}
+                src={getLogoForTheme(barbershopData, settings.text_color || 'light')}
                 alt={barbershopData.name}
                 className="h-12 md:h-16 w-auto mb-6 object-contain"
               />
@@ -198,9 +213,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           'relative z-10 container mx-auto px-4 py-20 flex flex-col',
           textPositionClass
         )}>
-          {settings.show_logo && barbershopData.logo_url && (
+          {settings.show_logo && getLogoForTheme(barbershopData, settings.text_color || 'light') && (
             <img
-              src={barbershopData.logo_url}
+              src={getLogoForTheme(barbershopData, settings.text_color || 'light')}
               alt={barbershopData.name}
               className="h-16 md:h-20 w-auto mb-8 object-contain"
             />
@@ -301,9 +316,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           'relative z-10 container mx-auto px-4 py-20 flex flex-col',
           textPositionClass
         )}>
-          {settings.show_logo && barbershopData.logo_url && (
+          {settings.show_logo && getLogoForTheme(barbershopData, settings.text_color || 'light') && (
             <img
-              src={barbershopData.logo_url}
+              src={getLogoForTheme(barbershopData, settings.text_color || 'light')}
               alt={barbershopData.name}
               className="h-16 md:h-20 w-auto mb-8 object-contain"
             />
@@ -374,9 +389,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         'relative z-10 container mx-auto px-4 py-20 flex flex-col',
         textPositionClass
       )}>
-        {settings.show_logo && barbershopData.logo_url && (
+        {settings.show_logo && getLogoForTheme(barbershopData, settings.text_color || 'light') && (
           <img
-            src={barbershopData.logo_url}
+            src={getLogoForTheme(barbershopData, settings.text_color || 'light')}
             alt={barbershopData.name}
             className="h-16 md:h-20 w-auto mb-8 object-contain"
           />
