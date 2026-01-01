@@ -355,6 +355,7 @@ const LandingPageBuilder: React.FC = () => {
 
   const getDefaultFooterSettings = (): FooterSettings => ({
     variant: 'complete',
+    theme: 'dark',
     show_logo: true,
     tagline: 'Qualidade e estilo em cada corte.',
     show_contact: true,
@@ -1562,6 +1563,74 @@ const FooterEditor: React.FC<FooterEditorProps> = ({ footer, onUpdate }) => {
               </div>
             </button>
           </div>
+        </div>
+
+        <Separator />
+
+        {/* Theme Selector */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm">Tema de Cores</h4>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => onUpdate({ theme: 'dark' })}
+              className={cn(
+                'p-3 rounded-lg border-2 text-center transition-all',
+                footer.theme === 'dark' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:border-primary/50'
+              )}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-full h-8 bg-gray-900 rounded flex items-center justify-center">
+                  <span className="text-white text-xs">Aa</span>
+                </div>
+                <span className="text-xs font-medium">Escuro</span>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdate({ theme: 'light' })}
+              className={cn(
+                'p-3 rounded-lg border-2 text-center transition-all',
+                footer.theme === 'light' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:border-primary/50'
+              )}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-full h-8 bg-gray-100 rounded flex items-center justify-center border">
+                  <span className="text-gray-900 text-xs">Aa</span>
+                </div>
+                <span className="text-xs font-medium">Claro</span>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdate({ theme: 'auto' })}
+              className={cn(
+                'p-3 rounded-lg border-2 text-center transition-all',
+                footer.theme === 'auto' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:border-primary/50'
+              )}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-full h-8 rounded flex overflow-hidden">
+                  <div className="w-1/2 bg-gray-900 flex items-center justify-center">
+                    <span className="text-white text-[10px]">A</span>
+                  </div>
+                  <div className="w-1/2 bg-gray-100 flex items-center justify-center border-y border-r">
+                    <span className="text-gray-900 text-[10px]">a</span>
+                  </div>
+                </div>
+                <span className="text-xs font-medium">Auto</span>
+              </div>
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            "Auto" detecta automaticamente o contraste baseado na cor de fundo.
+          </p>
         </div>
 
         <Separator />

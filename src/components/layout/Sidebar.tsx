@@ -339,7 +339,7 @@ const Sidebar = () => {
             <img 
               src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="h-14 w-auto max-w-[200px] object-contain mx-auto"
+              className="h-16 w-auto max-w-[220px] object-contain mx-auto"
             />
           </div>
         ) : (
@@ -347,7 +347,7 @@ const Sidebar = () => {
             <img 
               src={logoIconUrl || faviconUrl || currentLogoUrl || logoIcon} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="w-11 h-11 rounded-lg object-contain"
+              className="w-12 h-12 rounded-lg object-contain"
             />
           </div>
         )}

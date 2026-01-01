@@ -129,9 +129,11 @@ export interface CTASettings {
 }
 
 export type FooterVariant = 'complete' | 'minimal' | 'centered';
+export type FooterTheme = 'dark' | 'light' | 'auto';
 
 export interface FooterSettings {
   variant: FooterVariant;
+  theme: FooterTheme;
   show_logo: boolean;
   tagline: string;
   show_contact: boolean;
