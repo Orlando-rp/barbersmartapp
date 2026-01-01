@@ -42,8 +42,10 @@ const DomainSettings = () => {
     removeCustomDomain,
     updateLandingPageConfig,
     getFullSubdomainUrl,
+    getInternalUrl,
     getFullCustomDomainUrl,
     getPrimaryUrl,
+    checkSslStatus,
   } = useBarbershopDomain();
 
   const [subdomain, setSubdomain] = useState(domain?.subdomain || "");
@@ -51,6 +53,7 @@ const DomainSettings = () => {
   const [checkingSubdomain, setCheckingSubdomain] = useState(false);
   const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
+  const [checkingSsl, setCheckingSsl] = useState(false);
 
   // Update local state when domain changes
   useEffect(() => {
@@ -60,6 +63,8 @@ const DomainSettings = () => {
 
   // Get the public URL using configured domain (custom domain > subdomain)
   const publicUrl = getPrimaryUrl();
+  const internalUrl = getInternalUrl();
+  const realSubdomainUrl = getFullSubdomainUrl();
 
   const handleCheckSubdomain = async () => {
     if (!subdomain.trim()) return;
@@ -76,10 +81,22 @@ const DomainSettings = () => {
     setSaving(false);
 
     if (result.success) {
-      toast.success("Link público configurado com sucesso!");
+      toast.success("Subdomínio criado! O SSL será provisionado em alguns minutos.");
       setSubdomainAvailable(null);
     } else {
       toast.error(result.error || "Erro ao configurar link");
+    }
+  };
+
+  const handleCheckSsl = async () => {
+    setCheckingSsl(true);
+    const result = await checkSslStatus();
+    setCheckingSsl(false);
+
+    if (result.sslActive) {
+      toast.success("SSL está ativo! Seu subdomínio real está funcionando.");
+    } else {
+      toast.info("SSL ainda está sendo provisionado. Tente novamente em alguns minutos.");
     }
   };
 
@@ -314,9 +331,70 @@ const DomainSettings = () => {
                     </div>
                     {getStatusBadge(domain.subdomain_status)}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Seu link público está funcionando e pronto para compartilhar.
-                  </p>
+
+                  {/* Status do SSL */}
+                  {domain.ssl_status === 'provisioning' || domain.ssl_status === 'pending' ? (
+                    <Alert className="bg-amber-500/10 border-amber-500/30">
+                      <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                      <AlertDescription className="text-amber-700/80 text-xs">
+                        <strong>SSL sendo provisionado.</strong> Enquanto isso, use o link interno abaixo. O subdomínio real ({domain.subdomain}.{baseDomain}) funcionará em alguns minutos.
+                      </AlertDescription>
+                    </Alert>
+                  ) : domain.ssl_status === 'active' && realSubdomainUrl ? (
+                    <Alert className="bg-success/10 border-success/30">
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                      <AlertDescription className="text-success text-xs">
+                        <strong>SSL ativo!</strong> Seu subdomínio real está funcionando: <span className="font-mono">{realSubdomainUrl}</span>
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+
+                  {/* Links disponíveis */}
+                  <div className="space-y-2">
+                    {internalUrl && (
+                      <div className="flex items-center gap-2 p-2 bg-background rounded border text-xs">
+                        <Link className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-mono break-all flex-1">{internalUrl}</span>
+                        <Badge variant="outline" className="text-[10px]">Sempre funciona</Badge>
+                        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => copyToClipboard(internalUrl)}>
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    {realSubdomainUrl && domain.ssl_status === 'active' && (
+                      <div className="flex items-center gap-2 p-2 bg-success/5 rounded border border-success/20 text-xs">
+                        <Shield className="h-3.5 w-3.5 text-success shrink-0" />
+                        <span className="font-mono break-all flex-1">{realSubdomainUrl}</span>
+                        <Badge variant="default" className="text-[10px]">SSL Ativo</Badge>
+                        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => copyToClipboard(realSubdomainUrl)}>
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Botão para verificar SSL */}
+                  {(domain.ssl_status === 'provisioning' || domain.ssl_status === 'pending') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCheckSsl}
+                      disabled={checkingSsl}
+                      className="w-full"
+                    >
+                      {checkingSsl ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Verificando SSL...
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="h-4 w-4 mr-2" />
+                          Verificar Status do SSL
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -327,7 +405,7 @@ const DomainSettings = () => {
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Salvando...
+                    Criando Subdomínio...
                   </>
                 ) : (
                   "Salvar Identificador"

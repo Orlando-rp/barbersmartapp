@@ -143,13 +143,17 @@ export const useBarbershopDomain = () => {
     }
 
     try {
+      // Guardar subdomínio antigo para deletar no cPanel se necessário
+      const oldSubdomain = domain?.subdomain;
+
       if (domain) {
         // Update existing
         const { error } = await supabase
           .from('barbershop_domains')
           .update({
             subdomain: normalizedSubdomain,
-            subdomain_status: 'active',
+            subdomain_status: 'provisioning',
+            ssl_status: 'pending',
           })
           .eq('id', domain.id);
 
@@ -161,10 +165,39 @@ export const useBarbershopDomain = () => {
           .insert({
             barbershop_id: effectiveBarbershopId,
             subdomain: normalizedSubdomain,
-            subdomain_status: 'active',
+            subdomain_status: 'provisioning',
+            ssl_status: 'pending',
           });
 
         if (error) throw error;
+      }
+
+      // Deletar subdomínio antigo no cPanel se existir e for diferente
+      if (oldSubdomain && oldSubdomain !== normalizedSubdomain) {
+        try {
+          await supabase.functions.invoke('delete-cpanel-subdomain', {
+            body: { subdomain: oldSubdomain, barbershopId: null }
+          });
+        } catch (err) {
+          console.warn('Não foi possível deletar subdomínio antigo no cPanel:', err);
+        }
+      }
+
+      // Criar subdomínio no cPanel
+      try {
+        const { data: cpanelResult, error: cpanelError } = await supabase.functions.invoke('create-cpanel-subdomain', {
+          body: { subdomain: normalizedSubdomain, barbershopId: effectiveBarbershopId }
+        });
+
+        if (cpanelError) {
+          console.warn('Erro ao criar subdomínio no cPanel:', cpanelError);
+          // Continuar mesmo com erro - rota interna ainda funciona
+        } else {
+          console.log('Subdomínio criado no cPanel:', cpanelResult);
+        }
+      } catch (err) {
+        console.warn('Erro ao chamar cPanel API:', err);
+        // Continuar mesmo com erro - rota interna ainda funciona
       }
 
       await fetchDomain();
@@ -287,9 +320,20 @@ export const useBarbershopDomain = () => {
     }
   };
 
+  // URL do subdomínio real (quando SSL está ativo)
   const getFullSubdomainUrl = (): string | null => {
     if (!domain?.subdomain) return null;
-    return `https://${domain.subdomain}.${BASE_DOMAIN}`;
+    // Só retorna URL do subdomínio real se SSL estiver ativo
+    if (domain.ssl_status === 'active') {
+      return `https://${domain.subdomain}.${BASE_DOMAIN}`;
+    }
+    return null;
+  };
+
+  // URL da rota interna (sempre funciona)
+  const getInternalUrl = (): string | null => {
+    if (!domain?.subdomain) return null;
+    return `https://${BASE_DOMAIN}/s/${domain.subdomain}`;
   };
 
   const getFullCustomDomainUrl = (): string | null => {
@@ -298,11 +342,41 @@ export const useBarbershopDomain = () => {
   };
 
   const getPrimaryUrl = (): string | null => {
-    // Prioridade: domínio customizado ativo > subdomínio
+    // Prioridade: domínio customizado ativo > subdomínio real com SSL > rota interna
     if (domain?.custom_domain && domain.custom_domain_status === 'active') {
       return getFullCustomDomainUrl();
     }
-    return getFullSubdomainUrl();
+    // Se subdomínio tem SSL ativo, usar URL real
+    if (domain?.subdomain && domain.ssl_status === 'active') {
+      return getFullSubdomainUrl();
+    }
+    // Fallback para rota interna (sempre funciona)
+    return getInternalUrl();
+  };
+
+  // Verificar status do SSL no cPanel
+  const checkSslStatus = async (): Promise<{ success: boolean; sslActive: boolean; error?: string }> => {
+    if (!domain?.subdomain) {
+      return { success: false, sslActive: false, error: 'Nenhum subdomínio configurado' };
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('check-cpanel-ssl', {
+        body: { subdomain: domain.subdomain, barbershopId: effectiveBarbershopId }
+      });
+
+      if (error) {
+        return { success: false, sslActive: false, error: error.message };
+      }
+
+      if (data.sslActive) {
+        await fetchDomain(); // Atualizar estado local
+      }
+
+      return { success: true, sslActive: data.sslActive };
+    } catch (err: any) {
+      return { success: false, sslActive: false, error: err.message };
+    }
   };
 
   return {
@@ -316,8 +390,10 @@ export const useBarbershopDomain = () => {
     removeCustomDomain,
     updateLandingPageConfig,
     getFullSubdomainUrl,
+    getInternalUrl,
     getFullCustomDomainUrl,
     getPrimaryUrl,
+    checkSslStatus,
     refresh: fetchDomain,
   };
 };

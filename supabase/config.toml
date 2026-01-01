@@ -95,3 +95,12 @@ verify_jwt = false
 
 [functions.trigger-deploy]
 verify_jwt = true
+
+[functions.create-cpanel-subdomain]
+verify_jwt = true
+
+[functions.delete-cpanel-subdomain]
+verify_jwt = true
+
+[functions.check-cpanel-ssl]
+verify_jwt = false
