@@ -1,7 +1,7 @@
 import React from 'react';
-import { GlobalStyles, FooterSettings } from '@/types/landing-page';
-import { Instagram, Phone, MapPin, Facebook, Mail } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { GlobalStyles, FooterSettings, FooterVariant } from '@/types/landing-page';
+import { Instagram, Phone, MapPin, Mail } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface FooterSectionProps {
   globalStyles: GlobalStyles;
@@ -24,6 +24,7 @@ interface FooterSectionProps {
 
 // Default footer settings
 const defaultFooterSettings: FooterSettings = {
+  variant: 'complete',
   show_logo: true,
   tagline: 'Qualidade e estilo em cada corte.',
   show_contact: true,
@@ -37,7 +38,6 @@ const defaultFooterSettings: FooterSettings = {
 };
 
 // Helper to get the appropriate logo based on background brightness
-// logo_dark_url = logo for dark backgrounds (light-colored logo)
 const getLogoForBackground = (
   barbershopData: FooterSectionProps['barbershopData'],
   isDarkBackground: boolean
@@ -56,9 +56,9 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
   isPreview,
 }) => {
   const settings = { ...defaultFooterSettings, ...footerSettings };
-  const isDarkBackground = true; // Footer typically uses dark background
+  const variant = settings.variant || 'complete';
+  const isDarkBackground = true;
   const logoUrl = settings.show_logo ? getLogoForBackground(barbershopData, isDarkBackground) : null;
-
   const currentYear = new Date().getFullYear();
 
   const handleBookingClick = () => {
@@ -70,6 +70,178 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
     ? `hsl(${settings.background_color})`
     : `hsl(${globalStyles.secondary_color})`;
 
+  // Minimal variant - single line footer
+  if (variant === 'minimal') {
+    return (
+      <footer 
+        className="py-6 px-4"
+        style={{ backgroundColor }}
+      >
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {logoUrl && (
+                <img 
+                  src={logoUrl} 
+                  alt={barbershopData.name}
+                  className="h-8 w-auto object-contain"
+                />
+              )}
+              <span className="text-white/70 text-sm">
+                © {currentYear} {barbershopData.name}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-4 text-sm">
+              {settings.show_privacy_link && (
+                <a href="/privacy" className="text-white/50 hover:text-white transition-colors">
+                  Privacidade
+                </a>
+              )}
+              {settings.show_terms_link && (
+                <a href="/terms" className="text-white/50 hover:text-white transition-colors">
+                  Termos
+                </a>
+              )}
+              {settings.show_social && barbershopData.instagram && (
+                <a 
+                  href={`https://instagram.com/${barbershopData.instagram.replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/50 hover:text-white transition-colors"
+                >
+                  <Instagram className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
+  // Centered variant - all content centered
+  if (variant === 'centered') {
+    return (
+      <footer 
+        className="py-12 px-4"
+        style={{ backgroundColor }}
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          {/* Logo and Brand */}
+          <div className="mb-6">
+            {logoUrl ? (
+              <img 
+                src={logoUrl} 
+                alt={barbershopData.name}
+                className="h-14 w-auto object-contain mx-auto mb-4"
+              />
+            ) : settings.show_logo && (
+              <h3 
+                className="text-2xl font-bold text-white mb-4"
+                style={{ fontFamily: 'var(--landing-font-heading)' }}
+              >
+                {barbershopData.name}
+              </h3>
+            )}
+            {settings.tagline && (
+              <p className="text-white/70 text-sm max-w-md mx-auto">
+                {settings.tagline}
+              </p>
+            )}
+          </div>
+
+          {/* Contact and Social Icons */}
+          {(settings.show_contact || settings.show_social) && (
+            <div className="flex flex-wrap items-center justify-center gap-6 mb-6">
+              {settings.show_contact && barbershopData.phone && (
+                <a 
+                  href={`tel:${barbershopData.phone}`}
+                  className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+                >
+                  <Phone className="h-4 w-4" />
+                  {barbershopData.phone}
+                </a>
+              )}
+              {settings.show_contact && barbershopData.email && (
+                <a 
+                  href={`mailto:${barbershopData.email}`}
+                  className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+                >
+                  <Mail className="h-4 w-4" />
+                  {barbershopData.email}
+                </a>
+              )}
+              {settings.show_social && barbershopData.instagram && (
+                <a 
+                  href={`https://instagram.com/${barbershopData.instagram.replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+                >
+                  <Instagram className="h-4 w-4" />
+                  {barbershopData.instagram}
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Booking Button */}
+          {settings.show_booking_button && (
+            <button
+              onClick={handleBookingClick}
+              className="inline-block px-6 py-2 mb-6 rounded-full text-sm font-medium transition-colors"
+              style={{ 
+                backgroundColor: `hsl(${globalStyles.accent_color})`,
+                color: 'white'
+              }}
+            >
+              Agendar Horário
+            </button>
+          )}
+
+          {/* Links */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-6 text-sm">
+            {settings.custom_links.map((link, index) => (
+              <a 
+                key={index}
+                href={link.url}
+                className="text-white/50 hover:text-white transition-colors"
+                target={link.url.startsWith('http') ? '_blank' : undefined}
+                rel={link.url.startsWith('http') ? 'noopener noreferrer' : undefined}
+              >
+                {link.label}
+              </a>
+            ))}
+            {settings.show_privacy_link && (
+              <a href="/privacy" className="text-white/50 hover:text-white transition-colors">
+                Política de Privacidade
+              </a>
+            )}
+            {settings.show_terms_link && (
+              <a href="/terms" className="text-white/50 hover:text-white transition-colors">
+                Termos de Serviço
+              </a>
+            )}
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="pt-6 border-t border-white/10">
+            <p className="text-white/50 text-sm">
+              © {currentYear} {barbershopData.name}. Todos os direitos reservados.
+            </p>
+            {settings.show_powered_by && settings.powered_by_text && (
+              <p className="text-white/40 text-xs mt-2">
+                Powered by <span className="font-semibold text-white/60">{settings.powered_by_text}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
+  // Complete variant (default) - full 3-column layout
   return (
     <footer 
       className="py-12 px-4"
