@@ -1,6 +1,53 @@
 {
   "releases": [
     {
+      "version": "v1.4.3",
+      "date": "2025-12-31",
+      "sections": {
+        "🐛 Correções": [
+          { "text": "Correção de sintaxe do workflow GitHub Actions", "hash": null },
+          { "text": "Removida verificação de secrets em expressões if", "hash": null }
+        ],
+        "🔧 Manutenção": [
+          { "text": "Melhorias no sistema de notificações Discord/Slack", "hash": null }
+        ]
+      }
+    },
+    {
+      "version": "v1.4.0",
+      "date": "2025-12-28",
+      "sections": {
+        "✨ Novas Funcionalidades": [
+          { "text": "Sistema de deploy automatizado via SaaS Admin", "hash": null },
+          { "text": "Painel de controle de versões", "hash": null },
+          { "text": "Notificações de status de deploy", "hash": null }
+        ]
+      }
+    },
+    {
+      "version": "v1.3.0",
+      "date": "2025-12-20",
+      "sections": {
+        "✨ Novas Funcionalidades": [
+          { "text": "Sistema de retry para imports dinâmicos", "hash": null },
+          { "text": "Error boundary para componentes lazy", "hash": null }
+        ],
+        "🔧 Manutenção": [
+          { "text": "Otimização de carregamento de páginas", "hash": null }
+        ]
+      }
+    },
+    {
+      "version": "v1.2.0",
+      "date": "2025-12-15",
+      "sections": {
+        "✨ Novas Funcionalidades": [
+          { "text": "Melhorias de performance no carregamento", "hash": null },
+          { "text": "Cache otimizado para planos", "hash": null }
+        ]
+      }
+    },
+    {
       "version": "v1.1.0",
       "date": "2025-01-15",
       "sections": {
@@ -30,22 +77,19 @@
       }
     }
   ],
-  "total": 2,
+  "total": 6,
   "latest": {
-    "version": "v1.1.0",
-    "date": "2025-01-15",
+    "version": "v1.4.3",
+    "date": "2025-12-31",
     "sections": {
-      "✨ Novas Funcionalidades": [
-        { "text": "Notificação de novidades quando há nova versão", "hash": null },
-        { "text": "Gerador automático de release notes", "hash": null },
-        { "text": "Deploy controlado por tags de versão", "hash": null },
-        { "text": "Git hooks para validação de commits", "hash": null }
+      "🐛 Correções": [
+        { "text": "Correção de sintaxe do workflow GitHub Actions", "hash": null },
+        { "text": "Removida verificação de secrets em expressões if", "hash": null }
       ],
       "🔧 Manutenção": [
-        { "text": "Workflow otimizado para CI/CD", "hash": null },
-        { "text": "Cache de planos na landing page", "hash": null }
+        { "text": "Melhorias no sistema de notificações Discord/Slack", "hash": null }
       ]
     }
   },
-  "generated_at": "2025-01-15T12:00:00.000Z"
+  "generated_at": "2025-12-31T12:00:00.000Z"
 }
