@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   ArrowLeft, 
   Check, 
@@ -17,7 +18,9 @@ import {
   AlertCircle,
   Building2,
   Calendar,
-  Users
+  Users,
+  Gift,
+  Info
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,10 +43,15 @@ interface Barbershop {
   name: string;
 }
 
+interface PaymentConfig {
+  mercadopago_enabled: boolean;
+  stripe_enabled: boolean;
+}
+
 const SubscriptionCheckout = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, selectedBarbershopId } = useAuth();
+  const { user, selectedBarbershopId, barbershops } = useAuth();
   
   const planId = searchParams.get('plan');
   
@@ -51,7 +59,9 @@ const SubscriptionCheckout = () => {
   const [barbershop, setBarbershop] = useState<Barbershop | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [startingTrial, setStartingTrial] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentAvailable, setPaymentAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!planId) {
@@ -62,6 +72,54 @@ const SubscriptionCheckout = () => {
     
     fetchData();
   }, [planId, selectedBarbershopId]);
+
+  const fetchBarbershop = async (): Promise<Barbershop | null> => {
+    // First try selected barbershop
+    if (selectedBarbershopId) {
+      const { data } = await supabase
+        .from('barbershops')
+        .select('id, name')
+        .eq('id', selectedBarbershopId)
+        .single();
+      
+      if (data) return data;
+    }
+
+    // Fallback: try to get from context barbershops
+    if (barbershops && barbershops.length > 0) {
+      return { id: barbershops[0].id, name: barbershops[0].name };
+    }
+
+    // Fallback: fetch primary barbershop from user_barbershops
+    if (user) {
+      const { data } = await supabase
+        .from('user_barbershops')
+        .select('barbershop:barbershops(id, name)')
+        .eq('user_id', user.id)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      if (data?.barbershop) {
+        const bs = data.barbershop as unknown as Barbershop;
+        return bs;
+      }
+
+      // Last resort: get any barbershop for this user
+      const { data: anyBarbershop } = await supabase
+        .from('user_barbershops')
+        .select('barbershop:barbershops(id, name)')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (anyBarbershop?.barbershop) {
+        const bs = anyBarbershop.barbershop as unknown as Barbershop;
+        return bs;
+      }
+    }
+
+    return null;
+  };
 
   const fetchData = async () => {
     try {
@@ -76,6 +134,7 @@ const SubscriptionCheckout = () => {
         .single();
 
       if (planError || !planData) {
+        console.error('Plan not found:', planError);
         toast.error('Plano não encontrado');
         navigate('/upgrade');
         return;
@@ -88,18 +147,23 @@ const SubscriptionCheckout = () => {
           : planData.feature_flags || {}
       });
 
-      // Fetch barbershop details
-      if (selectedBarbershopId) {
-        const { data: barbershopData } = await supabase
-          .from('barbershops')
-          .select('id, name')
-          .eq('id', selectedBarbershopId)
-          .single();
+      // Fetch barbershop with fallback
+      const foundBarbershop = await fetchBarbershop();
+      setBarbershop(foundBarbershop);
 
-        if (barbershopData) {
-          setBarbershop(barbershopData);
-        }
+      // Check payment configuration
+      const { data: paymentConfig } = await supabase
+        .from('global_payment_config')
+        .select('mercadopago_enabled, stripe_enabled')
+        .maybeSingle();
+
+      const hasPaymentMethod = paymentConfig?.mercadopago_enabled || paymentConfig?.stripe_enabled;
+      setPaymentAvailable(hasPaymentMethod || false);
+
+      if (!hasPaymentMethod) {
+        console.log('Payment not configured:', paymentConfig);
       }
+
     } catch (error) {
       console.error('Error fetching checkout data:', error);
       toast.error('Erro ao carregar dados do checkout');
@@ -137,6 +201,18 @@ const SubscriptionCheckout = () => {
         return;
       }
 
+      // Check for specific error responses
+      if (data?.error) {
+        console.error('Payment API error:', data);
+        if (data.code === 'PAYMENT_NOT_CONFIGURED') {
+          setPaymentError('Sistema de pagamento não configurado. Use o trial gratuito ou contate o suporte.');
+          setPaymentAvailable(false);
+        } else {
+          setPaymentError(data.message || data.error);
+        }
+        return;
+      }
+
       if (!data?.init_point) {
         setPaymentError('Erro ao obter link de pagamento. Verifique as configurações.');
         return;
@@ -150,6 +226,51 @@ const SubscriptionCheckout = () => {
       setPaymentError('Erro inesperado. Tente novamente.');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleStartTrial = async () => {
+    if (!plan || !barbershop || !user) {
+      toast.error('Dados incompletos');
+      return;
+    }
+
+    try {
+      setStartingTrial(true);
+
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+
+      // Create trial subscription
+      const { error } = await supabase
+        .from('subscriptions')
+        .upsert({
+          barbershop_id: barbershop.id,
+          plan_id: plan.id,
+          status: 'trialing',
+          trial_ends_at: trialEndsAt.toISOString(),
+          current_period_start: new Date().toISOString(),
+          current_period_end: trialEndsAt.toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'barbershop_id'
+        });
+
+      if (error) {
+        console.error('Error creating trial:', error);
+        toast.error('Erro ao iniciar trial. Tente novamente.');
+        return;
+      }
+
+      toast.success('Trial de 14 dias iniciado com sucesso!');
+      navigate('/subscription/success?trial=true');
+
+    } catch (error) {
+      console.error('Trial error:', error);
+      toast.error('Erro inesperado. Tente novamente.');
+    } finally {
+      setStartingTrial(false);
     }
   };
 
@@ -168,19 +289,43 @@ const SubscriptionCheckout = () => {
     );
   }
 
-  if (!plan || !barbershop) {
+  if (!plan) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
           <CardContent className="py-8 text-center">
             <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <p className="text-lg font-medium mb-2">Erro no Checkout</p>
+            <p className="text-lg font-medium mb-2">Plano Não Encontrado</p>
             <p className="text-muted-foreground mb-4">
-              Não foi possível carregar os dados do checkout.
+              O plano selecionado não existe ou foi desativado.
             </p>
             <Button onClick={() => navigate('/upgrade')}>
               Voltar aos Planos
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!barbershop) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="py-8 text-center">
+            <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg font-medium mb-2">Nenhuma Barbearia Encontrada</p>
+            <p className="text-muted-foreground mb-4">
+              Você precisa ter uma barbearia cadastrada para assinar um plano.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => navigate('/barbershops')}>
+                Cadastrar Barbearia
+              </Button>
+              <Button variant="ghost" onClick={() => navigate('/upgrade')}>
+                Voltar aos Planos
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -217,6 +362,18 @@ const SubscriptionCheckout = () => {
                 Revise os detalhes do seu plano e confirme o pagamento
               </p>
             </div>
+
+            {/* Payment Not Available Alert */}
+            {paymentAvailable === false && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Pagamento em Configuração</AlertTitle>
+                <AlertDescription>
+                  O sistema de pagamento está sendo configurado. Por enquanto, você pode começar 
+                  com um trial gratuito de 14 dias e aproveitar todos os recursos do plano.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Plan Card */}
             <Card>
@@ -326,24 +483,49 @@ const SubscriptionCheckout = () => {
                   </div>
                 )}
 
-                <Button 
-                  onClick={handleCheckout}
-                  disabled={processing}
-                  className="w-full gap-2"
-                  size="lg"
-                >
-                  {processing ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      Processando...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-4 w-4" />
-                      Pagar com MercadoPago
-                    </>
+                {/* Main action buttons */}
+                <div className="space-y-3">
+                  {paymentAvailable !== false && (
+                    <Button 
+                      onClick={handleCheckout}
+                      disabled={processing || startingTrial}
+                      className="w-full gap-2"
+                      size="lg"
+                    >
+                      {processing ? (
+                        <>
+                          <LoadingSpinner size="sm" />
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="h-4 w-4" />
+                          Pagar com MercadoPago
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
+
+                  <Button 
+                    variant={paymentAvailable === false ? "default" : "outline"}
+                    onClick={handleStartTrial}
+                    disabled={processing || startingTrial}
+                    className="w-full gap-2"
+                    size="lg"
+                  >
+                    {startingTrial ? (
+                      <>
+                        <LoadingSpinner size="sm" />
+                        Iniciando Trial...
+                      </>
+                    ) : (
+                      <>
+                        <Gift className="h-4 w-4" />
+                        Começar Trial de 14 Dias (Grátis)
+                      </>
+                    )}
+                  </Button>
+                </div>
 
                 <p className="text-xs text-center text-muted-foreground">
                   Ao continuar, você concorda com nossos{' '}
