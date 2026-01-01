@@ -1,5 +1,5 @@
 import React from 'react';
-import { GlobalStyles, FooterSettings, FooterVariant } from '@/types/landing-page';
+import { GlobalStyles, FooterSettings, FooterVariant, FooterTheme } from '@/types/landing-page';
 import { Instagram, Phone, MapPin, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +25,7 @@ interface FooterSectionProps {
 // Default footer settings
 const defaultFooterSettings: FooterSettings = {
   variant: 'complete',
+  theme: 'dark',
   show_logo: true,
   tagline: 'Qualidade e estilo em cada corte.',
   show_contact: true,
@@ -35,6 +36,26 @@ const defaultFooterSettings: FooterSettings = {
   powered_by_text: 'Barber Smart',
   show_powered_by: true,
   custom_links: [],
+};
+
+// Helper to convert HSL string to luminance for contrast detection
+const getHslLuminance = (hslString: string): number => {
+  try {
+    const parts = hslString.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      const l = parseFloat(parts[2].replace('%', ''));
+      return l / 100;
+    }
+    return 0.5;
+  } catch {
+    return 0.5;
+  }
+};
+
+// Helper to determine if background is dark based on HSL luminance
+const isBackgroundDark = (hslString: string): boolean => {
+  const luminance = getHslLuminance(hslString);
+  return luminance < 0.5;
 };
 
 // Helper to get the appropriate logo based on background brightness
@@ -57,7 +78,30 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
 }) => {
   const settings = { ...defaultFooterSettings, ...footerSettings };
   const variant = settings.variant || 'complete';
-  const isDarkBackground = true;
+  const theme = settings.theme || 'dark';
+
+  // Determine background color based on theme
+  const getBackgroundColor = (): string => {
+    if (settings.background_color) {
+      return `hsl(${settings.background_color})`;
+    }
+    if (theme === 'light') {
+      return `hsl(${globalStyles.background_color})`;
+    }
+    return `hsl(${globalStyles.secondary_color})`;
+  };
+
+  const backgroundColor = getBackgroundColor();
+
+  // Auto-detect if background is dark based on theme or custom color
+  const isDarkBackground = (() => {
+    if (theme === 'auto') {
+      const colorToCheck = settings.background_color || globalStyles.secondary_color;
+      return isBackgroundDark(colorToCheck);
+    }
+    return theme === 'dark';
+  })();
+
   const logoUrl = settings.show_logo ? getLogoForBackground(barbershopData, isDarkBackground) : null;
   const currentYear = new Date().getFullYear();
 
@@ -66,9 +110,13 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
     window.location.href = bookingUrl;
   };
 
-  const backgroundColor = settings.background_color 
-    ? `hsl(${settings.background_color})`
-    : `hsl(${globalStyles.secondary_color})`;
+  // Text color classes based on theme
+  const textPrimary = isDarkBackground ? 'text-white' : 'text-gray-900';
+  const textSecondary = isDarkBackground ? 'text-white/70' : 'text-gray-600';
+  const textMuted = isDarkBackground ? 'text-white/50' : 'text-gray-400';
+  const textHighlight = isDarkBackground ? 'text-white/70' : 'text-gray-700';
+  const borderColor = isDarkBackground ? 'border-white/10' : 'border-gray-200';
+  const hoverText = isDarkBackground ? 'hover:text-white' : 'hover:text-gray-900';
 
   // Minimal variant - single line footer
   if (variant === 'minimal') {
@@ -87,19 +135,19 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                   className="h-8 w-auto object-contain"
                 />
               )}
-              <span className="text-white/70 text-sm">
+              <span className={cn(textSecondary, 'text-sm')}>
                 © {currentYear} {barbershopData.name}
               </span>
             </div>
             
             <div className="flex items-center gap-4 text-sm">
               {settings.show_privacy_link && (
-                <a href="/privacy" className="text-white/50 hover:text-white transition-colors">
+                <a href="/privacy" className={cn(textMuted, hoverText, 'transition-colors')}>
                   Privacidade
                 </a>
               )}
               {settings.show_terms_link && (
-                <a href="/terms" className="text-white/50 hover:text-white transition-colors">
+                <a href="/terms" className={cn(textMuted, hoverText, 'transition-colors')}>
                   Termos
                 </a>
               )}
@@ -108,7 +156,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                   href={`https://instagram.com/${barbershopData.instagram.replace('@', '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/50 hover:text-white transition-colors"
+                  className={cn(textMuted, hoverText, 'transition-colors')}
                 >
                   <Instagram className="h-4 w-4" />
                 </a>
@@ -138,14 +186,14 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               />
             ) : settings.show_logo && (
               <h3 
-                className="text-2xl font-bold text-white mb-4"
+                className={cn('text-2xl font-bold mb-4', textPrimary)}
                 style={{ fontFamily: 'var(--landing-font-heading)' }}
               >
                 {barbershopData.name}
               </h3>
             )}
             {settings.tagline && (
-              <p className="text-white/70 text-sm max-w-md mx-auto">
+              <p className={cn(textSecondary, 'text-sm max-w-md mx-auto')}>
                 {settings.tagline}
               </p>
             )}
@@ -157,7 +205,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               {settings.show_contact && barbershopData.phone && (
                 <a 
                   href={`tel:${barbershopData.phone}`}
-                  className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+                  className={cn('flex items-center gap-2 text-sm', textSecondary, hoverText, 'transition-colors')}
                 >
                   <Phone className="h-4 w-4" />
                   {barbershopData.phone}
@@ -166,7 +214,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               {settings.show_contact && barbershopData.email && (
                 <a 
                   href={`mailto:${barbershopData.email}`}
-                  className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+                  className={cn('flex items-center gap-2 text-sm', textSecondary, hoverText, 'transition-colors')}
                 >
                   <Mail className="h-4 w-4" />
                   {barbershopData.email}
@@ -177,7 +225,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                   href={`https://instagram.com/${barbershopData.instagram.replace('@', '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+                  className={cn('flex items-center gap-2 text-sm', textSecondary, hoverText, 'transition-colors')}
                 >
                   <Instagram className="h-4 w-4" />
                   {barbershopData.instagram}
@@ -190,11 +238,8 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
           {settings.show_booking_button && (
             <button
               onClick={handleBookingClick}
-              className="inline-block px-6 py-2 mb-6 rounded-full text-sm font-medium transition-colors"
-              style={{ 
-                backgroundColor: `hsl(${globalStyles.accent_color})`,
-                color: 'white'
-              }}
+              className="inline-block px-6 py-2 mb-6 rounded-full text-sm font-medium transition-colors text-white"
+              style={{ backgroundColor: `hsl(${globalStyles.accent_color})` }}
             >
               Agendar Horário
             </button>
@@ -206,7 +251,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               <a 
                 key={index}
                 href={link.url}
-                className="text-white/50 hover:text-white transition-colors"
+                className={cn(textMuted, hoverText, 'transition-colors')}
                 target={link.url.startsWith('http') ? '_blank' : undefined}
                 rel={link.url.startsWith('http') ? 'noopener noreferrer' : undefined}
               >
@@ -214,25 +259,25 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               </a>
             ))}
             {settings.show_privacy_link && (
-              <a href="/privacy" className="text-white/50 hover:text-white transition-colors">
+              <a href="/privacy" className={cn(textMuted, hoverText, 'transition-colors')}>
                 Política de Privacidade
               </a>
             )}
             {settings.show_terms_link && (
-              <a href="/terms" className="text-white/50 hover:text-white transition-colors">
+              <a href="/terms" className={cn(textMuted, hoverText, 'transition-colors')}>
                 Termos de Serviço
               </a>
             )}
           </div>
 
           {/* Bottom Bar */}
-          <div className="pt-6 border-t border-white/10">
-            <p className="text-white/50 text-sm">
+          <div className={cn('pt-6 border-t', borderColor)}>
+            <p className={cn(textMuted, 'text-sm')}>
               © {currentYear} {barbershopData.name}. Todos os direitos reservados.
             </p>
             {settings.show_powered_by && settings.powered_by_text && (
-              <p className="text-white/40 text-xs mt-2">
-                Powered by <span className="font-semibold text-white/60">{settings.powered_by_text}</span>
+              <p className={cn(textMuted, 'text-xs mt-2')}>
+                Powered by <span className={cn('font-semibold', textHighlight)}>{settings.powered_by_text}</span>
               </p>
             )}
           </div>
@@ -259,14 +304,14 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               />
             ) : settings.show_logo ? (
               <h3 
-                className="text-xl font-bold text-white mb-4"
+                className={cn('text-xl font-bold mb-4', textPrimary)}
                 style={{ fontFamily: 'var(--landing-font-heading)' }}
               >
                 {barbershopData.name}
               </h3>
             ) : null}
             {settings.tagline && (
-              <p className="text-white/70 text-sm text-center md:text-left">
+              <p className={cn(textSecondary, 'text-sm text-center md:text-left')}>
                 {settings.tagline}
               </p>
             )}
@@ -275,12 +320,12 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
           {/* Contact Info */}
           {settings.show_contact && (
             <div className="flex flex-col items-center md:items-start">
-              <h4 className="text-white font-semibold mb-4">Contato</h4>
+              <h4 className={cn(textPrimary, 'font-semibold mb-4')}>Contato</h4>
               <div className="space-y-2">
                 {barbershopData.phone && (
                   <a 
                     href={`tel:${barbershopData.phone}`}
-                    className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+                    className={cn('flex items-center gap-2 text-sm', textSecondary, hoverText, 'transition-colors')}
                   >
                     <Phone className="h-4 w-4" />
                     {barbershopData.phone}
@@ -289,14 +334,14 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                 {barbershopData.email && (
                   <a 
                     href={`mailto:${barbershopData.email}`}
-                    className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+                    className={cn('flex items-center gap-2 text-sm', textSecondary, hoverText, 'transition-colors')}
                   >
                     <Mail className="h-4 w-4" />
                     {barbershopData.email}
                   </a>
                 )}
                 {barbershopData.address && (
-                  <div className="flex items-center gap-2 text-white/70 text-sm">
+                  <div className={cn('flex items-center gap-2 text-sm', textSecondary)}>
                     <MapPin className="h-4 w-4 flex-shrink-0" />
                     <span>
                       {barbershopData.address}
@@ -310,7 +355,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                     href={`https://instagram.com/${barbershopData.instagram.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+                    className={cn('flex items-center gap-2 text-sm', textSecondary, hoverText, 'transition-colors')}
                   >
                     <Instagram className="h-4 w-4" />
                     {barbershopData.instagram}
@@ -322,12 +367,12 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
 
           {/* Quick Links */}
           <div className="flex flex-col items-center md:items-start">
-            <h4 className="text-white font-semibold mb-4">Links</h4>
+            <h4 className={cn(textPrimary, 'font-semibold mb-4')}>Links</h4>
             <div className="space-y-2">
               {settings.show_booking_button && (
                 <button
                   onClick={handleBookingClick}
-                  className="text-white/70 hover:text-white transition-colors text-sm block"
+                  className={cn(textSecondary, hoverText, 'transition-colors text-sm block')}
                 >
                   Agendar Horário
                 </button>
@@ -336,7 +381,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                 <a 
                   key={index}
                   href={link.url}
-                  className="block text-white/70 hover:text-white transition-colors text-sm"
+                  className={cn('block text-sm', textSecondary, hoverText, 'transition-colors')}
                   target={link.url.startsWith('http') ? '_blank' : undefined}
                   rel={link.url.startsWith('http') ? 'noopener noreferrer' : undefined}
                 >
@@ -346,7 +391,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               {settings.show_privacy_link && (
                 <a 
                   href="/privacy" 
-                  className="block text-white/70 hover:text-white transition-colors text-sm"
+                  className={cn('block text-sm', textSecondary, hoverText, 'transition-colors')}
                 >
                   Política de Privacidade
                 </a>
@@ -354,7 +399,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               {settings.show_terms_link && (
                 <a 
                   href="/terms" 
-                  className="block text-white/70 hover:text-white transition-colors text-sm"
+                  className={cn('block text-sm', textSecondary, hoverText, 'transition-colors')}
                 >
                   Termos de Serviço
                 </a>
@@ -364,14 +409,14 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-white/10">
+        <div className={cn('pt-8 border-t', borderColor)}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-white/50 text-sm">
+            <p className={cn(textMuted, 'text-sm')}>
               © {currentYear} {barbershopData.name}. Todos os direitos reservados.
             </p>
             {settings.show_powered_by && settings.powered_by_text && (
-              <p className="text-white/50 text-sm">
-                Powered by <span className="font-semibold text-white/70">{settings.powered_by_text}</span>
+              <p className={cn(textMuted, 'text-sm')}>
+                Powered by <span className={cn('font-semibold', textHighlight)}>{settings.powered_by_text}</span>
               </p>
             )}
           </div>
