@@ -14,6 +14,8 @@ interface TemplateRendererProps {
   barbershopData: {
     name: string;
     logo_url?: string;
+    logo_light_url?: string;
+    logo_dark_url?: string;
     address?: string;
     city?: string;
     state?: string;
