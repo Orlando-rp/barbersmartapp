@@ -5,8 +5,44 @@ import { ProtectedRoute, AdminRoute, SuperAdminRoute } from '../ProtectedRoute';
 import { ClientProtectedRoute } from '../client/ClientProtectedRoute';
 import { PageLoader } from '../ui/page-loader';
 import { PageTransition } from './PageTransition';
+import { Button } from '../ui/button';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
-// Lazy load all pages for code splitting
+// Helper function to retry dynamic imports on failure
+const retryImport = <T,>(
+  importFn: () => Promise<T>,
+  retries = 3,
+  delay = 1000
+): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    importFn()
+      .then(resolve)
+      .catch((error) => {
+        if (retries > 0) {
+          setTimeout(() => {
+            retryImport(importFn, retries - 1, delay).then(resolve, reject);
+          }, delay);
+        } else {
+          reject(error);
+        }
+      });
+  });
+};
+
+// Error fallback component for lazy loading failures
+const LazyErrorFallback = () => (
+  <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+    <AlertTriangle className="h-16 w-16 text-warning mb-4" />
+    <h2 className="text-xl font-bold mb-2 text-foreground">Erro ao carregar página</h2>
+    <p className="text-muted-foreground mb-4 text-center">Ocorreu um problema ao carregar esta página.</p>
+    <Button onClick={() => window.location.reload()}>
+      <RefreshCw className="h-4 w-4 mr-2" />
+      Recarregar Página
+    </Button>
+  </div>
+);
+
+// Lazy load all pages for code splitting with retry logic for critical pages
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
 const Index = lazy(() => import("../../pages/Index"));
 const Auth = lazy(() => import("../../pages/Auth"));
@@ -34,7 +70,7 @@ const MyEarnings = lazy(() => import("../../pages/MyEarnings"));
 const MultiUnitDashboard = lazy(() => import("../../pages/MultiUnitDashboard"));
 const StaffMultiUnit = lazy(() => import("../../pages/StaffMultiUnit"));
 const MultiUnitReports = lazy(() => import("../../pages/MultiUnitReports"));
-const SaasAdminPortal = lazy(() => import("../../pages/SaasAdminPortal"));
+const SaasAdminPortal = lazy(() => retryImport(() => import("../../pages/SaasAdminPortal")));
 const Barbershops = lazy(() => import("../../pages/Barbershops"));
 const ChatbotSettings = lazy(() => import("../../pages/ChatbotSettings"));
 const CompleteProfile = lazy(() => import("../../pages/CompleteProfile"));
