@@ -54,7 +54,7 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
   bookingUrl,
   isPreview = false,
 }) => {
-  const { sections, global_styles } = config;
+  const { sections, global_styles, footer } = config;
 
   // Sort sections by order
   const sortedSections = [...sections]
@@ -129,6 +129,7 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
         {/* Footer - always rendered at the end */}
         <FooterSection
           globalStyles={global_styles}
+          footerSettings={footer}
           barbershopData={barbershopData}
           bookingUrl={bookingUrl}
           isPreview={isPreview}

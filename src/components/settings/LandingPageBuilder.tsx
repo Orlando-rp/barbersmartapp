@@ -30,6 +30,7 @@ import {
   ReviewsSettings,
   LocationSettings,
   CTASettings,
+  FooterSettings,
   GlobalStyles,
   SEOConfig,
   ImageConfig
@@ -84,7 +85,9 @@ import {
   Star,
   MapPin,
   MousePointerClick,
-  Layers
+  Layers,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 interface SortableSectionItemProps {
@@ -343,6 +346,26 @@ const LandingPageBuilder: React.FC = () => {
     }));
   };
 
+  const updateFooter = (footer: Partial<FooterSettings>) => {
+    setConfig((prev) => ({
+      ...prev,
+      footer: { ...getDefaultFooterSettings(), ...prev.footer, ...footer },
+    }));
+  };
+
+  const getDefaultFooterSettings = (): FooterSettings => ({
+    show_logo: true,
+    tagline: 'Qualidade e estilo em cada corte.',
+    show_contact: true,
+    show_social: true,
+    show_booking_button: true,
+    show_privacy_link: true,
+    show_terms_link: true,
+    powered_by_text: 'Barber Smart',
+    show_powered_by: true,
+    custom_links: [],
+  });
+
   const activeSection = config.sections.find((s) => s.id === activeSectionId);
 
   const renderSectionEditor = () => {
@@ -492,7 +515,7 @@ const LandingPageBuilder: React.FC = () => {
       ) : (
         /* Editor Mode */
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="template">
               <Layout className="mr-2 h-4 w-4" />
               Template
@@ -500,6 +523,10 @@ const LandingPageBuilder: React.FC = () => {
             <TabsTrigger value="sections">
               <Layers className="mr-2 h-4 w-4" />
               Seções
+            </TabsTrigger>
+            <TabsTrigger value="footer">
+              <LayoutGrid className="mr-2 h-4 w-4" />
+              Footer
             </TabsTrigger>
             <TabsTrigger value="styles">
               <Palette className="mr-2 h-4 w-4" />
@@ -577,6 +604,13 @@ const LandingPageBuilder: React.FC = () => {
             <GlobalStylesEditor
               styles={config.global_styles}
               onUpdate={updateGlobalStyles}
+            />
+          </TabsContent>
+
+          <TabsContent value="footer" className="mt-6">
+            <FooterEditor
+              footer={config.footer || getDefaultFooterSettings()}
+              onUpdate={updateFooter}
             />
           </TabsContent>
 
@@ -1428,6 +1462,204 @@ const GlobalStylesEditor: React.FC<GlobalStylesEditorProps> = ({ styles, onUpdat
               <SelectItem value="full">Completo</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Footer Editor
+interface FooterEditorProps {
+  footer: FooterSettings;
+  onUpdate: (footer: Partial<FooterSettings>) => void;
+}
+
+const FooterEditor: React.FC<FooterEditorProps> = ({ footer, onUpdate }) => {
+  const addCustomLink = () => {
+    onUpdate({
+      custom_links: [...(footer.custom_links || []), { label: '', url: '' }],
+    });
+  };
+
+  const updateCustomLink = (index: number, field: 'label' | 'url', value: string) => {
+    const newLinks = [...(footer.custom_links || [])];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    onUpdate({ custom_links: newLinks });
+  };
+
+  const removeCustomLink = (index: number) => {
+    const newLinks = (footer.custom_links || []).filter((_, i) => i !== index);
+    onUpdate({ custom_links: newLinks });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Configurações do Footer</CardTitle>
+        <CardDescription>
+          Personalize o rodapé da sua landing page
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Visibility Options */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm">Visibilidade</h4>
+          
+          <div className="flex items-center justify-between">
+            <Label>Mostrar Logo</Label>
+            <Switch
+              checked={footer.show_logo}
+              onCheckedChange={(checked) => onUpdate({ show_logo: checked })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>Mostrar Contato</Label>
+            <Switch
+              checked={footer.show_contact}
+              onCheckedChange={(checked) => onUpdate({ show_contact: checked })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>Mostrar Redes Sociais</Label>
+            <Switch
+              checked={footer.show_social}
+              onCheckedChange={(checked) => onUpdate({ show_social: checked })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>Botão de Agendamento</Label>
+            <Switch
+              checked={footer.show_booking_button}
+              onCheckedChange={(checked) => onUpdate({ show_booking_button: checked })}
+            />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Content */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm">Conteúdo</h4>
+          
+          <div className="space-y-2">
+            <Label>Tagline / Slogan</Label>
+            <Input
+              value={footer.tagline}
+              onChange={(e) => onUpdate({ tagline: e.target.value })}
+              placeholder="Qualidade e estilo em cada corte."
+            />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Links */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm">Links Padrão</h4>
+          
+          <div className="flex items-center justify-between">
+            <Label>Link de Privacidade</Label>
+            <Switch
+              checked={footer.show_privacy_link}
+              onCheckedChange={(checked) => onUpdate({ show_privacy_link: checked })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>Link de Termos</Label>
+            <Switch
+              checked={footer.show_terms_link}
+              onCheckedChange={(checked) => onUpdate({ show_terms_link: checked })}
+            />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Custom Links */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-sm">Links Personalizados</h4>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addCustomLink}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar
+            </Button>
+          </div>
+          
+          {(footer.custom_links || []).map((link, index) => (
+            <div key={index} className="flex gap-2">
+              <Input
+                value={link.label}
+                onChange={(e) => updateCustomLink(index, 'label', e.target.value)}
+                placeholder="Texto do link"
+                className="flex-1"
+              />
+              <Input
+                value={link.url}
+                onChange={(e) => updateCustomLink(index, 'url', e.target.value)}
+                placeholder="URL"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => removeCustomLink(index)}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        <Separator />
+
+        {/* Powered By */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm">Créditos</h4>
+          
+          <div className="flex items-center justify-between">
+            <Label>Mostrar "Powered by"</Label>
+            <Switch
+              checked={footer.show_powered_by}
+              onCheckedChange={(checked) => onUpdate({ show_powered_by: checked })}
+            />
+          </div>
+
+          {footer.show_powered_by && (
+            <div className="space-y-2">
+              <Label>Texto "Powered by"</Label>
+              <Input
+                value={footer.powered_by_text}
+                onChange={(e) => onUpdate({ powered_by_text: e.target.value })}
+                placeholder="Barber Smart"
+              />
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Background Color */}
+        <div className="space-y-2">
+          <Label>Cor de Fundo (HSL) - deixe vazio para usar cor secundária</Label>
+          <Input
+            value={footer.background_color || ''}
+            onChange={(e) => onUpdate({ background_color: e.target.value || undefined })}
+            placeholder="Usar cor secundária"
+          />
+          <div 
+            className="h-8 rounded-md border"
+            style={{ backgroundColor: footer.background_color ? `hsl(${footer.background_color})` : '#1a1a2e' }}
+          />
         </div>
       </CardContent>
     </Card>
