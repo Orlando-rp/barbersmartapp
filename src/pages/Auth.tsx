@@ -49,10 +49,22 @@ interface BarbershopUnit {
   isPrimary: boolean;
 }
 
+const getRedirectPath = (role: string | null): string => {
+  switch (role) {
+    case 'super_admin':
+      return '/saas-admin';
+    case 'admin':
+    case 'barbeiro':
+    case 'recepcionista':
+    default:
+      return '/dashboard';
+  }
+};
+
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, signIn, refreshBarbershops } = useAuth();
+  const { user, signIn, refreshBarbershops, userRole, loading: authLoading } = useAuth();
   const { effectiveBranding, currentLogoUrl, hasWhiteLabel, tenantBarbershopName } = useBranding();
   
   // Get plan parameter from URL (from landing page)
@@ -127,10 +139,11 @@ const Auth = () => {
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
 
   useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
+    if (user && !authLoading && userRole !== undefined) {
+      const redirectPath = getRedirectPath(userRole);
+      navigate(redirectPath);
     }
-  }, [user, navigate]);
+  }, [user, userRole, authLoading, navigate]);
 
   useEffect(() => {
     loadSocialProviders();
@@ -317,10 +330,10 @@ const Auth = () => {
         });
         navigate('/complete-profile');
       } else {
-        // Usuário existente
+        // Usuário existente - redirecionamento será feito pelo useEffect
         toast.success('Login realizado!');
         await refreshBarbershops();
-        navigate('/dashboard');
+        // useEffect fará o redirecionamento baseado no userRole
       }
     } catch (error: any) {
       console.error('Erro ao verificar OTP:', error);
@@ -602,8 +615,9 @@ const Auth = () => {
 
       const { error } = await signIn(validatedData.email, validatedData.password);
       
-      if (!error) {
-        navigate('/');
+      // Redirecionamento será feito pelo useEffect quando userRole estiver disponível
+      if (error) {
+        throw error;
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
