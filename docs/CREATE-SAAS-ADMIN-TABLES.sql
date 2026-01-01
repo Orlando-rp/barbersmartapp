@@ -123,13 +123,15 @@ ON public.system_messages FOR ALL
 TO authenticated
 USING (public.is_super_admin(auth.uid()));
 
--- 10. Inserir planos padrão
-INSERT INTO public.subscription_plans (name, slug, description, price, max_staff, max_clients, max_appointments_month, features) VALUES
-('Starter', 'starter', 'Ideal para barbearias iniciantes', 49.90, 2, 50, 100, '["Agendamento online", "Notificações WhatsApp", "Relatórios básicos"]'::jsonb),
-('Professional', 'professional', 'Para barbearias em crescimento', 99.90, 5, 200, 500, '["Agendamento online", "Notificações WhatsApp", "Relatórios avançados", "Marketing", "Fidelidade"]'::jsonb),
-('Premium', 'premium', 'Recursos completos para redes', 199.90, 15, 500, 2000, '["Agendamento online", "Notificações WhatsApp", "Relatórios avançados", "Marketing", "Fidelidade", "Multi-unidade", "API access", "Suporte prioritário"]'::jsonb),
-('Enterprise', 'enterprise', 'Solução personalizada para grandes redes', 499.90, 999, 9999, 99999, '["Todos os recursos Premium", "Customização", "Integração personalizada", "Gerente de conta dedicado", "SLA garantido"]'::jsonb)
-ON CONFLICT (slug) DO NOTHING;
+-- 10. Inserir planos padrão (com is_bundle=true para exibir na landing page)
+INSERT INTO public.subscription_plans (name, slug, description, price, max_staff, max_clients, max_appointments_month, features, active, is_bundle) VALUES
+('Starter', 'starter', 'Ideal para barbearias iniciantes', 49.90, 2, 50, 100, '["Agendamento online", "Notificações WhatsApp", "Relatórios básicos"]'::jsonb, true, true),
+('Professional', 'professional', 'Para barbearias em crescimento', 99.90, 5, 200, 500, '["Agendamento online", "Notificações WhatsApp", "Relatórios avançados", "Marketing", "Fidelidade"]'::jsonb, true, true),
+('Premium', 'premium', 'Recursos completos para redes', 199.90, 15, 500, 2000, '["Agendamento online", "Notificações WhatsApp", "Relatórios avançados", "Marketing", "Fidelidade", "Multi-unidade", "API access", "Suporte prioritário"]'::jsonb, true, true),
+('Enterprise', 'enterprise', 'Solução personalizada para grandes redes', 499.90, 999, 9999, 99999, '["Todos os recursos Premium", "Customização", "Integração personalizada", "Gerente de conta dedicado", "SLA garantido"]'::jsonb, true, true)
+ON CONFLICT (slug) DO UPDATE SET 
+  is_bundle = true,
+  active = true;
 
 -- 11. Índices para performance
 CREATE INDEX IF NOT EXISTS idx_subscriptions_barbershop ON public.subscriptions(barbershop_id);
