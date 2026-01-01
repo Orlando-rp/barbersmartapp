@@ -167,6 +167,7 @@ const SaasAdminPortal = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [messages, setMessages] = useState<SystemMessage[]>([]);
+  const [planFilter, setPlanFilter] = useState<'all' | 'landing' | 'inactive'>('all');
   const [stats, setStats] = useState({
     totalTenants: 0,
     activeTenants: 0,
@@ -1210,7 +1211,7 @@ const SaasAdminPortal = () => {
                 <div>
                   <CardTitle className="text-sm sm:text-base">Planos de Assinatura</CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    Gerencie os planos disponíveis • {plans.filter(p => p.is_bundle).length} exibidos na landing page
+                    Gerencie os planos disponíveis • {plans.filter(p => p.is_bundle && p.active).length} exibidos na landing page
                   </CardDescription>
                 </div>
                 <Button onClick={() => openPlanDialog()} className="bg-warning hover:bg-warning/90 text-warning-foreground w-full sm:w-auto">
@@ -1219,6 +1220,35 @@ const SaasAdminPortal = () => {
                 </Button>
               </CardHeader>
               <CardContent className="p-3 sm:p-6 pt-0">
+                {/* Plan Filter Tabs */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Button 
+                    variant={planFilter === 'all' ? 'default' : 'outline'} 
+                    size="sm" 
+                    onClick={() => setPlanFilter('all')}
+                    className="text-xs"
+                  >
+                    Todos ({plans.length})
+                  </Button>
+                  <Button 
+                    variant={planFilter === 'landing' ? 'default' : 'outline'} 
+                    size="sm" 
+                    onClick={() => setPlanFilter('landing')}
+                    className="text-xs"
+                  >
+                    <Globe className="h-3 w-3 mr-1" />
+                    Landing Page ({plans.filter(p => p.is_bundle && p.active).length})
+                  </Button>
+                  <Button 
+                    variant={planFilter === 'inactive' ? 'default' : 'outline'} 
+                    size="sm" 
+                    onClick={() => setPlanFilter('inactive')}
+                    className="text-xs"
+                  >
+                    Inativos ({plans.filter(p => !p.active).length})
+                  </Button>
+                </div>
+
                 {/* Warning if no bundle plans */}
                 {plans.filter(p => p.is_bundle && p.active).length === 0 && plans.length > 0 && (
                   <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-center gap-2">
@@ -1229,7 +1259,13 @@ const SaasAdminPortal = () => {
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {plans.map((plan) => (
+                  {plans
+                    .filter(plan => {
+                      if (planFilter === 'landing') return plan.is_bundle && plan.active;
+                      if (planFilter === 'inactive') return !plan.active;
+                      return true;
+                    })
+                    .map((plan) => (
                     <Card key={plan.id} className={`relative ${!plan.active ? 'opacity-60' : ''} ${plan.highlight_text ? 'ring-2 ring-warning' : ''}`}>
                       {/* Highlight Badge */}
                       {plan.highlight_text && (
@@ -1289,6 +1325,15 @@ const SaasAdminPortal = () => {
                       </CardContent>
                     </Card>
                   ))}
+                  {plans.filter(plan => {
+                    if (planFilter === 'landing') return plan.is_bundle && plan.active;
+                    if (planFilter === 'inactive') return !plan.active;
+                    return true;
+                  }).length === 0 && (
+                    <div className="col-span-full text-center py-8 text-muted-foreground text-sm">
+                      Nenhum plano encontrado nesta categoria
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
