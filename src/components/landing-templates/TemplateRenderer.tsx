@@ -7,6 +7,7 @@ import { GallerySection } from './sections/GallerySection';
 import { ReviewsSection } from './sections/ReviewsSection';
 import { LocationSection } from './sections/LocationSection';
 import { CTASection } from './sections/CTASection';
+import { FooterSection } from './sections/FooterSection';
 
 interface TemplateRendererProps {
   config: LandingPageConfig;
@@ -124,6 +125,14 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
             />
           );
         })}
+
+        {/* Footer - always rendered at the end */}
+        <FooterSection
+          globalStyles={global_styles}
+          barbershopData={barbershopData}
+          bookingUrl={bookingUrl}
+          isPreview={isPreview}
+        />
       </div>
     </>
   );
