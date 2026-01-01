@@ -685,15 +685,15 @@ const BarbershopBrandingConfig = () => {
                     className="p-6 min-h-[140px] flex flex-col items-center justify-center"
                     style={{ backgroundColor: branding.secondary_color || '#1a1a2e' }}
                   >
-                    {branding.logo_light_url ? (
+                    {branding.logo_dark_url ? (
                       <img 
-                        src={branding.logo_light_url} 
+                        src={branding.logo_dark_url} 
                         alt="Logo Modo Escuro" 
                         className="h-12 sm:h-16 w-auto object-contain mb-2"
                       />
-                    ) : branding.logo_dark_url ? (
+                    ) : branding.logo_light_url ? (
                       <img 
-                        src={branding.logo_dark_url} 
+                        src={branding.logo_light_url} 
                         alt="Logo Fallback" 
                         className="h-12 sm:h-16 w-auto object-contain mb-2 opacity-50"
                       />
@@ -722,15 +722,15 @@ const BarbershopBrandingConfig = () => {
                   <div 
                     className="p-6 min-h-[140px] flex flex-col items-center justify-center bg-white"
                   >
-                    {branding.logo_dark_url ? (
+                    {branding.logo_light_url ? (
                       <img 
-                        src={branding.logo_dark_url} 
+                        src={branding.logo_light_url} 
                         alt="Logo Modo Claro" 
                         className="h-12 sm:h-16 w-auto object-contain mb-2"
                       />
-                    ) : branding.logo_light_url ? (
+                    ) : branding.logo_dark_url ? (
                       <img 
-                        src={branding.logo_light_url} 
+                        src={branding.logo_dark_url} 
                         alt="Logo Fallback" 
                         className="h-12 sm:h-16 w-auto object-contain mb-2 opacity-50"
                       />
