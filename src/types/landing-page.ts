@@ -128,6 +128,23 @@ export interface CTASettings {
   background_image?: ImageConfig;
 }
 
+export interface FooterSettings {
+  show_logo: boolean;
+  tagline: string;
+  show_contact: boolean;
+  show_social: boolean;
+  show_booking_button: boolean;
+  show_privacy_link: boolean;
+  show_terms_link: boolean;
+  powered_by_text: string;
+  show_powered_by: boolean;
+  custom_links: {
+    label: string;
+    url: string;
+  }[];
+  background_color?: string;
+}
+
 export type SectionSettings = 
   | HeroSettings 
   | ServicesSettings 
@@ -152,6 +169,7 @@ export interface LandingPageConfig {
   sections: SectionConfig[];
   global_styles: GlobalStyles;
   seo: SEOConfig;
+  footer?: FooterSettings;
   updated_at?: string;
 }
 
