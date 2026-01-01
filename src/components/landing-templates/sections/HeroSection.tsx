@@ -18,16 +18,18 @@ interface HeroSectionProps {
 }
 
 // Helper to get the appropriate logo based on text color
+// logo_light_url = logo for light backgrounds (dark-colored logo)
+// logo_dark_url = logo for dark backgrounds (light-colored logo)
 const getLogoForTheme = (
   barbershopData: HeroSectionProps['barbershopData'],
   textColor: 'light' | 'dark'
 ): string | undefined => {
   if (textColor === 'light') {
-    // Light text means dark background, use light logo variant
-    return barbershopData.logo_light_url || barbershopData.logo_url;
+    // Light text means dark background, use dark mode logo (light-colored)
+    return barbershopData.logo_dark_url || barbershopData.logo_url;
   }
-  // Dark text means light background, use dark logo variant
-  return barbershopData.logo_dark_url || barbershopData.logo_url;
+  // Dark text means light background, use light mode logo (dark-colored)
+  return barbershopData.logo_light_url || barbershopData.logo_url;
 };
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
