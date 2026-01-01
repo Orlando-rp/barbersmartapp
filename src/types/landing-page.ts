@@ -128,7 +128,10 @@ export interface CTASettings {
   background_image?: ImageConfig;
 }
 
+export type FooterVariant = 'complete' | 'minimal' | 'centered';
+
 export interface FooterSettings {
+  variant: FooterVariant;
   show_logo: boolean;
   tagline: string;
   show_contact: boolean;

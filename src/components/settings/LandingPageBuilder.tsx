@@ -354,6 +354,7 @@ const LandingPageBuilder: React.FC = () => {
   };
 
   const getDefaultFooterSettings = (): FooterSettings => ({
+    variant: 'complete',
     show_logo: true,
     tagline: 'Qualidade e estilo em cada corte.',
     show_contact: true,
@@ -1501,6 +1502,70 @@ const FooterEditor: React.FC<FooterEditorProps> = ({ footer, onUpdate }) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Variant Selector */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm">Estilo do Footer</h4>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => onUpdate({ variant: 'complete' })}
+              className={cn(
+                'p-3 rounded-lg border-2 text-center transition-all',
+                footer.variant === 'complete' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:border-primary/50'
+              )}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-full h-8 bg-muted rounded flex">
+                  <div className="w-1/3 border-r border-background/50" />
+                  <div className="w-1/3 border-r border-background/50" />
+                  <div className="w-1/3" />
+                </div>
+                <span className="text-xs font-medium">Completo</span>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdate({ variant: 'centered' })}
+              className={cn(
+                'p-3 rounded-lg border-2 text-center transition-all',
+                footer.variant === 'centered' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:border-primary/50'
+              )}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-full h-8 bg-muted rounded flex items-center justify-center">
+                  <div className="w-1/2 h-4 bg-background/50 rounded" />
+                </div>
+                <span className="text-xs font-medium">Centrado</span>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdate({ variant: 'minimal' })}
+              className={cn(
+                'p-3 rounded-lg border-2 text-center transition-all',
+                footer.variant === 'minimal' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:border-primary/50'
+              )}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-full h-8 bg-muted rounded flex items-center px-2">
+                  <div className="w-1/4 h-2 bg-background/50 rounded" />
+                  <div className="flex-1" />
+                  <div className="w-1/4 h-2 bg-background/50 rounded" />
+                </div>
+                <span className="text-xs font-medium">Minimalista</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <Separator />
+
         {/* Visibility Options */}
         <div className="space-y-4">
           <h4 className="font-medium text-sm">Visibilidade</h4>
