@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StaffAvatar } from "@/components/ui/smart-avatar";
-import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2 } from "lucide-react";
+import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, formatDuration } from "@/lib/utils";
@@ -22,6 +22,15 @@ import { useStaffServices } from "@/hooks/useStaffServices";
 import { useSelectableUnits } from "@/hooks/useSelectableUnits";
 import { toast as sonnerToast } from "sonner";
 import { DayProps, DayContent } from "react-day-picker";
+import { RecurrenceSelector, RecurrenceType } from "@/components/booking/RecurrenceSelector";
+import { RecurrenceConflictDialog } from "@/components/booking/RecurrenceConflictDialog";
+import { 
+  RecurrenceConfig, 
+  GeneratedDate, 
+  generateRecurrenceGroupId,
+  calculateTotalPrice,
+  formatRecurrenceSummary
+} from "@/lib/recurrenceUtils";
 
 interface WaitlistPrefill {
   clientName?: string;
@@ -38,7 +47,7 @@ interface AppointmentFormProps {
   waitlistPrefill?: WaitlistPrefill;
 }
 
-type WizardStep = 'unit' | 'professional' | 'service' | 'datetime' | 'client' | 'confirm';
+type WizardStep = 'unit' | 'professional' | 'service' | 'datetime' | 'recurrence' | 'client' | 'confirm';
 
 export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
   const { barbershopId, barbershops, user } = useAuth();
