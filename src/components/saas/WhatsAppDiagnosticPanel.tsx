@@ -131,6 +131,9 @@ export const WhatsAppDiagnosticPanel = () => {
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [creatingOtpInstance, setCreatingOtpInstance] = useState(false);
   const [otpQrCode, setOtpQrCode] = useState<string | null>(null);
+  const [diagnoseDialogOpen, setDiagnoseDialogOpen] = useState(false);
+  const [diagnoseLoading, setDiagnoseLoading] = useState(false);
+  const [diagnoseResult, setDiagnoseResult] = useState<any>(null);
   const [selectInstanceDialogOpen, setSelectInstanceDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -898,6 +901,43 @@ export const WhatsAppDiagnosticPanel = () => {
     }
   };
 
+  const diagnoseSendOtpFunction = async () => {
+    setDiagnoseLoading(true);
+    setDiagnoseDialogOpen(true);
+    setDiagnoseResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp-whatsapp', {
+        body: { action: 'diagnose' }
+      });
+
+      if (error) throw error;
+
+      setDiagnoseResult(data);
+      
+      if (data.suggestedFix) {
+        toast.warning('Problema detectado', {
+          description: data.suggestedFix.substring(0, 100)
+        });
+      } else if (data.realTimeCheck?.otpInstance?.connected) {
+        toast.success('Função OTP operacional', {
+          description: `Versão: ${data.functionVersion}`
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro no diagnóstico:', error);
+      setDiagnoseResult({
+        error: true,
+        message: error.message || 'Erro ao executar diagnóstico'
+      });
+      toast.error('Erro ao diagnosticar função', {
+        description: error.message
+      });
+    } finally {
+      setDiagnoseLoading(false);
+    }
+  };
+
   const viewBarbershopLogs = async (barbershopId: string, barbershopName: string) => {
     const shopLogs = logs.filter(l => l.barbershop_id === barbershopId);
     setSelectedBarbershopLogs(shopLogs);
@@ -1108,6 +1148,15 @@ export const WhatsAppDiagnosticPanel = () => {
             >
               <GitCompare className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
               Sincronizar Instâncias
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={diagnoseSendOtpFunction}
+              disabled={diagnoseLoading}
+            >
+              <Server className={`h-4 w-4 mr-2 ${diagnoseLoading ? 'animate-spin' : ''}`} />
+              Diagnosticar Função OTP
             </Button>
             <Button 
               variant="outline" 
@@ -1721,6 +1770,212 @@ export const WhatsAppDiagnosticPanel = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectInstanceDialogOpen(false)}>
               Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diagnose OTP Function Dialog */}
+      <Dialog open={diagnoseDialogOpen} onOpenChange={setDiagnoseDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5 text-warning" />
+              Diagnóstico da Função send-otp-whatsapp
+            </DialogTitle>
+            <DialogDescription>
+              Verificação em tempo real da função Edge que envia códigos OTP
+            </DialogDescription>
+          </DialogHeader>
+          
+          {diagnoseLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-warning" />
+              <span className="ml-3 text-muted-foreground">Executando diagnóstico...</span>
+            </div>
+          ) : diagnoseResult?.error ? (
+            <Alert className="border-destructive/50 bg-destructive/10">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <AlertTitle>Erro no diagnóstico</AlertTitle>
+              <AlertDescription className="text-destructive/90">
+                {diagnoseResult.message}
+              </AlertDescription>
+            </Alert>
+          ) : diagnoseResult ? (
+            <div className="space-y-4">
+              {/* Function Version */}
+              <div className="p-4 rounded-lg border border-border bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Versão da Função:</span>
+                  <Badge variant="outline" className="font-mono">
+                    {diagnoseResult.functionVersion || 'Desconhecida'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-sm text-muted-foreground">Timestamp:</span>
+                  <span className="text-sm font-mono">{diagnoseResult.timestamp}</span>
+                </div>
+              </div>
+
+              {/* Config */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-foreground">Configuração no Banco</h4>
+                <div className="p-4 rounded-lg border border-border bg-muted/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Evolution API:</span>
+                    {diagnoseResult.config?.evolutionApiConfigured ? (
+                      <Badge className="bg-success/20 text-success">Configurada</Badge>
+                    ) : (
+                      <Badge variant="destructive">Não configurada</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">API URL:</span>
+                    <span className="text-sm font-mono truncate max-w-[300px]">
+                      {diagnoseResult.config?.apiUrl || '-'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Instância OTP (DB):</span>
+                    <span className="text-sm font-mono">
+                      {diagnoseResult.config?.otpInstanceFromDb || 'Não configurada'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Status (DB):</span>
+                    <Badge variant="outline">
+                      {diagnoseResult.config?.otpDbStatus || 'null'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Real Time Check */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-foreground">Verificação em Tempo Real</h4>
+                <div className="p-4 rounded-lg border border-border bg-muted/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">API Acessível:</span>
+                    {diagnoseResult.realTimeCheck?.apiReachable ? (
+                      <Badge className="bg-success/20 text-success">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Sim
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Não
+                      </Badge>
+                    )}
+                  </div>
+                  {diagnoseResult.realTimeCheck?.otpInstance && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Instância Existe:</span>
+                        {diagnoseResult.realTimeCheck.otpInstance.exists ? (
+                          <Badge className="bg-success/20 text-success">Sim</Badge>
+                        ) : (
+                          <Badge variant="destructive">Não</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Conectada:</span>
+                        {diagnoseResult.realTimeCheck.otpInstance.connected ? (
+                          <Badge className="bg-success/20 text-success">
+                            <Wifi className="h-3 w-3 mr-1" />
+                            Sim
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-warning border-warning">
+                            <WifiOff className="h-3 w-3 mr-1" />
+                            Não
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Estado:</span>
+                        <span className="text-sm font-mono">
+                          {diagnoseResult.realTimeCheck.otpInstance.state || 'N/A'}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* All Instances */}
+              {diagnoseResult.allInstances && diagnoseResult.allInstances.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-foreground">
+                    Todas as Instâncias no Evolution ({diagnoseResult.allInstances.length})
+                  </h4>
+                  <div className="rounded-md border border-border overflow-x-auto max-h-[200px] overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border">
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Estado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {diagnoseResult.allInstances.map((inst: any, idx: number) => (
+                          <TableRow key={idx} className="border-border">
+                            <TableCell className="font-mono text-sm">{inst.name}</TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={inst.state === 'open' ? 'default' : 'outline'}
+                                className={inst.state === 'open' ? 'bg-success/20 text-success' : ''}
+                              >
+                                {inst.state || 'unknown'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* Suggested Fix */}
+              {diagnoseResult.suggestedFix && (
+                <Alert className="border-warning/50 bg-warning/10">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <AlertTitle>Ação Sugerida</AlertTitle>
+                  <AlertDescription className="text-warning/90">
+                    {diagnoseResult.suggestedFix}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Success indicator */}
+              {!diagnoseResult.suggestedFix && diagnoseResult.realTimeCheck?.otpInstance?.connected && (
+                <Alert className="border-success/50 bg-success/10">
+                  <CheckCircle className="h-4 w-4 text-success" />
+                  <AlertTitle>Tudo OK!</AlertTitle>
+                  <AlertDescription className="text-success/90">
+                    A função OTP está configurada corretamente e a instância está conectada.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Clique em "Diagnosticar" para verificar a função
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDiagnoseDialogOpen(false)}>
+              Fechar
+            </Button>
+            <Button onClick={diagnoseSendOtpFunction} disabled={diagnoseLoading}>
+              {diagnoseLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Diagnosticar Novamente
             </Button>
           </DialogFooter>
         </DialogContent>
