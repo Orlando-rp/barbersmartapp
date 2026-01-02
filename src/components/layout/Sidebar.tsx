@@ -188,11 +188,11 @@ export const MobileSidebar = () => {
       <SheetContent side="left" className="w-72 p-0">
         <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
         <div className="flex flex-col h-full bg-card">
-          <div className="flex items-center justify-center p-4 border-b border-border">
+          <div className="flex items-center justify-center px-4 py-5 border-b border-border">
             <img 
               src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="h-16 w-auto object-contain"
+              className="h-14 w-auto object-contain"
             />
           </div>
 
@@ -333,7 +333,7 @@ const Sidebar = () => {
       collapsed ? "w-16" : "w-64"
     )}>
       {/* Logo + Toggle */}
-      <div className="relative flex items-center justify-center p-4 border-b border-border min-h-[80px]">
+      <div className="relative flex items-center justify-center px-4 py-5 border-b border-border min-h-[88px]">
         {!collapsed ? (
           <>
             <img 
