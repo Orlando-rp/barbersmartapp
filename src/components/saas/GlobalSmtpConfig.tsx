@@ -39,9 +39,11 @@ export default function GlobalSmtpConfig() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [smtpStats, setSmtpStats] = useState({ usingOwn: 0, usingGlobal: 0 });
 
   useEffect(() => {
     loadConfig();
+    loadSmtpStats();
   }, []);
 
   const loadConfig = async () => {
@@ -65,6 +67,24 @@ export default function GlobalSmtpConfig() {
       toast.error('Erro ao carregar configuração SMTP');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSmtpStats = async () => {
+    try {
+      // Count barbershops with their own SMTP vs using global
+      const { data: barbershops } = await supabase
+        .from('barbershops')
+        .select('id, email_config, parent_id')
+        .is('parent_id', null); // Only count main barbershops, not units
+
+      if (barbershops) {
+        const usingOwn = barbershops.filter(b => b.email_config?.enabled).length;
+        const usingGlobal = barbershops.length - usingOwn;
+        setSmtpStats({ usingOwn, usingGlobal });
+      }
+    } catch (error) {
+      console.error('Error loading SMTP stats:', error);
     }
   };
 
@@ -189,6 +209,24 @@ export default function GlobalSmtpConfig() {
         <CardDescription>
           Configure seu servidor SMTP próprio para envio de todos os emails do sistema.
         </CardDescription>
+        
+        {/* Usage Stats */}
+        {(smtpStats.usingOwn > 0 || smtpStats.usingGlobal > 0) && (
+          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-2">📊 Uso do SMTP pelas barbearias:</p>
+            <div className="flex gap-4 text-xs">
+              <span className="text-blue-600 dark:text-blue-400">
+                <strong>{smtpStats.usingGlobal}</strong> usando SMTP global
+              </span>
+              <span className="text-green-600 dark:text-green-400">
+                <strong>{smtpStats.usingOwn}</strong> com SMTP próprio
+              </span>
+            </div>
+            <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-2">
+              Este SMTP é usado como fallback para barbearias sem configuração própria.
+            </p>
+          </div>
+        )}
         
         {/* Functions that use SMTP */}
         <div className="mt-3 p-3 bg-muted/50 rounded-lg">

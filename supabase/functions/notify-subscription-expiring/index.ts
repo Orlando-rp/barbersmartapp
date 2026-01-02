@@ -167,27 +167,17 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get SMTP config from system_config table
+    // Get global SMTP config from system_config table
     const { data: smtpConfigData } = await supabase
       .from("system_config")
       .select("value")
       .eq("key", "smtp_config")
       .maybeSingle();
 
-    const smtpConfig: SmtpConfig | null = smtpConfigData?.value;
+    const globalSmtpConfig: SmtpConfig | null = smtpConfigData?.value;
     
-    if (!smtpConfig || !smtpConfig.enabled) {
-      console.warn("SMTP not configured or disabled, skipping email notifications");
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: "SMTP not configured. Configure in admin panel under Integrations." 
-        }),
-        { 
-          status: 200, 
-          headers: { "Content-Type": "application/json", ...corsHeaders } 
-        }
-      );
+    if (!globalSmtpConfig || !globalSmtpConfig.enabled) {
+      console.warn("Global SMTP not configured or disabled, will try barbershop-specific configs");
     }
 
     // Get system name for branding
@@ -249,16 +239,52 @@ serve(async (req) => {
     let emailsFailed = 0;
 
     for (const subscription of expiringSubscriptions) {
-      // Get barbershop and owner details
+      // Get barbershop and owner details including email_config
       const { data: barbershop, error: barbershopError } = await supabase
         .from("barbershops")
-        .select("name, owner_id")
+        .select("name, owner_id, email_config, parent_id, subscription_id")
         .eq("id", subscription.barbershop_id)
         .single();
 
       if (barbershopError || !barbershop) {
         console.error(`Error fetching barbershop ${subscription.barbershop_id}:`, barbershopError);
         continue;
+      }
+
+      // Determine which SMTP to use (barbershop or global)
+      let smtpToUse: SmtpConfig | null = null;
+      
+      // Check if barbershop has white_label and custom SMTP
+      if (barbershop.subscription_id) {
+        const { data: sub } = await supabase
+          .from("subscriptions")
+          .select("plan_id")
+          .eq("id", barbershop.subscription_id)
+          .single();
+        
+        if (sub) {
+          const { data: plan } = await supabase
+            .from("subscription_plans")
+            .select("feature_flags")
+            .eq("id", sub.plan_id)
+            .single();
+          
+          if (plan?.feature_flags?.white_label && barbershop.email_config?.enabled) {
+            smtpToUse = barbershop.email_config;
+            console.log(`[SMTP] Using barbershop-specific SMTP for ${barbershop.name}`);
+          }
+        }
+      }
+      
+      // Fallback to global SMTP
+      if (!smtpToUse) {
+        if (globalSmtpConfig?.enabled) {
+          smtpToUse = globalSmtpConfig;
+        } else {
+          console.warn(`No SMTP config available for barbershop ${barbershop.name}, skipping`);
+          emailsFailed++;
+          continue;
+        }
       }
 
       // Get owner email from profiles
@@ -294,10 +320,15 @@ serve(async (req) => {
         plan_name: subscription.plan?.name || "Plano Atual",
       };
 
-      const subject = `⏰ Sua assinatura expira em ${daysUntilExpiration} dia${daysUntilExpiration > 1 ? 's' : ''} - ${systemName}`;
-      const html = generateExpirationEmailHtml(subscriptionData, daysUntilExpiration, systemName);
+      // Use the barbershop name as system name if using their SMTP
+      const emailSystemName = smtpToUse === barbershop.email_config 
+        ? (smtpToUse.from_name || barbershop.name)
+        : systemName;
+
+      const subject = `⏰ Sua assinatura expira em ${daysUntilExpiration} dia${daysUntilExpiration > 1 ? 's' : ''} - ${emailSystemName}`;
+      const html = generateExpirationEmailHtml(subscriptionData, daysUntilExpiration, emailSystemName);
       
-      const sent = await sendViaSmtp(smtpConfig, subscriptionData.owner_email, subject, html);
+      const sent = await sendViaSmtp(smtpToUse, subscriptionData.owner_email, subject, html);
       
       if (sent) {
         emailsSent++;
@@ -311,7 +342,8 @@ serve(async (req) => {
             barbershop_id: subscription.barbershop_id,
             days_until_expiration: daysUntilExpiration,
             email_sent_to: subscriptionData.owner_email,
-            method: "smtp"
+            method: "smtp",
+            smtp_type: smtpToUse === barbershop.email_config ? "barbershop" : "global"
           },
         });
       } else {

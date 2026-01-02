@@ -18,6 +18,7 @@ interface SmtpTestRequest {
   pass: string;
   from_email: string;
   from_name: string;
+  barbershop_id?: string; // Optional: for testing barbershop-specific SMTP
 }
 
 serve(async (req: Request) => {
