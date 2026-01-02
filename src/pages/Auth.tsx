@@ -747,24 +747,35 @@ const Auth = () => {
     try {
       const redirectUrl = `${window.location.origin}/auth`;
       
-      // Try custom edge function with tenant branding first
-      let success = false;
+      // Try custom edge function with tenant branding first (with timeout)
+      let usedCustomEmail = false;
+      
       try {
+        // Create abort controller for 10 second timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        console.log('Attempting to send recovery email via Edge Function...');
+        
         const { data, error } = await supabase.functions.invoke('send-recovery-email', {
           body: { email: recoveryEmail, redirectUrl }
         });
+        
+        clearTimeout(timeoutId);
 
         if (!error && data?.success) {
-          success = true;
+          usedCustomEmail = true;
+          console.log('Recovery email sent successfully via custom Edge Function');
         } else {
-          console.log('Edge function failed, falling back to native Supabase:', error || data?.error);
+          console.warn('Edge function returned error, will use fallback:', error || data?.error);
         }
-      } catch (edgeFnError) {
-        console.log('Edge function unavailable, falling back to native Supabase:', edgeFnError);
+      } catch (edgeFnError: any) {
+        console.warn('Edge function unavailable or timed out:', edgeFnError?.message || edgeFnError);
       }
 
-      // Fallback to native Supabase password recovery
-      if (!success) {
+      // Fallback to native Supabase password recovery if Edge Function failed
+      if (!usedCustomEmail) {
+        console.log('Using native Supabase password recovery as fallback');
         const { error: nativeError } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
           redirectTo: redirectUrl
         });

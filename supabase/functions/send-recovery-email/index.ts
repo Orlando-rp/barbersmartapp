@@ -1,3 +1,7 @@
+// Edge Function: send-recovery-email
+// Version: 1.0.1 - Force redeploy for custom branding emails
+// Last updated: 2026-01-02
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
