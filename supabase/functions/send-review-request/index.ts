@@ -1,9 +1,26 @@
+/**
+ * Send Review Request via WhatsApp
+ * 
+ * Usa whatsapp-resolver para resolver configuração por barbearia
+ * com fallback automático para global se necessário.
+ * 
+ * @version 2025-01-02.review-v2
+ */
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  resolveWhatsAppConfig,
+  sendWhatsAppMessage,
+  RESOLVER_VERSION
+} from "../_shared/whatsapp-resolver.ts";
+
+const FUNCTION_VERSION = '2025-01-02.review-v2';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "X-Function-Version": FUNCTION_VERSION
 };
 
 interface ReviewRequest {
@@ -27,13 +44,20 @@ serve(async (req) => {
   try {
     const { appointmentId, barbershopId, clientName, clientPhone, serviceName, staffName }: ReviewRequest = await req.json();
 
-    console.log("Send review request:", { appointmentId, barbershopId, clientName, clientPhone });
+    console.log(`[review-request] Version: ${FUNCTION_VERSION}`, { appointmentId, barbershopId, clientName });
 
     if (!barbershopId || !clientPhone || !clientName) {
-      throw new Error("barbershopId, clientPhone, and clientName are required");
+      return new Response(JSON.stringify({
+        success: false,
+        error: "barbershopId, clientPhone e clientName são obrigatórios",
+        functionVersion: FUNCTION_VERSION
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
-    // Get barbershop info
+    // Buscar info da barbearia
     const { data: barbershop, error: barbershopError } = await supabase
       .from("barbershops")
       .select("name, parent_id")
@@ -41,13 +65,13 @@ serve(async (req) => {
       .single();
 
     if (barbershopError) {
-      console.error("Error fetching barbershop:", barbershopError);
+      console.error("Erro ao buscar barbearia:", barbershopError);
       throw barbershopError;
     }
 
     const barbershopName = barbershop?.name || "Barbearia";
 
-    // Check client notification preferences
+    // Verificar preferências do cliente
     const phoneClean = clientPhone.replace(/\D/g, "");
     const { data: client } = await supabase
       .from("clients")
@@ -56,48 +80,39 @@ serve(async (req) => {
       .eq("barbershop_id", barbershop.parent_id || barbershopId)
       .maybeSingle();
     
-    // Use preferred_name if available
     const displayName = client?.preferred_name || clientName;
 
-    // Check if client has opted out of completed notifications
+    // Verificar opt-out
     if (client) {
       if (client.notification_enabled === false) {
-        console.log("Client has disabled notifications");
+        console.log("Cliente desabilitou notificações");
         return new Response(
-          JSON.stringify({ success: true, skipped: true, reason: "Client disabled notifications" }),
+          JSON.stringify({ success: true, skipped: true, reason: "Cliente desabilitou notificações" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
       const notificationTypes = client.notification_types || {};
       if (notificationTypes.appointment_completed === false) {
-        console.log("Client has opted out of completed notifications");
+        console.log("Cliente optou por não receber avaliações");
         return new Response(
-          JSON.stringify({ success: true, skipped: true, reason: "Client opted out of completed notifications" }),
+          JSON.stringify({ success: true, skipped: true, reason: "Cliente optou por não receber avaliações" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
-    // Get WhatsApp configuration
-    const { data: whatsappConfig } = await supabase
-      .from("whatsapp_config")
-      .select("*")
-      .eq("barbershop_id", barbershopId)
-      .eq("is_active", true)
-      .maybeSingle();
+    // Resolver configuração WhatsApp
+    const whatsappConfig = await resolveWhatsAppConfig(supabase, barbershopId, {
+      requireConnected: true
+    });
 
-    // Build review request message
+    // Construir mensagem
     let message = `⭐ Olá ${displayName}!\n\n`;
     message += `Esperamos que você tenha gostado do seu atendimento na ${barbershopName}`;
     
-    if (serviceName) {
-      message += ` - ${serviceName}`;
-    }
-    
-    if (staffName) {
-      message += ` com ${staffName}`;
-    }
+    if (serviceName) message += ` - ${serviceName}`;
+    if (staffName) message += ` com ${staffName}`;
     
     message += `.\n\n`;
     message += `Sua opinião é muito importante para nós! Por favor, avalie nosso serviço:\n\n`;
@@ -110,104 +125,43 @@ serve(async (req) => {
     message += `Você também pode adicionar um comentário após a nota. Obrigado! 💈`;
 
     let messageSent = false;
-    let whatsappMessageId = null;
+    let messageId = null;
 
-    // Try Evolution API first
-    if (whatsappConfig?.provider === "evolution" && whatsappConfig.evolution_instance_name) {
-      try {
-        // Get global Evolution API config
-        const { data: globalConfig } = await supabase
-          .from("system_config")
-          .select("value")
-          .eq("key", "evolution_api")
-          .single();
+    if (whatsappConfig) {
+      console.log(`[review-request] Using instance: ${whatsappConfig.instanceName} (source: ${whatsappConfig.source})`);
+      
+      const result = await sendWhatsAppMessage(whatsappConfig, phoneClean, message, {
+        supabase,
+        barbershopId,
+        messageType: 'review_request',
+        recipientName: clientName,
+        appointmentId
+      });
 
-        if (globalConfig?.value) {
-          const evolutionConfig = globalConfig.value;
-          const apiUrl = evolutionConfig.api_url;
-          const apiKey = evolutionConfig.api_key;
-          const instanceName = whatsappConfig.evolution_instance_name;
-
-          console.log("Sending via Evolution API:", { apiUrl, instanceName });
-
-          const response = await fetch(`${apiUrl}/message/sendText/${instanceName}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "apikey": apiKey,
-            },
-            body: JSON.stringify({
-              number: phoneClean,
-              text: message,
-            }),
-          });
-
-          const responseData = await response.json();
-          console.log("Evolution API response:", responseData);
-
-          if (response.ok) {
-            messageSent = true;
-            whatsappMessageId = responseData.key?.id || responseData.messageId;
-          } else {
-            console.error("Evolution API error:", responseData);
-          }
-        }
-      } catch (evolutionError) {
-        console.error("Evolution API error:", evolutionError);
+      messageSent = result.success;
+      messageId = result.messageId;
+      
+      if (!result.success) {
+        console.error("[review-request] Falha ao enviar:", result.error);
       }
+    } else {
+      console.log("[review-request] WhatsApp não configurado");
+      
+      // Log mesmo sem enviar
+      await supabase.from("whatsapp_logs").insert({
+        barbershop_id: barbershopId,
+        appointment_id: appointmentId,
+        recipient_phone: phoneClean,
+        recipient_name: clientName,
+        message_type: "review_request",
+        message_content: message,
+        status: "failed",
+        provider: "none",
+        error_message: "WhatsApp não configurado"
+      });
     }
 
-    // Try Meta API if Evolution didn't work
-    if (!messageSent && whatsappConfig?.provider === "meta" && whatsappConfig.phone_number_id) {
-      try {
-        const payload = {
-          messaging_product: "whatsapp",
-          to: phoneClean,
-          type: "text",
-          text: { body: message },
-        };
-
-        const response = await fetch(
-          `https://graph.facebook.com/v18.0/${whatsappConfig.phone_number_id}/messages`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${whatsappConfig.access_token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          }
-        );
-
-        const responseData = await response.json();
-        console.log("Meta API response:", responseData);
-
-        if (response.ok) {
-          messageSent = true;
-          whatsappMessageId = responseData.messages?.[0]?.id;
-        } else {
-          console.error("Meta API error:", responseData);
-        }
-      } catch (metaError) {
-        console.error("Meta API error:", metaError);
-      }
-    }
-
-    // Log the message attempt
-    await supabase.from("whatsapp_logs").insert({
-      barbershop_id: barbershopId,
-      appointment_id: appointmentId,
-      recipient_phone: phoneClean,
-      recipient_name: clientName,
-      message_type: "review_request",
-      message_content: message,
-      status: messageSent ? "sent" : "failed",
-      whatsapp_message_id: whatsappMessageId,
-      provider: whatsappConfig?.provider || "none",
-      error_message: messageSent ? null : "WhatsApp not configured or send failed",
-    });
-
-    // Update appointment to mark review request sent
+    // Marcar agendamento como solicitação de avaliação enviada
     if (appointmentId) {
       await supabase
         .from("appointments")
@@ -215,7 +169,7 @@ serve(async (req) => {
         .eq("id", appointmentId);
     }
 
-    console.log("Review request result:", { messageSent, whatsappMessageId });
+    console.log("[review-request] Resultado:", { messageSent, messageId });
 
     return new Response(
       JSON.stringify({
@@ -225,6 +179,7 @@ serve(async (req) => {
         message: messageSent 
           ? `Solicitação de avaliação enviada para ${clientName}`
           : `Solicitação registrada (WhatsApp não configurado)`,
+        functionVersion: FUNCTION_VERSION
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -232,11 +187,12 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error in send-review-request function:", error);
+    console.error("[review-request] Erro:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+        functionVersion: FUNCTION_VERSION
       }),
       { 
         status: 500, 
