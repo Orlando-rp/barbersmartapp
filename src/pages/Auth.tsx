@@ -1978,16 +1978,16 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <Card className="w-full max-w-lg barbershop-card">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4 animate-fade-in">
+          <div className="flex justify-center mb-6 animate-fade-in">
             {currentLogoUrl ? (
               <img 
                 src={currentLogoUrl} 
                 alt={effectiveBranding?.system_name || 'Logo'} 
-                className="h-20 w-auto object-contain"
+                className="h-28 w-auto max-w-[280px] object-contain"
               />
             ) : (
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Scissors className="h-8 w-8 text-primary" />
+              <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
+                <Scissors className="h-12 w-12 text-primary" />
               </div>
             )}
           </div>
