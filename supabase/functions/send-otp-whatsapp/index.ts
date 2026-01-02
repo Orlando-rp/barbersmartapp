@@ -57,38 +57,6 @@ serve(async (req) => {
       );
     }
 
-    // Invalidar códigos anteriores não verificados
-    await supabase
-      .from('auth_otp_codes')
-      .update({ verified: true })
-      .eq('phone', formattedPhone)
-      .eq('verified', false);
-
-    // Gerar código de 6 dígitos
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Definir expiração (5 minutos)
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
-    // Salvar código no banco
-    const { error: insertError } = await supabase
-      .from('auth_otp_codes')
-      .insert({
-        phone: formattedPhone,
-        code,
-        expires_at: expiresAt,
-        verified: false,
-        attempts: 0
-      });
-
-    if (insertError) {
-      console.error('[Send OTP] Erro ao salvar código:', insertError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Erro ao gerar código de verificação' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Buscar configuração global da Evolution API
     const { data: evolutionConfig } = await supabase
       .from('system_config')
@@ -99,8 +67,12 @@ serve(async (req) => {
     if (!evolutionConfig?.value?.api_url || !evolutionConfig?.value?.api_key) {
       console.error('[Send OTP] Evolution API não configurada globalmente');
       return new Response(
-        JSON.stringify({ success: false, error: 'WhatsApp não configurado no sistema. Configure o servidor Evolution API no painel SaaS Admin.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          success: false,
+          error:
+            'WhatsApp não configurado no sistema. Configure o servidor Evolution API no painel SaaS Admin.',
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -114,61 +86,59 @@ serve(async (req) => {
       .eq('key', 'otp_whatsapp')
       .maybeSingle();
 
-    let instanceName = otpConfig?.value?.instance_name;
-    const otpStatus = otpConfig?.value?.status;
+    let instanceName = otpConfig?.value?.instance_name ?? otpConfig?.value?.instanceName;
+    const otpStatus = otpConfig?.value?.status ?? otpConfig?.value?.connection_status;
 
     // Se não há instância OTP configurada, tentar usar instância de barbearia
     if (!instanceName) {
       console.log('[Send OTP] Instância OTP global não configurada, buscando instância alternativa...');
 
-      // Buscar qualquer instância evolution ativa
       const { data: configs, error: configsError } = await supabase
         .from('whatsapp_config')
         .select('config, is_active')
-        .eq('provider', 'evolution')
-        .eq('is_active', true);
+        .eq('provider', 'evolution');
 
       if (configsError) {
         console.error('[Send OTP] Erro ao buscar whatsapp_config:', configsError);
       }
 
-      console.log('[Send OTP] Configurações encontradas:', JSON.stringify(configs));
-
-      // Filtrar para encontrar uma com instance_name
-      const validConfig = configs?.find(c => c.config?.instance_name);
+      const validConfig = configs?.find((c) => {
+        const cfg: any = c.config;
+        const inst = cfg?.instance_name ?? cfg?.instanceName;
+        const connected =
+          cfg?.connection_status === 'connected' ||
+          cfg?.status === 'connected' ||
+          cfg?.state === 'open' ||
+          cfg?.connectionState === 'open';
+        return !!inst && (c.is_active === true || connected);
+      });
 
       if (!validConfig) {
-        console.error('[Send OTP] Nenhuma instância WhatsApp conectada');
-        
-        // Delete the OTP record since we can't send
-        await supabase
-          .from('auth_otp_codes')
-          .delete()
-          .eq('phone', formattedPhone)
-          .eq('code', code);
-        
+        console.error('[Send OTP] Nenhuma instância WhatsApp disponível');
+
         return new Response(
           JSON.stringify({
             success: false,
             error:
               'Nenhuma instância WhatsApp disponível. Conecte a instância OTP global no painel SaaS Admin (Configurações > OTP WhatsApp) ou conecte o WhatsApp de alguma barbearia.',
             details: {
-              otp_instance_configured: !!otpConfig?.value?.instance_name,
+              otp_instance_configured: !!(otpConfig?.value?.instance_name ?? otpConfig?.value?.instanceName),
               otp_status: otpStatus || null,
               configs_found: configs?.length || 0,
             },
           }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       const fallbackConfig = validConfig.config as {
         api_url?: string;
         api_key?: string;
-        instance_name: string;
+        instance_name?: string;
+        instanceName?: string;
       };
 
-      instanceName = fallbackConfig.instance_name;
+      instanceName = fallbackConfig.instance_name ?? fallbackConfig.instanceName;
       apiUrl = fallbackConfig.api_url || apiUrl;
       apiKey = fallbackConfig.api_key || apiKey;
 
@@ -181,6 +151,38 @@ serve(async (req) => {
       } else {
         console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
       }
+    }
+
+    // Invalidar códigos anteriores não verificados
+    await supabase
+      .from('auth_otp_codes')
+      .update({ verified: true })
+      .eq('phone', formattedPhone)
+      .eq('verified', false);
+
+    // Gerar código de 6 dígitos
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Definir expiração (5 minutos)
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    // Salvar código no banco
+    const { error: insertError } = await supabase
+      .from('auth_otp_codes')
+      .insert({
+        phone: formattedPhone,
+        code,
+        expires_at: expiresAt,
+        verified: false,
+        attempts: 0,
+      });
+
+    if (insertError) {
+      console.error('[Send OTP] Erro ao salvar código:', insertError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Erro ao gerar código de verificação' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Mensagem do código OTP
