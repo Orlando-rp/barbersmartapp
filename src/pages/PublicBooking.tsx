@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { formatDuration } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays, isBefore, startOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, addDays, addWeeks, isBefore, startOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar } from '@/components/ui/calendar';
@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star, Bug, ChevronDown, ChevronUp, Copy, CheckCheck, CreditCard, Wallet } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star, Bug, ChevronDown, ChevronUp, Copy, CheckCheck, CreditCard, Wallet, Repeat, CalendarDays, X } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,6 +26,7 @@ import {
   businessHoursToStandard,
   DEFAULT_DAY_SCHEDULE
 } from '@/types/schedule';
+import { generateRecurrenceGroupId } from '@/lib/recurrenceUtils';
 
 // Animation variants for step transitions
 const stepVariants = {
@@ -212,6 +213,13 @@ export default function PublicBooking() {
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
+  
+  // Recurring booking state
+  const [recurringMode, setRecurringMode] = useState<'single' | 'weekly'>('single');
+  const [recurringWeeks, setRecurringWeeks] = useState<number>(4);
+  const [recurringDates, setRecurringDates] = useState<Date[]>([]);
+  const [recurringAvailability, setRecurringAvailability] = useState<Map<string, boolean>>(new Map());
+  const [checkingRecurring, setCheckingRecurring] = useState(false);
   
   // Waitlist state
   const [showWaitlistForm, setShowWaitlistForm] = useState(false);
@@ -932,28 +940,79 @@ export default function PublicBooking() {
         return;
       }
 
-      // Create appointment via RPC
-      const { data: rpcResult, error: rpcError } = await supabase.rpc('create_public_appointment', {
-        p_barbershop_id: effectiveUnitId,
-        p_staff_id: selectedStaff.id,
-        p_service_id: selectedService.id,
-        p_appointment_date: format(selectedDate, 'yyyy-MM-dd'),
-        p_appointment_time: selectedTime,
-        p_duration: selectedService.duration,
-        p_service_price: selectedService.price,
-        p_service_name: selectedService.name,
-        p_client_name: clientName.trim(),
-        p_client_phone: clientPhone.replace(/\D/g, ''),
-        p_client_email: clientEmail?.trim() || null
-      });
+      // Determine which dates to book
+      let datesToBook: Date[] = [selectedDate];
+      let recurrenceGroupId: string | null = null;
 
-      if (rpcError) throw rpcError;
-      
-      if (!rpcResult?.success) {
-        throw new Error(rpcResult?.error || 'Erro ao criar agendamento');
+      if (recurringMode === 'weekly' && recurringDates.length > 1) {
+        // Filter to only available dates
+        datesToBook = recurringDates.filter((date, index) => {
+          if (index === 0) return true; // First date is always the selected one
+          const dateStr = format(date, 'yyyy-MM-dd');
+          return recurringAvailability.get(dateStr) !== false;
+        });
+        
+        if (datesToBook.length > 1) {
+          recurrenceGroupId = generateRecurrenceGroupId();
+        }
       }
 
-      const appointmentId = rpcResult?.appointment_id;
+      const createdAppointments: string[] = [];
+      let firstAppointmentId: string | null = null;
+
+      // Create appointments for each date
+      for (let i = 0; i < datesToBook.length; i++) {
+        const date = datesToBook[i];
+        
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('create_public_appointment', {
+          p_barbershop_id: effectiveUnitId,
+          p_staff_id: selectedStaff.id,
+          p_service_id: selectedService.id,
+          p_appointment_date: format(date, 'yyyy-MM-dd'),
+          p_appointment_time: selectedTime,
+          p_duration: selectedService.duration,
+          p_service_price: selectedService.price,
+          p_service_name: selectedService.name,
+          p_client_name: clientName.trim(),
+          p_client_phone: clientPhone.replace(/\D/g, ''),
+          p_client_email: clientEmail?.trim() || null
+        });
+
+        if (rpcError) {
+          console.error(`Error creating appointment for ${format(date, 'yyyy-MM-dd')}:`, rpcError);
+          continue;
+        }
+        
+        if (!rpcResult?.success) {
+          console.error(`Failed to create appointment for ${format(date, 'yyyy-MM-dd')}:`, rpcResult?.error);
+          continue;
+        }
+
+        const appointmentId = rpcResult?.appointment_id;
+        if (appointmentId) {
+          createdAppointments.push(appointmentId);
+          if (i === 0) firstAppointmentId = appointmentId;
+
+          // Update with recurrence info if applicable
+          if (recurrenceGroupId && datesToBook.length > 1) {
+            await supabase
+              .from('appointments')
+              .update({
+                recurrence_group_id: recurrenceGroupId,
+                recurrence_rule: 'weekly',
+                is_recurring: true,
+                recurrence_index: i,
+              })
+              .eq('id', appointmentId);
+          }
+        }
+      }
+
+      if (createdAppointments.length === 0) {
+        throw new Error('Não foi possível criar nenhum agendamento');
+      }
+
+      const appointmentId = firstAppointmentId;
 
       // Handle online payment
       const shouldPayOnline = paymentMethod === 'online' || 
@@ -1034,7 +1093,23 @@ export default function PublicBooking() {
             clientDisplayName = existingClient.preferred_name || existingClient.name || clientName;
           }
           
-          const message = `Olá ${clientDisplayName}! 👋
+          // Adjust message for recurring appointments
+          const isRecurring = createdAppointments.length > 1;
+          const message = isRecurring
+            ? `Olá ${clientDisplayName}! 👋
+
+✅ Seus ${createdAppointments.length} agendamentos foram confirmados!
+
+🔁 Agendamento Semanal:
+${datesToBook.filter((d, i) => i === 0 || recurringAvailability.get(format(d, 'yyyy-MM-dd')) !== false).map(d => `📅 ${format(d, "dd/MM/yyyy", { locale: ptBR })}`).join('\n')}
+
+⏰ Horário: ${selectedTime}
+✂️ Serviço: ${selectedService.name}
+💈 Profissional: ${staffName}
+💰 Valor Total: R$ ${(selectedService.price * createdAppointments.length).toFixed(2)}
+
+Aguardamos você! 💈`
+            : `Olá ${clientDisplayName}! 👋
 
 ✅ Seu agendamento foi confirmado!
 
@@ -1217,10 +1292,99 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
     }
   };
 
+  // Generate recurring dates when mode changes
+  const generateRecurringDates = useCallback(() => {
+    if (!selectedDate || recurringMode !== 'weekly') {
+      setRecurringDates([]);
+      return;
+    }
+
+    const dates: Date[] = [selectedDate];
+    for (let i = 1; i < recurringWeeks; i++) {
+      dates.push(addWeeks(selectedDate, i));
+    }
+    setRecurringDates(dates);
+  }, [selectedDate, recurringMode, recurringWeeks]);
+
+  // Check availability for recurring dates
+  const checkRecurringAvailability = useCallback(async () => {
+    if (recurringDates.length <= 1 || !selectedStaff || !selectedTime || !selectedService) {
+      return;
+    }
+
+    setCheckingRecurring(true);
+    const availabilityMap = new Map<string, boolean>();
+    const effectiveUnitId = selectedUnit?.id || barbershop?.id;
+
+    if (!effectiveUnitId) {
+      setCheckingRecurring(false);
+      return;
+    }
+
+    try {
+      // Check each date in parallel
+      await Promise.all(
+        recurringDates.map(async (date) => {
+          const dateStr = format(date, 'yyyy-MM-dd');
+          
+          // Check if staff works on this day
+          if (!staffWorksOnDate(selectedStaff, date)) {
+            availabilityMap.set(dateStr, false);
+            return;
+          }
+
+          // Check for existing appointments
+          const { data: existingAppointments } = await supabase
+            .from('appointments')
+            .select('id')
+            .eq('barbershop_id', effectiveUnitId)
+            .eq('staff_id', selectedStaff.id)
+            .eq('appointment_date', dateStr)
+            .eq('appointment_time', selectedTime)
+            .in('status', ['pendente', 'confirmado']);
+
+          availabilityMap.set(dateStr, !existingAppointments || existingAppointments.length === 0);
+        })
+      );
+
+      setRecurringAvailability(availabilityMap);
+    } catch (error) {
+      console.error('Error checking recurring availability:', error);
+    } finally {
+      setCheckingRecurring(false);
+    }
+  }, [recurringDates, selectedStaff, selectedTime, selectedService, selectedUnit, barbershop, staffWorksOnDate]);
+
+  // Effect to generate dates when mode or base date changes
+  useEffect(() => {
+    generateRecurringDates();
+  }, [generateRecurringDates]);
+
+  // Effect to check availability when dates change
+  useEffect(() => {
+    if (recurringDates.length > 1) {
+      checkRecurringAvailability();
+    }
+  }, [recurringDates, checkRecurringAvailability]);
+
+  // Reset recurring mode when time changes
+  useEffect(() => {
+    if (selectedTime) {
+      setRecurringAvailability(new Map());
+      if (recurringMode === 'weekly') {
+        checkRecurringAvailability();
+      }
+    }
+  }, [selectedTime]);
+
+  const availableRecurringCount = Array.from(recurringAvailability.values()).filter(v => v).length;
+
   useEffect(() => {
     setShowWaitlistForm(false);
     setWaitlistSuccess(false);
     setWaitlistPosition(null);
+    setRecurringMode('single');
+    setRecurringDates([]);
   }, [selectedDate]);
 
   // Loading state
@@ -1392,6 +1556,8 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
   }
 
   // Success state
+  const appointmentsCount = recurringMode === 'weekly' ? Math.max(availableRecurringCount, 1) : 1;
+  
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/50 flex items-center justify-center p-4">
@@ -1401,19 +1567,47 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
             <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
               <Check className="h-10 w-10 text-white" />
             </div>
-            <h2 className="text-2xl font-serif font-semibold text-white">Agendamento Confirmado!</h2>
+            <h2 className="text-2xl font-serif font-semibold text-white">
+              {appointmentsCount > 1 
+                ? `${appointmentsCount} Agendamentos Confirmados!` 
+                : 'Agendamento Confirmado!'}
+            </h2>
+            {appointmentsCount > 1 && (
+              <Badge className="mt-2 bg-white/20 text-white border-white/30">
+                <Repeat className="h-3 w-3 mr-1" />
+                Série Semanal
+              </Badge>
+            )}
           </div>
           
           <CardContent className="p-6 space-y-4">
             <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between py-2 border-b border-border/50">
-                <span className="text-muted-foreground">Data</span>
-                <span className="font-medium">{selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-border/50">
-                <span className="text-muted-foreground">Horário</span>
-                <span className="font-medium">{selectedTime}</span>
-              </div>
+              {appointmentsCount > 1 ? (
+                <div className="py-2 border-b border-border/50">
+                  <span className="text-muted-foreground block mb-2">Datas Agendadas</span>
+                  <div className="space-y-1">
+                    {recurringDates
+                      .filter((d, i) => i === 0 || recurringAvailability.get(format(d, 'yyyy-MM-dd')) !== false)
+                      .map((date) => (
+                        <div key={format(date, 'yyyy-MM-dd')} className="flex justify-between text-sm">
+                          <span className="font-medium">{format(date, "EEE, dd/MM/yyyy", { locale: ptBR })}</span>
+                          <span className="text-muted-foreground">{selectedTime}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between py-2 border-b border-border/50">
+                    <span className="text-muted-foreground">Data</span>
+                    <span className="font-medium">{selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-border/50">
+                    <span className="text-muted-foreground">Horário</span>
+                    <span className="font-medium">{selectedTime}</span>
+                  </div>
+                </>
+              )}
               <div className="flex items-center justify-between py-2 border-b border-border/50">
                 <span className="text-muted-foreground">Serviço</span>
                 <span className="font-medium truncate ml-4">{selectedService?.name}</span>
@@ -1431,8 +1625,15 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 </div>
               </div>
               <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Valor</span>
-                <span className="font-semibold text-lg text-accent">R$ {selectedService?.price.toFixed(2)}</span>
+                <span className="text-muted-foreground">Valor Total</span>
+                <span className="font-semibold text-lg text-accent">
+                  R$ {((selectedService?.price || 0) * appointmentsCount).toFixed(2)}
+                  {appointmentsCount > 1 && (
+                    <span className="text-xs font-normal text-muted-foreground ml-1">
+                      ({appointmentsCount}x)
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
             
@@ -1965,22 +2166,159 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                         )}
                       </div>
                     ) : (
-                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
-                        {availableSlots.map((slot) => (
-                          <Button
-                            key={slot}
-                            variant={selectedTime === slot ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setSelectedTime(slot)}
-                            className={`text-sm font-medium ${
-                              selectedTime === slot 
-                                ? 'bg-accent hover:bg-accent/90 text-accent-foreground shadow-md' 
-                                : 'hover:border-accent/50'
-                            }`}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+                          {availableSlots.map((slot) => (
+                            <Button
+                              key={slot}
+                              variant={selectedTime === slot ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setSelectedTime(slot)}
+                              className={`text-sm font-medium ${
+                                selectedTime === slot 
+                                  ? 'bg-accent hover:bg-accent/90 text-accent-foreground shadow-md' 
+                                  : 'hover:border-accent/50'
+                              }`}
+                            >
+                              {slot}
+                            </Button>
+                          ))}
+                        </div>
+
+                        {/* Recurring booking option - show after time is selected */}
+                        {selectedTime && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-4 p-4 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border border-primary/20"
                           >
-                            {slot}
-                          </Button>
-                        ))}
+                            <div className="flex items-center gap-2 mb-3">
+                              <Repeat className="h-4 w-4 text-primary" />
+                              <span className="text-sm font-medium">Agendar para mais semanas?</span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={recurringMode === 'single' ? 'default' : 'outline'}
+                                onClick={() => setRecurringMode('single')}
+                                className={recurringMode === 'single' ? 'bg-accent text-accent-foreground' : ''}
+                              >
+                                <CalendarIcon className="h-4 w-4 mr-1" />
+                                Só essa data
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={recurringMode === 'weekly' ? 'default' : 'outline'}
+                                onClick={() => setRecurringMode('weekly')}
+                                className={recurringMode === 'weekly' ? 'bg-accent text-accent-foreground' : ''}
+                              >
+                                <CalendarDays className="h-4 w-4 mr-1" />
+                                Semanalmente
+                              </Button>
+                            </div>
+
+                            {recurringMode === 'weekly' && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                className="mt-4 space-y-3"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Label className="text-xs text-muted-foreground">Repetir por</Label>
+                                  <Select
+                                    value={recurringWeeks.toString()}
+                                    onValueChange={(v) => setRecurringWeeks(parseInt(v))}
+                                  >
+                                    <SelectTrigger className="w-[140px] h-8">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="2">2 semanas</SelectItem>
+                                      <SelectItem value="3">3 semanas</SelectItem>
+                                      <SelectItem value="4">4 semanas</SelectItem>
+                                      <SelectItem value="6">6 semanas</SelectItem>
+                                      <SelectItem value="8">8 semanas</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Preview of dates */}
+                                {recurringDates.length > 0 && (
+                                  <div className="bg-background rounded-lg border p-3 space-y-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs font-medium text-muted-foreground">
+                                        Datas ({recurringDates.length})
+                                      </span>
+                                      {checkingRecurring && (
+                                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                                      )}
+                                      {!checkingRecurring && availableRecurringCount > 0 && (
+                                        <Badge variant="outline" className="text-xs text-green-600 border-green-200 bg-green-50">
+                                          {availableRecurringCount} disponíveis
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                                      {recurringDates.map((date, i) => {
+                                        const dateStr = format(date, 'yyyy-MM-dd');
+                                        const isAvailable = recurringAvailability.get(dateStr);
+                                        const isFirst = i === 0;
+
+                                        return (
+                                          <div
+                                            key={dateStr}
+                                            className={`flex items-center justify-between text-xs py-1 px-2 rounded ${
+                                              isAvailable === false && !isFirst
+                                                ? 'bg-orange-50 dark:bg-orange-950/20'
+                                                : ''
+                                            }`}
+                                          >
+                                            <span className={isAvailable === false && !isFirst ? 'text-orange-600' : ''}>
+                                              {format(date, "EEE, dd/MM", { locale: ptBR })} às {selectedTime}
+                                            </span>
+                                            {isFirst ? (
+                                              <Check className="h-3 w-3 text-green-600" />
+                                            ) : checkingRecurring ? (
+                                              <div className="h-3 w-3 rounded-full border border-muted-foreground border-t-transparent animate-spin" />
+                                            ) : isAvailable ? (
+                                              <Check className="h-3 w-3 text-green-600" />
+                                            ) : (
+                                              <X className="h-3 w-3 text-orange-600" />
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    
+                                    {!checkingRecurring && availableRecurringCount < recurringDates.length && (
+                                      <p className="text-xs text-orange-600 mt-2">
+                                        {recurringDates.length - availableRecurringCount} data(s) indisponível(eis) serão ignoradas
+                                      </p>
+                                    )}
+
+                                    {selectedService && (
+                                      <div className="pt-2 mt-2 border-t">
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-muted-foreground">Total estimado:</span>
+                                          <span className="font-bold text-accent">
+                                            R$ {(selectedService.price * (availableRecurringCount || 1)).toFixed(2)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </motion.div>
+                            )}
+
+                            <p className="text-xs text-muted-foreground mt-3">
+                              💡 Clientes que agendam regularmente ganham pontos de fidelidade!
+                            </p>
+                          </motion.div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2060,17 +2398,51 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                       <span className="text-muted-foreground">Profissional</span>
                       <span className="font-medium">{getStaffName(selectedStaff)}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Data</span>
-                      <span className="font-medium">{selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Horário</span>
-                      <span className="font-medium">{selectedTime}</span>
-                    </div>
+                    {recurringMode === 'weekly' && recurringDates.length > 1 ? (
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Agendamento</span>
+                          <Badge className="bg-primary/10 text-primary border-primary/20">
+                            <Repeat className="h-3 w-3 mr-1" />
+                            Semanal
+                          </Badge>
+                        </div>
+                        <div className="bg-muted/50 rounded-lg p-2 space-y-1">
+                          {recurringDates.map((date, i) => {
+                            const dateStr = format(date, 'yyyy-MM-dd');
+                            const isAvailable = i === 0 || recurringAvailability.get(dateStr) !== false;
+                            if (!isAvailable) return null;
+                            return (
+                              <div key={dateStr} className="flex justify-between text-xs">
+                                <span>{format(date, "EEE, dd/MM", { locale: ptBR })}</span>
+                                <span>{selectedTime}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Data</span>
+                          <span className="font-medium">{selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Horário</span>
+                          <span className="font-medium">{selectedTime}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="pt-3 mt-3 border-t border-border/50 flex justify-between items-center">
                       <span className="text-muted-foreground">Valor Total</span>
-                      <span className="text-xl font-bold text-accent">R$ {selectedService?.price.toFixed(2)}</span>
+                      <span className="text-xl font-bold text-accent">
+                        R$ {(selectedService?.price || 0) * (recurringMode === 'weekly' ? Math.max(availableRecurringCount, 1) : 1)}
+                        {recurringMode === 'weekly' && availableRecurringCount > 1 && (
+                          <span className="text-xs font-normal text-muted-foreground ml-1">
+                            ({availableRecurringCount}x R$ {selectedService?.price.toFixed(2)})
+                          </span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 </motion.div>
