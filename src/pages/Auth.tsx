@@ -273,8 +273,22 @@ const Auth = () => {
         body: { phone: whatsappPhone }
       });
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+      if (error) {
+        // Extract error message from FunctionsHttpError
+        const errorBody = error.context?.body;
+        let errorMessage = 'Erro ao enviar código';
+        if (errorBody) {
+          try {
+            const parsed = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
+            errorMessage = parsed.error || errorMessage;
+          } catch {
+            errorMessage = error.message || errorMessage;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+      
+      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar código');
 
       setOtpStep('code');
       setOtpExpiresAt(new Date(data.expiresAt));
@@ -380,8 +394,21 @@ const Auth = () => {
         body: { phone: signupWhatsappPhone }
       });
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+      if (error) {
+        const errorBody = error.context?.body;
+        let errorMessage = 'Erro ao enviar código';
+        if (errorBody) {
+          try {
+            const parsed = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
+            errorMessage = parsed.error || errorMessage;
+          } catch {
+            errorMessage = error.message || errorMessage;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+      
+      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar código');
 
       setSignupOtpStep('code');
       setSignupOtpExpiresAt(new Date(data.expiresAt));
@@ -467,8 +494,21 @@ const Auth = () => {
         body: { phone: recoveryPhone }
       });
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+      if (error) {
+        const errorBody = error.context?.body;
+        let errorMessage = 'Erro ao enviar código';
+        if (errorBody) {
+          try {
+            const parsed = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
+            errorMessage = parsed.error || errorMessage;
+          } catch {
+            errorMessage = error.message || errorMessage;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+      
+      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar código');
 
       setRecoveryStep('code');
       setRecoveryOtpExpiresAt(new Date(data.expiresAt));
