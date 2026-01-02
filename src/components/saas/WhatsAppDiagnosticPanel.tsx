@@ -58,6 +58,8 @@ interface SystemHealth {
     instanceName: string | null;
     status: string | null;
     phoneNumber: string | null;
+    existsInEvolution: boolean | null;
+    evolutionState: string | null;
   };
   barbershopConfigs: {
     total: number;
@@ -161,6 +163,8 @@ export const WhatsAppDiagnosticPanel = () => {
         instanceName: otpData?.value?.instance_name || null,
         status: otpData?.value?.status || null,
         phoneNumber: otpData?.value?.phone_number || null,
+        existsInEvolution: null, // Will be checked on demand
+        evolutionState: null,
       },
       barbershopConfigs: {
         total: allConfigs?.length || 0,
@@ -358,6 +362,43 @@ export const WhatsAppDiagnosticPanel = () => {
         }
       });
 
+      // Verificar se a instância existe
+      const instanceNotFound = error?.message?.includes('404') || 
+                               error?.message?.includes('not found') ||
+                               data?.error?.includes('not found') ||
+                               data?.error?.includes('Nenhuma instância');
+
+      if (instanceNotFound) {
+        // Atualizar status para 'missing'
+        const { data: otpData } = await supabase
+          .from('system_config')
+          .select('value')
+          .eq('key', 'otp_whatsapp')
+          .maybeSingle();
+
+        await supabase
+          .from('system_config')
+          .update({
+            value: { ...otpData?.value, status: 'missing' }
+          })
+          .eq('key', 'otp_whatsapp');
+
+        setHealth(prev => prev ? {
+          ...prev,
+          otpInstance: {
+            ...prev.otpInstance,
+            status: 'missing',
+            existsInEvolution: false,
+            evolutionState: null
+          }
+        } : null);
+
+        toast.error('Instância OTP não existe no Evolution', {
+          description: `A instância "${health.otpInstance.instanceName}" não foi encontrada. Crie ou reconecte.`
+        });
+        return;
+      }
+
       if (error) throw error;
 
       const state = data?.state || data?.instance?.state;
@@ -385,7 +426,9 @@ export const WhatsAppDiagnosticPanel = () => {
         ...prev,
         otpInstance: {
           ...prev.otpInstance,
-          status: isConnected ? 'connected' : 'disconnected'
+          status: isConnected ? 'connected' : 'disconnected',
+          existsInEvolution: true,
+          evolutionState: state
         }
       } : null);
 
@@ -566,6 +609,11 @@ export const WhatsAppDiagnosticPanel = () => {
                   {health?.otpInstance.instanceName || 'Não configurado'}
                   {health?.otpInstance.phoneNumber && ` (+${health.otpInstance.phoneNumber})`}
                 </p>
+                {health?.otpInstance.evolutionState && (
+                  <p className="text-xs text-muted-foreground">
+                    Evolution state: {health.otpInstance.evolutionState}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -574,6 +622,11 @@ export const WhatsAppDiagnosticPanel = () => {
                   <Badge className="bg-success/20 text-success">
                     <Wifi className="h-3 w-3 mr-1" />
                     Conectado
+                  </Badge>
+                ) : health.otpInstance.status === 'missing' ? (
+                  <Badge variant="destructive">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Não Existe
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-warning border-warning">

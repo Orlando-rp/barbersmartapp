@@ -1,4 +1,5 @@
 // Edge Function para enviar código OTP via WhatsApp usando Evolution API
+// Solução definitiva com fallback automático e diagnóstico aprimorado
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -8,8 +9,191 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Tipos para melhor tipagem
+interface EvolutionConfig {
+  api_url: string;
+  api_key: string;
+}
+
+interface OtpWhatsAppConfig {
+  instance_name?: string;
+  instanceName?: string;
+  status?: string;
+  connection_status?: string;
+}
+
+interface WhatsAppInstanceConfig {
+  api_url?: string;
+  api_key?: string;
+  instance_name?: string;
+  instanceName?: string;
+  connection_status?: string;
+  status?: string;
+  state?: string;
+  connectionState?: string;
+}
+
+interface InstanceCheckResult {
+  exists: boolean;
+  connected: boolean;
+  state: string | null;
+  error?: string;
+}
+
+// Normalizar nome da instância (remover espaços e caracteres inválidos)
+function normalizeInstanceName(name: string): string {
+  return name
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9-_]/g, '')
+    .toLowerCase();
+}
+
+// Verificar se instância existe e está conectada no Evolution
+async function checkInstanceStatus(
+  apiUrl: string,
+  apiKey: string,
+  instanceName: string
+): Promise<InstanceCheckResult> {
+  const normalizedName = normalizeInstanceName(instanceName);
+  const checkUrl = `${apiUrl.replace(/\/+$/, '')}/instance/connectionState/${normalizedName}`;
+  
+  console.log(`[OTP] Verificando instância: ${checkUrl}`);
+
+  try {
+    const response = await fetch(checkUrl, {
+      method: 'GET',
+      headers: { 'apikey': apiKey },
+    });
+
+    if (response.status === 404) {
+      console.log(`[OTP] Instância ${normalizedName} não existe (404)`);
+      return { exists: false, connected: false, state: null, error: 'INSTANCE_NOT_FOUND' };
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`[OTP] Erro ao verificar instância (${response.status}): ${errorText}`);
+      
+      // Verificar se é erro de instância não encontrada em formato diferente
+      if (errorText.includes('not found') || errorText.includes('não encontrada') || errorText.includes('Nenhuma instância')) {
+        return { exists: false, connected: false, state: null, error: 'INSTANCE_NOT_FOUND' };
+      }
+      
+      return { exists: true, connected: false, state: 'unknown', error: `HTTP_${response.status}` };
+    }
+
+    const data = await response.json();
+    const state = data?.state || data?.instance?.state;
+    const isConnected = state === 'open';
+    
+    console.log(`[OTP] Estado da instância ${normalizedName}: ${state} (connected: ${isConnected})`);
+    
+    return { exists: true, connected: isConnected, state };
+  } catch (error: any) {
+    console.error(`[OTP] Erro de conexão ao verificar instância: ${error.message}`);
+    return { exists: true, connected: false, state: null, error: 'CONNECTION_ERROR' };
+  }
+}
+
+// Buscar instância alternativa de barbearia que esteja conectada
+async function findFallbackInstance(
+  supabase: any,
+  globalApiUrl: string,
+  globalApiKey: string
+): Promise<{ instanceName: string; apiUrl: string; apiKey: string; barbershopId: string } | null> {
+  console.log('[OTP] Buscando instância fallback...');
+
+  const { data: configs, error } = await supabase
+    .from('whatsapp_config')
+    .select('config, barbershop_id, is_active')
+    .eq('provider', 'evolution');
+
+  if (error || !configs?.length) {
+    console.log('[OTP] Nenhuma config de barbearia encontrada');
+    return null;
+  }
+
+  // Ordenar: ativas primeiro, depois por config
+  const sortedConfigs = configs
+    .filter((c: any) => {
+      const cfg = c.config as WhatsAppInstanceConfig;
+      const instName = cfg?.instance_name || cfg?.instanceName;
+      return !!instName;
+    })
+    .sort((a: any, b: any) => (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0));
+
+  // Testar cada instância (máximo 5 para não demorar muito)
+  for (const config of sortedConfigs.slice(0, 5)) {
+    const cfg = config.config as WhatsAppInstanceConfig;
+    const instanceName = cfg?.instance_name || cfg?.instanceName;
+    const apiUrl = cfg?.api_url || globalApiUrl;
+    const apiKey = cfg?.api_key || globalApiKey;
+
+    if (!instanceName) continue;
+
+    const status = await checkInstanceStatus(apiUrl, apiKey, instanceName);
+    
+    if (status.exists && status.connected) {
+      console.log(`[OTP] Encontrada instância fallback: ${instanceName} (barbershop: ${config.barbershop_id})`);
+      return {
+        instanceName: normalizeInstanceName(instanceName),
+        apiUrl,
+        apiKey,
+        barbershopId: config.barbershop_id,
+      };
+    }
+  }
+
+  console.log('[OTP] Nenhuma instância fallback disponível');
+  return null;
+}
+
+// Log de falha no whatsapp_logs
+async function logFailure(
+  supabase: any,
+  phone: string,
+  errorMessage: string,
+  instanceName?: string,
+  usedFallback?: boolean
+) {
+  try {
+    await supabase.from('whatsapp_logs').insert({
+      barbershop_id: null,
+      recipient_phone: phone,
+      message_content: `[OTP] Falha${usedFallback ? ' (fallback)' : ''}`,
+      status: 'failed',
+      provider: 'evolution',
+      message_type: 'otp',
+      error_message: `${errorMessage}${instanceName ? ` | Instance: ${instanceName}` : ''}`,
+    });
+  } catch (e) {
+    console.warn('[OTP] Erro ao logar falha:', e);
+  }
+}
+
+// Log de sucesso
+async function logSuccess(
+  supabase: any,
+  phone: string,
+  instanceName: string,
+  usedFallback: boolean
+) {
+  try {
+    await supabase.from('whatsapp_logs').insert({
+      barbershop_id: null,
+      recipient_phone: phone,
+      message_content: `[OTP] Código enviado${usedFallback ? ' (via fallback)' : ''}`,
+      status: 'sent',
+      provider: 'evolution',
+      message_type: 'otp',
+    });
+  } catch (e) {
+    console.warn('[OTP] Erro ao logar sucesso:', e);
+  }
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -19,26 +203,28 @@ serve(async (req) => {
 
     if (!phone) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Número de telefone é obrigatório' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Número de telefone é obrigatório',
+          error_code: 'MISSING_PHONE'
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Formatar telefone - remover caracteres não numéricos
+    // Formatar telefone
     let formattedPhone = phone.replace(/\D/g, '');
-    
-    // Adicionar código do país se não tiver
     if (!formattedPhone.startsWith('55') && formattedPhone.length <= 11) {
       formattedPhone = '55' + formattedPhone;
     }
 
-    console.log(`[Send OTP] Iniciando para telefone: ${formattedPhone}`);
+    console.log(`[OTP] Iniciando para: ${formattedPhone}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verificar rate limiting: máx 5 códigos por hora por telefone
+    // Rate limiting: máx 10 códigos por hora por telefone
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { count: recentCount } = await supabase
       .from('auth_otp_codes')
@@ -46,12 +232,14 @@ serve(async (req) => {
       .eq('phone', formattedPhone)
       .gte('created_at', oneHourAgo);
 
-    if (recentCount && recentCount >= 5) {
-      console.log(`[Send OTP] Rate limit excedido para: ${formattedPhone}`);
+    if (recentCount && recentCount >= 10) {
+      console.log(`[OTP] Rate limit excedido para: ${formattedPhone} (${recentCount} tentativas)`);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Muitas tentativas. Aguarde 1 hora antes de solicitar novo código.' 
+        JSON.stringify({
+          success: false,
+          error: 'Muitas tentativas. Aguarde 1 hora antes de solicitar novo código.',
+          error_code: 'RATE_LIMITED',
+          details: { attempts: recentCount, limit: 10 }
         }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -65,19 +253,20 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!evolutionConfig?.value?.api_url || !evolutionConfig?.value?.api_key) {
-      console.error('[Send OTP] Evolution API não configurada globalmente');
+      console.error('[OTP] Evolution API não configurada');
+      await logFailure(supabase, formattedPhone, 'Evolution API não configurada');
       return new Response(
         JSON.stringify({
           success: false,
-          error:
-            'WhatsApp não configurado no sistema. Configure o servidor Evolution API no painel SaaS Admin.',
+          error: 'WhatsApp não configurado. Configure o servidor Evolution API no painel SaaS Admin.',
+          error_code: 'EVOLUTION_NOT_CONFIGURED',
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    let apiUrl = evolutionConfig.value.api_url;
-    let apiKey = evolutionConfig.value.api_key;
+    const globalApiUrl = evolutionConfig.value.api_url;
+    const globalApiKey = evolutionConfig.value.api_key;
 
     // Buscar configuração da instância OTP global
     const { data: otpConfig } = await supabase
@@ -87,139 +276,86 @@ serve(async (req) => {
       .maybeSingle();
 
     let instanceName = otpConfig?.value?.instance_name ?? otpConfig?.value?.instanceName;
-    const otpStatus = otpConfig?.value?.status ?? otpConfig?.value?.connection_status;
+    let apiUrl = globalApiUrl;
+    let apiKey = globalApiKey;
+    let usedFallback = false;
+    let fallbackBarbershopId: string | null = null;
 
-    // Se não há instância OTP configurada, tentar usar instância de barbearia
-    if (!instanceName) {
-      console.log('[Send OTP] Instância OTP global não configurada, buscando instância alternativa...');
+    // Verificar instância OTP global
+    if (instanceName) {
+      instanceName = normalizeInstanceName(instanceName);
+      console.log(`[OTP] Verificando instância OTP global: ${instanceName}`);
 
-      const { data: configs, error: configsError } = await supabase
-        .from('whatsapp_config')
-        .select('config, is_active')
-        .eq('provider', 'evolution');
+      const status = await checkInstanceStatus(apiUrl, apiKey, instanceName);
 
-      if (configsError) {
-        console.error('[Send OTP] Erro ao buscar whatsapp_config:', configsError);
-      }
+      if (!status.exists) {
+        console.log('[OTP] Instância OTP global não existe, atualizando status e buscando fallback...');
+        
+        // Atualizar status no banco
+        await supabase
+          .from('system_config')
+          .update({
+            value: { ...otpConfig?.value, status: 'missing' },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('key', 'otp_whatsapp');
 
-      const validConfig = configs?.find((c) => {
-        const cfg: any = c.config;
-        const inst = cfg?.instance_name ?? cfg?.instanceName;
-        const connected =
-          cfg?.connection_status === 'connected' ||
-          cfg?.status === 'connected' ||
-          cfg?.state === 'open' ||
-          cfg?.connectionState === 'open';
-        return !!inst && (c.is_active === true || connected);
-      });
-
-      if (!validConfig) {
-        console.error('[Send OTP] Nenhuma instância WhatsApp disponível');
-
-        // Logar falha
-        try {
-          await supabase
-            .from('whatsapp_logs')
-            .insert({
-              barbershop_id: null,
-              recipient_phone: formattedPhone,
-              message_content: '[OTP] Falha - Nenhuma instância disponível',
-              status: 'failed',
-              provider: 'evolution',
-              message_type: 'otp',
-              error_message: 'Nenhuma instância WhatsApp disponível'
-            });
-        } catch (logErr) {
-          console.warn('[Send OTP] Erro ao logar falha:', logErr);
-        }
-
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error:
-              'Nenhuma instância WhatsApp disponível. Conecte a instância OTP global no painel SaaS Admin (Configurações > OTP WhatsApp) ou conecte o WhatsApp de alguma barbearia.',
-            details: {
-              otp_instance_configured: !!(otpConfig?.value?.instance_name ?? otpConfig?.value?.instanceName),
-              otp_status: otpStatus || null,
-              configs_found: configs?.length || 0,
-            },
-          }),
-          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const fallbackConfig = validConfig.config as {
-        api_url?: string;
-        api_key?: string;
-        instance_name?: string;
-        instanceName?: string;
-      };
-
-      instanceName = fallbackConfig.instance_name ?? fallbackConfig.instanceName;
-      apiUrl = fallbackConfig.api_url || apiUrl;
-      apiKey = fallbackConfig.api_key || apiKey;
-
-      console.log(`[Send OTP] Usando instância alternativa: ${instanceName}`);
-    } else {
-      if (otpStatus !== 'connected') {
-        console.log(
-          `[Send OTP] Instância OTP global com status "${otpStatus || 'unknown'}"; tentando enviar mesmo assim: ${instanceName}`
-        );
-      } else {
-        console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
-      }
-    }
-
-    // VALIDAR CONEXÃO REAL NO EVOLUTION antes de enviar
-    const connectionCheckUrl = `${apiUrl.replace(/\/+$/, '')}/instance/connectionState/${instanceName}`;
-    console.log(`[Send OTP] Verificando conexão: ${connectionCheckUrl}`);
-
-    try {
-      const connResp = await fetch(connectionCheckUrl, {
-        method: 'GET',
-        headers: { 'apikey': apiKey }
-      });
-
-      if (connResp.ok) {
-        const connData = await connResp.json();
-        const state = connData?.state || connData?.instance?.state;
-        console.log(`[Send OTP] Estado da conexão: ${state}`);
-
-        if (state !== 'open') {
-          // Atualizar status no banco se estava marcado como conectado
-          if (otpStatus === 'connected') {
-            await supabase
-              .from('system_config')
-              .update({
-                value: {
-                  ...otpConfig?.value,
-                  status: 'disconnected'
-                }
-              })
-              .eq('key', 'otp_whatsapp');
-            console.log('[Send OTP] Status OTP atualizado para disconnected no banco');
-          }
-
-          // Logar falha
-          await supabase
-            .from('whatsapp_logs')
-            .insert({
-              barbershop_id: null,
-              recipient_phone: formattedPhone,
-              message_content: '[OTP] Falha - Instância desconectada',
-              status: 'failed',
-              provider: 'evolution',
-              message_type: 'otp',
-              error_message: `Instância ${instanceName} não está conectada (state: ${state})`
-            });
-
+        // Buscar fallback
+        const fallback = await findFallbackInstance(supabase, globalApiUrl, globalApiKey);
+        
+        if (fallback) {
+          instanceName = fallback.instanceName;
+          apiUrl = fallback.apiUrl;
+          apiKey = fallback.apiKey;
+          usedFallback = true;
+          fallbackBarbershopId = fallback.barbershopId;
+        } else {
+          await logFailure(supabase, formattedPhone, 'Instância OTP não existe e nenhum fallback disponível', instanceName);
           return new Response(
             JSON.stringify({
               success: false,
-              error: `Instância WhatsApp desconectada. Reconecte no SaaS Admin → OTP WhatsApp.`,
+              error: 'Instância WhatsApp OTP não encontrada. Reconecte no SaaS Admin → OTP WhatsApp ou configure o WhatsApp de uma barbearia.',
+              error_code: 'OTP_INSTANCE_MISSING',
               details: {
                 instanceName,
-                state,
+                apiUrl: apiUrl.replace(/\/+$/, ''),
+                hint: 'Recrie ou reconecte a instância OTP no painel SaaS Admin'
+              }
+            }),
+            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else if (!status.connected) {
+        console.log(`[OTP] Instância OTP global desconectada (state: ${status.state}), buscando fallback...`);
+        
+        // Atualizar status no banco
+        await supabase
+          .from('system_config')
+          .update({
+            value: { ...otpConfig?.value, status: 'disconnected' },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('key', 'otp_whatsapp');
+
+        // Buscar fallback
+        const fallback = await findFallbackInstance(supabase, globalApiUrl, globalApiKey);
+        
+        if (fallback) {
+          instanceName = fallback.instanceName;
+          apiUrl = fallback.apiUrl;
+          apiKey = fallback.apiKey;
+          usedFallback = true;
+          fallbackBarbershopId = fallback.barbershopId;
+        } else {
+          await logFailure(supabase, formattedPhone, `Instância desconectada (state: ${status.state}) e nenhum fallback`, instanceName);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: 'WhatsApp OTP desconectado. Reconecte escaneando o QR Code no SaaS Admin.',
+              error_code: 'OTP_INSTANCE_DISCONNECTED',
+              details: {
+                instanceName,
+                state: status.state,
                 apiUrl: apiUrl.replace(/\/+$/, ''),
               }
             }),
@@ -227,11 +363,38 @@ serve(async (req) => {
           );
         }
       } else {
-        console.warn(`[Send OTP] Não foi possível verificar conexão (status ${connResp.status}), tentando enviar mesmo assim`);
+        console.log(`[OTP] Instância OTP global OK: ${instanceName} (state: ${status.state})`);
       }
-    } catch (connErr) {
-      console.warn('[Send OTP] Erro ao verificar conexão, tentando enviar mesmo assim:', connErr);
+    } else {
+      // Não há instância OTP configurada, buscar fallback
+      console.log('[OTP] Nenhuma instância OTP configurada, buscando fallback...');
+      
+      const fallback = await findFallbackInstance(supabase, globalApiUrl, globalApiKey);
+      
+      if (fallback) {
+        instanceName = fallback.instanceName;
+        apiUrl = fallback.apiUrl;
+        apiKey = fallback.apiKey;
+        usedFallback = true;
+        fallbackBarbershopId = fallback.barbershopId;
+      } else {
+        await logFailure(supabase, formattedPhone, 'Nenhuma instância OTP configurada e nenhum fallback disponível');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Nenhuma instância WhatsApp disponível. Configure a instância OTP global ou conecte o WhatsApp de uma barbearia.',
+            error_code: 'NO_AVAILABLE_INSTANCE',
+            details: {
+              otpConfigured: false,
+              fallbacksChecked: true,
+            }
+          }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
+
+    console.log(`[OTP] Usando instância: ${instanceName}${usedFallback ? ' (FALLBACK)' : ''}`);
 
     // Invalidar códigos anteriores não verificados
     await supabase
@@ -258,9 +421,13 @@ serve(async (req) => {
       });
 
     if (insertError) {
-      console.error('[Send OTP] Erro ao salvar código:', insertError);
+      console.error('[OTP] Erro ao salvar código:', insertError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Erro ao gerar código de verificação' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Erro ao gerar código de verificação',
+          error_code: 'DB_INSERT_ERROR'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -271,24 +438,23 @@ serve(async (req) => {
     // Enviar via Evolution API
     const evolutionUrl = `${apiUrl.replace(/\/+$/, '')}/message/sendText/${instanceName}`;
 
-    console.log(`[Send OTP] Chamando Evolution API: ${evolutionUrl}`);
+    console.log(`[OTP] Enviando para Evolution: ${evolutionUrl}`);
 
     const response = await fetch(evolutionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': apiKey
+        'apikey': apiKey,
       },
       body: JSON.stringify({
         number: formattedPhone,
-        text: message
-      })
+        text: message,
+      }),
     });
 
-    // Handle response - may be JSON or text/HTML
     const responseText = await response.text();
     let responseData: any = null;
-    
+
     try {
       responseData = JSON.parse(responseText);
     } catch {
@@ -296,81 +462,66 @@ serve(async (req) => {
     }
 
     if (!response.ok) {
-      console.error('[Send OTP] Erro ao enviar WhatsApp:', { status: response.status, responseData });
-      
-      // Delete the OTP record since sending failed (avoid rate limit issues)
+      console.error('[OTP] Erro ao enviar WhatsApp:', { status: response.status, responseData });
+
+      // Deletar o código OTP já que falhou
       await supabase
         .from('auth_otp_codes')
         .delete()
         .eq('phone', formattedPhone)
         .eq('code', code);
-      
-      console.log('[Send OTP] OTP deletado após falha de envio');
 
       const errorMessage = responseData?.error || responseData?.message || responseData?.raw || 'Erro ao enviar código via WhatsApp';
       
-      // Logar falha no whatsapp_logs
-      try {
-        await supabase
-          .from('whatsapp_logs')
-          .insert({
-            barbershop_id: null,
-            recipient_phone: formattedPhone,
-            message_content: '[OTP] Falha ao enviar',
-            status: 'failed',
-            provider: 'evolution',
-            message_type: 'otp',
-            error_message: errorMessage
-          });
-      } catch (logErr) {
-        console.warn('[Send OTP] Erro ao logar falha:', logErr);
+      await logFailure(supabase, formattedPhone, errorMessage, instanceName, usedFallback);
+
+      // Determinar código de erro apropriado
+      let errorCode = 'EVOLUTION_SEND_ERROR';
+      if (errorMessage.includes('not found') || errorMessage.includes('não encontrada') || errorMessage.includes('Nenhuma instância')) {
+        errorCode = 'INSTANCE_NOT_FOUND_ON_SEND';
       }
-      
+
       return new Response(
         JSON.stringify({
           success: false,
           error: errorMessage,
+          error_code: errorCode,
           details: {
-            status: response.status,
+            httpStatus: response.status,
             endpoint: evolutionUrl,
             instanceName,
+            usedFallback,
           }
         }),
-        { status: response.status >= 400 && response.status < 500 ? 400 : 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[Send OTP] Código enviado com sucesso para: ${formattedPhone}`);
+    console.log(`[OTP] ✓ Código enviado com sucesso para: ${formattedPhone}`);
 
-    // Log the OTP attempt in whatsapp_logs
-    try {
-      await supabase
-        .from('whatsapp_logs')
-        .insert({
-          barbershop_id: null,
-          recipient_phone: formattedPhone,
-          message_content: '[OTP] Código de verificação enviado',
-          status: 'sent',
-          provider: 'evolution',
-          message_type: 'otp'
-        });
-    } catch (logError) {
-      console.warn('[Send OTP] Erro ao registrar log (não crítico):', logError);
-    }
+    await logSuccess(supabase, formattedPhone, instanceName, usedFallback);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: 'Código enviado via WhatsApp',
-        expiresAt
+        expiresAt,
+        meta: {
+          usedFallback,
+          instanceName,
+        }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
-    console.error('[Send OTP] Erro:', error);
+  } catch (error: any) {
+    console.error('[OTP] Erro não tratado:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || 'Erro interno do servidor',
+        error_code: 'INTERNAL_ERROR'
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
