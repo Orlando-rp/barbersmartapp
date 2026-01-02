@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.send-recurring-reminders]
 verify_jwt = false
+
+[functions.otp-status-monitor]
+verify_jwt = false
