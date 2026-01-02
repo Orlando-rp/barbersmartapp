@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { PlanSelectionStep } from '@/components/auth/PlanSelectionStep';
+import { WhatsAppDiagnostic } from '@/components/auth/WhatsAppDiagnostic';
 
 interface SocialProviders {
   google: { enabled: boolean };
@@ -2144,6 +2145,9 @@ const Auth = () => {
               )}
             </TabsContent>
           </Tabs>
+          
+          {/* Diagnóstico WhatsApp - apenas para admins */}
+          <WhatsAppDiagnostic />
         </CardContent>
       </Card>
     </div>
