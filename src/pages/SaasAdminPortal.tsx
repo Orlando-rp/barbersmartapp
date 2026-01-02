@@ -85,6 +85,7 @@ import { SocialAuthConfig } from "@/components/saas/SocialAuthConfig";
 import { BrandingConfig } from "@/components/saas/BrandingConfig";
 import DomainsManagement from "@/components/saas/DomainsManagement";
 import { GlobalPaymentConfig } from "@/components/saas/GlobalPaymentConfig";
+import GlobalSmtpConfig from "@/components/saas/GlobalSmtpConfig";
 import { PlanFeaturesSelector, defaultPlanFeatures, featuresToStringArray, stringArrayToFeatures, type PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import { PlanCardPreview } from "@/components/saas/PlanCardPreview";
 import { ReleaseNotes } from "@/components/saas/ReleaseNotes";
@@ -1526,6 +1527,13 @@ const SaasAdminPortal = () => {
                   💳 Gateways de Pagamento
                 </h2>
                 <GlobalPaymentConfig />
+              </div>
+
+              <div className="border-t border-border pt-6 sm:pt-8">
+                <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
+                  📧 Servidor de Email (SMTP)
+                </h2>
+                <GlobalSmtpConfig />
               </div>
             </div>
           </TabsContent>

@@ -1,10 +1,10 @@
 // Edge Function: send-recovery-email
-// Version: 1.0.1 - Force redeploy for custom branding emails
+// Version: 2.0.0 - Now uses custom SMTP from admin panel
 // Last updated: 2026-01-02
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +21,17 @@ interface TenantBranding {
   logo_url: string | null;
   primary_color: string;
   secondary_color: string;
+}
+
+interface SmtpConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from_email: string;
+  from_name: string;
 }
 
 // Generate recovery email HTML with tenant branding
@@ -129,6 +140,36 @@ function generateToken(): string {
   return token;
 }
 
+// Send email via custom SMTP
+async function sendViaSmtp(smtpConfig: SmtpConfig, to: string, subject: string, html: string): Promise<void> {
+  console.log(`[SMTP] Connecting to ${smtpConfig.host}:${smtpConfig.port} (secure: ${smtpConfig.secure})`);
+  
+  const client = new SMTPClient({
+    connection: {
+      hostname: smtpConfig.host,
+      port: smtpConfig.port,
+      tls: smtpConfig.secure,
+      auth: {
+        username: smtpConfig.user,
+        password: smtpConfig.pass,
+      },
+    },
+  });
+
+  try {
+    await client.send({
+      from: `${smtpConfig.from_name} <${smtpConfig.from_email}>`,
+      to: to,
+      subject: subject,
+      content: "auto",
+      html: html,
+    });
+    console.log('[SMTP] Email sent successfully');
+  } finally {
+    await client.close();
+  }
+}
+
 serve(async (req) => {
   console.log("send-recovery-email: Request received", { method: req.method });
 
@@ -140,7 +181,7 @@ serve(async (req) => {
   // Health check endpoint
   if (req.method === "GET") {
     return new Response(
-      JSON.stringify({ status: "ok", function: "send-recovery-email" }),
+      JSON.stringify({ status: "ok", function: "send-recovery-email", version: "2.0.0" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
@@ -157,21 +198,38 @@ serve(async (req) => {
       );
     }
 
-    // Initialize clients
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured");
+    // Get SMTP config from system_config table
+    const { data: smtpConfigData, error: smtpConfigError } = await supabase
+      .from("system_config")
+      .select("value")
+      .eq("key", "smtp_config")
+      .maybeSingle();
+
+    const smtpConfig: SmtpConfig | null = smtpConfigData?.value;
+    
+    if (!smtpConfig || !smtpConfig.enabled) {
+      console.error("SMTP not configured or disabled in admin panel");
       return new Response(
-        JSON.stringify({ success: false, error: "Serviço de email não configurado" }),
+        JSON.stringify({ 
+          success: false, 
+          error: "Servidor de email não configurado. Configure nas integrações do painel administrativo." 
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const resend = new Resend(resendApiKey);
+    if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass || !smtpConfig.from_email) {
+      console.error("SMTP config incomplete");
+      return new Response(
+        JSON.stringify({ success: false, error: "Configuração SMTP incompleta" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Find user by email in auth.users
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
@@ -199,9 +257,9 @@ serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    // Default branding (BarberSmart)
+    // Default branding (use from_name as system name)
     let branding: TenantBranding = {
-      system_name: "BarberSmart",
+      system_name: smtpConfig.from_name || "BarberSmart",
       logo_url: null,
       primary_color: "#d4a574",
       secondary_color: "#1a1a2e"
@@ -320,21 +378,30 @@ serve(async (req) => {
 
     // Generate email HTML
     const emailHtml = generateEmailHtml(branding, resetLink);
+    const subject = `🔐 Redefinir sua senha - ${branding.system_name}`;
 
-    // Send email via Resend
-    const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: `${branding.system_name} <onboarding@resend.dev>`,
-      to: [email],
-      subject: `🔐 Redefinir sua senha - ${branding.system_name}`,
-      html: emailHtml
-    });
-
-    if (emailError) {
-      console.error("Error sending email:", emailError);
-      throw new Error("Erro ao enviar email");
+    // Send via SMTP
+    try {
+      await sendViaSmtp(smtpConfig, email, subject, emailHtml);
+      console.log("Recovery email sent successfully via SMTP");
+    } catch (smtpError: any) {
+      console.error("SMTP send error:", smtpError);
+      
+      // Parse error message for user
+      let userError = "Erro ao enviar email";
+      if (smtpError.message?.includes("authentication")) {
+        userError = "Falha na autenticação SMTP. Verifique as credenciais.";
+      } else if (smtpError.message?.includes("ECONNREFUSED")) {
+        userError = "Não foi possível conectar ao servidor SMTP.";
+      } else if (smtpError.message?.includes("timeout")) {
+        userError = "Timeout ao conectar ao servidor SMTP.";
+      }
+      
+      return new Response(
+        JSON.stringify({ success: false, error: userError }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-
-    console.log("Recovery email sent successfully:", emailResult?.id);
 
     return new Response(
       JSON.stringify({ success: true, message: "Email de recuperação enviado" }),
