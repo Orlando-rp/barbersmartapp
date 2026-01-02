@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaffAvatar } from "@/components/ui/smart-avatar";
-import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin, Wallet, CreditCard, CheckCircle2, Banknote, QrCode } from "lucide-react";
+import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin, Wallet, CreditCard, CheckCircle2, Banknote, QrCode, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ import { ptBR } from "date-fns/locale";
 import { AppointmentsSkeleton } from "@/components/skeletons";
 import { IllustratedEmptyState } from "@/components/ui/illustrated-empty-state";
 import { PullToRefreshContainer } from "@/components/ui/pull-to-refresh";
+import { RecurrenceBadge, RecurrenceActionDialog, RecurrenceActionScope } from "@/components/booking";
 
 interface Appointment {
   id: string;
@@ -44,6 +45,12 @@ interface Appointment {
     name: string;
     avatar_url: string | null;
   } | null;
+  // Recurrence fields
+  is_recurring?: boolean;
+  recurrence_group_id?: string | null;
+  recurrence_rule?: string | null;
+  recurrence_index?: number | null;
+  original_date?: string | null;
 }
 
 const statusConfig = {
@@ -98,6 +105,12 @@ const Appointments = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cash' | 'card' | 'pix'>('cash');
   const [appointmentToPay, setAppointmentToPay] = useState<Appointment | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
+  // Recurrence cancellation state
+  const [recurrenceActionOpen, setRecurrenceActionOpen] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
+  const [seriesCount, setSeriesCount] = useState<number>(0);
+  const [isCancellingRecurrence, setIsCancellingRecurrence] = useState(false);
   
   // Map barbershop IDs to names for quick lookup
   const barbershopNamesMap = new Map(barbershops.map(b => [b.id, b.name]));
@@ -196,7 +209,7 @@ const Appointments = () => {
     try {
       setLoading(true);
       
-      // Fetch appointments
+      // Fetch appointments including recurrence fields
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select(`
@@ -214,7 +227,12 @@ const Appointments = () => {
           barbershop_id,
           payment_status,
           payment_method_chosen,
-          payment_amount
+          payment_amount,
+          is_recurring,
+          recurrence_group_id,
+          recurrence_rule,
+          recurrence_index,
+          original_date
         `)
         .in('barbershop_id', activeBarbershopIds)
         .order('appointment_date', { ascending: true })
@@ -226,6 +244,15 @@ const Appointments = () => {
         setAppointments([]);
         return;
       }
+
+      // Calculate total in series for each recurrence group
+      const recurrenceGroupCounts = new Map<string, number>();
+      appointmentsData.forEach(apt => {
+        if (apt.recurrence_group_id) {
+          const current = recurrenceGroupCounts.get(apt.recurrence_group_id) || 0;
+          recurrenceGroupCounts.set(apt.recurrence_group_id, current + 1);
+        }
+      });
 
       // Get unique staff IDs
       const staffIds = [...new Set(appointmentsData.map(a => a.staff_id).filter(Boolean))];
@@ -270,17 +297,21 @@ const Appointments = () => {
         }
       });
 
-      // Transform appointments with staff names, avatars and barbershop names
+      // Transform appointments with staff names, avatars, barbershop names and recurrence info
       const transformedData = appointmentsData.map(apt => {
         const staffInfo = apt.staff_id ? staffLookupMap.get(apt.staff_id) : null;
         const staffName = staffInfo?.name || 'Nome não disponível';
         const staffAvatarUrl = staffInfo?.avatar_url || null;
+        const totalInSeries = apt.recurrence_group_id 
+          ? recurrenceGroupCounts.get(apt.recurrence_group_id) 
+          : undefined;
         return {
           ...apt,
           staff_name: apt.staff_id ? staffName : null,
           staff_avatar_url: staffAvatarUrl,
           staff: apt.staff_id ? { name: staffName, avatar_url: staffAvatarUrl } : null,
-          barbershop_name: barbershopNamesMap.get(apt.barbershop_id) || null
+          barbershop_name: barbershopNamesMap.get(apt.barbershop_id) || null,
+          totalInSeries
         };
       });
       
@@ -615,6 +646,85 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
     }
   };
 
+  // Handle cancel click - check if recurring
+  const handleCancelClick = async (appointment: Appointment) => {
+    if (appointment.is_recurring && appointment.recurrence_group_id) {
+      // Fetch total in series for dialog
+      const { count } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('recurrence_group_id', appointment.recurrence_group_id)
+        .neq('status', 'cancelado');
+      
+      setSeriesCount(count || 0);
+      setAppointmentToCancel(appointment);
+      setRecurrenceActionOpen(true);
+    } else {
+      // Direct cancel for non-recurring
+      updateStatus(appointment.id, 'cancelado');
+    }
+  };
+
+  // Handle recurrence action confirmation
+  const handleRecurrenceCancel = async (scope: RecurrenceActionScope) => {
+    if (!appointmentToCancel) return;
+    
+    setIsCancellingRecurrence(true);
+    try {
+      if (scope === 'single') {
+        // Cancel only this appointment
+        await updateStatus(appointmentToCancel.id, 'cancelado');
+      } else if (scope === 'future') {
+        // Cancel this and all future in series
+        const { error } = await supabase
+          .from('appointments')
+          .update({ status: 'cancelado' })
+          .eq('recurrence_group_id', appointmentToCancel.recurrence_group_id)
+          .gte('appointment_date', appointmentToCancel.appointment_date)
+          .neq('status', 'cancelado');
+        
+        if (error) throw error;
+        
+        toast({
+          title: 'Agendamentos cancelados',
+          description: 'Este e os próximos agendamentos da série foram cancelados.',
+        });
+        
+        // Send notification for the current one
+        sendWhatsAppNotification(appointmentToCancel, 'cancelled');
+        fetchAppointments();
+      } else if (scope === 'all') {
+        // Cancel all in series
+        const { error } = await supabase
+          .from('appointments')
+          .update({ status: 'cancelado' })
+          .eq('recurrence_group_id', appointmentToCancel.recurrence_group_id)
+          .neq('status', 'cancelado');
+        
+        if (error) throw error;
+        
+        toast({
+          title: 'Série cancelada',
+          description: 'Todos os agendamentos da série foram cancelados.',
+        });
+        
+        // Send notification for the current one
+        sendWhatsAppNotification(appointmentToCancel, 'cancelled');
+        fetchAppointments();
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao cancelar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCancellingRecurrence(false);
+      setRecurrenceActionOpen(false);
+      setAppointmentToCancel(null);
+    }
+  };
+
   // Pull to refresh callback
   const handleRefresh = useCallback(async () => {
     await fetchAppointments();
@@ -751,7 +861,16 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                             <span>{appointment.client_phone}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {appointment.is_recurring && appointment.recurrence_index !== null && (
+                            <RecurrenceBadge
+                              recurrenceIndex={appointment.recurrence_index}
+                              totalInSeries={(appointment as any).totalInSeries}
+                              recurrenceRule={appointment.recurrence_rule || undefined}
+                              isRescheduled={appointment.original_date !== null && appointment.original_date !== appointment.appointment_date}
+                              className="text-[10px]"
+                            />
+                          )}
                           <Badge 
                             variant={statusConfig[appointment.status as keyof typeof statusConfig].variant}
                             className="text-[10px] md:text-xs flex-shrink-0"
@@ -839,6 +958,17 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                           <CheckCircle2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                           <span className="hidden md:inline">Marcar Pago</span>
                           <span className="md:hidden">Pago</span>
+                        </Button>
+                      )}
+                      {appointment.status !== 'cancelado' && appointment.status !== 'concluido' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCancelClick(appointment)}
+                          className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                          Cancelar
                         </Button>
                       )}
                       <Select
@@ -941,6 +1071,16 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de ação para agendamentos recorrentes */}
+      <RecurrenceActionDialog
+        open={recurrenceActionOpen}
+        onOpenChange={setRecurrenceActionOpen}
+        action="cancel"
+        currentIndex={appointmentToCancel?.recurrence_index ?? 0}
+        totalInSeries={seriesCount}
+        onConfirm={handleRecurrenceCancel}
+      />
     </PullToRefreshContainer>
   );
 };
