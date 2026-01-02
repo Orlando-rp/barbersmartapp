@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, ReactNode } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { ProtectedRoute, AdminRoute, SuperAdminRoute } from '../ProtectedRoute';
 import { ClientProtectedRoute } from '../client/ClientProtectedRoute';
 import { PageLoader } from '../ui/page-loader';
 import { PageTransition } from './PageTransition';
+import Layout from './Layout';
 import { Button } from '../ui/button';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
@@ -91,6 +92,27 @@ const ClientProfile = lazy(() => import("../../pages/client/ClientProfile"));
 const ClientNotifications = lazy(() => import("../../pages/client/ClientNotifications"));
 const ClientReviews = lazy(() => import("../../pages/client/ClientReviews"));
 
+// Wrapper components that keep Layout static during navigation
+const ProtectedLayoutRoute = ({ children }: { children: ReactNode }) => (
+  <ProtectedRoute>
+    <Layout>
+      <PageTransition>
+        {children}
+      </PageTransition>
+    </Layout>
+  </ProtectedRoute>
+);
+
+const AdminLayoutRoute = ({ children }: { children: ReactNode }) => (
+  <AdminRoute>
+    <Layout>
+      <PageTransition>
+        {children}
+      </PageTransition>
+    </Layout>
+  </AdminRoute>
+);
+
 export const AnimatedRoutes = () => {
   const location = useLocation();
 
@@ -122,39 +144,39 @@ export const AnimatedRoutes = () => {
           <Route path="/cliente/notificacoes" element={<ClientProtectedRoute><PageTransition><ClientNotifications /></PageTransition></ClientProtectedRoute>} />
           <Route path="/cliente/avaliacoes" element={<ClientProtectedRoute><PageTransition><ClientReviews /></PageTransition></ClientProtectedRoute>} />
           
-          {/* Protected Routes */}
-          <Route path="/dashboard" element={<ProtectedRoute><PageTransition><Index /></PageTransition></ProtectedRoute>} />
-          <Route path="/debug" element={<ProtectedRoute><PageTransition><Debug /></PageTransition></ProtectedRoute>} />
-          <Route path="/appointments" element={<ProtectedRoute><PageTransition><Appointments /></PageTransition></ProtectedRoute>} />
-          <Route path="/clients" element={<ProtectedRoute><PageTransition><Clients /></PageTransition></ProtectedRoute>} />
-          <Route path="/services" element={<ProtectedRoute><PageTransition><Services /></PageTransition></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><PageTransition><Profile /></PageTransition></ProtectedRoute>} />
-          <Route path="/meus-ganhos" element={<ProtectedRoute><PageTransition><MyEarnings /></PageTransition></ProtectedRoute>} />
-          <Route path="/waitlist" element={<ProtectedRoute><PageTransition><Waitlist /></PageTransition></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><PageTransition><SettingsPage /></PageTransition></ProtectedRoute>} />
-          <Route path="/client-history/:clientId" element={<ProtectedRoute><PageTransition><ClientHistory /></PageTransition></ProtectedRoute>} />
+          {/* Protected Routes with Layout */}
+          <Route path="/dashboard" element={<ProtectedLayoutRoute><Index /></ProtectedLayoutRoute>} />
+          <Route path="/debug" element={<ProtectedLayoutRoute><Debug /></ProtectedLayoutRoute>} />
+          <Route path="/appointments" element={<ProtectedLayoutRoute><Appointments /></ProtectedLayoutRoute>} />
+          <Route path="/clients" element={<ProtectedLayoutRoute><Clients /></ProtectedLayoutRoute>} />
+          <Route path="/services" element={<ProtectedLayoutRoute><Services /></ProtectedLayoutRoute>} />
+          <Route path="/profile" element={<ProtectedLayoutRoute><Profile /></ProtectedLayoutRoute>} />
+          <Route path="/meus-ganhos" element={<ProtectedLayoutRoute><MyEarnings /></ProtectedLayoutRoute>} />
+          <Route path="/waitlist" element={<ProtectedLayoutRoute><Waitlist /></ProtectedLayoutRoute>} />
+          <Route path="/settings" element={<ProtectedLayoutRoute><SettingsPage /></ProtectedLayoutRoute>} />
+          <Route path="/client-history/:clientId" element={<ProtectedLayoutRoute><ClientHistory /></ProtectedLayoutRoute>} />
           
-          {/* Admin Only Routes */}
-          <Route path="/staff" element={<AdminRoute><PageTransition><Staff /></PageTransition></AdminRoute>} />
-          <Route path="/finance" element={<AdminRoute><PageTransition><Finance /></PageTransition></AdminRoute>} />
-          <Route path="/reports" element={<AdminRoute><PageTransition><Reports /></PageTransition></AdminRoute>} />
-          <Route path="/marketing" element={<AdminRoute><PageTransition><Marketing /></PageTransition></AdminRoute>} />
-          <Route path="/business-hours" element={<AdminRoute><PageTransition><BusinessHours /></PageTransition></AdminRoute>} />
-          <Route path="/reviews" element={<AdminRoute><PageTransition><Reviews /></PageTransition></AdminRoute>} />
-          <Route path="/whatsapp" element={<AdminRoute><PageTransition><WhatsAppSettings /></PageTransition></AdminRoute>} />
-          <Route path="/whatsapp-chat" element={<AdminRoute><PageTransition><WhatsAppChat /></PageTransition></AdminRoute>} />
-          <Route path="/chatbot" element={<AdminRoute><PageTransition><ChatbotSettings /></PageTransition></AdminRoute>} />
-          <Route path="/audit" element={<AdminRoute><PageTransition><AuditLogs /></PageTransition></AdminRoute>} />
-          <Route path="/multi-unit" element={<AdminRoute><PageTransition><MultiUnitDashboard /></PageTransition></AdminRoute>} />
-          <Route path="/staff-multi-unit" element={<AdminRoute><PageTransition><StaffMultiUnit /></PageTransition></AdminRoute>} />
-          <Route path="/multi-unit-reports" element={<AdminRoute><PageTransition><MultiUnitReports /></PageTransition></AdminRoute>} />
-          <Route path="/barbershops" element={<AdminRoute><PageTransition><Barbershops /></PageTransition></AdminRoute>} />
-          <Route path="/upgrade" element={<AdminRoute><PageTransition><UpgradePlans /></PageTransition></AdminRoute>} />
+          {/* Admin Only Routes with Layout */}
+          <Route path="/staff" element={<AdminLayoutRoute><Staff /></AdminLayoutRoute>} />
+          <Route path="/finance" element={<AdminLayoutRoute><Finance /></AdminLayoutRoute>} />
+          <Route path="/reports" element={<AdminLayoutRoute><Reports /></AdminLayoutRoute>} />
+          <Route path="/marketing" element={<AdminLayoutRoute><Marketing /></AdminLayoutRoute>} />
+          <Route path="/business-hours" element={<AdminLayoutRoute><BusinessHours /></AdminLayoutRoute>} />
+          <Route path="/reviews" element={<AdminLayoutRoute><Reviews /></AdminLayoutRoute>} />
+          <Route path="/whatsapp" element={<AdminLayoutRoute><WhatsAppSettings /></AdminLayoutRoute>} />
+          <Route path="/whatsapp-chat" element={<AdminLayoutRoute><WhatsAppChat /></AdminLayoutRoute>} />
+          <Route path="/chatbot" element={<AdminLayoutRoute><ChatbotSettings /></AdminLayoutRoute>} />
+          <Route path="/audit" element={<AdminLayoutRoute><AuditLogs /></AdminLayoutRoute>} />
+          <Route path="/multi-unit" element={<AdminLayoutRoute><MultiUnitDashboard /></AdminLayoutRoute>} />
+          <Route path="/staff-multi-unit" element={<AdminLayoutRoute><StaffMultiUnit /></AdminLayoutRoute>} />
+          <Route path="/multi-unit-reports" element={<AdminLayoutRoute><MultiUnitReports /></AdminLayoutRoute>} />
+          <Route path="/barbershops" element={<AdminLayoutRoute><Barbershops /></AdminLayoutRoute>} />
+          <Route path="/upgrade" element={<AdminLayoutRoute><UpgradePlans /></AdminLayoutRoute>} />
           <Route path="/subscription/checkout" element={<ProtectedRoute><PageTransition><SubscriptionCheckout /></PageTransition></ProtectedRoute>} />
           <Route path="/subscription/success" element={<PageTransition><SubscriptionSuccess /></PageTransition>} />
-          <Route path="/subscription/manage" element={<ProtectedRoute><PageTransition><SubscriptionManagement /></PageTransition></ProtectedRoute>} />
+          <Route path="/subscription/manage" element={<ProtectedLayoutRoute><SubscriptionManagement /></ProtectedLayoutRoute>} />
           
-          {/* Super Admin Only Routes */}
+          {/* Super Admin Only Routes - SaasAdminPortal uses its own SaasAdminLayout */}
           <Route path="/saas-admin" element={<SuperAdminRoute><PageTransition><SaasAdminPortal /></PageTransition></SuperAdminRoute>} />
           
           {/* Catch-all */}

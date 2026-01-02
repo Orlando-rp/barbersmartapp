@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import Layout from "@/components/layout/Layout";
 import { ClientDialog } from "@/components/dialogs/ClientDialog";
 import { ClientImportDialog } from "@/components/dialogs/ClientImportDialog";
 import { Button } from "@/components/ui/button";
@@ -315,17 +314,12 @@ const Clients = () => {
   };
 
   if (loading) {
-    return (
-      <Layout>
-        <ClientsSkeleton />
-      </Layout>
-    );
+    return <ClientsSkeleton />;
   }
 
   return (
-    <Layout>
-      <PullToRefreshContainer onRefresh={handleRefresh} disabled={loading}>
-        <div className="space-y-4 md:space-y-6">
+    <PullToRefreshContainer onRefresh={handleRefresh} disabled={loading}>
+      <div className="space-y-4 md:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -721,9 +715,8 @@ const Clients = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        </div>
-      </PullToRefreshContainer>
-    </Layout>
+      </div>
+    </PullToRefreshContainer>
   );
 };
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, CheckCircle, XCircle, UserPlus, User, Building2 } from "lucide-react";
 import { StaffAvatar } from "@/components/ui/smart-avatar";
@@ -433,7 +432,7 @@ const Staff = () => {
   };
 
   return (
-    <Layout>
+    <div className="space-y-6">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
@@ -703,7 +702,7 @@ const Staff = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </Layout>
+    </div>
   );
 };
 
