@@ -1,13 +1,20 @@
+// Edge Function: uptime-monitor
+// Version: 2.0.0 - Now uses custom SMTP from admin panel
+// Last updated: 2026-01-02
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 /**
  * BarberSmart Uptime Monitor
  * 
  * Verifica endpoints de saúde e envia alertas via Email/WhatsApp quando detecta problemas.
  * 
- * Secrets necessários:
- * - RESEND_API_KEY: API key do Resend para envio de emails
+ * Configuração via system_config table:
+ * - smtp_config: Configuração SMTP para envio de emails
+ * 
+ * Secrets opcionais (legacy):
  * - ALERT_EMAIL: Email(s) para receber alertas (separados por vírgula)
  * - ALERT_WHATSAPP: Telefone(s) para alertas WhatsApp (opcional)
  * - MAIN_DOMAIN: Domínio principal para monitorar (ex: barbersmart.app)
@@ -19,6 +26,17 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+interface SmtpConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from_email: string;
+  from_name: string;
+}
 
 interface HealthCheckResult {
   endpoint: string;
@@ -36,8 +54,8 @@ interface MonitorConfig {
     expectedStatus: number;
     timeout: number;
   }>;
-  alertThreshold: number; // Número de falhas consecutivas antes de alertar
-  cooldownMinutes: number; // Minutos entre alertas para o mesmo endpoint
+  alertThreshold: number;
+  cooldownMinutes: number;
 }
 
 // Configuração padrão dos endpoints a monitorar
@@ -82,32 +100,39 @@ async function checkEndpoint(
       method: "GET",
       signal: controller.signal,
       headers: {
-        "User-Agent": "BarberSmart-UptimeMonitor/1.0",
+        "User-Agent": "BarberSmart-UptimeMonitor/2.0",
       },
     });
 
     clearTimeout(timeoutId);
-    const responseTime = Date.now() - startTime;
 
-    // Determinar status baseado no código e tempo de resposta
+    const responseTime = Date.now() - startTime;
+    const statusCode = response.status;
+
+    // Determinar status
     let status: "healthy" | "degraded" | "down";
-    if (response.status === endpoint.expectedStatus) {
-      status = responseTime > 5000 ? "degraded" : "healthy";
-    } else if (response.status >= 500) {
-      status = "down";
-    } else {
+    if (statusCode === endpoint.expectedStatus) {
+      if (responseTime > 3000) {
+        status = "degraded";
+      } else {
+        status = "healthy";
+      }
+    } else if (statusCode >= 200 && statusCode < 400) {
       status = "degraded";
+    } else {
+      status = "down";
     }
 
     return {
       endpoint: endpoint.name,
       status,
       responseTime,
-      statusCode: response.status,
+      statusCode,
       timestamp,
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
+
     return {
       endpoint: endpoint.name,
       status: "down",
@@ -119,21 +144,60 @@ async function checkEndpoint(
   }
 }
 
-async function sendEmailAlert(
-  results: HealthCheckResult[],
-  alertEmail: string,
-  resendApiKey: string
+async function sendViaSmtp(
+  smtpConfig: SmtpConfig, 
+  to: string[], 
+  subject: string, 
+  html: string
 ): Promise<boolean> {
+  console.log(`[SMTP] Sending alert to ${to.join(', ')}`);
+  
+  const client = new SMTPClient({
+    connection: {
+      hostname: smtpConfig.host,
+      port: smtpConfig.port,
+      tls: smtpConfig.secure,
+      auth: {
+        username: smtpConfig.user,
+        password: smtpConfig.pass,
+      },
+    },
+  });
+
+  try {
+    for (const recipient of to) {
+      await client.send({
+        from: `${smtpConfig.from_name} Monitor <${smtpConfig.from_email}>`,
+        to: recipient,
+        subject: subject,
+        content: "auto",
+        html: html,
+      });
+      console.log(`[SMTP] Alert sent to ${recipient}`);
+    }
+    return true;
+  } catch (error: any) {
+    console.error("[SMTP] Error sending alert:", error);
+    return false;
+  } finally {
+    try {
+      await client.close();
+    } catch (e) {
+      // Ignore close errors
+    }
+  }
+}
+
+function generateAlertEmailHtml(
+  results: HealthCheckResult[],
+  systemName: string
+): { subject: string; html: string } {
   const downEndpoints = results.filter((r) => r.status === "down");
   const degradedEndpoints = results.filter((r) => r.status === "degraded");
 
-  if (downEndpoints.length === 0 && degradedEndpoints.length === 0) {
-    return true;
-  }
-
   const subject = downEndpoints.length > 0
-    ? `🚨 ALERTA: ${downEndpoints.length} serviço(s) OFFLINE - BarberSmart`
-    : `⚠️ AVISO: ${degradedEndpoints.length} serviço(s) com lentidão - BarberSmart`;
+    ? `🚨 ALERTA: ${downEndpoints.length} serviço(s) OFFLINE - ${systemName}`
+    : `⚠️ AVISO: ${degradedEndpoints.length} serviço(s) com lentidão - ${systemName}`;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -156,7 +220,7 @@ async function sendEmailAlert(
       <div class="container">
         <div class="header">
           <h1 style="margin:0;">${downEndpoints.length > 0 ? "🚨 Sistema OFFLINE" : "⚠️ Lentidão Detectada"}</h1>
-          <p style="margin:10px 0 0;">BarberSmart Uptime Monitor</p>
+          <p style="margin:10px 0 0;">${systemName} Uptime Monitor</p>
         </div>
         <div class="content">
           ${downEndpoints.length > 0 ? `
@@ -201,7 +265,7 @@ async function sendEmailAlert(
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
           
           <p style="font-size:13px;color:#6b7280;">
-            Este alerta foi enviado automaticamente pelo sistema de monitoramento BarberSmart.<br>
+            Este alerta foi enviado automaticamente pelo sistema de monitoramento ${systemName}.<br>
             Para configurar alertas, acesse o painel de administração.
           </p>
         </div>
@@ -210,35 +274,7 @@ async function sendEmailAlert(
     </html>
   `;
 
-  try {
-    const emails = alertEmail.split(",").map((e) => e.trim());
-    
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "BarberSmart Monitor <monitor@resend.dev>",
-        to: emails,
-        subject,
-        html: htmlContent,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error("Erro ao enviar email:", error);
-      return false;
-    }
-
-    console.log("Email de alerta enviado com sucesso para:", emails);
-    return true;
-  } catch (error) {
-    console.error("Erro ao enviar email:", error);
-    return false;
-  }
+  return { subject, html: htmlContent };
 }
 
 async function sendWhatsAppAlert(
@@ -254,41 +290,25 @@ async function sendWhatsAppAlert(
     return true;
   }
 
-  const emoji = downEndpoints.length > 0 ? "🚨" : "⚠️";
-  const title = downEndpoints.length > 0
-    ? `*${emoji} ALERTA: Sistema OFFLINE*`
-    : `*${emoji} AVISO: Lentidão Detectada*`;
-
-  let message = `${title}\n\n`;
-  message += `📊 *BarberSmart Uptime Monitor*\n`;
-  message += `⏰ ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}\n\n`;
-
+  let message = "";
   if (downEndpoints.length > 0) {
-    message += `❌ *Serviços Offline:*\n`;
-    downEndpoints.forEach((r) => {
-      message += `• ${r.endpoint}: ${r.statusCode || "Timeout"} (${r.responseTime}ms)\n`;
-      if (r.error) message += `  _Erro: ${r.error}_\n`;
-    });
-    message += "\n";
+    message = `🚨 *ALERTA CRÍTICO*\n\n${downEndpoints.length} serviço(s) OFFLINE:\n\n`;
+    message += downEndpoints.map((r) => `❌ ${r.endpoint}\n   ${r.error || `Status: ${r.statusCode}`}`).join("\n\n");
+  } else {
+    message = `⚠️ *AVISO*\n\n${degradedEndpoints.length} serviço(s) com lentidão:\n\n`;
+    message += degradedEndpoints.map((r) => `⚠️ ${r.endpoint}\n   Tempo: ${r.responseTime}ms`).join("\n\n");
   }
 
-  if (degradedEndpoints.length > 0) {
-    message += `⚠️ *Serviços Lentos:*\n`;
-    degradedEndpoints.forEach((r) => {
-      message += `• ${r.endpoint}: ${r.statusCode} (${r.responseTime}ms)\n`;
-    });
-    message += "\n";
-  }
-
-  const healthyCount = results.filter((r) => r.status === "healthy").length;
-  message += `✅ Serviços saudáveis: ${healthyCount}/${results.length}`;
+  message += `\n\n⏰ ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`;
 
   try {
-    const phones = alertPhone.split(",").map((p) => p.trim().replace(/\D/g, ""));
-    
+    const phones = alertPhone.split(",").map((p) => p.trim());
+
     for (const phone of phones) {
+      const formattedPhone = phone.replace(/\D/g, "");
+      
       const response = await fetch(
-        `https://graph.facebook.com/v18.0/${whatsappPhoneId}/messages`,
+        `https://graph.facebook.com/v17.0/${whatsappPhoneId}/messages`,
         {
           method: "POST",
           headers: {
@@ -297,7 +317,7 @@ async function sendWhatsAppAlert(
           },
           body: JSON.stringify({
             messaging_product: "whatsapp",
-            to: phone,
+            to: formattedPhone,
             type: "text",
             text: { body: message },
           }),
@@ -307,11 +327,11 @@ async function sendWhatsAppAlert(
       if (!response.ok) {
         const error = await response.json();
         console.error(`Erro ao enviar WhatsApp para ${phone}:`, error);
-      } else {
-        console.log(`WhatsApp de alerta enviado para: ${phone}`);
+        return false;
       }
     }
-    
+
+    console.log("WhatsApp de alerta enviado com sucesso");
     return true;
   } catch (error) {
     console.error("Erro ao enviar WhatsApp:", error);
@@ -320,7 +340,7 @@ async function sendWhatsAppAlert(
 }
 
 async function saveHealthCheckResults(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   results: HealthCheckResult[]
 ): Promise<void> {
   try {
@@ -333,10 +353,12 @@ async function saveHealthCheckResults(
       checked_at: r.timestamp,
     }));
 
-    const { error } = await supabase.from("uptime_logs").insert(records);
+    const { error } = await supabase
+      .from("uptime_checks")
+      .insert(records);
 
     if (error) {
-      console.error("Erro ao salvar logs de uptime:", error);
+      console.error("Erro ao salvar resultados:", error);
     }
   } catch (error) {
     console.error("Erro ao salvar resultados:", error);
@@ -344,24 +366,23 @@ async function saveHealthCheckResults(
 }
 
 async function shouldSendAlert(
-  supabase: ReturnType<typeof createClient>,
-  endpointName: string,
+  supabase: any,
+  endpoint: string,
   cooldownMinutes: number
 ): Promise<boolean> {
   try {
     const cooldownTime = new Date(Date.now() - cooldownMinutes * 60 * 1000).toISOString();
-    
+
     const { data, error } = await supabase
       .from("uptime_alerts")
-      .select("sent_at")
-      .eq("endpoint_name", endpointName)
+      .select("id")
+      .eq("endpoint_name", endpoint)
       .gte("sent_at", cooldownTime)
-      .order("sent_at", { ascending: false })
       .limit(1);
 
     if (error) {
       console.error("Erro ao verificar cooldown:", error);
-      return true; // Em caso de erro, permite enviar
+      return true;
     }
 
     return !data || data.length === 0;
@@ -372,16 +393,16 @@ async function shouldSendAlert(
 }
 
 async function recordAlertSent(
-  supabase: ReturnType<typeof createClient>,
-  endpointName: string,
-  alertType: "email" | "whatsapp",
+  supabase: any,
+  endpoint: string,
+  method: "email" | "whatsapp",
   status: string
 ): Promise<void> {
   try {
     await supabase.from("uptime_alerts").insert({
-      endpoint_name: endpointName,
-      alert_type: alertType,
-      status,
+      endpoint_name: endpoint,
+      alert_method: method,
+      status_detected: status,
       sent_at: new Date().toISOString(),
     });
   } catch (error) {
@@ -394,25 +415,49 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Health check
+  if (req.method === "GET") {
+    return new Response(
+      JSON.stringify({ status: "ok", function: "uptime-monitor", version: "2.0.0" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get SMTP config from system_config table
+    const { data: smtpConfigData } = await supabase
+      .from("system_config")
+      .select("value")
+      .eq("key", "smtp_config")
+      .maybeSingle();
+
+    const smtpConfig: SmtpConfig | null = smtpConfigData?.value;
+
+    // Get system name for branding
+    const { data: systemBranding } = await supabase
+      .from("system_branding")
+      .select("system_name")
+      .single();
+    
+    const systemName = systemBranding?.system_name || smtpConfig?.from_name || "BarberSmart";
+
     // Obter configurações
     const mainDomain = Deno.env.get("MAIN_DOMAIN") || "barbersmart.app";
     const alertEmail = Deno.env.get("ALERT_EMAIL");
     const alertWhatsApp = Deno.env.get("ALERT_WHATSAPP");
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
     const whatsappToken = Deno.env.get("WHATSAPP_API_TOKEN");
     const whatsappPhoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
     // Verificar se há configuração de alertas
-    const hasEmailConfig = alertEmail && resendApiKey;
+    const hasEmailConfig = smtpConfig?.enabled && alertEmail;
     const hasWhatsAppConfig = alertWhatsApp && whatsappToken && whatsappPhoneId;
 
     if (!hasEmailConfig && !hasWhatsAppConfig) {
-      console.warn("Nenhum método de alerta configurado. Configure ALERT_EMAIL + RESEND_API_KEY ou ALERT_WHATSAPP + credenciais WhatsApp.");
+      console.warn("Nenhum método de alerta configurado. Configure SMTP + ALERT_EMAIL ou WhatsApp.");
     }
 
     // Obter configuração (pode ser customizada via body ou banco)
@@ -454,9 +499,11 @@ serve(async (req) => {
         );
 
         if (canAlert) {
-          // Enviar alerta por email
-          if (hasEmailConfig) {
-            emailSent = await sendEmailAlert(results, alertEmail!, resendApiKey!);
+          // Enviar alerta por email via SMTP
+          if (hasEmailConfig && smtpConfig) {
+            const emails = alertEmail!.split(",").map((e) => e.trim());
+            const { subject, html } = generateAlertEmailHtml(results, systemName);
+            emailSent = await sendViaSmtp(smtpConfig, emails, subject, html);
             if (emailSent) {
               await recordAlertSent(supabase, endpoint.endpoint, "email", endpoint.status);
             }
