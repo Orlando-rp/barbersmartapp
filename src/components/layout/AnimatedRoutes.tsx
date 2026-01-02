@@ -172,8 +172,8 @@ export const AnimatedRoutes = () => {
           <Route path="/multi-unit-reports" element={<AdminLayoutRoute><MultiUnitReports /></AdminLayoutRoute>} />
           <Route path="/barbershops" element={<AdminLayoutRoute><Barbershops /></AdminLayoutRoute>} />
           <Route path="/upgrade" element={<AdminLayoutRoute><UpgradePlans /></AdminLayoutRoute>} />
-          <Route path="/subscription/checkout" element={<ProtectedRoute><PageTransition><SubscriptionCheckout /></PageTransition></ProtectedRoute>} />
-          <Route path="/subscription/success" element={<PageTransition><SubscriptionSuccess /></PageTransition>} />
+          <Route path="/subscription/checkout" element={<ProtectedLayoutRoute><SubscriptionCheckout /></ProtectedLayoutRoute>} />
+          <Route path="/subscription/success" element={<ProtectedLayoutRoute><SubscriptionSuccess /></ProtectedLayoutRoute>} />
           <Route path="/subscription/manage" element={<ProtectedLayoutRoute><SubscriptionManagement /></ProtectedLayoutRoute>} />
           
           {/* Super Admin Only Routes - SaasAdminPortal uses its own SaasAdminLayout */}
