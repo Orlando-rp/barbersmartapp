@@ -203,35 +203,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get SMTP config from system_config table
-    const { data: smtpConfigData, error: smtpConfigError } = await supabase
-      .from("system_config")
-      .select("value")
-      .eq("key", "smtp_config")
-      .maybeSingle();
-
-    const smtpConfig: SmtpConfig | null = smtpConfigData?.value;
-    
-    if (!smtpConfig || !smtpConfig.enabled) {
-      console.error("SMTP not configured or disabled in admin panel");
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Servidor de email não configurado. Configure nas integrações do painel administrativo." 
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass || !smtpConfig.from_email) {
-      console.error("SMTP config incomplete");
-      return new Response(
-        JSON.stringify({ success: false, error: "Configuração SMTP incompleta" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Find user by email in auth.users
+    // Find user by email in auth.users first (needed to get barbershop association)
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
     
     if (authError) {
@@ -250,12 +222,114 @@ serve(async (req) => {
       );
     }
 
-    // Get user's profile and associated barbershop
+    // Get user's profile and associated barbershop for SMTP hierarchy
+    let barbershopSmtpConfig: SmtpConfig | null = null;
+    let userBarbershopId: string | null = null;
+    
     const { data: profile } = await supabase
       .from("profiles")
       .select("id")
       .eq("id", user.id)
       .single();
+
+    if (profile) {
+      const { data: userBarbershop } = await supabase
+        .from("user_barbershops")
+        .select("barbershop_id")
+        .eq("user_id", profile.id)
+        .limit(1)
+        .single();
+
+      if (userBarbershop) {
+        userBarbershopId = userBarbershop.barbershop_id;
+        
+        // Get barbershop's email_config
+        const { data: barbershop } = await supabase
+          .from("barbershops")
+          .select("id, name, parent_id, email_config, custom_branding, subscription_id")
+          .eq("id", userBarbershop.barbershop_id)
+          .single();
+
+        if (barbershop) {
+          // If it's a unit, get parent's config
+          const targetBarbershopId = barbershop.parent_id || barbershop.id;
+          
+          let targetBarbershop = barbershop;
+          if (barbershop.parent_id) {
+            const { data: parent } = await supabase
+              .from("barbershops")
+              .select("id, name, email_config, custom_branding, subscription_id")
+              .eq("id", barbershop.parent_id)
+              .single();
+            if (parent) targetBarbershop = parent;
+          }
+
+          // Check if has white_label feature (required for custom SMTP)
+          let hasWhiteLabel = false;
+          if (targetBarbershop.subscription_id) {
+            const { data: subscription } = await supabase
+              .from("subscriptions")
+              .select("plan_id")
+              .eq("id", targetBarbershop.subscription_id)
+              .single();
+
+            if (subscription) {
+              const { data: plan } = await supabase
+                .from("subscription_plans")
+                .select("feature_flags")
+                .eq("id", subscription.plan_id)
+                .single();
+
+              if (plan?.feature_flags?.white_label) {
+                hasWhiteLabel = true;
+              }
+            }
+          }
+
+          // Use barbershop SMTP if white_label and enabled
+          if (hasWhiteLabel && targetBarbershop.email_config?.enabled) {
+            barbershopSmtpConfig = targetBarbershop.email_config;
+            console.log("[SMTP] Using barbershop-specific SMTP config");
+          }
+        }
+      }
+    }
+
+    // Determine which SMTP to use (barbershop or global fallback)
+    let smtpConfig: SmtpConfig | null = barbershopSmtpConfig;
+    
+    if (!smtpConfig) {
+      // Fallback to global SMTP config
+      const { data: smtpConfigData } = await supabase
+        .from("system_config")
+        .select("value")
+        .eq("key", "smtp_config")
+        .maybeSingle();
+
+      smtpConfig = smtpConfigData?.value;
+      if (smtpConfig?.enabled) {
+        console.log("[SMTP] Using global SMTP config");
+      }
+    }
+    
+    if (!smtpConfig || !smtpConfig.enabled) {
+      console.error("SMTP not configured or disabled");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Servidor de email não configurado. Configure nas integrações do painel administrativo." 
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass || !smtpConfig.from_email) {
+      console.error("SMTP config incomplete");
+      return new Response(
+        JSON.stringify({ success: false, error: "Configuração SMTP incompleta" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Default branding (use from_name as system name)
     let branding: TenantBranding = {
@@ -280,75 +354,59 @@ serve(async (req) => {
       };
     }
 
-    // Try to get tenant-specific branding if user has barbershop association
-    if (profile) {
-      const { data: userBarbershop } = await supabase
-        .from("user_barbershops")
-        .select("barbershop_id")
-        .eq("user_id", profile.id)
-        .limit(1)
+    // Try to get tenant-specific branding if user has barbershop association with white_label
+    if (userBarbershopId) {
+      const { data: barbershop } = await supabase
+        .from("barbershops")
+        .select("id, name, parent_id, custom_branding, subscription_id")
+        .eq("id", userBarbershopId)
         .single();
 
-      if (userBarbershop) {
-        // Get barbershop with parent info for hierarchy
-        const { data: barbershop } = await supabase
-          .from("barbershops")
-          .select(`
-            id,
-            name,
-            parent_id,
-            custom_branding,
-            subscription_id
-          `)
-          .eq("id", userBarbershop.barbershop_id)
-          .single();
+      if (barbershop) {
+        // If it's a unit, get parent's branding
+        const targetBarbershopId = barbershop.parent_id || barbershop.id;
+        
+        let targetBarbershop = barbershop;
+        if (barbershop.parent_id) {
+          const { data: parent } = await supabase
+            .from("barbershops")
+            .select("id, name, custom_branding, subscription_id")
+            .eq("id", barbershop.parent_id)
+            .single();
+          if (parent) targetBarbershop = parent;
+        }
 
-        if (barbershop) {
-          // If it's a unit, get parent's branding
-          const targetBarbershopId = barbershop.parent_id || barbershop.id;
-          
-          let targetBarbershop = barbershop;
-          if (barbershop.parent_id) {
-            const { data: parent } = await supabase
-              .from("barbershops")
-              .select("id, name, custom_branding, subscription_id")
-              .eq("id", barbershop.parent_id)
-              .single();
-            if (parent) targetBarbershop = parent;
-          }
+        // Check if has white_label feature
+        let hasWhiteLabel = false;
+        if (targetBarbershop.subscription_id) {
+          const { data: subscription } = await supabase
+            .from("subscriptions")
+            .select("plan_id")
+            .eq("id", targetBarbershop.subscription_id)
+            .single();
 
-          // Check if has white_label feature
-          let hasWhiteLabel = false;
-          if (targetBarbershop.subscription_id) {
-            const { data: subscription } = await supabase
-              .from("subscriptions")
-              .select("plan_id")
-              .eq("id", targetBarbershop.subscription_id)
+          if (subscription) {
+            const { data: plan } = await supabase
+              .from("subscription_plans")
+              .select("feature_flags")
+              .eq("id", subscription.plan_id)
               .single();
 
-            if (subscription) {
-              const { data: plan } = await supabase
-                .from("subscription_plans")
-                .select("feature_flags")
-                .eq("id", subscription.plan_id)
-                .single();
-
-              if (plan?.feature_flags?.white_label) {
-                hasWhiteLabel = true;
-              }
+            if (plan?.feature_flags?.white_label) {
+              hasWhiteLabel = true;
             }
           }
+        }
 
-          // Apply tenant branding if has white_label and custom_branding
-          if (hasWhiteLabel && targetBarbershop.custom_branding) {
-            const customBranding = targetBarbershop.custom_branding;
-            branding = {
-              system_name: customBranding.system_name || targetBarbershop.name || branding.system_name,
-              logo_url: customBranding.logo_url || branding.logo_url,
-              primary_color: customBranding.primary_color || branding.primary_color,
-              secondary_color: customBranding.secondary_color || branding.secondary_color
-            };
-          }
+        // Apply tenant branding if has white_label and custom_branding
+        if (hasWhiteLabel && targetBarbershop.custom_branding) {
+          const customBranding = targetBarbershop.custom_branding;
+          branding = {
+            system_name: customBranding.system_name || targetBarbershop.name || branding.system_name,
+            logo_url: customBranding.logo_url || branding.logo_url,
+            primary_color: customBranding.primary_color || branding.primary_color,
+            secondary_color: customBranding.secondary_color || branding.secondary_color
+          };
         }
       }
     }
