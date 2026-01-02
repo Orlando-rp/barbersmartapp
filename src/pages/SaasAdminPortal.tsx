@@ -70,6 +70,7 @@ import {
   Unlink,
   BookOpen,
   Rocket,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -182,6 +183,7 @@ const SaasAdminPortal = () => {
   const [allBarbershops, setAllBarbershops] = useState<{id: string; name: string; parent_id: string | null}[]>([]);
   const [linkForm, setLinkForm] = useState({ unitId: '', parentId: '' });
   const [savingLink, setSavingLink] = useState(false);
+  const [tenantSearch, setTenantSearch] = useState('');
 
   // Dialogs
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
@@ -955,24 +957,45 @@ const SaasAdminPortal = () => {
           {/* Tenants Tab */}
           <TabsContent value="tenants">
             <Card>
-              <CardHeader className="p-3 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <CardTitle className="text-sm sm:text-base">Barbearias Cadastradas</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    {tenants.length} barbearias (matrizes) • {tenants.reduce((sum, t) => sum + (t.units?.length || 0), 0)} unidades
-                  </CardDescription>
+              <CardHeader className="p-3 sm:p-6 flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-sm sm:text-base">Barbearias Cadastradas</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      {tenants.length} barbearias (matrizes) • {tenants.reduce((sum, t) => sum + (t.units?.length || 0), 0)} unidades
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => setLinkUnitDialogOpen(true)} variant="outline" className="w-full sm:w-auto">
+                    <Link className="h-4 w-4 mr-2" />
+                    Gerenciar Hierarquia
+                  </Button>
                 </div>
-                <Button onClick={() => setLinkUnitDialogOpen(true)} variant="outline" className="w-full sm:w-auto">
-                  <Link className="h-4 w-4 mr-2" />
-                  Gerenciar Hierarquia
-                </Button>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, plano ou status..."
+                    value={tenantSearch}
+                    onChange={(e) => setTenantSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
               </CardHeader>
               <CardContent className="p-3 sm:p-6 pt-0">
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
-                  {tenants.map((tenant) => {
-                    const consolidated = getConsolidatedMetrics(tenant);
-                    return (
+                  {tenants
+                    .filter((tenant) => {
+                      if (!tenantSearch.trim()) return true;
+                      const search = tenantSearch.toLowerCase();
+                      const matchName = tenant.name.toLowerCase().includes(search);
+                      const matchPlan = tenant.subscription?.plan_name?.toLowerCase().includes(search);
+                      const matchStatus = tenant.subscription?.status?.toLowerCase().includes(search);
+                      const matchUnitName = tenant.units?.some(u => u.name.toLowerCase().includes(search));
+                      return matchName || matchPlan || matchStatus || matchUnitName;
+                    })
+                    .map((tenant) => {
+                      const consolidated = getConsolidatedMetrics(tenant);
+                      return (
                     <div key={tenant.id} className="border rounded-lg overflow-hidden">
                       {/* Matriz */}
                       <div className="p-3 space-y-2 bg-card">
@@ -1089,7 +1112,17 @@ const SaasAdminPortal = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {tenants.map((tenant) => {
+                      {tenants
+                        .filter((tenant) => {
+                          if (!tenantSearch.trim()) return true;
+                          const search = tenantSearch.toLowerCase();
+                          const matchName = tenant.name.toLowerCase().includes(search);
+                          const matchPlan = tenant.subscription?.plan_name?.toLowerCase().includes(search);
+                          const matchStatus = tenant.subscription?.status?.toLowerCase().includes(search);
+                          const matchUnitName = tenant.units?.some(u => u.name.toLowerCase().includes(search));
+                          return matchName || matchPlan || matchStatus || matchUnitName;
+                        })
+                        .map((tenant) => {
                         const consolidated = getConsolidatedMetrics(tenant);
                         return [
                           /* Linha da Matriz */
