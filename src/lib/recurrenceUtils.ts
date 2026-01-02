@@ -120,17 +120,71 @@ export function formatRecurrenceSummary(
 }
 
 /**
- * Opções predefinidas de quantidade de repetições
+ * Calcula a duração aproximada em semanas/meses baseado na frequência
+ */
+export function getCountDurationLabel(count: number, rule: RecurrenceRule, customDays?: number): string {
+  let daysPerRepetition: number;
+  
+  switch (rule) {
+    case 'weekly':
+      daysPerRepetition = 7;
+      break;
+    case 'biweekly':
+      daysPerRepetition = 14;
+      break;
+    case 'triweekly':
+      daysPerRepetition = 21;
+      break;
+    case 'monthly':
+      daysPerRepetition = 30;
+      break;
+    case 'custom':
+      daysPerRepetition = customDays || 7;
+      break;
+    default:
+      daysPerRepetition = 7;
+  }
+  
+  const totalDays = (count - 1) * daysPerRepetition; // -1 porque a primeira data é o início
+  const weeks = Math.round(totalDays / 7);
+  const months = Math.round(totalDays / 30);
+  
+  if (totalDays < 7) {
+    return '';
+  } else if (weeks < 4) {
+    return `(${weeks} ${weeks === 1 ? 'semana' : 'semanas'})`;
+  } else {
+    return `(${months} ${months === 1 ? 'mês' : 'meses'})`;
+  }
+}
+
+/**
+ * Gera opções de quantidade de repetições com duração dinâmica
+ */
+export function getRecurrenceCountOptions(rule: RecurrenceRule, customDays?: number) {
+  const counts = [2, 3, 4, 5, 6, 8, 10, 12];
+  
+  return counts.map(count => {
+    const durationLabel = getCountDurationLabel(count, rule, customDays);
+    return {
+      value: count,
+      label: durationLabel ? `${count} vezes ${durationLabel}` : `${count} vezes`
+    };
+  });
+}
+
+/**
+ * Opções predefinidas básicas (para fallback)
  */
 export const RECURRENCE_COUNT_OPTIONS = [
   { value: 2, label: '2 vezes' },
   { value: 3, label: '3 vezes' },
-  { value: 4, label: '4 vezes (1 mês)' },
+  { value: 4, label: '4 vezes' },
   { value: 5, label: '5 vezes' },
   { value: 6, label: '6 vezes' },
-  { value: 8, label: '8 vezes (2 meses)' },
+  { value: 8, label: '8 vezes' },
   { value: 10, label: '10 vezes' },
-  { value: 12, label: '12 vezes (3 meses)' },
+  { value: 12, label: '12 vezes' },
 ];
 
 /**

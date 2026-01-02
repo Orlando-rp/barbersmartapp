@@ -16,7 +16,7 @@ import {
   GeneratedDate,
   generateRecurringDates,
   getRecurrenceLabel,
-  RECURRENCE_COUNT_OPTIONS,
+  getRecurrenceCountOptions,
   RECURRENCE_RULE_OPTIONS,
 } from '@/lib/recurrenceUtils';
 
@@ -229,7 +229,7 @@ export function RecurrenceSelector({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {RECURRENCE_COUNT_OPTIONS.map((option) => (
+                      {getRecurrenceCountOptions(recurrenceRule, customIntervalDays).map((option) => (
                         <SelectItem key={option.value} value={option.value.toString()}>
                           {option.label}
                         </SelectItem>

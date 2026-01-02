@@ -36,7 +36,7 @@ import {
   RecurrenceRule,
   getRecurrenceLabel,
   RECURRENCE_RULE_OPTIONS,
-  RECURRENCE_COUNT_OPTIONS,
+  getRecurrenceCountOptions,
 } from "@/lib/recurrenceUtils";
 
 interface WaitlistPrefill {
@@ -2000,7 +2000,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {RECURRENCE_COUNT_OPTIONS.map(opt => (
+                                {getRecurrenceCountOptions(recurrenceRule, customIntervalDays).map(opt => (
                                   <SelectItem key={opt.value} value={opt.value.toString()} className="text-xs">
                                     {opt.label}
                                   </SelectItem>
