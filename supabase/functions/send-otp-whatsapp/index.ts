@@ -123,12 +123,12 @@ serve(async (req) => {
       
       const { data: configs } = await supabase
         .from('whatsapp_config')
-        .select('instance_name, status')
+        .select('config')
         .eq('provider', 'evolution')
-        .eq('status', 'connected')
+        .eq('is_active', true)
         .limit(1);
 
-      if (!configs || configs.length === 0) {
+      if (!configs || configs.length === 0 || !configs[0].config?.instance_name) {
         console.error('[Send OTP] Nenhuma instância WhatsApp conectada');
         return new Response(
           JSON.stringify({ 
@@ -139,7 +139,7 @@ serve(async (req) => {
         );
       }
 
-      instanceName = configs[0].instance_name;
+      instanceName = configs[0].config.instance_name;
       console.log(`[Send OTP] Usando instância alternativa: ${instanceName}`);
     } else {
       console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
