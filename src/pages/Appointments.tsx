@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaffAvatar } from "@/components/ui/smart-avatar";
-import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin, Wallet, CreditCard, CheckCircle2, Banknote, QrCode, Trash2 } from "lucide-react";
+import { Calendar, Plus, Search, Clock, User, Scissors, Phone, Edit, MapPin, Wallet, CreditCard, CheckCircle2, Banknote, QrCode, Trash2, Layers } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,8 @@ import { AppointmentsSkeleton } from "@/components/skeletons";
 import { IllustratedEmptyState } from "@/components/ui/illustrated-empty-state";
 import { PullToRefreshContainer } from "@/components/ui/pull-to-refresh";
 import { RecurrenceBadge, RecurrenceActionDialog, RecurrenceActionScope } from "@/components/booking";
+import { RecurringSeriesCard } from "@/components/appointments/RecurringSeriesCard";
+import { Switch } from "@/components/ui/switch";
 
 interface Appointment {
   id: string;
@@ -111,6 +113,9 @@ const Appointments = () => {
   const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
   const [seriesCount, setSeriesCount] = useState<number>(0);
   const [isCancellingRecurrence, setIsCancellingRecurrence] = useState(false);
+  
+  // Group recurring appointments toggle
+  const [groupRecurring, setGroupRecurring] = useState(true);
   
   // Map barbershop IDs to names for quick lookup
   const barbershopNamesMap = new Map(barbershops.map(b => [b.id, b.name]));
@@ -734,6 +739,39 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
     });
   }, [activeBarbershopIds]);
 
+  // Group recurring appointments together
+  const { groupedAppointments, recurringGroups, standaloneAppointments } = useMemo(() => {
+    if (!groupRecurring) {
+      return {
+        groupedAppointments: filteredAppointments,
+        recurringGroups: new Map<string, Appointment[]>(),
+        standaloneAppointments: filteredAppointments,
+      };
+    }
+
+    const groups = new Map<string, Appointment[]>();
+    const standalone: Appointment[] = [];
+
+    filteredAppointments.forEach((apt) => {
+      if (apt.is_recurring && apt.recurrence_group_id) {
+        const existing = groups.get(apt.recurrence_group_id) || [];
+        existing.push(apt);
+        groups.set(apt.recurrence_group_id, existing);
+      } else {
+        standalone.push(apt);
+      }
+    });
+
+    return {
+      groupedAppointments: filteredAppointments,
+      recurringGroups: groups,
+      standaloneAppointments: standalone,
+    };
+  }, [filteredAppointments, groupRecurring]);
+
+  // Count recurring groups for display
+  const recurringGroupCount = recurringGroups.size;
+
   return (
     <PullToRefreshContainer onRefresh={handleRefresh} disabled={loading}>
       <PullToRefreshContainer onRefresh={handleRefresh} disabled={loading}>
@@ -812,6 +850,24 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                 </Select>
               </div>
             </div>
+            
+            {/* Group recurring toggle */}
+            {recurringGroupCount > 0 && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Layers className="h-4 w-4" />
+                  <span>Agrupar séries recorrentes</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {recurringGroupCount} {recurringGroupCount === 1 ? 'série' : 'séries'}
+                  </Badge>
+                </div>
+                <Switch
+                  checked={groupRecurring}
+                  onCheckedChange={setGroupRecurring}
+                  aria-label="Agrupar agendamentos recorrentes"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -845,151 +901,172 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
               </Card>
             )
           ) : (
-            filteredAppointments.map((appointment) => (
-              <Card key={appointment.id} className="barbershop-card hover:shadow-lg transition-shadow">
-                <CardContent className="p-3 md:p-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
-                    <div className="flex-1 space-y-2 md:space-y-3 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1 md:mb-2">
-                            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="font-semibold text-base md:text-lg truncate">{appointment.client_name}</span>
+            <>
+              {/* Recurring Series Cards (grouped) */}
+              {groupRecurring && Array.from(recurringGroups.entries()).map(([groupId, groupAppointments]) => (
+                <RecurringSeriesCard
+                  key={groupId}
+                  appointments={groupAppointments}
+                  onEdit={(apt) => {
+                    setEditingAppointment(apt);
+                    setIsDialogOpen(true);
+                  }}
+                  onCancel={handleCancelClick}
+                  onStatusChange={updateStatus}
+                  onPayment={openPaymentModal}
+                  showBarbershopName={activeBarbershopIds.length > 1}
+                  statusConfig={statusConfig}
+                  paymentStatusConfig={paymentStatusConfig}
+                />
+              ))}
+
+              {/* Standalone Appointments (non-recurring or ungrouped) */}
+              {(groupRecurring ? standaloneAppointments : filteredAppointments).map((appointment) => (
+                <Card key={appointment.id} className="barbershop-card hover:shadow-lg transition-shadow">
+                  <CardContent className="p-3 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+                      <div className="flex-1 space-y-2 md:space-y-3 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1 md:mb-2">
+                              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="font-semibold text-base md:text-lg truncate">{appointment.client_name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                              <Phone className="h-3 w-3 flex-shrink-0" />
+                              <span>{appointment.client_phone}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                            <Phone className="h-3 w-3 flex-shrink-0" />
-                            <span>{appointment.client_phone}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {appointment.is_recurring && appointment.recurrence_index !== null && (
-                            <RecurrenceBadge
-                              recurrenceIndex={appointment.recurrence_index}
-                              totalInSeries={(appointment as any).totalInSeries}
-                              recurrenceRule={appointment.recurrence_rule || undefined}
-                              isRescheduled={appointment.original_date !== null && appointment.original_date !== appointment.appointment_date}
-                              className="text-[10px]"
-                            />
-                          )}
-                          <Badge 
-                            variant={statusConfig[appointment.status as keyof typeof statusConfig].variant}
-                            className="text-[10px] md:text-xs flex-shrink-0"
-                          >
-                            {statusConfig[appointment.status as keyof typeof statusConfig].label}
-                          </Badge>
-                          {appointment.payment_status && paymentStatusConfig[appointment.payment_status] && (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {appointment.is_recurring && appointment.recurrence_index !== null && (
+                              <RecurrenceBadge
+                                recurrenceIndex={appointment.recurrence_index}
+                                totalInSeries={(appointment as any).totalInSeries}
+                                recurrenceRule={appointment.recurrence_rule || undefined}
+                                isRescheduled={appointment.original_date !== null && appointment.original_date !== appointment.appointment_date}
+                                className="text-[10px]"
+                              />
+                            )}
                             <Badge 
-                              variant="outline"
-                              className={`text-[10px] md:text-xs flex-shrink-0 ${paymentStatusConfig[appointment.payment_status].color}`}
+                              variant={statusConfig[appointment.status as keyof typeof statusConfig].variant}
+                              className="text-[10px] md:text-xs flex-shrink-0"
                             >
-                              <span className="hidden md:inline">{paymentStatusConfig[appointment.payment_status].label}</span>
-                              <span className="md:hidden">{paymentStatusConfig[appointment.payment_status].shortLabel}</span>
+                              {statusConfig[appointment.status as keyof typeof statusConfig].label}
                             </Badge>
+                            {appointment.payment_status && paymentStatusConfig[appointment.payment_status] && (
+                              <Badge 
+                                variant="outline"
+                                className={`text-[10px] md:text-xs flex-shrink-0 ${paymentStatusConfig[appointment.payment_status].color}`}
+                              >
+                                <span className="hidden md:inline">{paymentStatusConfig[appointment.payment_status].label}</span>
+                                <span className="md:hidden">{paymentStatusConfig[appointment.payment_status].shortLabel}</span>
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs md:text-sm">
+                          <div className="flex items-center gap-1 md:gap-2">
+                            <Calendar className="h-3 w-3 md:h-4 md:w-4 text-primary" />
+                            <span className="font-medium">
+                              {format(parseISO(appointment.appointment_date), "dd/MM/yy", { locale: ptBR })}
+                            </span>
+                            <Clock className="h-3 w-3 md:h-4 md:w-4 text-primary ml-1" />
+                            <span className="font-medium">{appointment.appointment_time}</span>
+                          </div>
+                          <div className="flex items-center gap-1 md:gap-2">
+                            <Scissors className="h-3 w-3 md:h-4 md:w-4 text-primary" />
+                            <span className="truncate max-w-[120px] md:max-w-none">{appointment.service_name}</span>
+                            <span className="text-muted-foreground whitespace-nowrap">R$ {appointment.service_price?.toFixed(0)}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs md:text-sm">
+                          <div className="flex items-center gap-2">
+                            <StaffAvatar 
+                              src={appointment.staff?.avatar_url}
+                              alt={appointment.staff?.name || ''}
+                              fallbackText={appointment.staff?.name}
+                              fallback={!appointment.staff?.name ? <User className="h-3 w-3" /> : undefined}
+                              size="xs"
+                              fallbackClassName="bg-primary/10 text-primary"
+                            />
+                            <span className="truncate">
+                              <span className="hidden sm:inline">Barbeiro: </span>
+                              <span className="font-medium">{appointment.staff?.name || 'Não especificado'}</span>
+                            </span>
+                          </div>
+                          {activeBarbershopIds.length > 1 && appointment.barbershop_name && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <MapPin className="h-3 w-3 md:h-4 md:w-4" />
+                              <span className="truncate max-w-[150px]">{appointment.barbershop_name}</span>
+                            </div>
                           )}
                         </div>
-                      </div>
 
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs md:text-sm">
-                        <div className="flex items-center gap-1 md:gap-2">
-                          <Calendar className="h-3 w-3 md:h-4 md:w-4 text-primary" />
-                          <span className="font-medium">
-                            {format(parseISO(appointment.appointment_date), "dd/MM/yy", { locale: ptBR })}
-                          </span>
-                          <Clock className="h-3 w-3 md:h-4 md:w-4 text-primary ml-1" />
-                          <span className="font-medium">{appointment.appointment_time}</span>
-                        </div>
-                        <div className="flex items-center gap-1 md:gap-2">
-                          <Scissors className="h-3 w-3 md:h-4 md:w-4 text-primary" />
-                          <span className="truncate max-w-[120px] md:max-w-none">{appointment.service_name}</span>
-                          <span className="text-muted-foreground whitespace-nowrap">R$ {appointment.service_price?.toFixed(0)}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs md:text-sm">
-                        <div className="flex items-center gap-2">
-                          <StaffAvatar 
-                            src={appointment.staff?.avatar_url}
-                            alt={appointment.staff?.name || ''}
-                            fallbackText={appointment.staff?.name}
-                            fallback={!appointment.staff?.name ? <User className="h-3 w-3" /> : undefined}
-                            size="xs"
-                            fallbackClassName="bg-primary/10 text-primary"
-                          />
-                          <span className="truncate">
-                            <span className="hidden sm:inline">Barbeiro: </span>
-                            <span className="font-medium">{appointment.staff?.name || 'Não especificado'}</span>
-                          </span>
-                        </div>
-                        {activeBarbershopIds.length > 1 && appointment.barbershop_name && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <MapPin className="h-3 w-3 md:h-4 md:w-4" />
-                            <span className="truncate max-w-[150px]">{appointment.barbershop_name}</span>
+                        {appointment.notes && (
+                          <div className="text-xs md:text-sm text-muted-foreground bg-muted/50 p-2 rounded line-clamp-2">
+                            {appointment.notes}
                           </div>
                         )}
                       </div>
 
-                      {appointment.notes && (
-                        <div className="text-xs md:text-sm text-muted-foreground bg-muted/50 p-2 rounded line-clamp-2">
-                          {appointment.notes}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-row md:flex-col gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-border">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditingAppointment(appointment);
-                          setIsDialogOpen(true);
-                        }}
-                        className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9"
-                      >
-                        <Edit className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-                        Editar
-                      </Button>
-                      {appointment.payment_status === 'pending' && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => openPaymentModal(appointment)}
-                          className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9 bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-                          <span className="hidden md:inline">Marcar Pago</span>
-                          <span className="md:hidden">Pago</span>
-                        </Button>
-                      )}
-                      {appointment.status !== 'cancelado' && appointment.status !== 'concluido' && (
+                      <div className="flex flex-row md:flex-col gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-border">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleCancelClick(appointment)}
-                          className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setEditingAppointment(appointment);
+                            setIsDialogOpen(true);
+                          }}
+                          className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9"
                         >
-                          <Trash2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-                          Cancelar
+                          <Edit className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                          Editar
                         </Button>
-                      )}
-                      <Select
-                        value={appointment.status}
-                        onValueChange={(value) => updateStatus(appointment.id, value)}
-                      >
-                        <SelectTrigger className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pendente">Pendente</SelectItem>
-                          <SelectItem value="confirmado">Confirmado</SelectItem>
-                          <SelectItem value="concluido">Concluído</SelectItem>
-                          <SelectItem value="cancelado">Cancelado</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {appointment.payment_status === 'pending' && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => openPaymentModal(appointment)}
+                            className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9 bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            <span className="hidden md:inline">Marcar Pago</span>
+                            <span className="md:hidden">Pago</span>
+                          </Button>
+                        )}
+                        {appointment.status !== 'cancelado' && appointment.status !== 'concluido' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCancelClick(appointment)}
+                            className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            Cancelar
+                          </Button>
+                        )}
+                        <Select
+                          value={appointment.status}
+                          onValueChange={(value) => updateStatus(appointment.id, value)}
+                        >
+                          <SelectTrigger className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pendente">Pendente</SelectItem>
+                            <SelectItem value="confirmado">Confirmado</SelectItem>
+                            <SelectItem value="concluido">Concluído</SelectItem>
+                            <SelectItem value="cancelado">Cancelado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              ))}
+            </>
           )}
         </div>
         </div>
