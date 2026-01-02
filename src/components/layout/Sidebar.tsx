@@ -188,11 +188,11 @@ export const MobileSidebar = () => {
       <SheetContent side="left" className="w-72 p-0">
         <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
         <div className="flex flex-col h-full bg-card">
-          <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center justify-center p-4 border-b border-border">
             <img 
               src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="h-12 w-auto object-contain"
+              className="h-16 w-auto object-contain"
             />
           </div>
 
@@ -333,32 +333,30 @@ const Sidebar = () => {
       collapsed ? "w-16" : "w-64"
     )}>
       {/* Logo + Toggle */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="relative flex items-center justify-center p-4 border-b border-border min-h-[80px]">
         {!collapsed ? (
-          <div className="flex items-center justify-center flex-1">
+          <>
             <img 
               src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="h-16 w-auto max-w-[220px] object-contain mx-auto"
+              className="h-20 w-auto max-w-[200px] object-contain"
             />
-          </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </>
         ) : (
-          <div className="flex items-center justify-center w-full">
-            <img 
-              src={logoIconUrl || faviconUrl || currentLogoUrl || logoIcon} 
-              alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="w-12 h-12 rounded-lg object-contain"
-            />
-          </div>
+          <img 
+            src={logoIconUrl || faviconUrl || currentLogoUrl || logoIcon} 
+            alt={effectiveBranding?.system_name || 'Barber Smart'} 
+            className="w-14 h-14 rounded-lg object-contain"
+          />
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn("h-8 w-8 shrink-0", collapsed && "hidden")}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
       </div>
 
       {/* Expand button when collapsed */}
