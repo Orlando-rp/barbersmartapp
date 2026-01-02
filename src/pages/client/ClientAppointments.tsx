@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { IllustratedEmptyState } from '@/components/ui/illustrated-empty-state';
+import { RecurrenceBadge } from '@/components/booking';
 
 type AppointmentStatus = 'pendente' | 'confirmado' | 'concluido' | 'cancelado' | 'falta';
 
@@ -64,16 +65,37 @@ export default function ClientAppointments() {
         .select(`
           *,
           staff:staff_id(id, user_id, profiles:user_id(full_name, preferred_name, avatar_url)),
-          service:service_id(name, duration, price)
+          service:service_id(name, duration, price),
+          is_recurring,
+          recurrence_group_id,
+          recurrence_rule,
+          recurrence_index,
+          original_date
         `)
         .eq('client_id', client.id)
         .in('status', ['pendente', 'confirmado'])
         .gte('appointment_date', today)
         .order('appointment_date', { ascending: true })
         .order('appointment_time', { ascending: true });
-
+      
       if (error) throw error;
-      return data || [];
+      
+      // Calculate total in series for each recurrence group
+      const recurrenceGroupCounts = new Map<string, number>();
+      (data || []).forEach((apt: any) => {
+        if (apt.recurrence_group_id) {
+          const current = recurrenceGroupCounts.get(apt.recurrence_group_id) || 0;
+          recurrenceGroupCounts.set(apt.recurrence_group_id, current + 1);
+        }
+      });
+      
+      return (data || []).map((apt: any) => ({
+        ...apt,
+        totalInSeries: apt.recurrence_group_id 
+          ? recurrenceGroupCounts.get(apt.recurrence_group_id) 
+          : undefined
+      }));
+
     },
     enabled: !!client?.id,
   });
@@ -90,7 +112,12 @@ export default function ClientAppointments() {
           *,
           staff:staff_id(id, user_id, profiles:user_id(full_name, preferred_name, avatar_url)),
           service:service_id(name, duration, price),
-          reviews:reviews(id, rating)
+          reviews:reviews(id, rating),
+          is_recurring,
+          recurrence_group_id,
+          recurrence_rule,
+          recurrence_index,
+          original_date
         `)
         .eq('client_id', client.id)
         .in('status', ['concluido', 'cancelado', 'falta'])
@@ -99,7 +126,22 @@ export default function ClientAppointments() {
         .limit(50);
 
       if (error) throw error;
-      return data || [];
+      
+      // Calculate total in series for each recurrence group
+      const recurrenceGroupCounts = new Map<string, number>();
+      (data || []).forEach((apt: any) => {
+        if (apt.recurrence_group_id) {
+          const current = recurrenceGroupCounts.get(apt.recurrence_group_id) || 0;
+          recurrenceGroupCounts.set(apt.recurrence_group_id, current + 1);
+        }
+      });
+      
+      return (data || []).map((apt: any) => ({
+        ...apt,
+        totalInSeries: apt.recurrence_group_id 
+          ? recurrenceGroupCounts.get(apt.recurrence_group_id) 
+          : undefined
+      }));
     },
     enabled: !!client?.id,
   });
@@ -148,10 +190,19 @@ export default function ClientAppointments() {
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <h3 className="font-semibold truncate">
                   {appointment.service?.name || appointment.service_name}
                 </h3>
+                {appointment.is_recurring && appointment.recurrence_index !== null && (
+                  <RecurrenceBadge
+                    recurrenceIndex={appointment.recurrence_index}
+                    totalInSeries={appointment.totalInSeries}
+                    recurrenceRule={appointment.recurrence_rule || undefined}
+                    isRescheduled={appointment.original_date !== null && appointment.original_date !== appointment.appointment_date}
+                    className="text-[10px]"
+                  />
+                )}
                 <Badge variant={status.variant}>{status.label}</Badge>
               </div>
 
