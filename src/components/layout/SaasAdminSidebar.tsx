@@ -81,7 +81,7 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
       !isMobile && "sticky top-0 h-screen hidden md:flex"
     )}>
       {/* Header */}
-      <div className="p-4 border-b border-border">
+      <div className="relative px-4 py-5 border-b border-border min-h-[88px]">
         <div className={cn("flex items-center", isCollapsed ? "justify-center" : "justify-center flex-1")}>
           {!isCollapsed && (
             <div className="flex items-center justify-center flex-1">
@@ -89,7 +89,7 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
                 <img 
                   src={currentLogoUrl} 
                   alt={systemName} 
-                  className="h-12 w-auto max-w-[180px] object-contain mx-auto" 
+                  className="h-20 w-auto max-w-[200px] object-contain mx-auto" 
                 />
               ) : (
                 <div className="flex items-center justify-center gap-2">
@@ -105,40 +105,40 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
                 <img 
                   src={logoIconUrl} 
                   alt={systemName} 
-                  className="h-10 w-10 rounded-lg object-contain" 
+                  className="h-14 w-14 rounded-lg object-contain" 
                 />
               ) : faviconUrl ? (
                 <img 
                   src={faviconUrl} 
                   alt={systemName} 
-                  className="h-10 w-10 rounded-lg object-contain" 
+                  className="h-14 w-14 rounded-lg object-contain" 
                 />
               ) : currentLogoUrl ? (
                 <img 
                   src={currentLogoUrl} 
                   alt={systemName} 
-                  className="h-10 w-10 rounded-lg object-contain" 
+                  className="h-14 w-14 rounded-lg object-contain" 
                 />
               ) : (
-                <Shield className="h-8 w-8 text-warning" />
+                <Shield className="h-10 w-10 text-warning" />
               )}
             </div>
           )}
-          {!isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCollapsed(!collapsed)}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-            </Button>
-          )}
         </div>
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
