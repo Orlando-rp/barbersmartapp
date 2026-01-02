@@ -104,3 +104,6 @@ verify_jwt = true
 
 [functions.check-cpanel-ssl]
 verify_jwt = false
+
+[functions.send-recurring-reminders]
+verify_jwt = false
