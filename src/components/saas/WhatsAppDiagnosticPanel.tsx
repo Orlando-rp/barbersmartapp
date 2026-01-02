@@ -35,6 +35,8 @@ import {
   GitCompare,
   Check,
   X,
+  Plus,
+  QrCode,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -55,6 +57,7 @@ interface SystemHealth {
     configured: boolean;
     apiUrl: string | null;
     reachable: boolean | null;
+    lastChecked: Date | null;
   };
   otpInstance: {
     configured: boolean;
@@ -63,6 +66,7 @@ interface SystemHealth {
     phoneNumber: string | null;
     existsInEvolution: boolean | null;
     evolutionState: string | null;
+    lastChecked: Date | null;
   };
   barbershopConfigs: {
     total: number;
@@ -125,6 +129,9 @@ export const WhatsAppDiagnosticPanel = () => {
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [creatingOtpInstance, setCreatingOtpInstance] = useState(false);
+  const [otpQrCode, setOtpQrCode] = useState<string | null>(null);
+  const [selectInstanceDialogOpen, setSelectInstanceDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchAllData();
@@ -146,7 +153,7 @@ export const WhatsAppDiagnosticPanel = () => {
     }
   };
 
-  const fetchHealth = async () => {
+  const fetchHealth = async (verifyRealTime = false) => {
     // Evolution API config
     const { data: evolutionData } = await supabase
       .from('system_config')
@@ -172,19 +179,104 @@ export const WhatsAppDiagnosticPanel = () => {
       c.is_active && c.config?.connection_status === 'connected'
     ) || [];
 
+    let apiReachable: boolean | null = null;
+    let otpExists: boolean | null = null;
+    let otpEvolutionState: string | null = null;
+    let otpStatus = otpData?.value?.status || null;
+
+    // Verificar em tempo real se solicitado
+    if (verifyRealTime && evolutionData?.value?.api_url && evolutionData?.value?.api_key) {
+      try {
+        // Verificar se API está acessível
+        const { data: instancesData, error: instancesError } = await supabase.functions.invoke('send-whatsapp-evolution', {
+          body: {
+            action: 'fetchInstances',
+            apiUrl: evolutionData.value.api_url,
+            apiKey: evolutionData.value.api_key,
+          }
+        });
+
+        if (!instancesError) {
+          apiReachable = true;
+
+          // Verificar se instância OTP existe
+          if (otpData?.value?.instance_name) {
+            let instances: any[] = [];
+            if (Array.isArray(instancesData)) {
+              instances = instancesData;
+            } else if (instancesData?.instances && Array.isArray(instancesData.instances)) {
+              instances = instancesData.instances;
+            }
+
+            const otpInstanceName = otpData.value.instance_name.toLowerCase();
+            const foundInstance = instances.find((inst: any) => {
+              const name = (inst.instanceName || inst.instance?.instanceName || inst.name || '').toLowerCase();
+              return name === otpInstanceName;
+            });
+
+            otpExists = !!foundInstance;
+            
+            if (foundInstance) {
+              // Verificar estado da conexão
+              const { data: stateData } = await supabase.functions.invoke('send-whatsapp-evolution', {
+                body: {
+                  action: 'connectionState',
+                  apiUrl: evolutionData.value.api_url,
+                  apiKey: evolutionData.value.api_key,
+                  instanceName: otpData.value.instance_name,
+                }
+              });
+              
+              otpEvolutionState = stateData?.state || stateData?.instance?.state || null;
+              const isConnected = otpEvolutionState === 'open';
+              otpStatus = isConnected ? 'connected' : 'disconnected';
+              
+              // Atualizar no banco se mudou
+              if (otpData.value.status !== otpStatus) {
+                await supabase
+                  .from('system_config')
+                  .update({
+                    value: { ...otpData.value, status: otpStatus }
+                  })
+                  .eq('key', 'otp_whatsapp');
+              }
+            } else {
+              // Instância não existe
+              otpStatus = 'missing';
+              if (otpData.value.status !== 'missing') {
+                await supabase
+                  .from('system_config')
+                  .update({
+                    value: { ...otpData.value, status: 'missing' }
+                  })
+                  .eq('key', 'otp_whatsapp');
+              }
+            }
+          }
+        } else {
+          apiReachable = false;
+        }
+      } catch (e) {
+        console.error('Erro na verificação em tempo real:', e);
+        apiReachable = false;
+      }
+    }
+
     setHealth({
       evolutionApi: {
         configured: !!(evolutionData?.value?.api_url && evolutionData?.value?.api_key),
         apiUrl: evolutionData?.value?.api_url || null,
-        reachable: null, // Will be checked on demand
+        reachable: apiReachable,
+        lastChecked: verifyRealTime ? new Date() : null,
       },
       otpInstance: {
         configured: !!otpData?.value?.instance_name,
         instanceName: otpData?.value?.instance_name || null,
-        status: otpData?.value?.status || null,
+        status: otpStatus,
         phoneNumber: otpData?.value?.phone_number || null,
-        existsInEvolution: null, // Will be checked on demand
-        evolutionState: null,
+        existsInEvolution: otpExists,
+        evolutionState: otpEvolutionState,
+        lastChecked: verifyRealTime ? new Date() : null,
       },
       barbershopConfigs: {
         total: allConfigs?.length || 0,
@@ -607,7 +699,33 @@ export const WhatsAppDiagnosticPanel = () => {
         barbershopMatches,
       });
 
+      // Atualizar status no banco se OTP não existe
       if (!otpMatch && otpInstanceName) {
+        const { data: currentOtpData } = await supabase
+          .from('system_config')
+          .select('value')
+          .eq('key', 'otp_whatsapp')
+          .maybeSingle();
+          
+        if (currentOtpData?.value?.status !== 'missing') {
+          await supabase
+            .from('system_config')
+            .update({
+              value: { ...currentOtpData?.value, status: 'missing' }
+            })
+            .eq('key', 'otp_whatsapp');
+        }
+        
+        // Atualizar health local
+        setHealth(prev => prev ? {
+          ...prev,
+          otpInstance: {
+            ...prev.otpInstance,
+            status: 'missing',
+            existsInEvolution: false
+          }
+        } : null);
+        
         toast.warning('Instância OTP não encontrada no Evolution', {
           description: `A instância "${otpInstanceName}" não existe no servidor Evolution.`
         });
@@ -623,6 +741,160 @@ export const WhatsAppDiagnosticPanel = () => {
       });
     } finally {
       setSyncLoading(false);
+    }
+  };
+
+  const createOtpInstance = async () => {
+    if (!health?.otpInstance.instanceName) {
+      toast.error('Nome da instância OTP não configurado');
+      return;
+    }
+
+    setCreatingOtpInstance(true);
+    setOtpQrCode(null);
+
+    try {
+      const { data: evolutionData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'evolution_api')
+        .maybeSingle();
+
+      if (!evolutionData?.value?.api_url || !evolutionData?.value?.api_key) {
+        toast.error('Evolution API não configurada');
+        return;
+      }
+
+      // Criar instância
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'createInstance',
+          apiUrl: evolutionData.value.api_url,
+          apiKey: evolutionData.value.api_key,
+          instanceName: health.otpInstance.instanceName,
+        }
+      });
+
+      if (error) throw error;
+
+      // Buscar QR Code
+      const { data: qrData, error: qrError } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'connect',
+          apiUrl: evolutionData.value.api_url,
+          apiKey: evolutionData.value.api_key,
+          instanceName: health.otpInstance.instanceName,
+        }
+      });
+
+      if (qrError) throw qrError;
+
+      const qrCode = qrData?.base64 || qrData?.qrcode?.base64 || qrData?.code;
+      if (qrCode) {
+        setOtpQrCode(qrCode);
+        toast.success('Instância criada! Escaneie o QR Code');
+      } else {
+        toast.success('Instância criada', {
+          description: 'Configure a conexão na aba OTP WhatsApp'
+        });
+      }
+
+      // Atualizar status
+      const { data: otpData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'otp_whatsapp')
+        .maybeSingle();
+
+      await supabase
+        .from('system_config')
+        .update({
+          value: { ...otpData?.value, status: 'connecting' }
+        })
+        .eq('key', 'otp_whatsapp');
+
+      setHealth(prev => prev ? {
+        ...prev,
+        otpInstance: {
+          ...prev.otpInstance,
+          status: 'connecting',
+          existsInEvolution: true
+        }
+      } : null);
+
+    } catch (error: any) {
+      console.error('Erro ao criar instância:', error);
+      toast.error('Erro ao criar instância', {
+        description: error.message
+      });
+    } finally {
+      setCreatingOtpInstance(false);
+    }
+  };
+
+  const selectExistingInstance = async (instanceName: string) => {
+    try {
+      const { data: otpData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'otp_whatsapp')
+        .maybeSingle();
+
+      // Verificar estado da instância
+      const { data: evolutionData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'evolution_api')
+        .maybeSingle();
+
+      const { data: stateData } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'connectionState',
+          apiUrl: evolutionData?.value?.api_url,
+          apiKey: evolutionData?.value?.api_key,
+          instanceName,
+        }
+      });
+
+      const state = stateData?.state || stateData?.instance?.state;
+      const isConnected = state === 'open';
+
+      await supabase
+        .from('system_config')
+        .update({
+          value: {
+            ...otpData?.value,
+            instance_name: instanceName,
+            status: isConnected ? 'connected' : 'disconnected'
+          }
+        })
+        .eq('key', 'otp_whatsapp');
+
+      toast.success('Instância OTP atualizada', {
+        description: `Agora usando: ${instanceName}`
+      });
+
+      setSelectInstanceDialogOpen(false);
+      setSyncDialogOpen(false);
+      await fetchHealth(true);
+    } catch (error: any) {
+      console.error('Erro ao selecionar instância:', error);
+      toast.error('Erro ao selecionar instância', {
+        description: error.message
+      });
+    }
+  };
+
+  const verifyHealthRealTime = async () => {
+    setRefreshing(true);
+    try {
+      await fetchHealth(true);
+      toast.success('Verificação em tempo real concluída');
+    } catch (error) {
+      console.error('Erro na verificação:', error);
+      toast.error('Erro na verificação');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -811,6 +1083,15 @@ export const WhatsAppDiagnosticPanel = () => {
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 pt-2">
             <Button 
+              variant="default" 
+              size="sm"
+              onClick={verifyHealthRealTime}
+              disabled={refreshing || !health?.evolutionApi.configured}
+            >
+              <Activity className={`h-4 w-4 mr-2 ${refreshing ? 'animate-pulse' : ''}`} />
+              Verificar em Tempo Real
+            </Button>
+            <Button 
               variant="outline" 
               size="sm"
               onClick={() => setTestDialogOpen(true)}
@@ -822,11 +1103,11 @@ export const WhatsAppDiagnosticPanel = () => {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={checkOtpInstanceConnection}
-              disabled={refreshing || !health?.otpInstance.instanceName}
+              onClick={syncEvolutionInstances}
+              disabled={!health?.evolutionApi.configured || syncLoading}
             >
-              <Wifi className="h-4 w-4 mr-2" />
-              Verificar Instância OTP
+              <GitCompare className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
+              Sincronizar Instâncias
             </Button>
             <Button 
               variant="outline" 
@@ -835,18 +1116,16 @@ export const WhatsAppDiagnosticPanel = () => {
               disabled={refreshing}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Atualizar Tudo
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={syncEvolutionInstances}
-              disabled={!health?.evolutionApi.configured || syncLoading}
-            >
-              <GitCompare className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
-              Sincronizar Instâncias
+              Atualizar Dados
             </Button>
           </div>
+          
+          {/* Last verified indicator */}
+          {health?.evolutionApi.lastChecked && (
+            <p className="text-xs text-muted-foreground pt-2">
+              Última verificação em tempo real: {format(health.evolutionApi.lastChecked, "dd/MM HH:mm:ss", { locale: ptBR })}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -1281,13 +1560,60 @@ export const WhatsAppDiagnosticPanel = () => {
                     </div>
                   </div>
                   {syncResult.otpConfigured && !syncResult.otpMatch && (
-                    <Alert className="mt-3 border-destructive/50 bg-destructive/10">
-                      <AlertTriangle className="h-4 w-4 text-destructive" />
-                      <AlertDescription className="text-destructive/90">
-                        A instância "{syncResult.otpConfigured}" configurada para OTP não foi encontrada no servidor Evolution. 
-                        Crie a instância ou atualize a configuração para uma instância existente.
-                      </AlertDescription>
-                    </Alert>
+                    <div className="mt-4 space-y-3">
+                      <Alert className="border-destructive/50 bg-destructive/10">
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                        <AlertDescription className="text-destructive/90">
+                          A instância "{syncResult.otpConfigured}" configurada para OTP não foi encontrada no servidor Evolution.
+                        </AlertDescription>
+                      </Alert>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={createOtpInstance}
+                          disabled={creatingOtpInstance}
+                        >
+                          {creatingOtpInstance ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Plus className="h-4 w-4 mr-2" />
+                          )}
+                          Criar Instância "{syncResult.otpConfigured}"
+                        </Button>
+                        {syncResult.evolutionInstances.length > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectInstanceDialogOpen(true)}
+                          >
+                            <QrCode className="h-4 w-4 mr-2" />
+                            Usar Instância Existente
+                          </Button>
+                        )}
+                      </div>
+                      {otpQrCode && (
+                        <div className="mt-4 p-4 bg-white rounded-lg flex flex-col items-center">
+                          <p className="text-sm text-muted-foreground mb-2">Escaneie o QR Code para conectar:</p>
+                          <img 
+                            src={otpQrCode.startsWith('data:') ? otpQrCode : `data:image/png;base64,${otpQrCode}`} 
+                            alt="QR Code" 
+                            className="w-64 h-64"
+                          />
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="mt-4"
+                            onClick={() => {
+                              setOtpQrCode(null);
+                              syncEvolutionInstances();
+                            }}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Verificar Conexão
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1355,6 +1681,46 @@ export const WhatsAppDiagnosticPanel = () => {
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
               Sincronizar Novamente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Select Existing Instance Dialog */}
+      <Dialog open={selectInstanceDialogOpen} onOpenChange={setSelectInstanceDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-warning" />
+              Selecionar Instância Existente
+            </DialogTitle>
+            <DialogDescription>
+              Escolha uma instância do Evolution para usar como OTP Global
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-2 py-4">
+            {syncResult?.evolutionInstances.map((inst, idx) => (
+              <Button
+                key={idx}
+                variant="outline"
+                className="w-full justify-between"
+                onClick={() => selectExistingInstance(inst.instanceName)}
+              >
+                <span className="font-mono">{inst.instanceName}</span>
+                <Badge 
+                  variant={inst.status === 'open' ? 'default' : 'outline'}
+                  className={inst.status === 'open' ? 'bg-success/20 text-success' : ''}
+                >
+                  {inst.status || 'unknown'}
+                </Badge>
+              </Button>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectInstanceDialogOpen(false)}>
+              Cancelar
             </Button>
           </DialogFooter>
         </DialogContent>
