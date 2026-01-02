@@ -121,19 +121,32 @@ serve(async (req) => {
     if (!instanceName) {
       console.log('[Send OTP] Instância OTP global não configurada, buscando instância alternativa...');
 
+      // Buscar qualquer instância evolution ativa
       const { data: configs, error: configsError } = await supabase
         .from('whatsapp_config')
         .select('config, is_active')
         .eq('provider', 'evolution')
-        .or('is_active.eq.true,config->>connection_status.eq.connected')
-        .limit(1);
+        .eq('is_active', true);
 
       if (configsError) {
         console.error('[Send OTP] Erro ao buscar whatsapp_config:', configsError);
       }
 
-      if (!configs || configs.length === 0 || !configs[0].config?.instance_name) {
+      console.log('[Send OTP] Configurações encontradas:', JSON.stringify(configs));
+
+      // Filtrar para encontrar uma com instance_name
+      const validConfig = configs?.find(c => c.config?.instance_name);
+
+      if (!validConfig) {
         console.error('[Send OTP] Nenhuma instância WhatsApp conectada');
+        
+        // Delete the OTP record since we can't send
+        await supabase
+          .from('auth_otp_codes')
+          .delete()
+          .eq('phone', formattedPhone)
+          .eq('code', code);
+        
         return new Response(
           JSON.stringify({
             success: false,
@@ -142,13 +155,14 @@ serve(async (req) => {
             details: {
               otp_instance_configured: !!otpConfig?.value?.instance_name,
               otp_status: otpStatus || null,
+              configs_found: configs?.length || 0,
             },
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const fallbackConfig = configs[0].config as {
+      const fallbackConfig = validConfig.config as {
         api_url?: string;
         api_key?: string;
         instance_name: string;
