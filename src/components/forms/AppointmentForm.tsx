@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StaffAvatar } from "@/components/ui/smart-avatar";
-import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2, Repeat } from "lucide-react";
+import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2, Repeat, AlertCircle, Check, X, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, formatDuration } from "@/lib/utils";
@@ -116,6 +116,8 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   const [recurrenceCount, setRecurrenceCount] = useState<number>(4);
   const [customIntervalDays, setCustomIntervalDays] = useState<number>(7);
   const [generatedDates, setGeneratedDates] = useState<GeneratedDate[]>([]);
+  const [dateAvailability, setDateAvailability] = useState<Map<string, { available: boolean; checking: boolean; reason?: string }>>(new Map());
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   
   // Check if editing a recurring appointment
   const isEditingRecurring = appointment?.is_recurring && appointment?.recurrence_group_id;
@@ -181,16 +183,99 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       };
       const dates = generateRecurringDates(date, config);
       setGeneratedDates(dates);
+      // Reset availability when dates change
+      setDateAvailability(new Map());
     } else if (recurrenceType === 'single' && date) {
       setGeneratedDates([{
         date: date,
         index: 0,
         formattedDate: format(date, 'yyyy-MM-dd'),
       }]);
+      setDateAvailability(new Map());
     } else {
       setGeneratedDates([]);
+      setDateAvailability(new Map());
     }
   }, [isNewAppointment, recurrenceType, recurrenceRule, recurrenceCount, customIntervalDays, date]);
+
+  // Check availability for recurring dates
+  useEffect(() => {
+    if (recurrenceType !== 'recurring' || generatedDates.length <= 1 || !selectedTime || !selectedBarber || !effectiveBarbershopId) {
+      return;
+    }
+
+    const checkRecurringAvailability = async () => {
+      setCheckingAvailability(true);
+      const service = services.find(s => s.id === selectedService);
+      const serviceDuration = service?.duration || 30;
+      
+      // Initialize all dates as checking
+      const initialMap = new Map<string, { available: boolean; checking: boolean; reason?: string }>();
+      generatedDates.forEach(d => {
+        initialMap.set(d.formattedDate, { available: true, checking: true });
+      });
+      setDateAvailability(initialMap);
+
+      // Check availability for each date (skip the first one as it's already validated)
+      const results = new Map<string, { available: boolean; checking: boolean; reason?: string }>();
+      
+      for (const genDate of generatedDates) {
+        try {
+          // Check business hours validation
+          const validation = validateDateTime(genDate.date, selectedTime, selectedBarber);
+          
+          if (!validation.isValid) {
+            results.set(genDate.formattedDate, { 
+              available: false, 
+              checking: false, 
+              reason: validation.reason || 'Horário indisponível' 
+            });
+            continue;
+          }
+
+          // Check for existing appointments
+          const { data: existingAppointments, error } = await supabase
+            .from('appointments')
+            .select('id, appointment_time, service_id')
+            .eq('barbershop_id', effectiveBarbershopId)
+            .eq('staff_id', selectedBarber)
+            .eq('appointment_date', genDate.formattedDate)
+            .in('status', ['pendente', 'confirmado', 'concluido']);
+
+          if (error) {
+            results.set(genDate.formattedDate, { available: true, checking: false });
+            continue;
+          }
+
+          // Check for time conflicts
+          const bookedAppointments = (existingAppointments || []).map(apt => {
+            const bookedService = services.find(s => s.id === apt.service_id);
+            return {
+              time: apt.appointment_time,
+              duration: bookedService?.duration || 30
+            };
+          });
+
+          const hasConflict = checkTimeOverlap(selectedTime, serviceDuration, bookedAppointments);
+          
+          results.set(genDate.formattedDate, { 
+            available: !hasConflict, 
+            checking: false,
+            reason: hasConflict ? 'Horário já ocupado' : undefined
+          });
+        } catch (err) {
+          results.set(genDate.formattedDate, { available: true, checking: false });
+        }
+      }
+
+      setDateAvailability(results);
+      setCheckingAvailability(false);
+    };
+
+    // Debounce the check
+    const timeoutId = setTimeout(checkRecurringAvailability, 500);
+    return () => clearTimeout(timeoutId);
+  }, [generatedDates, selectedTime, selectedBarber, effectiveBarbershopId, recurrenceType, selectedService, services]);
 
   // Fetch day availability for calendar visualization
   useEffect(() => {
@@ -1127,9 +1212,27 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
       } else {
         // New appointment - handle recurring if enabled
         if (isNewAppointment && recurrenceType === 'recurring' && generatedDates.length > 1) {
-          // Create recurring appointments
+          // Filter only available dates
+          const availableDates = generatedDates.filter(genDate => {
+            const availability = dateAvailability.get(genDate.formattedDate);
+            return availability?.available !== false; // Include if available or not checked
+          });
+
+          if (availableDates.length === 0) {
+            toast({
+              title: "Nenhuma data disponível",
+              description: "Todas as datas selecionadas estão ocupadas. Tente outros horários ou datas.",
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+
+          const skippedCount = generatedDates.length - availableDates.length;
+
+          // Create recurring appointments for available dates only
           const recurrenceGroupId = generateRecurrenceGroupId();
-          const appointmentsToCreate = generatedDates.map((genDate, index) => ({
+          const appointmentsToCreate = availableDates.map((genDate, index) => ({
             barbershop_id: effectiveBarbershopId,
             client_id: finalClientId,
             staff_id: selectedBarber,
@@ -1137,7 +1240,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             appointment_date: genDate.formattedDate,
             appointment_time: selectedTime,
             status: 'pendente',
-            notes: index === 0 ? notes : `${notes || ''} (Recorrência ${index + 1}/${generatedDates.length})`.trim(),
+            notes: index === 0 ? notes : `${notes || ''} (Recorrência ${index + 1}/${availableDates.length})`.trim(),
             client_name: clientName,
             client_phone: clientPhone,
             service_name: service?.name,
@@ -1155,9 +1258,13 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
 
           if (appointmentError) throw appointmentError;
 
+          const description = skippedCount > 0 
+            ? `${availableDates.length} agendamentos criados para ${clientName}. ${skippedCount} data(s) indisponível(is) foram ignoradas.`
+            : `${availableDates.length} agendamentos criados para ${clientName}, ${getRecurrenceLabel(recurrenceRule)}.`;
+
           toast({
             title: "Série de Agendamentos Criada!",
-            description: `${generatedDates.length} agendamentos criados para ${clientName}, ${getRecurrenceLabel(recurrenceRule)}.`,
+            description,
           });
 
           // Enviar confirmação apenas do primeiro agendamento
@@ -1166,7 +1273,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             sendWhatsAppConfirmation(firstApt.id, {
               clientName,
               clientPhone,
-              date: generatedDates[0].date,
+              date: availableDates[0].date,
               time: selectedTime,
               serviceName: service?.name || 'Serviço',
               barberName: selectedBarberData?.name || 'Profissional'
@@ -1917,32 +2024,104 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                           </div>
                         )}
                         
-                        {/* Preview of recurring dates */}
+                        {/* Preview of recurring dates with availability */}
                         {generatedDates.length > 0 && (
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-muted-foreground">
-                                {generatedDates.length} agendamentos
-                              </span>
+                            {/* Summary header */}
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">
+                                  {generatedDates.length} agendamentos
+                                </span>
+                                {checkingAvailability && (
+                                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                                )}
+                              </div>
                               {selectedServiceData && (
                                 <Badge variant="secondary" className="text-xs">
                                   Total: R$ {calculateTotalPrice(selectedServiceData.price, generatedDates.length).toFixed(2)}
                                 </Badge>
                               )}
                             </div>
-                            <div className="max-h-24 overflow-y-auto space-y-1">
-                              {generatedDates.slice(0, 5).map((genDate, idx) => (
-                                <div key={idx} className="flex items-center justify-between text-xs p-1 rounded bg-background/50">
-                                  <span>{format(genDate.date, "dd/MM/yyyy (EEE)", { locale: ptBR })}</span>
-                                  <span className="text-muted-foreground">{selectedTime}</span>
-                                </div>
-                              ))}
-                              {generatedDates.length > 5 && (
-                                <div className="text-xs text-center text-muted-foreground py-1">
-                                  +{generatedDates.length - 5} mais datas...
-                                </div>
-                              )}
+                            
+                            {/* Availability summary badges */}
+                            {!checkingAvailability && dateAvailability.size > 0 && (
+                              <div className="flex gap-2 flex-wrap">
+                                {(() => {
+                                  const available = Array.from(dateAvailability.values()).filter(d => d.available).length;
+                                  const unavailable = Array.from(dateAvailability.values()).filter(d => !d.available).length;
+                                  return (
+                                    <>
+                                      {available > 0 && (
+                                        <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600">
+                                          <Check className="h-3 w-3" />
+                                          {available} disponíveis
+                                        </Badge>
+                                      )}
+                                      {unavailable > 0 && (
+                                        <Badge variant="outline" className="text-xs gap-1 border-destructive/50 text-destructive">
+                                          <X className="h-3 w-3" />
+                                          {unavailable} indisponíveis
+                                        </Badge>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                            
+                            {/* Date list with availability indicators */}
+                            <div className="max-h-32 overflow-y-auto space-y-1">
+                              {generatedDates.map((genDate, idx) => {
+                                const availability = dateAvailability.get(genDate.formattedDate);
+                                const isAvailable = availability?.available ?? true;
+                                const isChecking = availability?.checking ?? false;
+                                
+                                return (
+                                  <div 
+                                    key={idx} 
+                                    className={cn(
+                                      "flex items-center justify-between text-xs p-1.5 rounded",
+                                      isChecking ? "bg-muted/50" :
+                                      isAvailable ? "bg-green-500/10" : "bg-destructive/10"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {isChecking ? (
+                                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                                      ) : isAvailable ? (
+                                        <Check className="h-3 w-3 text-green-600" />
+                                      ) : (
+                                        <X className="h-3 w-3 text-destructive" />
+                                      )}
+                                      <span className={cn(!isAvailable && "text-destructive")}>
+                                        {format(genDate.date, "dd/MM/yyyy (EEE)", { locale: ptBR })}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {!isAvailable && availability?.reason && (
+                                        <span className="text-destructive text-[10px]">{availability.reason}</span>
+                                      )}
+                                      <span className={cn(
+                                        "text-muted-foreground",
+                                        !isAvailable && "line-through"
+                                      )}>{selectedTime}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
+                            
+                            {/* Warning if there are unavailable dates */}
+                            {!checkingAvailability && Array.from(dateAvailability.values()).some(d => !d.available) && (
+                              <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                                <div className="text-xs text-amber-700">
+                                  <strong>Atenção:</strong> Algumas datas têm conflitos. 
+                                  Apenas as datas disponíveis serão agendadas.
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
