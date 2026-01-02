@@ -184,6 +184,8 @@ const SaasAdminPortal = () => {
   const [linkForm, setLinkForm] = useState({ unitId: '', parentId: '' });
   const [savingLink, setSavingLink] = useState(false);
   const [tenantSearch, setTenantSearch] = useState('');
+  const [tenantStatusFilter, setTenantStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [tenantPlanFilter, setTenantPlanFilter] = useState<string>('all');
 
   // Dialogs
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
@@ -970,14 +972,40 @@ const SaasAdminPortal = () => {
                     Gerenciar Hierarquia
                   </Button>
                 </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome, plano ou status..."
-                    value={tenantSearch}
-                    onChange={(e) => setTenantSearch(e.target.value)}
-                    className="pl-9"
-                  />
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome..."
+                      value={tenantSearch}
+                      onChange={(e) => setTenantSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Select value={tenantStatusFilter} onValueChange={(v: 'all' | 'active' | 'inactive') => setTenantStatusFilter(v)}>
+                      <SelectTrigger className="w-[130px]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="active">Ativos</SelectItem>
+                        <SelectItem value="inactive">Inativos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={tenantPlanFilter} onValueChange={setTenantPlanFilter}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os planos</SelectItem>
+                        {plans.filter(p => p.active).map(plan => (
+                          <SelectItem key={plan.id} value={plan.name}>{plan.name}</SelectItem>
+                        ))}
+                        <SelectItem value="Free">Free</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-3 sm:p-6 pt-0">
@@ -985,13 +1013,20 @@ const SaasAdminPortal = () => {
                 <div className="md:hidden space-y-3">
                   {tenants
                     .filter((tenant) => {
+                      // Filtro de status
+                      if (tenantStatusFilter === 'active' && !tenant.active) return false;
+                      if (tenantStatusFilter === 'inactive' && tenant.active) return false;
+                      // Filtro de plano
+                      if (tenantPlanFilter !== 'all') {
+                        const planName = tenant.subscription?.plan_name || 'Free';
+                        if (planName !== tenantPlanFilter) return false;
+                      }
+                      // Filtro de busca
                       if (!tenantSearch.trim()) return true;
                       const search = tenantSearch.toLowerCase();
                       const matchName = tenant.name.toLowerCase().includes(search);
-                      const matchPlan = tenant.subscription?.plan_name?.toLowerCase().includes(search);
-                      const matchStatus = tenant.subscription?.status?.toLowerCase().includes(search);
                       const matchUnitName = tenant.units?.some(u => u.name.toLowerCase().includes(search));
-                      return matchName || matchPlan || matchStatus || matchUnitName;
+                      return matchName || matchUnitName;
                     })
                     .map((tenant) => {
                       const consolidated = getConsolidatedMetrics(tenant);
@@ -1114,13 +1149,20 @@ const SaasAdminPortal = () => {
                     <TableBody>
                       {tenants
                         .filter((tenant) => {
+                          // Filtro de status
+                          if (tenantStatusFilter === 'active' && !tenant.active) return false;
+                          if (tenantStatusFilter === 'inactive' && tenant.active) return false;
+                          // Filtro de plano
+                          if (tenantPlanFilter !== 'all') {
+                            const planName = tenant.subscription?.plan_name || 'Free';
+                            if (planName !== tenantPlanFilter) return false;
+                          }
+                          // Filtro de busca
                           if (!tenantSearch.trim()) return true;
                           const search = tenantSearch.toLowerCase();
                           const matchName = tenant.name.toLowerCase().includes(search);
-                          const matchPlan = tenant.subscription?.plan_name?.toLowerCase().includes(search);
-                          const matchStatus = tenant.subscription?.status?.toLowerCase().includes(search);
                           const matchUnitName = tenant.units?.some(u => u.name.toLowerCase().includes(search));
-                          return matchName || matchPlan || matchStatus || matchUnitName;
+                          return matchName || matchUnitName;
                         })
                         .map((tenant) => {
                         const consolidated = getConsolidatedMetrics(tenant);
