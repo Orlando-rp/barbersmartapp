@@ -100,23 +100,24 @@ FLUXO DE AGENDAMENTO:
     try {
       setLoading(true);
       
+      // Usar system_config em vez de chatbot_config
       const { data, error } = await supabase
-        .from('chatbot_config')
-        .select('*')
-        .is('barbershop_id', null)
+        .from('system_config')
+        .select('value')
+        .eq('key', 'chatbot_global')
         .maybeSingle();
 
-      if (error && !error.message?.includes('does not exist')) {
+      if (error) {
         console.error('Erro ao carregar config global:', error);
       }
 
-      if (data?.config) {
+      if (data?.value) {
         setConfig({
-          enabled: data.config.enabled ?? true,
-          model: data.config.model || 'gpt-4o-mini',
-          maxTokens: data.config.max_tokens || 500,
-          temperature: data.config.temperature || 0.7,
-          systemPromptTemplate: data.config.system_prompt_template || defaultSystemPrompt
+          enabled: data.value.enabled ?? true,
+          model: data.value.model || 'gpt-4o-mini',
+          maxTokens: data.value.max_tokens || 500,
+          temperature: data.value.temperature || 0.7,
+          systemPromptTemplate: data.value.system_prompt_template || defaultSystemPrompt
         });
       } else {
         setConfig(prev => ({
@@ -139,22 +140,21 @@ FLUXO DE AGENDAMENTO:
     try {
       setSaving(true);
 
+      // Salvar em system_config para consistência
       const { error } = await supabase
-        .from('whatsapp_config')
+        .from('system_config')
         .upsert({
-          barbershop_id: null,
-          provider: 'chatbot',
-          config: {
+          key: 'chatbot_global',
+          value: {
             enabled: config.enabled,
             model: config.model,
             max_tokens: config.maxTokens,
             temperature: config.temperature,
             system_prompt_template: config.systemPromptTemplate
           },
-          is_active: config.enabled,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'barbershop_id,provider'
+          onConflict: 'key'
         });
 
       if (error) throw error;
