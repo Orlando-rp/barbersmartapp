@@ -330,6 +330,84 @@ export const WhatsAppDiagnosticPanel = () => {
     }
   };
 
+  const checkOtpInstanceConnection = async () => {
+    if (!health?.otpInstance.instanceName) {
+      toast.error('Instância OTP não configurada');
+      return;
+    }
+
+    setRefreshing(true);
+    try {
+      const { data: evolutionData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'evolution_api')
+        .maybeSingle();
+
+      if (!evolutionData?.value?.api_url) {
+        toast.error('Evolution API não configurada');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'connectionState',
+          apiUrl: evolutionData.value.api_url,
+          apiKey: evolutionData.value.api_key,
+          instanceName: health.otpInstance.instanceName,
+        }
+      });
+
+      if (error) throw error;
+
+      const state = data?.state || data?.instance?.state;
+      const isConnected = state === 'open';
+
+      // Atualizar status no system_config
+      const { data: otpData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'otp_whatsapp')
+        .maybeSingle();
+
+      await supabase
+        .from('system_config')
+        .update({
+          value: {
+            ...otpData?.value,
+            status: isConnected ? 'connected' : 'disconnected'
+          }
+        })
+        .eq('key', 'otp_whatsapp');
+
+      // Atualizar state local
+      setHealth(prev => prev ? {
+        ...prev,
+        otpInstance: {
+          ...prev.otpInstance,
+          status: isConnected ? 'connected' : 'disconnected'
+        }
+      } : null);
+
+      if (isConnected) {
+        toast.success('Instância OTP conectada!', {
+          description: `Estado: ${state} | Instância: ${health.otpInstance.instanceName}`
+        });
+      } else {
+        toast.warning('Instância OTP desconectada', {
+          description: `Estado: ${state || 'unknown'} | Reconecte no SaaS Admin → OTP WhatsApp`
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao verificar instância OTP:', error);
+      toast.error('Erro ao verificar instância OTP', {
+        description: error.message
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const sendTestOtp = async () => {
     if (!testPhone || testPhone.length < 10) {
       toast.error('Digite um número de telefone válido');
@@ -543,6 +621,15 @@ export const WhatsAppDiagnosticPanel = () => {
             >
               <TestTube className="h-4 w-4 mr-2" />
               Testar Envio OTP
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={checkOtpInstanceConnection}
+              disabled={refreshing || !health?.otpInstance.instanceName}
+            >
+              <Wifi className="h-4 w-4 mr-2" />
+              Verificar Instância OTP
             </Button>
             <Button 
               variant="outline" 

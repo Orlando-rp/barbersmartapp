@@ -116,6 +116,23 @@ serve(async (req) => {
       if (!validConfig) {
         console.error('[Send OTP] Nenhuma instância WhatsApp disponível');
 
+        // Logar falha
+        try {
+          await supabase
+            .from('whatsapp_logs')
+            .insert({
+              barbershop_id: null,
+              recipient_phone: formattedPhone,
+              message_content: '[OTP] Falha - Nenhuma instância disponível',
+              status: 'failed',
+              provider: 'evolution',
+              message_type: 'otp',
+              error_message: 'Nenhuma instância WhatsApp disponível'
+            });
+        } catch (logErr) {
+          console.warn('[Send OTP] Erro ao logar falha:', logErr);
+        }
+
         return new Response(
           JSON.stringify({
             success: false,
@@ -127,7 +144,7 @@ serve(async (req) => {
               configs_found: configs?.length || 0,
             },
           }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -151,6 +168,69 @@ serve(async (req) => {
       } else {
         console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
       }
+    }
+
+    // VALIDAR CONEXÃO REAL NO EVOLUTION antes de enviar
+    const connectionCheckUrl = `${apiUrl.replace(/\/+$/, '')}/instance/connectionState/${instanceName}`;
+    console.log(`[Send OTP] Verificando conexão: ${connectionCheckUrl}`);
+
+    try {
+      const connResp = await fetch(connectionCheckUrl, {
+        method: 'GET',
+        headers: { 'apikey': apiKey }
+      });
+
+      if (connResp.ok) {
+        const connData = await connResp.json();
+        const state = connData?.state || connData?.instance?.state;
+        console.log(`[Send OTP] Estado da conexão: ${state}`);
+
+        if (state !== 'open') {
+          // Atualizar status no banco se estava marcado como conectado
+          if (otpStatus === 'connected') {
+            await supabase
+              .from('system_config')
+              .update({
+                value: {
+                  ...otpConfig?.value,
+                  status: 'disconnected'
+                }
+              })
+              .eq('key', 'otp_whatsapp');
+            console.log('[Send OTP] Status OTP atualizado para disconnected no banco');
+          }
+
+          // Logar falha
+          await supabase
+            .from('whatsapp_logs')
+            .insert({
+              barbershop_id: null,
+              recipient_phone: formattedPhone,
+              message_content: '[OTP] Falha - Instância desconectada',
+              status: 'failed',
+              provider: 'evolution',
+              message_type: 'otp',
+              error_message: `Instância ${instanceName} não está conectada (state: ${state})`
+            });
+
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: `Instância WhatsApp desconectada. Reconecte no SaaS Admin → OTP WhatsApp.`,
+              details: {
+                instanceName,
+                state,
+                apiUrl: apiUrl.replace(/\/+$/, ''),
+              }
+            }),
+            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        console.warn(`[Send OTP] Não foi possível verificar conexão (status ${connResp.status}), tentando enviar mesmo assim`);
+      }
+    } catch (connErr) {
+      console.warn('[Send OTP] Erro ao verificar conexão, tentando enviar mesmo assim:', connErr);
     }
 
     // Invalidar códigos anteriores não verificados
@@ -229,6 +309,23 @@ serve(async (req) => {
 
       const errorMessage = responseData?.error || responseData?.message || responseData?.raw || 'Erro ao enviar código via WhatsApp';
       
+      // Logar falha no whatsapp_logs
+      try {
+        await supabase
+          .from('whatsapp_logs')
+          .insert({
+            barbershop_id: null,
+            recipient_phone: formattedPhone,
+            message_content: '[OTP] Falha ao enviar',
+            status: 'failed',
+            provider: 'evolution',
+            message_type: 'otp',
+            error_message: errorMessage
+          });
+      } catch (logErr) {
+        console.warn('[Send OTP] Erro ao logar falha:', logErr);
+      }
+      
       return new Response(
         JSON.stringify({
           success: false,
@@ -236,9 +333,10 @@ serve(async (req) => {
           details: {
             status: response.status,
             endpoint: evolutionUrl,
+            instanceName,
           }
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: response.status >= 400 && response.status < 500 ? 400 : 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
