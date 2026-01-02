@@ -110,3 +110,9 @@ verify_jwt = false
 
 [functions.otp-status-monitor]
 verify_jwt = false
+
+[functions.send-recovery-email]
+verify_jwt = false
+
+[functions.verify-email-recovery]
+verify_jwt = false

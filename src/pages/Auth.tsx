@@ -118,6 +118,7 @@ const Auth = () => {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isPasswordRecoverySession, setIsPasswordRecoverySession] = useState(false);
   const [emailResendCooldown, setEmailResendCooldown] = useState(0);
+  const [emailRecoveryToken, setEmailRecoveryToken] = useState<string | null>(null);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -143,8 +144,26 @@ const Auth = () => {
   // Current unit being edited
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
 
-  // Listen for PASSWORD_RECOVERY event (email recovery)
+  // Listen for PASSWORD_RECOVERY event (email recovery via Supabase native flow - fallback)
+  // And detect custom email recovery token in URL
   useEffect(() => {
+    // Check for custom email recovery token in URL
+    const params = new URLSearchParams(window.location.search);
+    const recovery = params.get('recovery');
+    const token = params.get('token');
+    const email = params.get('email');
+    
+    if (recovery === 'email' && token && email) {
+      setEmailRecoveryToken(token);
+      setRecoveryEmail(decodeURIComponent(email));
+      setShowPasswordRecovery(true);
+      setRecoveryMethod('email');
+      setRecoveryStep('newPassword');
+      // Clean URL params
+      window.history.replaceState({}, '', '/auth');
+    }
+
+    // Also listen for native Supabase PASSWORD_RECOVERY event (legacy fallback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordRecoverySession(true);
@@ -728,11 +747,13 @@ const Auth = () => {
     try {
       const redirectUrl = `${window.location.origin}/auth`;
       
-      const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
-        redirectTo: redirectUrl
+      // Use custom edge function with tenant branding
+      const { data, error } = await supabase.functions.invoke('send-recovery-email', {
+        body: { email: recoveryEmail, redirectUrl }
       });
 
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar email');
 
       setRecoveryStep('emailSent');
       setEmailResendCooldown(60);
@@ -772,29 +793,63 @@ const Auth = () => {
     setRecoveryStep('processing');
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
+      // If we have a custom email recovery token, use our edge function
+      if (emailRecoveryToken) {
+        const { data, error } = await supabase.functions.invoke('verify-email-recovery', {
+          body: { 
+            email: recoveryEmail, 
+            token: emailRecoveryToken,
+            newPassword 
+          }
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.error || 'Erro ao alterar senha');
 
-      toast.success('Senha alterada com sucesso!', {
-        description: 'Você já está logado com sua nova senha'
-      });
+        toast.success('Senha alterada com sucesso!', {
+          description: 'Faça login com sua nova senha'
+        });
 
-      // Reset recovery state
-      setShowPasswordRecovery(false);
-      setIsPasswordRecoverySession(false);
-      setRecoveryStep('phone');
-      setRecoveryMethod('choose');
-      setRecoveryEmail('');
-      setNewPassword('');
-      setConfirmNewPassword('');
+        // Reset recovery state
+        setShowPasswordRecovery(false);
+        setIsPasswordRecoverySession(false);
+        setEmailRecoveryToken(null);
+        setRecoveryStep('phone');
+        setRecoveryMethod('choose');
+        setRecoveryEmail('');
+        setNewPassword('');
+        setConfirmNewPassword('');
 
-      // Redirect to dashboard
-      await refreshBarbershops();
-      const redirectPath = getRedirectPath(userRole);
-      navigate(redirectPath);
+        // Pre-fill email for login
+        if (data.email) {
+          setLoginEmail(data.email);
+        }
+      } else {
+        // Native Supabase recovery session (legacy fallback)
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword
+        });
+
+        if (error) throw error;
+
+        toast.success('Senha alterada com sucesso!', {
+          description: 'Você já está logado com sua nova senha'
+        });
+
+        // Reset recovery state
+        setShowPasswordRecovery(false);
+        setIsPasswordRecoverySession(false);
+        setRecoveryStep('phone');
+        setRecoveryMethod('choose');
+        setRecoveryEmail('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+
+        // Redirect to dashboard
+        await refreshBarbershops();
+        const redirectPath = getRedirectPath(userRole);
+        navigate(redirectPath);
+      }
     } catch (error: any) {
       console.error('Erro ao resetar senha via email:', error);
       setRecoveryStep('newPassword');
