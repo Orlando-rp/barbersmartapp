@@ -24,6 +24,8 @@ import { toast as sonnerToast } from "sonner";
 import { DayProps, DayContent } from "react-day-picker";
 import { RecurrenceSelector, RecurrenceType } from "@/components/booking/RecurrenceSelector";
 import { RecurrenceConflictDialog } from "@/components/booking/RecurrenceConflictDialog";
+import { RecurrenceActionDialog, RecurrenceActionScope } from "@/components/booking/RecurrenceActionDialog";
+import { RecurrenceBadge } from "@/components/booking/RecurrenceBadge";
 import { 
   RecurrenceConfig, 
   GeneratedDate, 
@@ -97,6 +99,14 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   const [showWaitlistForm, setShowWaitlistForm] = useState(false);
   const [waitlistNotes, setWaitlistNotes] = useState("");
   const [savingWaitlist, setSavingWaitlist] = useState(false);
+  
+  // Recurrence edit state
+  const [recurrenceActionOpen, setRecurrenceActionOpen] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
+  const [recurrenceScope, setRecurrenceScope] = useState<RecurrenceActionScope>('single');
+  
+  // Check if editing a recurring appointment
+  const isEditingRecurring = appointment?.is_recurring && appointment?.recurrence_group_id;
   
   // Refs para controlar quando resetar as seleções
   const isFirstRender = useRef(true);
@@ -838,7 +848,27 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
     }
   };
 
-  const handleSubmit = async () => {
+  // Handle submit with recurrence scope check
+  const handleSubmitClick = async () => {
+    // If editing a recurring appointment, show scope dialog first
+    if (isEditingRecurring && !pendingSubmit) {
+      setRecurrenceActionOpen(true);
+      return;
+    }
+    
+    await handleSubmit(recurrenceScope);
+  };
+
+  // Handle recurrence action confirmation
+  const handleRecurrenceConfirm = async (scope: RecurrenceActionScope) => {
+    setRecurrenceScope(scope);
+    setPendingSubmit(true);
+    setRecurrenceActionOpen(false);
+    await handleSubmit(scope);
+    setPendingSubmit(false);
+  };
+
+  const handleSubmit = async (scope: RecurrenceActionScope = 'single') => {
     if (!date) {
       toast({
         title: "Erro",
@@ -949,27 +979,117 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
       };
 
       if (appointment) {
-        const { error: appointmentError } = await supabase
-          .from('appointments')
-          .update(appointmentData)
-          .eq('id', appointment.id);
+        // Handle recurring appointment updates based on scope
+        if (isEditingRecurring && scope !== 'single') {
+          const service = services.find(s => s.id === selectedService);
+          
+          // Calculate date difference for future/all updates
+          const originalDate = new Date(appointment.appointment_date);
+          const newDate = date;
+          const daysDiff = Math.floor((newDate.getTime() - originalDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (scope === 'all') {
+            // Update all appointments in series
+            const { data: seriesAppointments, error: fetchError } = await supabase
+              .from('appointments')
+              .select('id, appointment_date')
+              .eq('recurrence_group_id', appointment.recurrence_group_id)
+              .neq('status', 'cancelado')
+              .neq('status', 'concluido');
+            
+            if (fetchError) throw fetchError;
+            
+            // Update each appointment with the same relative change
+            for (const apt of seriesAppointments || []) {
+              const aptDate = new Date(apt.appointment_date);
+              aptDate.setDate(aptDate.getDate() + daysDiff);
+              
+              await supabase
+                .from('appointments')
+                .update({
+                  staff_id: selectedBarber,
+                  service_id: selectedService,
+                  appointment_date: format(aptDate, "yyyy-MM-dd"),
+                  appointment_time: selectedTime,
+                  notes,
+                  service_name: service?.name,
+                  service_price: service?.price,
+                })
+                .eq('id', apt.id);
+            }
+            
+            toast({
+              title: "Série Atualizada!",
+              description: `Todos os agendamentos da série foram atualizados.`,
+            });
+          } else if (scope === 'future') {
+            // Update this and future appointments
+            const { data: futureAppointments, error: fetchError } = await supabase
+              .from('appointments')
+              .select('id, appointment_date')
+              .eq('recurrence_group_id', appointment.recurrence_group_id)
+              .gte('recurrence_index', appointment.recurrence_index)
+              .neq('status', 'cancelado')
+              .neq('status', 'concluido');
+            
+            if (fetchError) throw fetchError;
+            
+            for (const apt of futureAppointments || []) {
+              const aptDate = new Date(apt.appointment_date);
+              aptDate.setDate(aptDate.getDate() + daysDiff);
+              
+              await supabase
+                .from('appointments')
+                .update({
+                  staff_id: selectedBarber,
+                  service_id: selectedService,
+                  appointment_date: format(aptDate, "yyyy-MM-dd"),
+                  appointment_time: selectedTime,
+                  notes,
+                  service_name: service?.name,
+                  service_price: service?.price,
+                })
+                .eq('id', apt.id);
+            }
+            
+            toast({
+              title: "Agendamentos Atualizados!",
+              description: `Este e os próximos agendamentos foram atualizados.`,
+            });
+          }
+        } else {
+          // Single appointment update (regular or single from recurring)
+          const updateData: any = {
+            ...appointmentData,
+          };
+          
+          // If editing single from recurring, save original_date
+          if (isEditingRecurring && scope === 'single') {
+            updateData.original_date = appointment.appointment_date;
+          }
+          
+          const { error: appointmentError } = await supabase
+            .from('appointments')
+            .update(updateData)
+            .eq('id', appointment.id);
 
-        if (appointmentError) throw appointmentError;
+          if (appointmentError) throw appointmentError;
 
-        toast({
-          title: "Agendamento Atualizado!",
-          description: `Agendamento para ${clientName} atualizado com sucesso.`,
-        });
+          toast({
+            title: "Agendamento Atualizado!",
+            description: `Agendamento para ${clientName} atualizado com sucesso.`,
+          });
 
-        // Enviar notificação de alteração via WhatsApp
-        sendWhatsAppUpdateNotification(appointment.id, {
-          clientName,
-          clientPhone,
-          date,
-          time: selectedTime,
-          serviceName: service?.name || 'Serviço',
-          barberName: selectedBarberData?.name || 'Profissional'
-        });
+          // Enviar notificação de alteração via WhatsApp
+          sendWhatsAppUpdateNotification(appointment.id, {
+            clientName,
+            clientPhone,
+            date,
+            time: selectedTime,
+            serviceName: service?.name || 'Serviço',
+            barberName: selectedBarberData?.name || 'Profissional'
+          });
+        }
       } else {
         const { data: insertedData, error: appointmentError } = await supabase
           .from('appointments')
@@ -1035,9 +1155,18 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
         <CardHeader className="space-y-3 sm:space-y-4 px-3 sm:px-6 pt-4 sm:pt-6">
           <div className="flex items-start sm:items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-2xl">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-2xl flex-wrap">
                 <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
                 <span className="truncate">{appointment ? 'Editar Agendamento' : 'Novo Agendamento'}</span>
+                {isEditingRecurring && (
+                  <RecurrenceBadge
+                    recurrenceIndex={appointment?.recurrence_index ?? 0}
+                    totalInSeries={appointment?.totalInSeries}
+                    recurrenceRule={appointment?.recurrence_rule}
+                    isRescheduled={appointment?.original_date && appointment?.original_date !== appointment?.appointment_date}
+                    className="text-xs"
+                  />
+                )}
               </CardTitle>
               <CardDescription className="mt-1 sm:mt-2 text-xs sm:text-sm line-clamp-2">
                 {currentStep === 'unit' && 'Selecione a unidade para o agendamento'}
@@ -1720,7 +1849,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 type="button"
                 variant="premium"
                 size="sm"
-                onClick={handleSubmit}
+                onClick={handleSubmitClick}
                 disabled={loading}
                 className="text-xs sm:text-sm"
               >
@@ -1750,6 +1879,18 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
           </div>
         </CardContent>
       </Card>
+      
+      {/* Recurrence Action Dialog for editing recurring appointments */}
+      {isEditingRecurring && (
+        <RecurrenceActionDialog
+          open={recurrenceActionOpen}
+          onOpenChange={setRecurrenceActionOpen}
+          action="reschedule"
+          currentIndex={appointment?.recurrence_index ?? 0}
+          totalInSeries={appointment?.totalInSeries ?? 0}
+          onConfirm={handleRecurrenceConfirm}
+        />
+      )}
     </div>
   );
 };
