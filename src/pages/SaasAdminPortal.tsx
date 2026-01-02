@@ -76,6 +76,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { GlobalEvolutionConfig } from "@/components/saas/GlobalEvolutionConfig";
 import { GlobalOtpWhatsAppConfig } from "@/components/saas/GlobalOtpWhatsAppConfig";
+import { GlobalEmailAlertConfig } from "@/components/saas/GlobalEmailAlertConfig";
 import { GlobalChatbotConfig } from "@/components/saas/GlobalChatbotConfig";
 import { WhatsAppStatusPanel } from "@/components/saas/WhatsAppStatusPanel";
 import { WhatsAppDiagnosticPanel } from "@/components/saas/WhatsAppDiagnosticPanel";
@@ -1422,6 +1423,13 @@ const SaasAdminPortal = () => {
                   🔐 WhatsApp para Autenticação OTP
                 </h3>
                 <GlobalOtpWhatsAppConfig />
+              </div>
+              
+              <div className="border-t border-border pt-6 sm:pt-8">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                  📧 Alertas de Desconexão OTP
+                </h3>
+                <GlobalEmailAlertConfig />
               </div>
               
               <WhatsAppStatusPanel />
