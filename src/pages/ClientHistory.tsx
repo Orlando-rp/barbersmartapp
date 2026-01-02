@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useSharedBarbershopId } from "@/hooks/useSharedBarbershopId";
-import Layout from "@/components/layout/Layout";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -238,29 +238,25 @@ const ClientHistory = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-96">
-          <LoadingSpinner size="lg" />
-        </div>
-      </Layout>
+      <div className="flex items-center justify-center h-96">
+        <LoadingSpinner size="lg" />
+      </div>
     );
   }
 
   if (!client) {
     return (
-      <Layout>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Cliente não encontrado</p>
-          <Button onClick={() => navigate('/clients')} className="mt-4">
-            Voltar para Clientes
-          </Button>
-        </div>
-      </Layout>
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Cliente não encontrado</p>
+        <Button onClick={() => navigate('/clients')} className="mt-4">
+          Voltar para Clientes
+        </Button>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -546,8 +542,6 @@ const ClientHistory = () => {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </>
   );
 };
-
-export default ClientHistory;

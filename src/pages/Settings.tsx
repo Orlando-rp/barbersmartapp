@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import Layout from "@/components/layout/Layout";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -488,7 +488,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <Layout>
+    <>
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div>
@@ -605,7 +605,7 @@ const SettingsPage = () => {
           </main>
         </div>
       </div>
-    </Layout>
+    </>
   );
 };
 

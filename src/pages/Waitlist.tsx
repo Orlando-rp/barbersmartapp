@@ -15,7 +15,7 @@ import {
   MessageSquare,
   CalendarPlus,
 } from "lucide-react";
-import Layout from "@/components/layout/Layout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -332,7 +332,7 @@ const Waitlist = () => {
   };
 
   return (
-    <Layout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -707,7 +707,7 @@ const Waitlist = () => {
           } : undefined}
         />
       </div>
-    </Layout>
+    </>
   );
 };
 

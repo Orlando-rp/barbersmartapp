@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Layout from "@/components/layout/Layout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -273,31 +273,27 @@ const MyEarnings = () => {
 
   if (loading && !staffInfo) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-96">
-          <LoadingSpinner size="lg" />
-        </div>
-      </Layout>
+      <div className="flex items-center justify-center h-96">
+        <LoadingSpinner size="lg" />
+      </div>
     );
   }
 
   if (!staffId) {
     return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center h-96 text-center px-4">
-          <Wallet className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-4" />
-          <h2 className="text-xl sm:text-2xl font-bold mb-2">Acesso Restrito</h2>
-          <p className="text-sm text-muted-foreground max-w-md">
-            Esta página é exclusiva para profissionais cadastrados na barbearia.
-            Entre em contato com o administrador se você deveria ter acesso.
-          </p>
-        </div>
-      </Layout>
+      <div className="flex flex-col items-center justify-center h-96 text-center px-4">
+        <Wallet className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-4" />
+        <h2 className="text-xl sm:text-2xl font-bold mb-2">Acesso Restrito</h2>
+        <p className="text-sm text-muted-foreground max-w-md">
+          Esta página é exclusiva para profissionais cadastrados na barbearia.
+          Entre em contato com o administrador se você deveria ter acesso.
+        </p>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="space-y-3 sm:space-y-4">
@@ -638,7 +634,7 @@ const MyEarnings = () => {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </>
   );
 };
 
