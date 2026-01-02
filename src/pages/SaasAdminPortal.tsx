@@ -78,6 +78,7 @@ import { GlobalEvolutionConfig } from "@/components/saas/GlobalEvolutionConfig";
 import { GlobalOtpWhatsAppConfig } from "@/components/saas/GlobalOtpWhatsAppConfig";
 import { GlobalChatbotConfig } from "@/components/saas/GlobalChatbotConfig";
 import { WhatsAppStatusPanel } from "@/components/saas/WhatsAppStatusPanel";
+import { WhatsAppDiagnosticPanel } from "@/components/saas/WhatsAppDiagnosticPanel";
 import { SocialAuthConfig } from "@/components/saas/SocialAuthConfig";
 import { BrandingConfig } from "@/components/saas/BrandingConfig";
 import DomainsManagement from "@/components/saas/DomainsManagement";
@@ -87,6 +88,7 @@ import { PlanCardPreview } from "@/components/saas/PlanCardPreview";
 import { ReleaseNotes } from "@/components/saas/ReleaseNotes";
 import { DocumentationTab } from "@/components/saas/DocumentationTab";
 import DeployPanel from "@/components/saas/DeployPanel";
+import { Stethoscope } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -873,6 +875,10 @@ const SaasAdminPortal = () => {
               <Rocket className="h-4 w-4 mr-2" />
               Deploy
             </TabsTrigger>
+            <TabsTrigger value="diagnostic" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
+              <Stethoscope className="h-4 w-4 mr-2" />
+              Diagnóstico
+            </TabsTrigger>
             <TabsTrigger value="docs" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
               <BookOpen className="h-4 w-4 mr-2" />
               Documentação
@@ -1441,6 +1447,11 @@ const SaasAdminPortal = () => {
                 <GlobalPaymentConfig />
               </div>
             </div>
+          </TabsContent>
+
+          {/* Diagnostic Tab */}
+          <TabsContent value="diagnostic">
+            <WhatsAppDiagnosticPanel />
           </TabsContent>
 
           {/* Domains Tab */}
