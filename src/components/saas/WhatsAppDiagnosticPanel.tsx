@@ -32,6 +32,9 @@ import {
   Activity,
   Eye,
   TestTube,
+  GitCompare,
+  Check,
+  X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -91,6 +94,20 @@ interface BarbershopConfig {
   updated_at: string;
 }
 
+interface EvolutionInstance {
+  instanceName: string;
+  status: string;
+  owner?: string;
+  connectionStatus?: string;
+}
+
+interface SyncResult {
+  evolutionInstances: EvolutionInstance[];
+  otpConfigured: string | null;
+  otpMatch: boolean;
+  barbershopMatches: { name: string; instanceName: string; found: boolean }[];
+}
+
 export const WhatsAppDiagnosticPanel = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -105,6 +122,9 @@ export const WhatsAppDiagnosticPanel = () => {
   const [logsDialogOpen, setLogsDialogOpen] = useState(false);
   const [selectedBarbershopLogs, setSelectedBarbershopLogs] = useState<WhatsAppLog[]>([]);
   const [selectedBarbershopName, setSelectedBarbershopName] = useState("");
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
 
   useEffect(() => {
     fetchAllData();
@@ -482,6 +502,130 @@ export const WhatsAppDiagnosticPanel = () => {
     }
   };
 
+  const syncEvolutionInstances = async () => {
+    setSyncLoading(true);
+    setSyncDialogOpen(true);
+    setSyncResult(null);
+
+    try {
+      // Buscar config da Evolution API
+      const { data: evolutionData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'evolution_api')
+        .maybeSingle();
+
+      if (!evolutionData?.value?.api_url || !evolutionData?.value?.api_key) {
+        toast.error('Evolution API não configurada');
+        setSyncLoading(false);
+        return;
+      }
+
+      // Buscar OTP config
+      const { data: otpData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'otp_whatsapp')
+        .maybeSingle();
+
+      const otpInstanceName = otpData?.value?.instance_name || null;
+
+      // Buscar todas as instâncias do Evolution
+      const { data: evolutionResponse, error: evolutionError } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'fetchInstances',
+          apiUrl: evolutionData.value.api_url,
+          apiKey: evolutionData.value.api_key,
+        }
+      });
+
+      if (evolutionError) {
+        console.error('Erro ao buscar instâncias:', evolutionError);
+        toast.error('Erro ao buscar instâncias do Evolution');
+        setSyncLoading(false);
+        return;
+      }
+
+      // Normalizar resposta (pode vir como array ou objeto com array)
+      let instances: EvolutionInstance[] = [];
+      if (Array.isArray(evolutionResponse)) {
+        instances = evolutionResponse.map((inst: any) => ({
+          instanceName: inst.instanceName || inst.instance?.instanceName || inst.name,
+          status: inst.status || inst.instance?.status || inst.connectionStatus || 'unknown',
+          owner: inst.owner || inst.instance?.owner,
+          connectionStatus: inst.connectionStatus || inst.instance?.connectionStatus,
+        }));
+      } else if (evolutionResponse?.instances && Array.isArray(evolutionResponse.instances)) {
+        instances = evolutionResponse.instances.map((inst: any) => ({
+          instanceName: inst.instanceName || inst.instance?.instanceName || inst.name,
+          status: inst.status || inst.instance?.status || inst.connectionStatus || 'unknown',
+          owner: inst.owner || inst.instance?.owner,
+          connectionStatus: inst.connectionStatus || inst.instance?.connectionStatus,
+        }));
+      }
+
+      console.log('Instâncias encontradas no Evolution:', instances);
+
+      // Verificar se OTP está nas instâncias
+      const otpMatch = otpInstanceName 
+        ? instances.some(inst => inst.instanceName?.toLowerCase() === otpInstanceName.toLowerCase())
+        : false;
+
+      // Buscar configs de barbearias
+      const { data: barbershopConfigs } = await supabase
+        .from('whatsapp_config')
+        .select('barbershop_id, config')
+        .eq('provider', 'evolution')
+        .not('barbershop_id', 'is', null);
+
+      // Buscar nomes das barbearias
+      const barbershopIds = barbershopConfigs?.map(c => c.barbershop_id) || [];
+      const { data: barbershops } = await supabase
+        .from('barbershops')
+        .select('id, name')
+        .in('id', barbershopIds);
+
+      const barbershopMap = new Map(barbershops?.map(b => [b.id, b.name]) || []);
+
+      // Verificar matches de barbearias
+      const barbershopMatches = (barbershopConfigs || []).map(config => {
+        const instanceName = config.config?.instance_name;
+        const found = instanceName 
+          ? instances.some(inst => inst.instanceName?.toLowerCase() === instanceName.toLowerCase())
+          : false;
+        return {
+          name: barbershopMap.get(config.barbershop_id) || 'Desconhecida',
+          instanceName: instanceName || 'Não configurado',
+          found,
+        };
+      });
+
+      setSyncResult({
+        evolutionInstances: instances,
+        otpConfigured: otpInstanceName,
+        otpMatch,
+        barbershopMatches,
+      });
+
+      if (!otpMatch && otpInstanceName) {
+        toast.warning('Instância OTP não encontrada no Evolution', {
+          description: `A instância "${otpInstanceName}" não existe no servidor Evolution.`
+        });
+      } else if (otpMatch) {
+        toast.success('Sincronização concluída', {
+          description: `${instances.length} instâncias encontradas no Evolution.`
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao sincronizar:', error);
+      toast.error('Erro ao sincronizar instâncias', {
+        description: error.message
+      });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   const viewBarbershopLogs = async (barbershopId: string, barbershopName: string) => {
     const shopLogs = logs.filter(l => l.barbershop_id === barbershopId);
     setSelectedBarbershopLogs(shopLogs);
@@ -692,6 +836,15 @@ export const WhatsAppDiagnosticPanel = () => {
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               Atualizar Tudo
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={syncEvolutionInstances}
+              disabled={!health?.evolutionApi.configured || syncLoading}
+            >
+              <GitCompare className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
+              Sincronizar Instâncias
             </Button>
           </div>
         </CardContent>
@@ -1024,6 +1177,186 @@ export const WhatsAppDiagnosticPanel = () => {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sync Evolution Instances Dialog */}
+      <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitCompare className="h-5 w-5 text-warning" />
+              Sincronização de Instâncias Evolution
+            </DialogTitle>
+            <DialogDescription>
+              Comparação entre instâncias no Evolution API e configurações do sistema
+            </DialogDescription>
+          </DialogHeader>
+          
+          {syncLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-warning" />
+              <span className="ml-3 text-muted-foreground">Buscando instâncias...</span>
+            </div>
+          ) : syncResult ? (
+            <div className="space-y-6">
+              {/* Evolution Instances */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-foreground flex items-center gap-2">
+                  <Server className="h-4 w-4" />
+                  Instâncias no Evolution ({syncResult.evolutionInstances.length})
+                </h4>
+                {syncResult.evolutionInstances.length === 0 ? (
+                  <Alert className="border-warning/50 bg-warning/10">
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    <AlertDescription className="text-warning/90">
+                      Nenhuma instância encontrada no servidor Evolution. Verifique a URL e chave de API.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="rounded-md border border-border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border">
+                          <TableHead>Nome da Instância</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Owner</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {syncResult.evolutionInstances.map((inst, idx) => (
+                          <TableRow key={idx} className="border-border">
+                            <TableCell className="font-mono text-sm">
+                              {inst.instanceName || '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={inst.status === 'open' ? 'default' : 'outline'}
+                                className={inst.status === 'open' ? 'bg-success/20 text-success' : ''}
+                              >
+                                {inst.status || 'unknown'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {inst.owner || '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+
+              {/* OTP Match Check */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-foreground flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Instância OTP Global
+                </h4>
+                <div className="p-4 rounded-lg border border-border bg-muted/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Configurada como:</p>
+                      <p className="font-mono font-medium">
+                        {syncResult.otpConfigured || 'Não configurado'}
+                      </p>
+                    </div>
+                    <div>
+                      {syncResult.otpConfigured ? (
+                        syncResult.otpMatch ? (
+                          <Badge className="bg-success/20 text-success">
+                            <Check className="h-3 w-3 mr-1" />
+                            Encontrada no Evolution
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">
+                            <X className="h-3 w-3 mr-1" />
+                            NÃO existe no Evolution
+                          </Badge>
+                        )
+                      ) : (
+                        <Badge variant="outline">Não configurado</Badge>
+                      )}
+                    </div>
+                  </div>
+                  {syncResult.otpConfigured && !syncResult.otpMatch && (
+                    <Alert className="mt-3 border-destructive/50 bg-destructive/10">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                      <AlertDescription className="text-destructive/90">
+                        A instância "{syncResult.otpConfigured}" configurada para OTP não foi encontrada no servidor Evolution. 
+                        Crie a instância ou atualize a configuração para uma instância existente.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              </div>
+
+              {/* Barbershop Matches */}
+              {syncResult.barbershopMatches.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-foreground flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Instâncias das Barbearias
+                  </h4>
+                  <div className="rounded-md border border-border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border">
+                          <TableHead>Barbearia</TableHead>
+                          <TableHead>Instância Configurada</TableHead>
+                          <TableHead>Existe no Evolution?</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {syncResult.barbershopMatches.map((match, idx) => (
+                          <TableRow key={idx} className="border-border">
+                            <TableCell>{match.name}</TableCell>
+                            <TableCell className="font-mono text-sm">
+                              {match.instanceName}
+                            </TableCell>
+                            <TableCell>
+                              {match.instanceName === 'Não configurado' ? (
+                                <Badge variant="outline">-</Badge>
+                              ) : match.found ? (
+                                <Badge className="bg-success/20 text-success">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Sim
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive">
+                                  <X className="h-3 w-3 mr-1" />
+                                  Não
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Clique em "Sincronizar" para buscar instâncias
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSyncDialogOpen(false)}>
+              Fechar
+            </Button>
+            <Button onClick={syncEvolutionInstances} disabled={syncLoading}>
+              {syncLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Sincronizar Novamente
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
