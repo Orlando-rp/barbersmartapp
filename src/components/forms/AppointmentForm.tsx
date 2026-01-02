@@ -31,7 +31,12 @@ import {
   GeneratedDate, 
   generateRecurrenceGroupId,
   calculateTotalPrice,
-  formatRecurrenceSummary
+  formatRecurrenceSummary,
+  generateRecurringDates,
+  RecurrenceRule,
+  getRecurrenceLabel,
+  RECURRENCE_RULE_OPTIONS,
+  RECURRENCE_COUNT_OPTIONS,
 } from "@/lib/recurrenceUtils";
 
 interface WaitlistPrefill {
@@ -105,8 +110,16 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const [recurrenceScope, setRecurrenceScope] = useState<RecurrenceActionScope>('single');
   
+  // Recurrence state for new appointments
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('single');
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>('weekly');
+  const [recurrenceCount, setRecurrenceCount] = useState<number>(4);
+  const [customIntervalDays, setCustomIntervalDays] = useState<number>(7);
+  const [generatedDates, setGeneratedDates] = useState<GeneratedDate[]>([]);
+  
   // Check if editing a recurring appointment
   const isEditingRecurring = appointment?.is_recurring && appointment?.recurrence_group_id;
+  const isNewAppointment = !appointment;
   
   // Refs para controlar quando resetar as seleções
   const isFirstRender = useRef(true);
@@ -157,6 +170,27 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       setSelectedTime("");
     }
   }, [date, selectedBarber, selectedService]);
+
+  // Generate recurring dates when configuration changes
+  useEffect(() => {
+    if (isNewAppointment && recurrenceType === 'recurring' && date) {
+      const config: RecurrenceConfig = {
+        rule: recurrenceRule,
+        count: recurrenceCount,
+        customIntervalDays: recurrenceRule === 'custom' ? customIntervalDays : undefined,
+      };
+      const dates = generateRecurringDates(date, config);
+      setGeneratedDates(dates);
+    } else if (recurrenceType === 'single' && date) {
+      setGeneratedDates([{
+        date: date,
+        index: 0,
+        formattedDate: format(date, 'yyyy-MM-dd'),
+      }]);
+    } else {
+      setGeneratedDates([]);
+    }
+  }, [isNewAppointment, recurrenceType, recurrenceRule, recurrenceCount, customIntervalDays, date]);
 
   // Fetch day availability for calendar visualization
   useEffect(() => {
@@ -1091,29 +1125,79 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
           });
         }
       } else {
-        const { data: insertedData, error: appointmentError } = await supabase
-          .from('appointments')
-          .insert(appointmentData)
-          .select()
-          .single();
+        // New appointment - handle recurring if enabled
+        if (isNewAppointment && recurrenceType === 'recurring' && generatedDates.length > 1) {
+          // Create recurring appointments
+          const recurrenceGroupId = generateRecurrenceGroupId();
+          const appointmentsToCreate = generatedDates.map((genDate, index) => ({
+            barbershop_id: effectiveBarbershopId,
+            client_id: finalClientId,
+            staff_id: selectedBarber,
+            service_id: selectedService,
+            appointment_date: genDate.formattedDate,
+            appointment_time: selectedTime,
+            status: 'pendente',
+            notes: index === 0 ? notes : `${notes || ''} (Recorrência ${index + 1}/${generatedDates.length})`.trim(),
+            client_name: clientName,
+            client_phone: clientPhone,
+            service_name: service?.name,
+            service_price: service?.price,
+            is_recurring: true,
+            recurrence_group_id: recurrenceGroupId,
+            recurrence_rule: recurrenceRule,
+            recurrence_index: index,
+          }));
 
-        if (appointmentError) throw appointmentError;
+          const { data: insertedData, error: appointmentError } = await supabase
+            .from('appointments')
+            .insert(appointmentsToCreate)
+            .select();
 
-        toast({
-          title: "Agendamento Criado!",
-          description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
-        });
+          if (appointmentError) throw appointmentError;
 
-        // Enviar confirmação via WhatsApp (não bloqueia o fechamento)
-        if (insertedData?.id) {
-          sendWhatsAppConfirmation(insertedData.id, {
-            clientName,
-            clientPhone,
-            date,
-            time: selectedTime,
-            serviceName: service?.name || 'Serviço',
-            barberName: selectedBarberData?.name || 'Profissional'
+          toast({
+            title: "Série de Agendamentos Criada!",
+            description: `${generatedDates.length} agendamentos criados para ${clientName}, ${getRecurrenceLabel(recurrenceRule)}.`,
           });
+
+          // Enviar confirmação apenas do primeiro agendamento
+          if (insertedData && insertedData.length > 0) {
+            const firstApt = insertedData[0];
+            sendWhatsAppConfirmation(firstApt.id, {
+              clientName,
+              clientPhone,
+              date: generatedDates[0].date,
+              time: selectedTime,
+              serviceName: service?.name || 'Serviço',
+              barberName: selectedBarberData?.name || 'Profissional'
+            });
+          }
+        } else {
+          // Single appointment
+          const { data: insertedData, error: appointmentError } = await supabase
+            .from('appointments')
+            .insert(appointmentData)
+            .select()
+            .single();
+
+          if (appointmentError) throw appointmentError;
+
+          toast({
+            title: "Agendamento Criado!",
+            description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
+          });
+
+          // Enviar confirmação via WhatsApp (não bloqueia o fechamento)
+          if (insertedData?.id) {
+            sendWhatsAppConfirmation(insertedData.id, {
+              clientName,
+              clientPhone,
+              date,
+              time: selectedTime,
+              serviceName: service?.name || 'Serviço',
+              barberName: selectedBarberData?.name || 'Profissional'
+            });
+          }
         }
       }
 
@@ -1747,6 +1831,124 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                     </div>
                   )}
                 </div>
+                
+                {/* Recurrence Options - only for new appointments when time is selected */}
+                {isNewAppointment && selectedTime && date && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Repeat className="h-4 w-4 text-primary" />
+                      <span>Repetição</span>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={recurrenceType === 'single' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setRecurrenceType('single')}
+                        className="flex-1 text-xs sm:text-sm"
+                      >
+                        Só essa data
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={recurrenceType === 'recurring' ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setRecurrenceType('recurring')}
+                        className="flex-1 text-xs sm:text-sm gap-1"
+                      >
+                        <Repeat className="h-3 w-3" />
+                        Recorrente
+                      </Button>
+                    </div>
+                    
+                    {recurrenceType === 'recurring' && (
+                      <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Frequência</Label>
+                            <Select 
+                              value={recurrenceRule} 
+                              onValueChange={(val) => setRecurrenceRule(val as RecurrenceRule)}
+                            >
+                              <SelectTrigger className="text-xs h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {RECURRENCE_RULE_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Repetições</Label>
+                            <Select 
+                              value={recurrenceCount.toString()} 
+                              onValueChange={(val) => setRecurrenceCount(parseInt(val))}
+                            >
+                              <SelectTrigger className="text-xs h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {RECURRENCE_COUNT_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value.toString()} className="text-xs">
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        {recurrenceRule === 'custom' && (
+                          <div className="space-y-1">
+                            <Label className="text-xs">Intervalo em dias</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={90}
+                              value={customIntervalDays}
+                              onChange={(e) => setCustomIntervalDays(parseInt(e.target.value) || 7)}
+                              className="text-xs h-8"
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Preview of recurring dates */}
+                        {generatedDates.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">
+                                {generatedDates.length} agendamentos
+                              </span>
+                              {selectedServiceData && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Total: R$ {calculateTotalPrice(selectedServiceData.price, generatedDates.length).toFixed(2)}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="max-h-24 overflow-y-auto space-y-1">
+                              {generatedDates.slice(0, 5).map((genDate, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-xs p-1 rounded bg-background/50">
+                                  <span>{format(genDate.date, "dd/MM/yyyy (EEE)", { locale: ptBR })}</span>
+                                  <span className="text-muted-foreground">{selectedTime}</span>
+                                </div>
+                              ))}
+                              {generatedDates.length > 5 && (
+                                <div className="text-xs text-center text-muted-foreground py-1">
+                                  +{generatedDates.length - 5} mais datas...
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1811,6 +2013,23 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                         <p className="text-xs sm:text-sm text-muted-foreground">{selectedTime}</p>
                       </div>
                     </div>
+                    
+                    {/* Show recurrence info if recurring */}
+                    {isNewAppointment && recurrenceType === 'recurring' && generatedDates.length > 1 && (
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <Repeat className="h-4 w-4 sm:h-5 sm:w-5 text-primary mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm text-muted-foreground">Recorrência</p>
+                          <p className="font-semibold text-sm sm:text-base">
+                            {getRecurrenceLabel(recurrenceRule, customIntervalDays)}
+                          </p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
+                            {generatedDates.length} agendamentos
+                            {selectedServiceData && ` • Total: R$ ${calculateTotalPrice(selectedServiceData.price, generatedDates.length).toFixed(2)}`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
