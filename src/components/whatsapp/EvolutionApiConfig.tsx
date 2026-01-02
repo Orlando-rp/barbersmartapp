@@ -725,7 +725,10 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
               />
             </div>
 
-            <MessageTemplates />
+            <MessageTemplates 
+              onSelectTemplate={handleSelectTemplate}
+              selectedTemplateId={selectedTemplateId}
+            />
 
             <div className="space-y-2">
               <Label>Mensagem</Label>
