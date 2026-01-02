@@ -20,6 +20,7 @@ import {
   Palette,
   BookOpen,
   Rocket,
+  Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ const saasNavigation: NavItem[] = [
   { name: "Mensagens", tab: "messages", icon: MessageSquare },
   { name: "Branding", tab: "branding", icon: Palette },
   { name: "Integrações", tab: "integrations", icon: Smartphone },
+  { name: "Diagnóstico", tab: "diagnostic", icon: Stethoscope },
   { name: "Deploy", tab: "deploy", icon: Rocket },
   { name: "Documentação", tab: "docs", icon: BookOpen },
 ];
