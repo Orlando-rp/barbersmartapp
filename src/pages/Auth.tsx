@@ -254,6 +254,15 @@ const Auth = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Error codes que indicam problema de configuração (não tentar novamente)
+  const CONFIG_ERROR_CODES = [
+    'EVOLUTION_NOT_CONFIGURED',
+    'OTP_INSTANCE_MISSING', 
+    'OTP_INSTANCE_DISCONNECTED',
+    'NO_AVAILABLE_INSTANCE',
+    'INSTANCE_NOT_FOUND_ON_SEND'
+  ];
+
   const handleSendOTP = async () => {
     setErrors({});
     
@@ -274,28 +283,57 @@ const Auth = () => {
       });
 
       if (error) {
-        // Extract error message from FunctionsHttpError
+        // Extract error details from FunctionsHttpError
         const errorBody = error.context?.body;
         let errorMessage = 'Erro ao enviar código';
+        let errorCode = 'UNKNOWN';
+        let errorDetails: any = null;
+        
         if (errorBody) {
           try {
             const parsed = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
             errorMessage = parsed.error || errorMessage;
+            errorCode = parsed.error_code || errorCode;
+            errorDetails = parsed.details || null;
           } catch {
             errorMessage = error.message || errorMessage;
           }
         }
+
+        // Se for erro de configuração, mostrar mensagem especial
+        if (CONFIG_ERROR_CODES.includes(errorCode)) {
+          toast.error('WhatsApp OTP indisponível', {
+            description: 'O sistema de login via WhatsApp está temporariamente indisponível. Use o login por email.',
+            duration: 8000,
+          });
+          return;
+        }
+        
         throw new Error(errorMessage);
       }
       
-      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar código');
+      if (!data?.success) {
+        const errorCode = data?.error_code || 'UNKNOWN';
+        if (CONFIG_ERROR_CODES.includes(errorCode)) {
+          toast.error('WhatsApp OTP indisponível', {
+            description: 'Use o login por email ou contate o suporte.',
+            duration: 8000,
+          });
+          return;
+        }
+        throw new Error(data?.error || 'Erro ao enviar código');
+      }
 
       setOtpStep('code');
       setOtpExpiresAt(new Date(data.expiresAt));
       setResendCooldown(60);
       
+      // Mostrar se usou fallback (informativo)
+      const usedFallback = data?.meta?.usedFallback;
       toast.success('Código enviado!', {
-        description: 'Verifique seu WhatsApp para o código de verificação'
+        description: usedFallback 
+          ? 'Verifique seu WhatsApp para o código de verificação'
+          : 'Verifique seu WhatsApp para o código de verificação'
       });
     } catch (error: any) {
       console.error('Erro ao enviar OTP:', error);
@@ -397,18 +435,40 @@ const Auth = () => {
       if (error) {
         const errorBody = error.context?.body;
         let errorMessage = 'Erro ao enviar código';
+        let errorCode = 'UNKNOWN';
+        
         if (errorBody) {
           try {
             const parsed = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
             errorMessage = parsed.error || errorMessage;
+            errorCode = parsed.error_code || errorCode;
           } catch {
             errorMessage = error.message || errorMessage;
           }
         }
+        
+        if (CONFIG_ERROR_CODES.includes(errorCode)) {
+          toast.error('WhatsApp OTP indisponível', {
+            description: 'Use o cadastro por email ou contate o suporte.',
+            duration: 8000,
+          });
+          return;
+        }
+        
         throw new Error(errorMessage);
       }
       
-      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar código');
+      if (!data?.success) {
+        const errorCode = data?.error_code || 'UNKNOWN';
+        if (CONFIG_ERROR_CODES.includes(errorCode)) {
+          toast.error('WhatsApp OTP indisponível', {
+            description: 'Use o cadastro por email.',
+            duration: 8000,
+          });
+          return;
+        }
+        throw new Error(data?.error || 'Erro ao enviar código');
+      }
 
       setSignupOtpStep('code');
       setSignupOtpExpiresAt(new Date(data.expiresAt));
