@@ -187,8 +187,18 @@ export default function GlobalSmtpConfig() {
           </div>
         </div>
         <CardDescription>
-          Configure seu servidor SMTP próprio para envio de emails (recuperação de senha, notificações, etc.)
+          Configure seu servidor SMTP próprio para envio de todos os emails do sistema.
         </CardDescription>
+        
+        {/* Functions that use SMTP */}
+        <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+          <p className="text-xs font-medium text-muted-foreground mb-2">📧 Funções que usam este SMTP:</p>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="text-xs bg-background px-2 py-1 rounded border">Recuperação de senha</span>
+            <span className="text-xs bg-background px-2 py-1 rounded border">Expiração de assinatura</span>
+            <span className="text-xs bg-background px-2 py-1 rounded border">Alertas de uptime</span>
+          </div>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
