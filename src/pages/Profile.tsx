@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Layout from "@/components/layout/Layout";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Lock, Settings as SettingsIcon, Scissors } from "lucide-react";
@@ -89,16 +89,14 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="p-6 flex justify-center items-center h-96">
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </Layout>
+      <div className="p-6 flex justify-center items-center h-96">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Meu Perfil</h1>
@@ -203,7 +201,7 @@ const Profile = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </Layout>
+    </>
   );
 };
 

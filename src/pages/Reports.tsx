@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Layout from "@/components/layout/Layout";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -267,8 +267,7 @@ const Reports = () => {
   };
 
   return (
-    <Layout>
-      <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
@@ -369,8 +368,7 @@ const Reports = () => {
             <PredictiveAnalytics />
           </TabsContent>
         </Tabs>
-      </div>
-    </Layout>
+    </div>
   );
 };
 

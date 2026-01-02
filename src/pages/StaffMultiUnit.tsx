@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { StaffAvatar } from "@/components/ui/smart-avatar";
-import Layout from "@/components/layout/Layout";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -312,30 +312,26 @@ const StaffMultiUnit = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-96">
-          <LoadingSpinner size="lg" />
-        </div>
-      </Layout>
+      <div className="flex items-center justify-center h-96">
+        <LoadingSpinner size="lg" />
+      </div>
     );
   }
 
   if (barbershops.length <= 1 && userRole !== 'super_admin') {
     return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center h-96 text-center">
-          <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
-          <h2 className="text-2xl font-bold text-foreground mb-2">Staff Multi-Unidade</h2>
-          <p className="text-muted-foreground max-w-md">
-            Esta funcionalidade está disponível apenas para contas com múltiplas unidades de barbearia.
-          </p>
-        </div>
-      </Layout>
+      <div className="flex flex-col items-center justify-center h-96 text-center">
+        <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-bold text-foreground mb-2">Staff Multi-Unidade</h2>
+        <p className="text-muted-foreground max-w-md">
+          Esta funcionalidade está disponível apenas para contas com múltiplas unidades de barbearia.
+        </p>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -690,7 +686,7 @@ const StaffMultiUnit = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </Layout>
+    </>
   );
 };
 
