@@ -104,8 +104,8 @@ serve(async (req) => {
       );
     }
 
-    const apiUrl = evolutionConfig.value.api_url;
-    const apiKey = evolutionConfig.value.api_key;
+    let apiUrl = evolutionConfig.value.api_url;
+    let apiKey = evolutionConfig.value.api_key;
 
     // Buscar configuração da instância OTP global
     const { data: otpConfig } = await supabase
@@ -117,32 +117,56 @@ serve(async (req) => {
     let instanceName = otpConfig?.value?.instance_name;
     const otpStatus = otpConfig?.value?.status;
 
-    // Se não há instância OTP configurada ou não está conectada, tentar usar instância de barbearia
-    if (!instanceName || otpStatus !== 'connected') {
-      console.log('[Send OTP] Instância OTP global não disponível, buscando instância alternativa...');
-      
-      const { data: configs } = await supabase
+    // Se não há instância OTP configurada, tentar usar instância de barbearia
+    if (!instanceName) {
+      console.log('[Send OTP] Instância OTP global não configurada, buscando instância alternativa...');
+
+      const { data: configs, error: configsError } = await supabase
         .from('whatsapp_config')
-        .select('config')
+        .select('config, is_active')
         .eq('provider', 'evolution')
-        .eq('is_active', true)
+        .or('is_active.eq.true,config->>connection_status.eq.connected')
         .limit(1);
+
+      if (configsError) {
+        console.error('[Send OTP] Erro ao buscar whatsapp_config:', configsError);
+      }
 
       if (!configs || configs.length === 0 || !configs[0].config?.instance_name) {
         console.error('[Send OTP] Nenhuma instância WhatsApp conectada');
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Nenhuma instância WhatsApp disponível. Configure a instância OTP global no painel SaaS Admin.' 
+          JSON.stringify({
+            success: false,
+            error:
+              'Nenhuma instância WhatsApp disponível. Conecte a instância OTP global no painel SaaS Admin (Configurações > OTP WhatsApp) ou conecte o WhatsApp de alguma barbearia.',
+            details: {
+              otp_instance_configured: !!otpConfig?.value?.instance_name,
+              otp_status: otpStatus || null,
+            },
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      instanceName = configs[0].config.instance_name;
+      const fallbackConfig = configs[0].config as {
+        api_url?: string;
+        api_key?: string;
+        instance_name: string;
+      };
+
+      instanceName = fallbackConfig.instance_name;
+      apiUrl = fallbackConfig.api_url || apiUrl;
+      apiKey = fallbackConfig.api_key || apiKey;
+
       console.log(`[Send OTP] Usando instância alternativa: ${instanceName}`);
     } else {
-      console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
+      if (otpStatus !== 'connected') {
+        console.log(
+          `[Send OTP] Instância OTP global com status "${otpStatus || 'unknown'}"; tentando enviar mesmo assim: ${instanceName}`
+        );
+      } else {
+        console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
+      }
     }
 
     // Mensagem do código OTP
@@ -150,7 +174,7 @@ serve(async (req) => {
 
     // Enviar via Evolution API
     const evolutionUrl = `${apiUrl.replace(/\/+$/, '')}/message/sendText/${instanceName}`;
-    
+
     const response = await fetch(evolutionUrl, {
       method: 'POST',
       headers: {
@@ -168,9 +192,9 @@ serve(async (req) => {
     if (!response.ok) {
       console.error('[Send OTP] Erro ao enviar WhatsApp:', responseData);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Erro ao enviar código via WhatsApp' 
+        JSON.stringify({
+          success: false,
+          error: responseData?.error || responseData?.message || 'Erro ao enviar código via WhatsApp',
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
