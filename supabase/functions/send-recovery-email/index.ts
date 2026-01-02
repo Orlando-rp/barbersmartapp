@@ -126,15 +126,27 @@ function generateToken(): string {
 }
 
 serve(async (req) => {
+  console.log("send-recovery-email: Request received", { method: req.method });
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Health check endpoint
+  if (req.method === "GET") {
+    return new Response(
+      JSON.stringify({ status: "ok", function: "send-recovery-email" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const { email, redirectUrl }: RecoveryRequest = await req.json();
+    console.log("send-recovery-email: Parsed request", { email, redirectUrl });
 
     if (!email || !redirectUrl) {
+      console.error("send-recovery-email: Missing required fields");
       return new Response(
         JSON.stringify({ success: false, error: "Email e URL de redirecionamento são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -747,13 +747,29 @@ const Auth = () => {
     try {
       const redirectUrl = `${window.location.origin}/auth`;
       
-      // Use custom edge function with tenant branding
-      const { data, error } = await supabase.functions.invoke('send-recovery-email', {
-        body: { email: recoveryEmail, redirectUrl }
-      });
+      // Try custom edge function with tenant branding first
+      let success = false;
+      try {
+        const { data, error } = await supabase.functions.invoke('send-recovery-email', {
+          body: { email: recoveryEmail, redirectUrl }
+        });
 
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar email');
+        if (!error && data?.success) {
+          success = true;
+        } else {
+          console.log('Edge function failed, falling back to native Supabase:', error || data?.error);
+        }
+      } catch (edgeFnError) {
+        console.log('Edge function unavailable, falling back to native Supabase:', edgeFnError);
+      }
+
+      // Fallback to native Supabase password recovery
+      if (!success) {
+        const { error: nativeError } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
+          redirectTo: redirectUrl
+        });
+        if (nativeError) throw nativeError;
+      }
 
       setRecoveryStep('emailSent');
       setEmailResendCooldown(60);
