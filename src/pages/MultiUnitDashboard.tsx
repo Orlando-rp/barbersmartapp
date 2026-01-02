@@ -537,3 +537,5 @@ const MultiUnitDashboard = () => {
     </>
   );
 };
+
+export default MultiUnitDashboard;

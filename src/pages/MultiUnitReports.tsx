@@ -834,3 +834,5 @@ const MultiUnitReports = () => {
     </>
   );
 };
+
+export default MultiUnitReports;

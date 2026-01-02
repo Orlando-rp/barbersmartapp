@@ -412,196 +412,195 @@ const Index = () => {
       {/* Welcome Section */}
       <div className="gradient-subtle p-4 lg:p-6 rounded-xl border border-border">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
-                {userDisplayName 
-                  ? `Bem-vindo, ${userDisplayName}!` 
-                  : `Bem-vindo ao ${branding?.system_name || 'Barber Smart'}!`
-                } 👋
-              </h1>
-              <p className="text-muted-foreground text-sm lg:text-lg">
-                {isConsolidatedView 
-                  ? `Visão consolidada de ${activeBarbershopIds.length} unidades`
-                  : (branding?.tagline || 'Gerencie sua barbearia de forma inteligente')
-                }
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <LayoutManager
-                currentWidgets={widgets}
-                currentOrder={widgetOrder}
-                currentColumns={columns}
-                onLoadLayout={handleLoadLayout}
-              />
-              <Button
-                variant={customizeMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCustomizeMode(!customizeMode)}
-              >
-                {customizeMode ? (
-                  <>
-                    <GripVertical className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Arraste para reorganizar</span>
-                  </>
-                ) : (
-                  <>
-                    <Settings className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Personalizar</span>
-                  </>
-                )}
-              </Button>
-              {customizeMode && (
-                <WidgetSelector
-                  widgets={widgets}
-                  onToggleWidget={handleToggleWidget}
-                  columns={columns}
-                  onColumnsChange={handleColumnsChange}
-                />
-              )}
-              <AppointmentDialog>
-                <Button variant="premium" size="sm" className="shadow-gold">
-                  <UserPlus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Novo Agendamento</span>
-                </Button>
-              </AppointmentDialog>
-            </div>
-          </div>
-          {customizeMode && (
-            <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
-              <GripVertical className="h-3 w-3" />
-              Arraste os widgets pelo ícone para reorganizá-los
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
+              {userDisplayName 
+                ? `Bem-vindo, ${userDisplayName}!` 
+                : `Bem-vindo ao ${branding?.system_name || 'Barber Smart'}!`
+              } 👋
+            </h1>
+            <p className="text-muted-foreground text-sm lg:text-lg">
+              {isConsolidatedView 
+                ? `Visão consolidada de ${activeBarbershopIds.length} unidades`
+                : (branding?.tagline || 'Gerencie sua barbearia de forma inteligente')
+              }
             </p>
-          )}
-        </div>
-
-        {/* Real-time Widgets with Drag & Drop */}
-        <DraggableWidgetGrid
-          widgetOrder={widgetOrder}
-          onReorder={handleReorderWidgets}
-          isCustomizeMode={customizeMode}
-          columns={columns}
-        >
-          {renderWidget}
-        </DraggableWidgetGrid>
-
-        {/* Legacy Quick Stats - Only show if no widgets are enabled OR consolidated view */}
-        {(!widgets.some(w => w.enabled) || isConsolidatedView) && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-            <StatsCard
-              title={isConsolidatedView ? "Agendamentos Hoje (Total)" : "Agendamentos Hoje"}
-              value={currentStats?.todayAppointments || 0}
-              icon={Calendar}
-              variant="primary"
-            />
-            <StatsCard
-              title={isConsolidatedView ? "Receita do Mês (Total)" : "Receita do Mês"}
-              value={`R$ ${(currentStats?.monthRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-              icon={DollarSign}
-              variant="success"
-            />
-            <StatsCard
-              title={isConsolidatedView ? "Clientes Ativos (Total)" : "Clientes Ativos"}
-              value={currentStats?.activeClients || 0}
-              icon={Users}
-              variant="default"
-            />
-            <StatsCard
-              title={isConsolidatedView ? "Avaliação Média (Geral)" : "Avaliação Média"}
-              value={currentStats?.averageRating || 0}
-              icon={Star}
-              variant="warning"
-            />
           </div>
+          <div className="flex flex-wrap gap-2">
+            <LayoutManager
+              currentWidgets={widgets}
+              currentOrder={widgetOrder}
+              currentColumns={columns}
+              onLoadLayout={handleLoadLayout}
+            />
+            <Button
+              variant={customizeMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCustomizeMode(!customizeMode)}
+            >
+              {customizeMode ? (
+                <>
+                  <GripVertical className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Arraste para reorganizar</span>
+                </>
+              ) : (
+                <>
+                  <Settings className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Personalizar</span>
+                </>
+              )}
+            </Button>
+            {customizeMode && (
+              <WidgetSelector
+                widgets={widgets}
+                onToggleWidget={handleToggleWidget}
+                columns={columns}
+                onColumnsChange={handleColumnsChange}
+              />
+            )}
+            <AppointmentDialog>
+              <Button variant="premium" size="sm" className="shadow-gold">
+                <UserPlus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Novo Agendamento</span>
+              </Button>
+            </AppointmentDialog>
+          </div>
+        </div>
+        {customizeMode && (
+          <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+            <GripVertical className="h-3 w-3" />
+            Arraste os widgets pelo ícone para reorganizá-los
+          </p>
         )}
+      </div>
 
-        {/* Public Booking Link */}
-        <PublicBookingLink />
+      {/* Real-time Widgets with Drag & Drop */}
+      <DraggableWidgetGrid
+        widgetOrder={widgetOrder}
+        onReorder={handleReorderWidgets}
+        isCustomizeMode={customizeMode}
+        columns={columns}
+      >
+        {renderWidget}
+      </DraggableWidgetGrid>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-          <div>
-            <AppointmentList />
-          </div>
-          <div>
-            <RevenueChart />
-          </div>
+      {/* Legacy Quick Stats - Only show if no widgets are enabled OR consolidated view */}
+      {(!widgets.some(w => w.enabled) || isConsolidatedView) && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+          <StatsCard
+            title={isConsolidatedView ? "Agendamentos Hoje (Total)" : "Agendamentos Hoje"}
+            value={currentStats?.todayAppointments || 0}
+            icon={Calendar}
+            variant="primary"
+          />
+          <StatsCard
+            title={isConsolidatedView ? "Receita do Mês (Total)" : "Receita do Mês"}
+            value={`R$ ${(currentStats?.monthRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+            icon={DollarSign}
+            variant="success"
+          />
+          <StatsCard
+            title={isConsolidatedView ? "Clientes Ativos (Total)" : "Clientes Ativos"}
+            value={currentStats?.activeClients || 0}
+            icon={Users}
+            variant="default"
+          />
+          <StatsCard
+            title={isConsolidatedView ? "Avaliação Média (Geral)" : "Avaliação Média"}
+            value={currentStats?.averageRating || 0}
+            icon={Star}
+            variant="warning"
+          />
         </div>
+      )}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <Card className="barbershop-card hover:shadow-medium cursor-pointer">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                Serviços Populares
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="space-y-2 sm:space-y-3">
-                {currentStats?.popularServices && currentStats.popularServices.length > 0 ? (
-                  currentStats.popularServices.map((service, idx) => (
-                    <div key={idx} className="flex justify-between items-center gap-2">
-                      <span className="text-xs sm:text-sm text-muted-foreground truncate">{service.name}</span>
-                      <span className="text-xs sm:text-sm font-medium flex-shrink-0">{service.percentage}%</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs sm:text-sm text-muted-foreground">Nenhum dado disponível</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+      {/* Public Booking Link */}
+      <PublicBookingLink />
 
-          <Card className="barbershop-card hover:shadow-medium cursor-pointer">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
-                Performance do Mês
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="space-y-2 sm:space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Ocupação</span>
-                  <span className="text-xs sm:text-sm font-medium text-success">{currentStats?.occupancyRate ?? 0}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Novos</span>
-                  <span className="text-xs sm:text-sm font-medium text-primary">+{currentStats?.newClientsThisMonth ?? 0}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Fidelização</span>
-                  <span className="text-xs sm:text-sm font-medium text-warning">{currentStats?.retentionRate ?? 0}%</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="barbershop-card hover:shadow-medium cursor-pointer sm:col-span-2 lg:col-span-1">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
-                Horários de Pico
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="space-y-2 sm:space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Manhã (9h-12h)</span>
-                  <span className="text-xs sm:text-sm font-medium">Alto</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Tarde (14h-17h)</span>
-                  <span className="text-xs sm:text-sm font-medium">Médio</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Noite (18h-20h)</span>
-                  <span className="text-xs sm:text-sm font-medium">Baixo</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <div>
+          <AppointmentList />
         </div>
+        <div>
+          <RevenueChart />
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+        <Card className="barbershop-card hover:shadow-medium cursor-pointer">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              Serviços Populares
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-2 sm:space-y-3">
+              {currentStats?.popularServices && currentStats.popularServices.length > 0 ? (
+                currentStats.popularServices.map((service, idx) => (
+                  <div key={idx} className="flex justify-between items-center gap-2">
+                    <span className="text-xs sm:text-sm text-muted-foreground truncate">{service.name}</span>
+                    <span className="text-xs sm:text-sm font-medium flex-shrink-0">{service.percentage}%</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs sm:text-sm text-muted-foreground">Nenhum dado disponível</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="barbershop-card hover:shadow-medium cursor-pointer">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
+              Performance do Mês
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-2 sm:space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-muted-foreground">Ocupação</span>
+                <span className="text-xs sm:text-sm font-medium text-success">{currentStats?.occupancyRate ?? 0}%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-muted-foreground">Novos</span>
+                <span className="text-xs sm:text-sm font-medium text-primary">+{currentStats?.newClientsThisMonth ?? 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-muted-foreground">Fidelização</span>
+                <span className="text-xs sm:text-sm font-medium text-warning">{currentStats?.retentionRate ?? 0}%</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="barbershop-card hover:shadow-medium cursor-pointer sm:col-span-2 lg:col-span-1">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+              Horários de Pico
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-2 sm:space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-muted-foreground">Manhã (9h-12h)</span>
+                <span className="text-xs sm:text-sm font-medium">Alto</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-muted-foreground">Tarde (14h-17h)</span>
+                <span className="text-xs sm:text-sm font-medium">Médio</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-muted-foreground">Noite (18h-20h)</span>
+                <span className="text-xs sm:text-sm font-medium">Baixo</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
