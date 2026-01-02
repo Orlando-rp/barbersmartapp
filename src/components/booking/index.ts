@@ -3,3 +3,4 @@ export { MultiDatePicker } from './MultiDatePicker';
 export { RecurrenceConflictDialog } from './RecurrenceConflictDialog';
 export { RecurrenceBadge } from './RecurrenceBadge';
 export { RecurrenceActionDialog, type RecurrenceActionScope } from './RecurrenceActionDialog';
+export { PauseSeriesDialog, type PauseScope } from './PauseSeriesDialog';

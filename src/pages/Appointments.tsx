@@ -20,7 +20,7 @@ import { ptBR } from "date-fns/locale";
 import { AppointmentsSkeleton } from "@/components/skeletons";
 import { IllustratedEmptyState } from "@/components/ui/illustrated-empty-state";
 import { PullToRefreshContainer } from "@/components/ui/pull-to-refresh";
-import { RecurrenceBadge, RecurrenceActionDialog, RecurrenceActionScope } from "@/components/booking";
+import { RecurrenceBadge, RecurrenceActionDialog, RecurrenceActionScope, PauseSeriesDialog, PauseScope } from "@/components/booking";
 import { RecurringSeriesCard } from "@/components/appointments/RecurringSeriesCard";
 import { Switch } from "@/components/ui/switch";
 
@@ -53,6 +53,11 @@ interface Appointment {
   recurrence_rule?: string | null;
   recurrence_index?: number | null;
   original_date?: string | null;
+  // Pause fields
+  is_paused?: boolean;
+  paused_at?: string | null;
+  paused_until?: string | null;
+  pause_reason?: string | null;
 }
 
 const statusConfig = {
@@ -113,6 +118,12 @@ const Appointments = () => {
   const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
   const [seriesCount, setSeriesCount] = useState<number>(0);
   const [isCancellingRecurrence, setIsCancellingRecurrence] = useState(false);
+  
+  // Pause series state
+  const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
+  const [appointmentToPause, setAppointmentToPause] = useState<Appointment | null>(null);
+  const [pauseAction, setPauseAction] = useState<'pause' | 'resume'>('pause');
+  const [isProcessingPause, setIsProcessingPause] = useState(false);
   
   // Group recurring appointments toggle
   const [groupRecurring, setGroupRecurring] = useState(true);
@@ -730,6 +741,85 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
     }
   };
 
+  // Handle pause/resume click
+  const handlePauseClick = async (appointment: Appointment, action: 'pause' | 'resume') => {
+    if (appointment.is_recurring && appointment.recurrence_group_id) {
+      const { count } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('recurrence_group_id', appointment.recurrence_group_id)
+        .neq('status', 'cancelado')
+        .neq('status', 'concluido');
+      
+      setSeriesCount(count || 0);
+      setAppointmentToPause(appointment);
+      setPauseAction(action);
+      setPauseDialogOpen(true);
+    }
+  };
+
+  // Handle pause confirmation
+  const handlePauseConfirm = async (scope: PauseScope, untilDate?: Date, reason?: string) => {
+    if (!appointmentToPause) return;
+    
+    setIsProcessingPause(true);
+    try {
+      const updates = {
+        is_paused: pauseAction === 'pause',
+        paused_at: pauseAction === 'pause' ? new Date().toISOString() : null,
+        paused_until: pauseAction === 'pause' && untilDate ? untilDate.toISOString().split('T')[0] : null,
+        pause_reason: pauseAction === 'pause' ? reason || null : null,
+      };
+
+      if (scope === 'single') {
+        const { error } = await supabase
+          .from('appointments')
+          .update(updates)
+          .eq('id', appointmentToPause.id);
+        
+        if (error) throw error;
+      } else if (scope === 'future') {
+        const { error } = await supabase
+          .from('appointments')
+          .update(updates)
+          .eq('recurrence_group_id', appointmentToPause.recurrence_group_id)
+          .gte('recurrence_index', appointmentToPause.recurrence_index)
+          .neq('status', 'cancelado')
+          .neq('status', 'concluido');
+        
+        if (error) throw error;
+      } else if (scope === 'all') {
+        const { error } = await supabase
+          .from('appointments')
+          .update(updates)
+          .eq('recurrence_group_id', appointmentToPause.recurrence_group_id)
+          .neq('status', 'cancelado')
+          .neq('status', 'concluido');
+        
+        if (error) throw error;
+      }
+      
+      toast({
+        title: pauseAction === 'pause' ? 'Série pausada' : 'Série retomada',
+        description: pauseAction === 'pause' 
+          ? 'Os agendamentos selecionados foram pausados.'
+          : 'Os agendamentos selecionados foram retomados.',
+      });
+      
+      fetchAppointments();
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingPause(false);
+      setPauseDialogOpen(false);
+      setAppointmentToPause(null);
+    }
+  };
+
   // Pull to refresh callback
   const handleRefresh = useCallback(async () => {
     await fetchAppointments();
@@ -903,7 +993,7 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
           ) : (
             <>
               {/* Recurring Series Cards (grouped) */}
-              {groupRecurring && Array.from(recurringGroups.entries()).map(([groupId, groupAppointments]) => (
+{groupRecurring && Array.from(recurringGroups.entries()).map(([groupId, groupAppointments]) => (
                 <RecurringSeriesCard
                   key={groupId}
                   appointments={groupAppointments}
@@ -912,6 +1002,8 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                     setIsDialogOpen(true);
                   }}
                   onCancel={handleCancelClick}
+                  onPause={(apt) => handlePauseClick(apt, 'pause')}
+                  onResume={(apt) => handlePauseClick(apt, 'resume')}
                   onStatusChange={updateStatus}
                   onPayment={openPaymentModal}
                   showBarbershopName={activeBarbershopIds.length > 1}
@@ -1157,6 +1249,16 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
         currentIndex={appointmentToCancel?.recurrence_index ?? 0}
         totalInSeries={seriesCount}
         onConfirm={handleRecurrenceCancel}
+      />
+
+      {/* Dialog de pausa para séries recorrentes */}
+      <PauseSeriesDialog
+        open={pauseDialogOpen}
+        onOpenChange={setPauseDialogOpen}
+        action={pauseAction}
+        currentIndex={appointmentToPause?.recurrence_index ?? 0}
+        totalInSeries={seriesCount}
+        onConfirm={handlePauseConfirm}
       />
     </PullToRefreshContainer>
   );

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { StaffAvatar } from '@/components/ui/smart-avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Calendar, 
   Clock, 
@@ -15,7 +16,9 @@ import {
   Repeat,
   Edit,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  Pause,
+  Play
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -47,6 +50,10 @@ interface Appointment {
   recurrence_rule?: string | null;
   recurrence_index?: number | null;
   original_date?: string | null;
+  is_paused?: boolean;
+  paused_at?: string | null;
+  paused_until?: string | null;
+  pause_reason?: string | null;
   staff?: {
     name: string;
     avatar_url: string | null;
@@ -57,6 +64,8 @@ interface RecurringSeriesCardProps {
   appointments: Appointment[];
   onEdit: (appointment: any) => void;
   onCancel: (appointment: any) => void;
+  onPause?: (appointment: any) => void;
+  onResume?: (appointment: any) => void;
   onStatusChange: (appointmentId: string, status: string) => void;
   onPayment: (appointment: any) => void;
   showBarbershopName?: boolean;
@@ -68,6 +77,8 @@ export function RecurringSeriesCard({
   appointments,
   onEdit,
   onCancel,
+  onPause,
+  onResume,
   onStatusChange,
   onPayment,
   showBarbershopName,
@@ -90,10 +101,13 @@ export function RecurringSeriesCard({
   const pendingCount = sortedAppointments.filter(a => a.status === 'pendente' || a.status === 'confirmado').length;
   const completedCount = sortedAppointments.filter(a => a.status === 'concluido').length;
   const cancelledCount = sortedAppointments.filter(a => a.status === 'cancelado').length;
+  const pausedCount = sortedAppointments.filter(a => a.is_paused).length;
 
   const recurrenceLabel = firstAppointment.recurrence_rule 
     ? getRecurrenceLabel(firstAppointment.recurrence_rule as RecurrenceRule)
     : 'Recorrente';
+    
+  const hasPausedAppointments = pausedCount > 0;
 
   // Calculate total value
   const totalValue = sortedAppointments
@@ -127,6 +141,12 @@ export function RecurringSeriesCard({
                     <Badge variant="secondary" className="text-xs">
                       {recurrenceLabel}
                     </Badge>
+                    {hasPausedAppointments && (
+                      <Badge variant="outline" className="gap-1 text-xs border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-400">
+                        <Pause className="h-3 w-3" />
+                        {pausedCount} pausado{pausedCount > 1 ? 's' : ''}
+                      </Badge>
+                    )}
                   </div>
 
                   {/* Service and Staff */}
@@ -205,13 +225,15 @@ export function RecurringSeriesCard({
                 const status = statusConfig[appointment.status as keyof typeof statusConfig];
                 const isRescheduled = appointment.original_date !== null && 
                   appointment.original_date !== appointment.appointment_date;
+                const isPaused = appointment.is_paused === true;
 
                 return (
                   <div 
                     key={appointment.id}
                     className={cn(
                       "flex flex-col md:flex-row md:items-center justify-between gap-2 p-3 rounded-lg bg-card border",
-                      appointment.status === 'cancelado' && "opacity-60"
+                      appointment.status === 'cancelado' && "opacity-60",
+                      isPaused && "border-orange-300 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20"
                     )}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -239,6 +261,26 @@ export function RecurringSeriesCard({
 
                       {/* Status and Badges */}
                       <div className="flex items-center gap-1.5">
+                        {isPaused && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="text-[10px] gap-1 border-orange-300 bg-orange-100 text-orange-700 dark:border-orange-700 dark:bg-orange-900/50 dark:text-orange-400">
+                                  <Pause className="h-2.5 w-2.5" />
+                                  Pausado
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{appointment.pause_reason || 'Agendamento pausado temporariamente'}</p>
+                                {appointment.paused_until && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Até: {format(parseISO(appointment.paused_until), "dd/MM/yyyy", { locale: ptBR })}
+                                  </p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         {isRescheduled && (
                           <Badge variant="outline" className="text-[10px] border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-400">
                             Remarcado
@@ -287,18 +329,51 @@ export function RecurringSeriesCard({
                         </Button>
                       )}
                       {appointment.status !== 'cancelado' && appointment.status !== 'concluido' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onCancel(appointment);
-                          }}
-                          className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Cancelar
-                        </Button>
+                        <>
+                          {isPaused ? (
+                            onResume && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onResume(appointment);
+                                }}
+                                className="h-7 px-2 text-xs text-green-600 hover:text-green-700"
+                              >
+                                <Play className="h-3 w-3 mr-1" />
+                                Retomar
+                              </Button>
+                            )
+                          ) : (
+                            onPause && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onPause(appointment);
+                                }}
+                                className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700"
+                              >
+                                <Pause className="h-3 w-3 mr-1" />
+                                Pausar
+                              </Button>
+                            )
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCancel(appointment);
+                            }}
+                            className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Cancelar
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
