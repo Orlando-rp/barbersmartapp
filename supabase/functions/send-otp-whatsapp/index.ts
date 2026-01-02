@@ -175,6 +175,8 @@ serve(async (req) => {
     // Enviar via Evolution API
     const evolutionUrl = `${apiUrl.replace(/\/+$/, '')}/message/sendText/${instanceName}`;
 
+    console.log(`[Send OTP] Chamando Evolution API: ${evolutionUrl}`);
+
     const response = await fetch(evolutionUrl, {
       method: 'POST',
       headers: {
@@ -187,20 +189,60 @@ serve(async (req) => {
       })
     });
 
-    const responseData = await response.json();
+    // Handle response - may be JSON or text/HTML
+    const responseText = await response.text();
+    let responseData: any = null;
+    
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText.substring(0, 500) };
+    }
 
     if (!response.ok) {
-      console.error('[Send OTP] Erro ao enviar WhatsApp:', responseData);
+      console.error('[Send OTP] Erro ao enviar WhatsApp:', { status: response.status, responseData });
+      
+      // Delete the OTP record since sending failed (avoid rate limit issues)
+      await supabase
+        .from('auth_otp_codes')
+        .delete()
+        .eq('phone', formattedPhone)
+        .eq('code', code);
+      
+      console.log('[Send OTP] OTP deletado após falha de envio');
+
+      const errorMessage = responseData?.error || responseData?.message || responseData?.raw || 'Erro ao enviar código via WhatsApp';
+      
       return new Response(
         JSON.stringify({
           success: false,
-          error: responseData?.error || responseData?.message || 'Erro ao enviar código via WhatsApp',
+          error: errorMessage,
+          details: {
+            status: response.status,
+            endpoint: evolutionUrl,
+          }
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log(`[Send OTP] Código enviado com sucesso para: ${formattedPhone}`);
+
+    // Log the OTP attempt in whatsapp_logs
+    try {
+      await supabase
+        .from('whatsapp_logs')
+        .insert({
+          barbershop_id: null,
+          recipient_phone: formattedPhone,
+          message_content: '[OTP] Código de verificação enviado',
+          status: 'sent',
+          provider: 'evolution',
+          message_type: 'otp'
+        });
+    } catch (logError) {
+      console.warn('[Send OTP] Erro ao registrar log (não crítico):', logError);
+    }
 
     return new Response(
       JSON.stringify({ 
