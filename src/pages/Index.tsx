@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { supabase } from "@/lib/supabase";
-import Layout from "@/components/layout/Layout";
 import StatsCard from "@/components/dashboard/StatsCard";
 import AppointmentList from "@/components/dashboard/AppointmentList";
 import RevenueChart from "@/components/dashboard/RevenueChart";
@@ -401,23 +400,18 @@ const Index = () => {
   }, [widgets, customizeMode]);
 
   if (loading) {
-    return (
-      <Layout>
-        <DashboardSkeleton />
-      </Layout>
-    );
+    return <DashboardSkeleton />;
   }
 
   const currentStats = isConsolidatedView ? consolidatedStats : stats;
 
   return (
-    <Layout>
-      <div className="space-y-4 lg:space-y-6">
-        {/* Trial Banner */}
-        <TrialBanner />
-        {/* Welcome Section */}
-        <div className="gradient-subtle p-4 lg:p-6 rounded-xl border border-border">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 lg:space-y-6">
+      {/* Trial Banner */}
+      <TrialBanner />
+      {/* Welcome Section */}
+      <div className="gradient-subtle p-4 lg:p-6 rounded-xl border border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">
                 {userDisplayName 
@@ -609,7 +603,7 @@ const Index = () => {
           </Card>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 };
 

@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import Layout from "@/components/layout/Layout";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -626,7 +625,7 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
   }, [activeBarbershopIds]);
 
   return (
-    <Layout>
+    <PullToRefreshContainer onRefresh={handleRefresh} disabled={loading}>
       <PullToRefreshContainer onRefresh={handleRefresh} disabled={loading}>
         <div className="space-y-4 lg:space-y-6">
         {/* Header */}
@@ -942,7 +941,7 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </PullToRefreshContainer>
   );
 };
 
