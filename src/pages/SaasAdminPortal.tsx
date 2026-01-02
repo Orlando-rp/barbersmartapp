@@ -1091,10 +1091,9 @@ const SaasAdminPortal = () => {
                     <TableBody>
                       {tenants.map((tenant) => {
                         const consolidated = getConsolidatedMetrics(tenant);
-                        return (
-                        <React.Fragment key={tenant.id}>
-                          {/* Linha da Matriz */}
-                          <TableRow className="bg-card">
+                        return [
+                          /* Linha da Matriz */
+                          <TableRow key={`matrix-${tenant.id}`} className="bg-card">
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 {(tenant.units?.length || 0) > 0 ? (
@@ -1165,10 +1164,10 @@ const SaasAdminPortal = () => {
                                 </Button>
                               </div>
                             </TableCell>
-                          </TableRow>
-                          {/* Linhas das Unidades */}
-                          {expandedTenants.has(tenant.id) && tenant.units?.map((unit) => (
-                            <TableRow key={unit.id} className="bg-muted/30">
+                          </TableRow>,
+                          /* Linhas das Unidades */
+                          ...(expandedTenants.has(tenant.id) && tenant.units ? tenant.units.map((unit) => (
+                            <TableRow key={`unit-${unit.id}`} className="bg-muted/30">
                               <TableCell>
                                 <div className="flex items-center gap-2 pl-8">
                                   <MapPin className="h-3 w-3 text-muted-foreground" />
@@ -1200,9 +1199,8 @@ const SaasAdminPortal = () => {
                                 </div>
                               </TableCell>
                             </TableRow>
-                          ))}
-                        </React.Fragment>
-                        );
+                          )) : [])
+                        ];
                       })}
                     </TableBody>
                   </Table>
