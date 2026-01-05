@@ -10,6 +10,8 @@ interface EmailAlertConfig {
   enabled: boolean;
   resend_api_key: string;
   alert_emails: string;
+  whatsapp_enabled: boolean;
+  whatsapp_numbers: string;
   cooldown_minutes: number;
   last_alert_sent: string | null;
 }
@@ -111,6 +113,72 @@ const sendAlertEmail = async (
   return await response.json();
 };
 
+const sendWhatsAppAlert = async (
+  evolutionApiUrl: string,
+  evolutionApiKey: string,
+  alertInstanceName: string,
+  numbers: string[],
+  otpInstanceName: string,
+  status: string
+) => {
+  const isRecovery = status === 'connected';
+  const emoji = isRecovery ? '✅' : '🚨';
+  const statusText = isRecovery ? 'RECONECTADA' : 'DESCONECTADA';
+  const timestamp = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  
+  const message = isRecovery 
+    ? `${emoji} *ALERTA BARBERSMART*\n\n` +
+      `A instância OTP *${otpInstanceName}* foi *reconectada* com sucesso.\n\n` +
+      `✅ Status: Conectado\n` +
+      `🕐 Horário: ${timestamp}\n\n` +
+      `O serviço de login por WhatsApp está funcionando normalmente.`
+    : `${emoji} *ALERTA BARBERSMART*\n\n` +
+      `⚠️ A instância OTP *${otpInstanceName}* foi *desconectada*!\n\n` +
+      `❌ Status: Desconectado\n` +
+      `🕐 Horário: ${timestamp}\n\n` +
+      `*O login por WhatsApp pode estar indisponível!*\n\n` +
+      `*O que fazer:*\n` +
+      `1. Acesse o painel SaaS Admin\n` +
+      `2. Vá para a aba "WhatsApp"\n` +
+      `3. Clique em "Conectar" na seção OTP\n` +
+      `4. Escaneie o QR Code`;
+
+  const results = [];
+  
+  for (const number of numbers) {
+    const cleanNumber = number.replace(/\D/g, '');
+    if (!cleanNumber) continue;
+    
+    try {
+      const response = await fetch(`${evolutionApiUrl}/message/sendText/${alertInstanceName}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": evolutionApiKey,
+        },
+        body: JSON.stringify({
+          number: cleanNumber,
+          text: message,
+        }),
+      });
+
+      if (response.ok) {
+        results.push({ number: cleanNumber, success: true });
+        console.log(`WhatsApp alert sent to ${cleanNumber}`);
+      } else {
+        const error = await response.text();
+        results.push({ number: cleanNumber, success: false, error });
+        console.error(`Failed to send WhatsApp to ${cleanNumber}: ${error}`);
+      }
+    } catch (error) {
+      results.push({ number: cleanNumber, success: false, error: error.message });
+      console.error(`Error sending WhatsApp to ${cleanNumber}:`, error);
+    }
+  }
+  
+  return results;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -133,11 +201,12 @@ serve(async (req) => {
     const { data: configs } = await supabase
       .from('system_config')
       .select('key, value')
-      .in('key', ['email_alerts', 'evolution_api', 'otp_whatsapp']);
+      .in('key', ['email_alerts', 'evolution_api', 'otp_whatsapp', 'whatsapp_alert_instance']);
 
     const emailConfig = configs?.find(c => c.key === 'email_alerts')?.value as EmailAlertConfig | undefined;
     const evolutionConfig = configs?.find(c => c.key === 'evolution_api')?.value as EvolutionConfig | undefined;
     const otpConfig = configs?.find(c => c.key === 'otp_whatsapp')?.value as OtpConfig | undefined;
+    const alertInstanceName = (configs?.find(c => c.key === 'whatsapp_alert_instance')?.value as { instance_name?: string })?.instance_name || 'barbersmart-alerts';
 
     // Handle test email action
     if (body.action === 'test-email') {
@@ -164,6 +233,49 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Handle test WhatsApp action
+    if (body.action === 'test-whatsapp') {
+      if (!emailConfig?.whatsapp_numbers) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: "Configure os números de WhatsApp primeiro" 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!evolutionConfig?.api_url || !evolutionConfig?.api_key) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: "Evolution API não configurada" 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const numbers = emailConfig.whatsapp_numbers.split(',').map(n => n.trim()).filter(Boolean);
+      
+      const results = await sendWhatsAppAlert(
+        evolutionConfig.api_url,
+        evolutionConfig.api_key,
+        alertInstanceName,
+        numbers,
+        otpConfig?.instance_name || 'barbersmart-otp',
+        'disconnected'
+      );
+
+      const allSuccess = results.every(r => r.success);
+      
+      return new Response(JSON.stringify({ 
+        success: allSuccess,
+        results,
+        error: allSuccess ? undefined : "Algumas mensagens falharam"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
 
     // Skip check if monitoring is disabled
     if (!emailConfig?.enabled) {
@@ -229,7 +341,9 @@ serve(async (req) => {
 
     // Check if status changed
     const statusChanged = previousStatus !== currentStatus && previousStatus !== 'unknown';
-    const shouldSendAlert = statusChanged && emailConfig.resend_api_key && emailConfig.alert_emails;
+    const hasEmailConfig = emailConfig.resend_api_key && emailConfig.alert_emails;
+    const hasWhatsAppConfig = emailConfig.whatsapp_enabled && emailConfig.whatsapp_numbers;
+    const shouldSendAlert = statusChanged && (hasEmailConfig || hasWhatsAppConfig);
 
     // Check cooldown
     let withinCooldown = false;
@@ -239,21 +353,53 @@ serve(async (req) => {
       withinCooldown = (Date.now() - lastAlert.getTime()) < cooldownMs;
     }
 
+    let emailSent = false;
+    let whatsappSent = false;
+
     // Send alert if needed
     if (shouldSendAlert && !withinCooldown) {
       console.log(`Enviando alerta de ${currentStatus === 'connected' ? 'reconexão' : 'desconexão'}`);
       
-      const emails = emailConfig.alert_emails.split(',').map(e => e.trim()).filter(Boolean);
-      
-      try {
-        await sendAlertEmail(
-          emailConfig.resend_api_key,
-          emails,
-          otpConfig.instance_name,
-          currentStatus
-        );
+      // Send Email Alert
+      if (hasEmailConfig) {
+        const emails = emailConfig.alert_emails.split(',').map(e => e.trim()).filter(Boolean);
+        
+        try {
+          await sendAlertEmail(
+            emailConfig.resend_api_key,
+            emails,
+            otpConfig.instance_name,
+            currentStatus
+          );
+          emailSent = true;
+          console.log("Alerta por email enviado com sucesso");
+        } catch (error) {
+          console.error("Erro ao enviar alerta por email:", error);
+        }
+      }
 
-        // Update last alert sent
+      // Send WhatsApp Alert (backup)
+      if (hasWhatsAppConfig) {
+        const numbers = emailConfig.whatsapp_numbers.split(',').map(n => n.trim()).filter(Boolean);
+        
+        try {
+          const results = await sendWhatsAppAlert(
+            evolutionConfig.api_url,
+            evolutionConfig.api_key,
+            alertInstanceName,
+            numbers,
+            otpConfig.instance_name,
+            currentStatus
+          );
+          whatsappSent = results.some(r => r.success);
+          console.log("Alerta por WhatsApp enviado:", results);
+        } catch (error) {
+          console.error("Erro ao enviar alerta por WhatsApp:", error);
+        }
+      }
+
+      // Update last alert sent if any alert was sent
+      if (emailSent || whatsappSent) {
         await supabase
           .from('system_config')
           .upsert({
@@ -264,10 +410,6 @@ serve(async (req) => {
             },
             updated_at: now,
           }, { onConflict: 'key' });
-
-        console.log("Alerta enviado com sucesso");
-      } catch (error) {
-        console.error("Erro ao enviar alerta:", error);
       }
 
       // Update disconnect time
@@ -292,6 +434,8 @@ serve(async (req) => {
       status: currentStatus,
       previousStatus,
       alertSent: shouldSendAlert && !withinCooldown,
+      emailSent,
+      whatsappSent,
       withinCooldown,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
