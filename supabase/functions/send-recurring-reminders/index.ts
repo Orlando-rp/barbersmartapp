@@ -1,354 +1,265 @@
-/**
- * Send Recurring Appointment Reminders via WhatsApp
- * 
- * Envia lembretes semanais para clientes com agendamentos recorrentes.
- * 
- * Hierarquia de configuração:
- * 1. Configuração específica da barbearia (whatsapp_config)
- * 2. Configuração global (system_config.evolution_api + system_config.otp_whatsapp)
- * 
- * @version 2025-01-02.recurring-v3
- */
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const FUNCTION_VERSION = '2025-01-02.recurring-v3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'X-Function-Version': FUNCTION_VERSION
 };
 
-// ============= WhatsApp Resolver (Inline) =============
-
-interface WhatsAppConfig {
-  apiUrl: string;
-  apiKey: string;
-  instanceName: string;
-  source: 'barbershop' | 'global';
-  barbershopId?: string;
-}
-
-function formatPhoneNumber(phone: string): string {
-  let formatted = phone.replace(/\D/g, '');
-  if (!formatted.startsWith('55') && formatted.length <= 11) {
-    formatted = '55' + formatted;
-  }
-  return formatted;
-}
-
-async function checkInstanceHealth(config: WhatsAppConfig): Promise<{ connected: boolean; state: string }> {
-  const apiUrl = config.apiUrl.replace(/\/$/, '');
-  
-  try {
-    const response = await fetch(`${apiUrl}/instance/connectionState/${config.instanceName}`, {
-      method: 'GET',
-      headers: {
-        'apikey': config.apiKey,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      return { connected: false, state: response.status === 404 ? 'not_found' : 'error' };
-    }
-
-    const data = await response.json();
-    const state = data?.state || data?.instance?.state || 'unknown';
-    return { connected: state === 'open', state };
-  } catch (error) {
-    console.error(`[recurring] Health check error:`, error);
-    return { connected: false, state: 'error' };
-  }
-}
-
-async function resolveWhatsAppConfig(
-  supabase: any,
-  barbershopId?: string | null
-): Promise<WhatsAppConfig | null> {
-  console.log(`[recurring] Resolving config for barbershop: ${barbershopId || 'GLOBAL'}`);
-
-  if (barbershopId) {
-    const { data: bbConfig } = await supabase
-      .from('whatsapp_config')
-      .select('config, is_active')
-      .eq('barbershop_id', barbershopId)
-      .eq('provider', 'evolution')
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (bbConfig?.config) {
-      const cfg = bbConfig.config;
-      let apiUrl = cfg.api_url;
-      let apiKey = cfg.api_key;
-      const instanceName = cfg.instance_name;
-
-      if (!apiUrl || !apiKey) {
-        const { data: globalEvolution } = await supabase
-          .from('system_config')
-          .select('value')
-          .eq('key', 'evolution_api')
-          .maybeSingle();
-
-        if (globalEvolution?.value) {
-          apiUrl = apiUrl || globalEvolution.value.api_url;
-          apiKey = apiKey || globalEvolution.value.api_key;
-        }
-      }
-
-      if (apiUrl && apiKey && instanceName) {
-        const config: WhatsAppConfig = { apiUrl, apiKey, instanceName, source: 'barbershop', barbershopId };
-        
-        const health = await checkInstanceHealth(config);
-        if (health.connected) {
-          console.log(`[recurring] Using barbershop config: ${instanceName}`);
-          return config;
-        }
-        console.log(`[recurring] Barbershop instance not connected, trying global`);
-      }
-    }
-  }
-
-  const { data: globalEvolution } = await supabase
-    .from('system_config')
-    .select('value')
-    .eq('key', 'evolution_api')
-    .maybeSingle();
-
-  const { data: globalOtp } = await supabase
-    .from('system_config')
-    .select('value')
-    .eq('key', 'otp_whatsapp')
-    .maybeSingle();
-
-  if (!globalEvolution?.value?.api_url || !globalEvolution?.value?.api_key) {
-    console.log(`[recurring] No global Evolution API configured`);
-    return null;
-  }
-
-  const instanceName = globalOtp?.value?.instance_name;
-  if (!instanceName) {
-    console.log(`[recurring] No global OTP instance configured`);
-    return null;
-  }
-
-  const config: WhatsAppConfig = {
-    apiUrl: globalEvolution.value.api_url,
-    apiKey: globalEvolution.value.api_key,
-    instanceName,
-    source: 'global'
-  };
-
-  const health = await checkInstanceHealth(config);
-  if (!health.connected) {
-    console.log(`[recurring] Global instance not connected`);
-    return null;
-  }
-
-  console.log(`[recurring] Using global config: ${instanceName}`);
-  return config;
-}
-
-async function sendWhatsAppMessage(
-  config: WhatsAppConfig,
-  to: string,
-  message: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const apiUrl = config.apiUrl.replace(/\/$/, '');
-  const phoneNumber = formatPhoneNumber(to);
-  
-  console.log(`[recurring] Sending to ${phoneNumber} via ${config.instanceName}`);
-
-  try {
-    const response = await fetch(`${apiUrl}/message/sendText/${config.instanceName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.apiKey
-      },
-      body: JSON.stringify({ number: phoneNumber, text: message })
-    });
-
-    const responseData = await response.json();
-    
-    if (!response.ok) {
-      const errorMsg = responseData?.message || responseData?.error || JSON.stringify(responseData);
-      console.error(`[recurring] Send failed:`, errorMsg);
-      return { success: false, error: errorMsg };
-    }
-
-    const messageId = responseData?.key?.id || responseData?.messageId || responseData?.id;
-    console.log(`[recurring] Message sent: ${messageId}`);
-    return { success: true, messageId };
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[recurring] Send exception:`, error);
-    return { success: false, error: errorMsg };
-  }
-}
-
-// ============= Main Handler =============
-
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const startTime = Date.now();
-  console.log(`[recurring] Starting at ${new Date().toISOString()}`);
-
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Buscar agendamentos recorrentes para a próxima semana
+    console.log('🔔 Iniciando envio de lembretes de agendamentos recorrentes da semana...');
+
     const now = new Date();
-    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    // Calculate the start and end of the current week (Monday to Sunday)
+    const dayOfWeek = now.getDay();
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
+    
+    // Get the start of next week (Monday) for weekly reminder
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() + daysUntilMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    console.log(`📅 Buscando agendamentos recorrentes de ${startOfWeek.toISOString().split('T')[0]} a ${endOfWeek.toISOString().split('T')[0]}`);
 
-    const { data: recurringAppointments, error: fetchError } = await supabase
+    // Fetch recurring appointments for the upcoming week
+    const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
-      .select(`
-        id,
-        date,
-        time,
-        status,
-        barbershop_id,
-        recurrence_pattern,
-        client:clients!inner(name, phone),
-        service:services(name),
-        staff:staff(name)
-      `)
-      .gte('date', now.toISOString().split('T')[0])
-      .lte('date', nextWeek.toISOString().split('T')[0])
-      .not('recurrence_pattern', 'is', null)
-      .in('status', ['scheduled', 'confirmed'])
-      .is('recurring_reminder_sent', null);
+      .select('*')
+      .eq('is_recurring', true)
+      .in('status', ['pendente', 'confirmado'])
+      .gte('appointment_date', startOfWeek.toISOString().split('T')[0])
+      .lte('appointment_date', endOfWeek.toISOString().split('T')[0])
+      .order('appointment_date', { ascending: true });
 
-    if (fetchError) {
-      console.error('[recurring] Fetch error:', fetchError);
-      return new Response(JSON.stringify({
-        error: 'Database error',
-        details: fetchError.message,
-        functionVersion: FUNCTION_VERSION
+    if (appointmentsError) {
+      console.error('Erro ao buscar agendamentos:', appointmentsError);
+      throw appointmentsError;
+    }
+
+    if (!appointments || appointments.length === 0) {
+      console.log('✅ Nenhum agendamento recorrente para a próxima semana');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Nenhum agendamento recorrente para a próxima semana',
+        sent: 0 
       }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    if (!recurringAppointments?.length) {
-      console.log('[recurring] No recurring appointments to remind');
-      return new Response(JSON.stringify({
-        message: 'No recurring appointments to remind',
-        count: 0,
-        functionVersion: FUNCTION_VERSION
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    console.log(`📋 ${appointments.length} agendamentos recorrentes encontrados`);
+
+    // Group appointments by client (to send consolidated weekly reminder)
+    const appointmentsByClient = new Map<string, any[]>();
+    
+    for (const apt of appointments) {
+      const clientKey = `${apt.barbershop_id}:${apt.client_phone}`;
+      if (!appointmentsByClient.has(clientKey)) {
+        appointmentsByClient.set(clientKey, []);
+      }
+      appointmentsByClient.get(clientKey)!.push(apt);
     }
 
-    console.log(`[recurring] Found ${recurringAppointments.length} recurring appointments`);
+    console.log(`👥 ${appointmentsByClient.size} clientes únicos para notificar`);
 
-    // Agrupar por barbershop
-    const appointmentsByBarbershop: Record<string, typeof recurringAppointments> = {};
-    for (const apt of recurringAppointments) {
-      const bbId = apt.barbershop_id;
-      if (!appointmentsByBarbershop[bbId]) {
-        appointmentsByBarbershop[bbId] = [];
-      }
-      appointmentsByBarbershop[bbId].push(apt);
-    }
+    let totalSent = 0;
+    let totalFailed = 0;
 
-    let sent = 0;
-    let failed = 0;
+    // Process each client
+    for (const [clientKey, clientAppointments] of appointmentsByClient) {
+      const barbershopId = clientAppointments[0].barbershop_id;
+      const clientPhone = clientAppointments[0].client_phone;
+      const clientName = clientAppointments[0].client_name;
+      const clientId = clientAppointments[0].client_id;
 
-    for (const [barbershopId, bbAppointments] of Object.entries(appointmentsByBarbershop)) {
-      const config = await resolveWhatsAppConfig(supabase, barbershopId);
-      
-      if (!config) {
-        console.log(`[recurring] No WhatsApp config for barbershop ${barbershopId}`);
-        failed += bbAppointments.length;
-        continue;
-      }
+      try {
+        // Get barbershop notification settings
+        const { data: barbershopData } = await supabase
+          .from('barbershops')
+          .select('settings, name')
+          .eq('id', barbershopId)
+          .single();
 
-      for (const apt of bbAppointments) {
-        const clientName = apt.client?.name || 'Cliente';
-        const clientPhone = apt.client?.phone;
-        const serviceName = apt.service?.name || 'serviço';
-        const staffName = apt.staff?.name || '';
-
-        if (!clientPhone) {
-          console.log(`[recurring] No phone for appointment ${apt.id}`);
-          failed++;
+        const notificationConfig = barbershopData?.settings?.notification_config || {};
+        const recurringReminderConfig = notificationConfig.recurring_reminder || { enabled: true };
+        
+        if (!recurringReminderConfig.enabled) {
+          console.log(`⚠️ Lembretes recorrentes desabilitados para barbearia ${barbershopId}`);
           continue;
         }
 
-        const message = `Olá ${clientName}! 👋\n\nLembrete do seu agendamento recorrente:\n📅 ${apt.date}\n⏰ ${apt.time}\n✂️ ${serviceName}${staffName ? `\n👤 ${staffName}` : ''}\n\n🔄 Este é um lembrete semanal do seu horário fixo.\n\nSe precisar remarcar, entre em contato conosco!\n\nAté logo!`;
+        // Get WhatsApp Evolution config
+        const { data: whatsappConfig } = await supabase
+          .from('whatsapp_config')
+          .select('config, is_active')
+          .eq('barbershop_id', barbershopId)
+          .eq('provider', 'evolution')
+          .maybeSingle();
 
-        const result = await sendWhatsAppMessage(config, clientPhone, message);
+        if (!whatsappConfig?.is_active || !whatsappConfig?.config) {
+          console.log(`⚠️ WhatsApp não configurado para barbearia ${barbershopId}`);
+          continue;
+        }
 
-        if (result.success) {
-          sent++;
-          await supabase
-            .from('appointments')
-            .update({ recurring_reminder_sent: new Date().toISOString() })
-            .eq('id', apt.id);
+        const evolutionConfig = whatsappConfig.config as {
+          api_url: string;
+          api_key: string;
+          instance_name: string;
+        };
 
+        // Check client notification preferences
+        let displayName = clientName;
+        if (clientId) {
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('notification_enabled, notification_types, preferred_name')
+            .eq('id', clientId)
+            .maybeSingle();
+          
+          if (clientData) {
+            if (!clientData.notification_enabled) {
+              console.log(`⚠️ Cliente ${clientName} não deseja receber notificações`);
+              continue;
+            }
+            
+            const notificationTypes = clientData.notification_types as Record<string, boolean> | null;
+            if (notificationTypes && notificationTypes.recurring_reminder === false) {
+              console.log(`⚠️ Cliente ${clientName} não deseja receber lembretes de recorrência`);
+              continue;
+            }
+            
+            if (clientData.preferred_name) {
+              displayName = clientData.preferred_name;
+            }
+          }
+        }
+
+        if (!clientPhone) {
+          console.log(`⚠️ Cliente ${clientName} sem telefone`);
+          continue;
+        }
+
+        // Build the weekly summary message
+        const appointmentList = clientAppointments.map((apt, idx) => {
+          const aptDate = new Date(apt.appointment_date);
+          const weekday = aptDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+          const formattedDate = aptDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+          return `${idx + 1}. ${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${formattedDate} às ${apt.appointment_time.slice(0, 5)}
+   ✂️ ${apt.service_name || 'Serviço'}`;
+        }).join('\n\n');
+
+        const barbershopName = barbershopData?.name || 'nossa barbearia';
+        
+        const message = `Olá ${displayName}! 👋
+
+🔔 *Lembrete semanal dos seus agendamentos recorrentes*
+
+Você tem ${clientAppointments.length} agendamento(s) programado(s) para a próxima semana na ${barbershopName}:
+
+${appointmentList}
+
+📍 Não se esqueça! Estamos te esperando. 💈
+
+Caso precise reagendar algum horário, entre em contato conosco com antecedência.`;
+
+        // Format phone number
+        let phoneNumber = clientPhone.replace(/\D/g, '');
+        if (!phoneNumber.startsWith('55') && phoneNumber.length <= 11) {
+          phoneNumber = '55' + phoneNumber;
+        }
+
+        // Send via Evolution API
+        const apiUrl = evolutionConfig.api_url.replace(/\/$/, '');
+        const response = await fetch(`${apiUrl}/message/sendText/${evolutionConfig.instance_name}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': evolutionConfig.api_key
+          },
+          body: JSON.stringify({
+            number: phoneNumber,
+            text: message
+          })
+        });
+
+        const responseData = await response.json();
+
+        if (response.ok) {
+          console.log(`✅ Lembrete semanal enviado para ${clientName} (${clientAppointments.length} agendamentos)`);
+          
+          // Log the message
           await supabase.from('whatsapp_logs').insert({
             barbershop_id: barbershopId,
-            recipient_phone: formatPhoneNumber(clientPhone),
+            recipient_phone: phoneNumber,
             recipient_name: clientName,
             message_content: message,
             message_type: 'recurring_reminder',
             status: 'sent',
             provider: 'evolution',
-            whatsapp_message_id: result.messageId,
-            appointment_id: apt.id
+            response_data: responseData
           });
+
+          totalSent++;
         } else {
-          failed++;
+          console.error(`❌ Falha ao enviar para ${clientName}:`, responseData);
+          
           await supabase.from('whatsapp_logs').insert({
             barbershop_id: barbershopId,
-            recipient_phone: formatPhoneNumber(clientPhone),
+            recipient_phone: phoneNumber,
             recipient_name: clientName,
             message_content: message,
             message_type: 'recurring_reminder',
             status: 'failed',
             provider: 'evolution',
-            error_message: result.error,
-            appointment_id: apt.id
+            error_message: JSON.stringify(responseData)
           });
+
+          totalFailed++;
         }
+      } catch (sendError) {
+        console.error(`❌ Erro ao processar cliente ${clientName}:`, sendError);
+        totalFailed++;
       }
     }
 
-    const duration = Date.now() - startTime;
-    console.log(`[recurring] Completed: ${sent} sent, ${failed} failed in ${duration}ms`);
-
-    return new Response(JSON.stringify({
+    const result = {
       success: true,
-      sent,
-      failed,
-      total: recurringAppointments.length,
-      duration: `${duration}ms`,
-      functionVersion: FUNCTION_VERSION
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      message: `Lembretes de recorrência processados`,
+      sent: totalSent,
+      failed: totalFailed,
+      totalClients: appointmentsByClient.size,
+      totalAppointments: appointments.length
+    };
+
+    console.log('📊 Resultado:', result);
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('[recurring] Unexpected error:', error);
-    return new Response(JSON.stringify({
-      error: 'Internal error',
-      details: error instanceof Error ? error.message : 'Unknown error',
-      functionVersion: FUNCTION_VERSION
+    console.error('❌ Erro geral:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

@@ -86,27 +86,19 @@ export default function ClientAuth() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-otp-whatsapp', {
-        body: { phone: cleanPhone }
-      });
-
-      if (error) {
-        // Extract error message from FunctionsHttpError
-        const errorBody = error.context?.body;
-        let errorMessage = 'Erro ao enviar código';
-        if (errorBody) {
-          try {
-            const parsed = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
-            errorMessage = parsed.error || errorMessage;
-          } catch {
-            errorMessage = error.message || errorMessage;
-          }
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || 'https://nmsblmmhigwsevnqmhwn.supabase.co'}/functions/v1/send-otp-whatsapp`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanPhone }),
         }
-        throw new Error(errorMessage);
-      }
+      );
 
-      if (!data?.success) {
-        throw new Error(data?.error || 'Erro ao enviar código');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao enviar código');
       }
 
       setStep('otp');

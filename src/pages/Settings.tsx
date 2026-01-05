@@ -21,11 +21,10 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { 
   Save, User, Bell, Clock, Globe, Image, Sparkles, 
   Shield, Settings, ChevronRight, Building2, Link2, RotateCcw, LayoutTemplate,
-  MessageSquare, Bot, FileText, CreditCard, Mail
+  MessageSquare, Bot, FileText, CreditCard
 } from "lucide-react";
 import PaymentSettingsSection from "@/components/settings/PaymentSettingsSection";
 import LandingPageBuilder from "@/components/settings/LandingPageBuilder";
-import BarbershopEmailConfig from "@/components/settings/BarbershopEmailConfig";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -44,7 +43,7 @@ interface BarbershopSettings {
   };
 }
 
-type SettingsSection = 'profile' | 'notifications' | 'hours' | 'domain' | 'portfolio' | 'landing' | 'branding' | 'whatsapp' | 'chatbot' | 'email' | 'payments' | 'audit' | 'permissions';
+type SettingsSection = 'profile' | 'notifications' | 'hours' | 'domain' | 'portfolio' | 'landing' | 'branding' | 'whatsapp' | 'chatbot' | 'payments' | 'audit' | 'permissions';
 
 type SectionItem = {
   id: SettingsSection;
@@ -81,7 +80,6 @@ const settingsGroups: SectionGroup[] = [
       { id: 'notifications', label: 'Notificações', icon: Bell, description: 'Alertas e lembretes' },
       { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, description: 'APIs e integração' },
       { id: 'chatbot', label: 'Chatbot IA', icon: Bot, description: 'Assistente virtual' },
-      { id: 'email', label: 'Email', icon: Mail, description: 'Servidor de email' },
     ]
   },
   {
@@ -434,22 +432,6 @@ const SettingsPage = () => {
               upgradeMessage="O Chatbot IA não está disponível no seu plano atual. Faça upgrade para automatizar agendamentos via WhatsApp."
             >
               <ChatbotSettingsSection />
-            </FeatureGate>
-          </div>
-        );
-
-      case 'email':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground mb-1">Servidor de Email</h2>
-              <p className="text-sm text-muted-foreground">Configure seu próprio servidor SMTP para emails</p>
-            </div>
-            <FeatureGate 
-              feature="white_label"
-              upgradeMessage="O servidor de email próprio está disponível apenas para planos com White-Label. Faça upgrade para personalizar o remetente dos emails."
-            >
-              <BarbershopEmailConfig />
             </FeatureGate>
           </div>
         );

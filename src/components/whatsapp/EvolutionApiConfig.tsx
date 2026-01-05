@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Send, 
   CheckCircle, 
@@ -18,10 +17,6 @@ import {
   RefreshCw,
   Loader2,
   Save,
-  Globe,
-  Server,
-  AlertTriangle,
-  Info,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -42,6 +37,7 @@ interface EvolutionApiConfigProps {
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
+// Gera nome único da instância baseado no barbershopId
 const generateInstanceName = (barbershopId: string): string => {
   const shortId = barbershopId.split('-')[0];
   return `bs-${shortId}`;
@@ -69,10 +65,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>();
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
-  
-  // Novo: indicador de fonte da configuração
-  const [configSource, setConfigSource] = useState<'own' | 'global' | 'none'>('none');
-  const [globalConfig, setGlobalConfig] = useState<{ apiUrl: string; apiKey: string } | null>(null);
+  const [isUsingGlobalConfig, setIsUsingGlobalConfig] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<'unknown' | 'configured' | 'not_configured'>('unknown');
+  const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
 
   const handleSelectTemplate = (template: MessageTemplate) => {
     setTestMessage(template.message);
@@ -82,6 +77,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
   useEffect(() => {
     if (barbershopId) {
+      // Define instanceName automaticamente se não estiver definido
       if (!config.instanceName) {
         setConfig(prev => ({ ...prev, instanceName: generateInstanceName(barbershopId) }));
       }
@@ -99,23 +95,31 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
     setLoadingConfig(true);
     try {
-      // 1. Buscar config global via edge function
+      // Buscar config global via edge function (bypass RLS)
       let globalApiUrl = '';
       let globalApiKey = '';
       
       try {
         const { data: globalData, error: globalError } = await supabase.functions.invoke('get-evolution-config');
         
+        console.log('[EvolutionApiConfig] Global config response:', { globalData, globalError });
+        
         if (!globalError && globalData?.success && globalData?.config) {
           globalApiUrl = globalData.config.api_url || '';
           globalApiKey = globalData.config.api_key || '';
-          setGlobalConfig({ apiUrl: globalApiUrl, apiKey: globalApiKey });
+          console.log('[EvolutionApiConfig] Global config loaded:', { 
+            hasUrl: !!globalApiUrl, 
+            hasKey: !!globalApiKey,
+            url: globalApiUrl 
+          });
+        } else {
+          console.log('[EvolutionApiConfig] No global config or error:', globalError);
         }
-      } catch (e) {
-        console.error('Erro ao buscar config global:', e);
+      } catch (globalErr) {
+        console.error('[EvolutionApiConfig] Error fetching global config:', globalErr);
       }
 
-      // 2. Buscar configuração específica da barbearia
+      // Depois buscar configuração específica da barbearia
       const { data, error } = await supabase
         .from('whatsapp_config')
         .select('*')
@@ -123,20 +127,28 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         .eq('provider', 'evolution')
         .maybeSingle();
 
+      console.log('[EvolutionApiConfig] Local config:', { data, error });
+
       if (error && !error.message?.includes('whatsapp_config')) {
         console.error('Erro ao carregar config:', error);
       }
 
-      // Determinar fonte da configuração
-      const hasOwnConfig = !!(data?.config?.api_url && data?.config?.api_key);
-      const hasGlobalConfig = !!(globalApiUrl && globalApiKey);
+      const finalApiUrl = data?.config?.api_url || globalApiUrl;
+      const finalApiKey = data?.config?.api_key || globalApiKey;
+      const finalInstanceName = data?.config?.instance_name || generatedInstanceName;
 
-      if (hasOwnConfig) {
-        setConfigSource('own');
+      console.log('[EvolutionApiConfig] Final config:', { 
+        hasUrl: !!finalApiUrl, 
+        hasKey: !!finalApiKey, 
+        instanceName: finalInstanceName 
+      });
+
+      if (data?.config) {
+        // Usa config local, mas herda api_url e api_key da global se não existir local
         setConfig({
-          apiUrl: data.config.api_url,
-          apiKey: data.config.api_key,
-          instanceName: data.config.instance_name || generatedInstanceName
+          apiUrl: finalApiUrl,
+          apiKey: finalApiKey,
+          instanceName: finalInstanceName
         });
         if (data.config.connection_status) {
           setConnectionStatus(data.config.connection_status);
@@ -144,35 +156,24 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         if (data.config.connected_phone) {
           setConnectedPhone(data.config.connected_phone);
         }
+        setIsUsingGlobalConfig(!data.config.api_url && !data.config.api_key && (!!globalApiUrl || !!globalApiKey));
         
-        // Verificar status real se marcado como conectado
+        // Se já está marcado como conectado, verificar status real com o config carregado
         if (data.config.connection_status === 'connected') {
-          setTimeout(() => checkConnection({
-            apiUrl: data.config.api_url,
-            apiKey: data.config.api_key,
-            instanceName: data.config.instance_name || generatedInstanceName
-          }), 1000);
+          setTimeout(() => checkConnection({ apiUrl: finalApiUrl, apiKey: finalApiKey, instanceName: finalInstanceName }), 1000);
         }
-      } else if (hasGlobalConfig) {
-        setConfigSource('global');
+      } else if (globalApiUrl || globalApiKey) {
+        // Usar config global com instanceName local
         setConfig({
           apiUrl: globalApiUrl,
           apiKey: globalApiKey,
-          instanceName: data?.config?.instance_name || generatedInstanceName
+          instanceName: generatedInstanceName
         });
-        
-        // Se tem instância própria usando config global
-        if (data?.config?.instance_name && data?.config?.connection_status === 'connected') {
-          setConnectionStatus('connected');
-          setTimeout(() => checkConnection({
-            apiUrl: globalApiUrl,
-            apiKey: globalApiKey,
-            instanceName: data.config.instance_name
-          }), 1000);
-        }
+        setIsUsingGlobalConfig(true);
       } else {
-        setConfigSource('none');
+        // Sem nenhuma config, apenas usar instanceName gerado
         setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
+        setIsUsingGlobalConfig(false);
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
@@ -214,7 +215,6 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
       if (error) throw error;
 
-      setConfigSource('own');
       toast.success("Configuração salva com sucesso!");
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
@@ -224,52 +224,12 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     }
   };
 
-  const useGlobalConfig = async () => {
-    if (!globalConfig || !barbershopId) {
-      toast.error("Configuração global não disponível");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      // Salvar apenas instância, herdando apiUrl e apiKey do global
-      const { error } = await supabase
-        .from('whatsapp_config')
-        .upsert({
-          barbershop_id: barbershopId,
-          provider: 'evolution',
-          config: {
-            instance_name: config.instanceName,
-            connection_status: 'disconnected'
-          },
-          is_active: false,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'barbershop_id,provider'
-        });
-
-      if (error) throw error;
-
-      setConfig({
-        apiUrl: globalConfig.apiUrl,
-        apiKey: globalConfig.apiKey,
-        instanceName: config.instanceName
-      });
-      setConfigSource('global');
-      toast.success("Usando configuração global do servidor!");
-    } catch (error) {
-      console.error('Erro ao usar config global:', error);
-      toast.error("Erro ao aplicar configuração");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const checkConnection = async (overrideConfig?: { apiUrl: string; apiKey: string; instanceName: string } | React.MouseEvent) => {
+    // Se for um evento de mouse (clique de botão), usar config do state
     const checkConfig = (overrideConfig && 'apiUrl' in overrideConfig) ? overrideConfig : config;
     
     if (!checkConfig.apiUrl || !checkConfig.instanceName) {
+      // Não mostrar toast se config ainda está carregando
       if (!loadingConfig) {
         toast.error("Configure a URL e nome da instância primeiro");
       }
@@ -288,6 +248,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         }
       });
 
+      // Handle instance not found (404) - treat as disconnected, not error
       if (data?.success === false && data?.details?.status === 404) {
         setConnectionStatus('disconnected');
         setConnectedPhone(null);
@@ -299,7 +260,11 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
       if (data?.state === 'open' || data?.instance?.state === 'open') {
         setConnectionStatus('connected');
+        // Buscar informações da instância incluindo número - retorna o telefone encontrado
         const phone = await fetchInstanceInfo();
+        // Não verificar webhook automaticamente para evitar erro se ação não existir
+        // Usuário pode clicar em "Reconfigurar Webhook" manualmente
+        setWebhookStatus('unknown');
         if (phone) {
           toast.success(`WhatsApp conectado: +${phone}`);
         } else {
@@ -379,9 +344,14 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
             clearInterval(pollingRef.current);
           }
           
+          // Buscar informações da instância para obter o número conectado
           const phone = await fetchInstanceInfo();
+          
           setConnectionStatus('connected');
           setQrModalOpen(false);
+          
+          // Não verificar webhook automaticamente - usuário pode clicar em "Reconfigurar Webhook"
+          setWebhookStatus('unknown');
           
           if (phone) {
             toast.success(`WhatsApp conectado: +${phone}`);
@@ -394,6 +364,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       }
     }, 3000);
 
+    // Stop polling after 2 minutes
     setTimeout(() => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
@@ -411,9 +382,16 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         }
       });
 
-      if (error) return null;
+      if (error) {
+        console.error('Erro ao buscar instâncias:', error);
+        return null;
+      }
 
+      console.log('[fetchInstanceInfo] Raw response:', JSON.stringify(data, null, 2));
+
+      // A resposta vem como objeto com índices numéricos: {"0": {...}, "1": {...}, "success": true}
       let instanceList: any[] = [];
+      
       if (data) {
         Object.keys(data).forEach(key => {
           if (!isNaN(Number(key)) && data[key] && typeof data[key] === 'object') {
@@ -422,16 +400,26 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         });
       }
 
+      console.log('[fetchInstanceInfo] Parsed instances:', instanceList.length);
+
+      // Procurar a instância pelo nome
       for (const instanceData of instanceList) {
         const name = instanceData?.name || instanceData?.instanceName;
         
+        console.log('[fetchInstanceInfo] Checking:', name, 'vs', config.instanceName);
+        
         if (name === config.instanceName) {
+          console.log('[fetchInstanceInfo] Found matching instance:', instanceData);
+          
+          // ownerJid está no formato "554199550969@s.whatsapp.net"
           const ownerJid = instanceData?.ownerJid;
           
           if (ownerJid) {
             const phoneNumber = ownerJid.split('@')[0];
             setConnectedPhone(phoneNumber);
+            console.log('[fetchInstanceInfo] Connected phone:', phoneNumber);
             
+            // Atualizar no banco de dados imediatamente com o telefone encontrado
             if (barbershopId) {
               await supabase
                 .from('whatsapp_config')
@@ -439,13 +427,13 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
                   barbershop_id: barbershopId,
                   provider: 'evolution',
                   config: {
-                    api_url: configSource === 'own' ? config.apiUrl : undefined,
-                    api_key: configSource === 'own' ? config.apiKey : undefined,
+                    api_url: config.apiUrl,
+                    api_key: config.apiKey,
                     instance_name: config.instanceName,
-                    connection_status: 'connected',
+                    connection_status: instanceData.connectionStatus === 'open' ? 'connected' : 'disconnected',
                     connected_phone: phoneNumber
                   },
-                  is_active: true,
+                  is_active: instanceData.connectionStatus === 'open',
                   updated_at: new Date().toISOString()
                 }, {
                   onConflict: 'barbershop_id,provider'
@@ -453,7 +441,11 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
             }
             
             return phoneNumber;
+          } else {
+            console.log('[fetchInstanceInfo] No ownerJid found');
+            setConnectedPhone(null);
           }
+          break;
         }
       }
       return null;
@@ -473,8 +465,8 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           barbershop_id: barbershopId,
           provider: 'evolution',
           config: {
-            api_url: configSource === 'own' ? config.apiUrl : undefined,
-            api_key: configSource === 'own' ? config.apiKey : undefined,
+            api_url: config.apiUrl,
+            api_key: config.apiKey,
             instance_name: config.instanceName,
             connection_status: status,
             connected_phone: status === 'connected' ? connectedPhone : null
@@ -485,291 +477,590 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           onConflict: 'barbershop_id,provider'
         });
     } catch (error) {
-      console.error('Erro ao atualizar status:', error);
+      console.error('Erro ao atualizar status no banco:', error);
     }
   };
 
-  const sendTestMessage = async () => {
-    if (!testPhone) {
-      toast.error("Informe o número de telefone");
+  const checkWebhookStatus = async () => {
+    if (!config.apiUrl || !config.apiKey || !config.instanceName) return;
+    
+    try {
+      console.log('[checkWebhookStatus] Checking webhook for:', config.instanceName);
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'getWebhook',
+          apiUrl: config.apiUrl,
+          apiKey: config.apiKey,
+          instanceName: config.instanceName
+        }
+      });
+
+      console.log('[checkWebhookStatus] Response:', data);
+      
+      if (error) {
+        console.error('[checkWebhookStatus] Error:', error);
+        // Se a ação não existe ainda, assume webhook não configurado
+        setWebhookStatus('not_configured');
+        return;
+      }
+
+      // Se recebeu erro de ação desconhecida, assume não configurado
+      if (data?.error?.includes('desconhecida')) {
+        console.log('[checkWebhookStatus] Action not supported yet, assuming not configured');
+        setWebhookStatus('not_configured');
+        return;
+      }
+
+      // Check if webhook is configured with our URL
+      const webhookConfig = data?.webhook || data;
+      const configuredUrl = webhookConfig?.url || webhookConfig?.webhookUrl;
+      
+      setWebhookUrl(configuredUrl || null);
+      
+      if (configuredUrl && configuredUrl.includes('evolution-webhook')) {
+        setWebhookStatus('configured');
+        console.log('[checkWebhookStatus] Webhook is configured:', configuredUrl);
+      } else {
+        setWebhookStatus('not_configured');
+        console.log('[checkWebhookStatus] Webhook NOT configured. URL:', configuredUrl);
+      }
+    } catch (error) {
+      console.error('[checkWebhookStatus] Error:', error);
+      // Em caso de erro, assume não configurado (mais seguro)
+      setWebhookStatus('not_configured');
+    }
+  };
+
+  const disconnectInstance = async () => {
+    if (!config.apiUrl || !config.instanceName) return;
+
+    try {
+      setCheckingConnection(true);
+
+      // Primeiro faz logout da sessão
+      await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'logout',
+          apiUrl: config.apiUrl,
+          apiKey: config.apiKey,
+          instanceName: config.instanceName
+        }
+      });
+
+      // Depois exclui a instância completamente
+      const { error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'deleteInstance',
+          apiUrl: config.apiUrl,
+          apiKey: config.apiKey,
+          instanceName: config.instanceName
+        }
+      });
+
+      if (error) {
+        console.error('Erro ao excluir instância:', error);
+      }
+
+      // Atualiza status no banco de dados
+      await supabase
+        .from('whatsapp_config')
+        .upsert({
+          barbershop_id: barbershopId,
+          provider: 'evolution',
+          config: {
+            api_url: config.apiUrl,
+            api_key: config.apiKey,
+            instance_name: config.instanceName,
+            connection_status: 'disconnected'
+          },
+          is_active: false,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'barbershop_id,provider'
+        });
+
+      setConnectionStatus('disconnected');
+      toast.success("WhatsApp desconectado e instância excluída");
+    } catch (error) {
+      console.error('Erro ao desconectar:', error);
+      toast.error("Erro ao desconectar");
+    } finally {
+      setCheckingConnection(false);
+    }
+  };
+
+  const handleSendTest = async () => {
+    if (!testPhone.trim() || !testMessage.trim()) {
+      toast.error("Preencha o telefone e a mensagem");
       return;
     }
 
-    if (!config.apiUrl || !config.apiKey || !config.instanceName) {
-      toast.error("Configure a Evolution API primeiro");
+    if (!barbershopId) {
+      toast.error("ID da barbearia não encontrado");
+      return;
+    }
+
+    if (connectionStatus !== 'connected') {
+      toast.error("Conecte o WhatsApp primeiro");
       return;
     }
 
     try {
       setSending(true);
 
-      let formattedPhone = testPhone.replace(/\D/g, '');
-      if (!formattedPhone.startsWith('55')) {
-        formattedPhone = '55' + formattedPhone;
-      }
-
       const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
-          action: 'sendMessage',
+          action: 'sendText',
           apiUrl: config.apiUrl,
           apiKey: config.apiKey,
           instanceName: config.instanceName,
-          to: formattedPhone,
-          message: testMessage
+          to: testPhone,
+          message: testMessage,
+          barbershopId,
+          recipientName: 'Teste',
+          createdBy: user?.id
         }
       });
 
       if (error) throw error;
 
-      if (data?.success !== false) {
+      if (data?.success || data?.key) {
         toast.success("Mensagem enviada com sucesso!");
         setTestPhone("");
       } else {
-        throw new Error(data?.error || "Erro ao enviar mensagem");
+        throw new Error(data?.error || "Falha ao enviar mensagem");
       }
-    } catch (error: any) {
-      console.error('Erro ao enviar mensagem:', error);
-      toast.error(error.message || "Erro ao enviar mensagem");
+    } catch (error) {
+      console.error("Erro ao enviar mensagem:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar mensagem");
     } finally {
       setSending(false);
     }
   };
 
-  if (loadingConfig) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const refreshQRCode = async () => {
+    setQrLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'connect',
+          apiUrl: config.apiUrl,
+          apiKey: config.apiKey,
+          instanceName: config.instanceName
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.base64 || data?.code) {
+        const qrBase64 = data.base64 || data.code;
+        setQrCode(qrBase64.startsWith('data:') ? qrBase64 : `data:image/png;base64,${qrBase64}`);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar QR:', error);
+      toast.error("Erro ao atualizar QR Code");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const reconfigureWebhook = async () => {
+    if (!config.apiUrl || !config.apiKey || !config.instanceName) {
+      toast.error("Configure a instância primeiro");
+      return;
+    }
+
+    try {
+      setCheckingConnection(true);
+      
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'setWebhook',
+          apiUrl: config.apiUrl,
+          apiKey: config.apiKey,
+          instanceName: config.instanceName
+        }
+      });
+
+      console.log('[reconfigureWebhook] Response:', data);
+
+      if (error) throw error;
+
+      if (data?.success || data?.url || data?.enabled) {
+        setWebhookStatus('configured');
+        toast.success("Webhook reconfigurado com sucesso! Agora as mensagens serão recebidas.");
+        // Verificar novamente após um momento
+        setTimeout(() => checkWebhookStatus(), 2000);
+      } else {
+        throw new Error(data?.error || "Erro ao configurar webhook");
+      }
+    } catch (error) {
+      console.error('Erro ao reconfigurar webhook:', error);
+      toast.error(error instanceof Error ? error.message : "Erro ao reconfigurar webhook");
+    } finally {
+      setCheckingConnection(false);
+    }
+  };
+
+  const getConnectionBadge = () => {
+    switch (connectionStatus) {
+      case 'connected':
+        return <Badge className="bg-success/10 text-success"><Wifi className="h-3 w-3 mr-1" />Conectado</Badge>;
+      case 'connecting':
+        return <Badge className="bg-warning/10 text-warning"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Conectando</Badge>;
+      case 'error':
+        return <Badge className="bg-destructive/10 text-destructive"><XCircle className="h-3 w-3 mr-1" />Erro</Badge>;
+      default:
+        return <Badge variant="outline"><WifiOff className="h-3 w-3 mr-1" />Desconectado</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Indicador de Fonte da Configuração */}
-      <Alert className={configSource === 'own' ? 'border-primary' : configSource === 'global' ? 'border-blue-500' : 'border-amber-500'}>
-        {configSource === 'own' ? (
-          <>
-            <Server className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>Você está usando <strong>configuração própria</strong> do servidor Evolution.</span>
-              {globalConfig && (
-                <Button variant="ghost" size="sm" onClick={useGlobalConfig}>
-                  Usar servidor global
-                </Button>
-              )}
-            </AlertDescription>
-          </>
-        ) : configSource === 'global' ? (
-          <>
-            <Globe className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>Você está usando o <strong>servidor global compartilhado</strong>. Apenas a instância é própria.</span>
-              <Button variant="ghost" size="sm" onClick={() => setConfigSource('own')}>
-                Configurar servidor próprio
-              </Button>
-            </AlertDescription>
-          </>
-        ) : (
-          <>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span><strong>WhatsApp não configurado.</strong> Configure abaixo ou use o servidor global.</span>
-              {globalConfig && (
-                <Button variant="outline" size="sm" onClick={useGlobalConfig}>
-                  Usar servidor global
-                </Button>
-              )}
-            </AlertDescription>
-          </>
-        )}
-      </Alert>
+      {/* Statistics Dashboard - Always on top */}
+      <WhatsAppStats provider="evolution" />
 
-      {/* Configuração */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Configuração Evolution API
-          </CardTitle>
-          <CardDescription>
-            {configSource === 'global' 
-              ? 'Servidor herdado do administrador. Configure apenas sua instância.'
-              : 'Configure a conexão com o servidor Evolution API.'
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* URL e API Key - ocultos se usando global */}
-          {configSource !== 'global' && (
-            <>
-              <div className="space-y-2">
-                <Label>URL da API</Label>
-                <Input
-                  placeholder="https://api.evolution.seudominio.com"
-                  value={config.apiUrl}
-                  onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>API Key</Label>
-                <Input
-                  type="password"
-                  placeholder="Sua API Key"
-                  value={config.apiKey}
-                  onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-                />
-              </div>
-            </>
-          )}
-
-          <div className="space-y-2">
-            <Label>Nome da Instância</Label>
-            <Input
-              placeholder="minha-instancia"
-              value={config.instanceName}
-              onChange={(e) => setConfig({ ...config, instanceName: e.target.value })}
-            />
-            <p className="text-xs text-muted-foreground">
-              Nome único para identificar sua conexão WhatsApp
-            </p>
-          </div>
-
-          {/* Status da Conexão */}
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-2">
-              {connectionStatus === 'connected' ? (
-                <>
-                  <Wifi className="h-5 w-5 text-green-500" />
-                  <span className="font-medium">Conectado</span>
-                  {connectedPhone && (
-                    <Badge variant="secondary">+{connectedPhone}</Badge>
-                  )}
-                </>
-              ) : connectionStatus === 'connecting' ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
-                  <span className="font-medium">Conectando...</span>
-                </>
-              ) : connectionStatus === 'error' ? (
-                <>
-                  <XCircle className="h-5 w-5 text-destructive" />
-                  <span className="font-medium">Erro</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">Desconectado</span>
-                </>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={checkConnection}
-                disabled={checkingConnection}
-              >
-                {checkingConnection ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={connectInstance}
-                disabled={connectionStatus === 'connecting'}
-              >
-                <QrCode className="h-4 w-4 mr-2" />
-                {connectionStatus === 'connected' ? 'Reconectar' : 'Conectar'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Botão Salvar */}
-          {configSource !== 'global' && (
-            <Button onClick={saveConfig} disabled={saving} className="w-full">
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Salvar Configuração
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Teste de Mensagem */}
-      {connectionStatus === 'connected' && (
+      {/* Server Configuration - Only for SaaS Admin */}
+      {isSaasAdmin && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
-              Testar Envio
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              Configuração do Servidor
             </CardTitle>
-            <CardDescription>
-              Envie uma mensagem de teste para verificar a conexão
+            <CardDescription className="text-xs sm:text-sm">
+              Configure a conexão com seu servidor Evolution API
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Número de Telefone</Label>
+          <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="api-url" className="text-xs sm:text-sm">URL do Servidor</Label>
               <Input
-                placeholder="11999999999"
-                value={testPhone}
-                onChange={(e) => setTestPhone(e.target.value)}
+                id="api-url"
+                type="url"
+                value={config.apiUrl}
+                onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
+                placeholder="https://api.evolution.seudominio.com"
+                className="text-sm"
               />
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                URL base do servidor Evolution API
+              </p>
             </div>
 
-            <MessageTemplates 
-              onSelectTemplate={handleSelectTemplate}
-              selectedTemplateId={selectedTemplateId}
-            />
-
-            <div className="space-y-2">
-              <Label>Mensagem</Label>
-              <Textarea
-                value={testMessage}
-                onChange={(e) => setTestMessage(e.target.value)}
-                rows={3}
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="api-key" className="text-xs sm:text-sm">API Key (Global)</Label>
+              <Input
+                id="api-key"
+                type="password"
+                value={config.apiKey}
+                onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+                placeholder="sua-api-key-global"
+                className="text-sm"
               />
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Chave de API do servidor Evolution
+              </p>
             </div>
 
-            <Button onClick={sendTestMessage} disabled={sending}>
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              Enviar Mensagem
+            <div className="space-y-1.5 sm:space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="instance-name" className="text-xs sm:text-sm">Nome da Instância</Label>
+                <Badge variant="secondary" className="text-[10px] sm:text-xs">Auto</Badge>
+              </div>
+              <Input
+                id="instance-name"
+                type="text"
+                value={config.instanceName}
+                readOnly
+                className="bg-muted cursor-not-allowed text-sm"
+              />
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Identificador único gerado automaticamente
+              </p>
+            </div>
+
+            <Button onClick={saveConfig} disabled={saving} className="w-full text-xs sm:text-sm" size="sm">
+              <Save className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              {saving ? "Salvando..." : "Salvar Configuração"}
             </Button>
           </CardContent>
         </Card>
       )}
 
+      {/* Connection Status */}
+      <Card>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <span className="flex items-center gap-2 text-sm sm:text-base">
+              <Wifi className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              Status da Conexão
+            </span>
+            {getConnectionBadge()}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
+          {loadingConfig ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Carregando configuração...</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  onClick={checkConnection}
+                  disabled={checkingConnection || !config.apiUrl || !config.instanceName}
+                  className="text-xs sm:text-sm"
+                  size="sm"
+                >
+                  <RefreshCw className={`mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 ${checkingConnection ? 'animate-spin' : ''}`} />
+                  Verificar Status
+                </Button>
+
+                {connectionStatus !== 'connected' ? (
+                  <Button
+                    onClick={connectInstance}
+                    disabled={!config.apiUrl || !config.apiKey || !config.instanceName}
+                    className="text-xs sm:text-sm"
+                    size="sm"
+                  >
+                    <QrCode className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Conectar WhatsApp
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={reconfigureWebhook}
+                  disabled={checkingConnection}
+                  className="text-xs sm:text-sm"
+                  size="sm"
+                >
+                  <Settings className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Reconfigurar Webhook
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={disconnectInstance}
+                  disabled={checkingConnection}
+                  className="text-xs sm:text-sm"
+                  size="sm"
+                >
+                  <WifiOff className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Desconectar
+                </Button>
+              </>
+            )}
+          </div>
+
+          {connectionStatus === 'connected' && (
+            <div className="p-3 sm:p-4 bg-success/10 rounded-lg border border-success/20">
+              <div className="flex items-center gap-2 text-success">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium">WhatsApp conectado!</span>
+              </div>
+            </div>
+          )}
+
+          {/* Diagnóstico detalhado */}
+          <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border space-y-2 sm:space-y-3">
+            <h4 className="font-medium text-xs sm:text-sm flex items-center gap-2">
+              <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Diagnóstico da Conexão
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">URL do Servidor:</p>
+                <p className="font-mono text-[10px] sm:text-xs break-all">
+                  {config.apiUrl || <span className="text-destructive">Não configurado</span>}
+                </p>
+              </div>
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">API Key:</p>
+                <p className="font-mono text-[10px] sm:text-xs">
+                  {config.apiKey ? '••••••••' + config.apiKey.slice(-4) : <span className="text-destructive">Não configurado</span>}
+                </p>
+              </div>
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Instância:</p>
+                <p className="font-mono text-[10px] sm:text-xs">
+                  {config.instanceName || <span className="text-destructive">Não configurado</span>}
+                </p>
+              </div>
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Telefone:</p>
+                <p className="font-mono text-[10px] sm:text-xs">
+                  {connectedPhone ? (
+                    <span className="text-success font-medium">+{connectedPhone}</span>
+                  ) : connectionStatus === 'connected' ? (
+                    <span className="text-warning">Verificando...</span>
+                  ) : (
+                    <span className="text-muted-foreground">Nenhum</span>
+                  )}
+                </p>
+              </div>
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Config Global:</p>
+                <p className="text-[10px] sm:text-xs">
+                  {isUsingGlobalConfig ? (
+                    <Badge variant="outline" className="text-[10px] sm:text-xs h-5">Sim</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs h-5">Não</Badge>
+                  )}
+                </p>
+              </div>
+              <div className="space-y-0.5 sm:space-y-1">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Status:</p>
+                <div className="text-[10px] sm:text-xs">
+                  {getConnectionBadge()}
+                </div>
+              </div>
+              <div className="space-y-0.5 sm:space-y-1 col-span-1 sm:col-span-2">
+                <p className="text-muted-foreground text-[10px] sm:text-xs">Webhook (recebimento):</p>
+                <div className="text-[10px] sm:text-xs">
+                  {webhookStatus === 'configured' ? (
+                    <Badge className="bg-success/10 text-success text-[10px] sm:text-xs h-5">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Configurado
+                    </Badge>
+                  ) : webhookStatus === 'not_configured' ? (
+                    <Badge variant="destructive" className="text-[10px] sm:text-xs h-5">
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Não configurado
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] sm:text-xs h-5 bg-warning/10 text-warning border-warning/30">
+                      Clique em "Reconfigurar Webhook"
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {(webhookStatus === 'not_configured' || webhookStatus === 'unknown') && connectionStatus === 'connected' && (
+              <div className="mt-2 p-2 sm:p-3 bg-warning/10 border border-warning/20 rounded text-xs sm:text-sm">
+                <p className="text-warning font-medium text-xs">⚠️ Configure o webhook para receber mensagens</p>
+                <p className="text-muted-foreground text-[10px] sm:text-xs mt-1">
+                  Clique em "Reconfigurar Webhook" acima para ativar o recebimento de mensagens no chat.
+                </p>
+              </div>
+            )}
+            
+            {(!config.apiUrl || !config.apiKey) && (
+              <div className="mt-2 p-2 sm:p-3 bg-warning/10 border border-warning/20 rounded text-xs sm:text-sm">
+                <p className="text-warning font-medium text-xs">⚠️ Config Incompleta</p>
+                <p className="text-muted-foreground text-[10px] sm:text-xs mt-1">
+                  {!config.apiUrl && "URL não configurada. "}
+                  {!config.apiKey && "API Key não configurada. "}
+                  {isUsingGlobalConfig 
+                    ? "Verifique config global no SaaS Admin." 
+                    : "Configure acima ou peça ao admin SaaS."}
+                </p>
+              </div>
+            )}
+
+            {connectionStatus === 'disconnected' && config.apiUrl && config.apiKey && (
+              <div className="mt-2 p-2 sm:p-3 bg-muted border rounded text-xs sm:text-sm">
+                <p className="font-medium text-xs">📱 Próximos passos:</p>
+                <ol className="text-[10px] sm:text-xs text-muted-foreground mt-1 space-y-0.5 sm:space-y-1 list-decimal list-inside">
+                  <li>Clique em "Conectar WhatsApp"</li>
+                  <li>Escaneie o QR Code</li>
+                  <li>Aguarde a conexão</li>
+                </ol>
+              </div>
+            )}
+          </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Templates */}
+      <MessageTemplates 
+        onSelectTemplate={handleSelectTemplate}
+        selectedTemplateId={selectedTemplateId}
+      />
+
+      {/* Test Message */}
+      <Card>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Send className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            Enviar Mensagem de Teste
+          </CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            Teste a integração via Evolution API
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label htmlFor="evo-phone" className="text-xs sm:text-sm">Telefone (com DDI)</Label>
+            <Input
+              id="evo-phone"
+              type="tel"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+              placeholder="5511999999999"
+              disabled={sending || connectionStatus !== 'connected'}
+              className="text-sm"
+            />
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Formato: país + DDD + número
+            </p>
+          </div>
+
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label htmlFor="evo-message" className="text-xs sm:text-sm">Mensagem</Label>
+            <Textarea
+              id="evo-message"
+              value={testMessage}
+              onChange={(e) => {
+                setTestMessage(e.target.value);
+                setSelectedTemplateId(undefined);
+              }}
+              placeholder="Digite sua mensagem..."
+              rows={6}
+              disabled={sending || connectionStatus !== 'connected'}
+              className="text-sm"
+            />
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Use variáveis: {'{nome}'}, {'{data}'}, {'{hora}'}
+            </p>
+          </div>
+
+          <Button 
+            onClick={handleSendTest} 
+            disabled={sending || !testPhone.trim() || !testMessage.trim() || connectionStatus !== 'connected'}
+            className="w-full text-xs sm:text-sm"
+            size="sm"
+          >
+            <Send className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            {sending ? "Enviando..." : "Enviar Teste"}
+          </Button>
+
+          {connectionStatus !== 'connected' && (
+            <p className="text-[10px] sm:text-sm text-muted-foreground text-center">
+              Conecte o WhatsApp primeiro
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Logs with Stats Dashboard */}
+      <WhatsAppLogs provider="evolution" />
+
       {/* QR Code Modal */}
       <QRCodeModal
         open={qrModalOpen}
-        onOpenChange={(open) => {
-          setQrModalOpen(open);
-          if (!open && pollingRef.current) {
-            clearInterval(pollingRef.current);
-          }
-        }}
+        onOpenChange={setQrModalOpen}
         qrCode={qrCode}
-        loading={qrLoading}
         instanceName={config.instanceName}
-        onRefresh={connectInstance}
-        connectionStatus={connectionStatus === 'error' ? 'error' : connectionStatus}
+        onRefresh={refreshQRCode}
+        connectionStatus={connectionStatus}
+        loading={qrLoading}
       />
-
-      {/* Estatísticas e Logs */}
-      <WhatsAppStats provider="evolution" />
-      <WhatsAppLogs provider="evolution" />
     </div>
   );
 };

@@ -70,7 +70,6 @@ import {
   Unlink,
   BookOpen,
   Rocket,
-  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -85,7 +84,6 @@ import { SocialAuthConfig } from "@/components/saas/SocialAuthConfig";
 import { BrandingConfig } from "@/components/saas/BrandingConfig";
 import DomainsManagement from "@/components/saas/DomainsManagement";
 import { GlobalPaymentConfig } from "@/components/saas/GlobalPaymentConfig";
-import GlobalSmtpConfig from "@/components/saas/GlobalSmtpConfig";
 import { PlanFeaturesSelector, defaultPlanFeatures, featuresToStringArray, stringArrayToFeatures, type PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import { PlanCardPreview } from "@/components/saas/PlanCardPreview";
 import { ReleaseNotes } from "@/components/saas/ReleaseNotes";
@@ -184,9 +182,6 @@ const SaasAdminPortal = () => {
   const [allBarbershops, setAllBarbershops] = useState<{id: string; name: string; parent_id: string | null}[]>([]);
   const [linkForm, setLinkForm] = useState({ unitId: '', parentId: '' });
   const [savingLink, setSavingLink] = useState(false);
-  const [tenantSearch, setTenantSearch] = useState('');
-  const [tenantStatusFilter, setTenantStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [tenantPlanFilter, setTenantPlanFilter] = useState<string>('all');
 
   // Dialogs
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
@@ -960,78 +955,24 @@ const SaasAdminPortal = () => {
           {/* Tenants Tab */}
           <TabsContent value="tenants">
             <Card>
-              <CardHeader className="p-3 sm:p-6 flex flex-col gap-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <CardTitle className="text-sm sm:text-base">Barbearias Cadastradas</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      {tenants.length} barbearias (matrizes) • {tenants.reduce((sum, t) => sum + (t.units?.length || 0), 0)} unidades
-                    </CardDescription>
-                  </div>
-                  <Button onClick={() => setLinkUnitDialogOpen(true)} variant="outline" className="w-full sm:w-auto">
-                    <Link className="h-4 w-4 mr-2" />
-                    Gerenciar Hierarquia
-                  </Button>
+              <CardHeader className="p-3 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-sm sm:text-base">Barbearias Cadastradas</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    {tenants.length} barbearias (matrizes) • {tenants.reduce((sum, t) => sum + (t.units?.length || 0), 0)} unidades
+                  </CardDescription>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por nome..."
-                      value={tenantSearch}
-                      onChange={(e) => setTenantSearch(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Select value={tenantStatusFilter} onValueChange={(v: 'all' | 'active' | 'inactive') => setTenantStatusFilter(v)}>
-                      <SelectTrigger className="w-[130px]">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="active">Ativos</SelectItem>
-                        <SelectItem value="inactive">Inativos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={tenantPlanFilter} onValueChange={setTenantPlanFilter}>
-                      <SelectTrigger className="w-[140px]">
-                        <SelectValue placeholder="Plano" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os planos</SelectItem>
-                        {plans.filter(p => p.active).map(plan => (
-                          <SelectItem key={plan.id} value={plan.name}>{plan.name}</SelectItem>
-                        ))}
-                        <SelectItem value="Free">Free</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                <Button onClick={() => setLinkUnitDialogOpen(true)} variant="outline" className="w-full sm:w-auto">
+                  <Link className="h-4 w-4 mr-2" />
+                  Gerenciar Hierarquia
+                </Button>
               </CardHeader>
               <CardContent className="p-3 sm:p-6 pt-0">
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
-                  {tenants
-                    .filter((tenant) => {
-                      // Filtro de status
-                      if (tenantStatusFilter === 'active' && !tenant.active) return false;
-                      if (tenantStatusFilter === 'inactive' && tenant.active) return false;
-                      // Filtro de plano
-                      if (tenantPlanFilter !== 'all') {
-                        const planName = tenant.subscription?.plan_name || 'Free';
-                        if (planName !== tenantPlanFilter) return false;
-                      }
-                      // Filtro de busca
-                      if (!tenantSearch.trim()) return true;
-                      const search = tenantSearch.toLowerCase();
-                      const matchName = tenant.name.toLowerCase().includes(search);
-                      const matchUnitName = tenant.units?.some(u => u.name.toLowerCase().includes(search));
-                      return matchName || matchUnitName;
-                    })
-                    .map((tenant) => {
-                      const consolidated = getConsolidatedMetrics(tenant);
-                      return (
+                  {tenants.map((tenant) => {
+                    const consolidated = getConsolidatedMetrics(tenant);
+                    return (
                     <div key={tenant.id} className="border rounded-lg overflow-hidden">
                       {/* Matriz */}
                       <div className="p-3 space-y-2 bg-card">
@@ -1148,28 +1089,12 @@ const SaasAdminPortal = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {tenants
-                        .filter((tenant) => {
-                          // Filtro de status
-                          if (tenantStatusFilter === 'active' && !tenant.active) return false;
-                          if (tenantStatusFilter === 'inactive' && tenant.active) return false;
-                          // Filtro de plano
-                          if (tenantPlanFilter !== 'all') {
-                            const planName = tenant.subscription?.plan_name || 'Free';
-                            if (planName !== tenantPlanFilter) return false;
-                          }
-                          // Filtro de busca
-                          if (!tenantSearch.trim()) return true;
-                          const search = tenantSearch.toLowerCase();
-                          const matchName = tenant.name.toLowerCase().includes(search);
-                          const matchUnitName = tenant.units?.some(u => u.name.toLowerCase().includes(search));
-                          return matchName || matchUnitName;
-                        })
-                        .map((tenant) => {
+                      {tenants.map((tenant) => {
                         const consolidated = getConsolidatedMetrics(tenant);
-                        return [
-                          /* Linha da Matriz */
-                          <TableRow key={`matrix-${tenant.id}`} className="bg-card">
+                        return (
+                        <React.Fragment key={tenant.id}>
+                          {/* Linha da Matriz */}
+                          <TableRow className="bg-card">
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 {(tenant.units?.length || 0) > 0 ? (
@@ -1240,10 +1165,10 @@ const SaasAdminPortal = () => {
                                 </Button>
                               </div>
                             </TableCell>
-                          </TableRow>,
-                          /* Linhas das Unidades */
-                          ...(expandedTenants.has(tenant.id) && tenant.units ? tenant.units.map((unit) => (
-                            <TableRow key={`unit-${unit.id}`} className="bg-muted/30">
+                          </TableRow>
+                          {/* Linhas das Unidades */}
+                          {expandedTenants.has(tenant.id) && tenant.units?.map((unit) => (
+                            <TableRow key={unit.id} className="bg-muted/30">
                               <TableCell>
                                 <div className="flex items-center gap-2 pl-8">
                                   <MapPin className="h-3 w-3 text-muted-foreground" />
@@ -1275,8 +1200,9 @@ const SaasAdminPortal = () => {
                                 </div>
                               </TableCell>
                             </TableRow>
-                          )) : [])
-                        ];
+                          ))}
+                        </React.Fragment>
+                        );
                       })}
                     </TableBody>
                   </Table>
@@ -1527,13 +1453,6 @@ const SaasAdminPortal = () => {
                   💳 Gateways de Pagamento
                 </h2>
                 <GlobalPaymentConfig />
-              </div>
-
-              <div className="border-t border-border pt-6 sm:pt-8">
-                <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
-                  📧 Servidor de Email (SMTP)
-                </h2>
-                <GlobalSmtpConfig />
               </div>
             </div>
           </TabsContent>

@@ -16,7 +16,7 @@ interface QRCodeModalProps {
   qrCode: string | null;
   instanceName: string;
   onRefresh: () => void;
-  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error' | 'missing';
+  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
   loading: boolean;
 }
 
@@ -68,8 +68,6 @@ export const QRCodeModal = ({
         return <Badge className="bg-warning/10 text-warning"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Aguardando scan</Badge>;
       case 'error':
         return <Badge className="bg-destructive/10 text-destructive"><XCircle className="h-3 w-3 mr-1" />Erro</Badge>;
-      case 'missing':
-        return <Badge className="bg-destructive/10 text-destructive"><XCircle className="h-3 w-3 mr-1" />Não Existe</Badge>;
       default:
         return <Badge variant="outline">Desconectado</Badge>;
     }

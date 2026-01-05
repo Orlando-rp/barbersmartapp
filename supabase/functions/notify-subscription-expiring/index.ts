@@ -1,26 +1,10 @@
-// Edge Function: notify-subscription-expiring
-// Version: 2.0.0 - Now uses custom SMTP from admin panel
-// Last updated: 2026-01-02
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface SmtpConfig {
-  enabled: boolean;
-  host: string;
-  port: number;
-  secure: boolean;
-  user: string;
-  pass: string;
-  from_email: string;
-  from_name: string;
-}
 
 interface ExpiringSubscription {
   id: string;
@@ -31,51 +15,14 @@ interface ExpiringSubscription {
   plan_name: string;
 }
 
-async function sendViaSmtp(smtpConfig: SmtpConfig, to: string, subject: string, html: string): Promise<boolean> {
-  console.log(`[SMTP] Sending email to ${to}`);
-  
-  const client = new SMTPClient({
-    connection: {
-      hostname: smtpConfig.host,
-      port: smtpConfig.port,
-      tls: smtpConfig.secure,
-      auth: {
-        username: smtpConfig.user,
-        password: smtpConfig.pass,
-      },
-    },
-  });
-
-  try {
-    await client.send({
-      from: `${smtpConfig.from_name} <${smtpConfig.from_email}>`,
-      to: to,
-      subject: subject,
-      content: "auto",
-      html: html,
-    });
-    console.log(`[SMTP] Email sent successfully to ${to}`);
-    return true;
-  } catch (error: any) {
-    console.error(`[SMTP] Error sending to ${to}:`, error);
-    return false;
-  } finally {
-    try {
-      await client.close();
-    } catch (e) {
-      // Ignore close errors
-    }
-  }
-}
-
-function generateExpirationEmailHtml(
+async function sendExpirationEmail(
   subscription: ExpiringSubscription,
   daysUntilExpiration: number,
-  systemName: string
-): string {
+  resendApiKey: string
+): Promise<boolean> {
   const expirationDate = new Date(subscription.current_period_end).toLocaleDateString("pt-BR");
   
-  return `
+  const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -93,7 +40,7 @@ function generateExpirationEmailHtml(
       <div class="container">
         <div class="header">
           <h1 style="margin:0;">⏰ Sua assinatura expira em breve</h1>
-          <p style="margin:10px 0 0;">${systemName}</p>
+          <p style="margin:10px 0 0;">BarberSmart</p>
         </div>
         <div class="content">
           <p>Olá!</p>
@@ -112,7 +59,7 @@ function generateExpirationEmailHtml(
           </div>
           
           <p>
-            Para continuar aproveitando todos os recursos do ${systemName} e evitar interrupções no seu serviço, 
+            Para continuar aproveitando todos os recursos do BarberSmart e evitar interrupções no seu serviço, 
             renove sua assinatura antes da data de expiração.
           </p>
           
@@ -134,7 +81,7 @@ function generateExpirationEmailHtml(
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
           
           <p style="font-size:13px;color:#6b7280;">
-            Este email foi enviado automaticamente pelo ${systemName}.<br>
+            Este email foi enviado automaticamente pelo BarberSmart.<br>
             Caso tenha dúvidas, entre em contato com nosso suporte.
           </p>
         </div>
@@ -142,6 +89,34 @@ function generateExpirationEmailHtml(
     </body>
     </html>
   `;
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "BarberSmart <noreply@resend.dev>",
+        to: [subscription.owner_email],
+        subject: `⏰ Sua assinatura expira em ${daysUntilExpiration} dia${daysUntilExpiration > 1 ? 's' : ''} - BarberSmart`,
+        html: htmlContent,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed to send email to ${subscription.owner_email}:`, errorText);
+      return false;
+    }
+
+    console.log(`Email sent successfully to ${subscription.owner_email}`);
+    return true;
+  } catch (error) {
+    console.error(`Error sending email to ${subscription.owner_email}:`, error);
+    return false;
+  }
 }
 
 serve(async (req) => {
@@ -149,44 +124,30 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Health check
-  if (req.method === "GET") {
-    return new Response(
-      JSON.stringify({ status: "ok", function: "notify-subscription-expiring", version: "2.0.0" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase configuration");
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Get global SMTP config from system_config table
-    const { data: smtpConfigData } = await supabase
-      .from("system_config")
-      .select("value")
-      .eq("key", "smtp_config")
-      .maybeSingle();
-
-    const globalSmtpConfig: SmtpConfig | null = smtpConfigData?.value;
-    
-    if (!globalSmtpConfig || !globalSmtpConfig.enabled) {
-      console.warn("Global SMTP not configured or disabled, will try barbershop-specific configs");
+    if (!resendApiKey) {
+      console.warn("RESEND_API_KEY not configured, skipping email notifications");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: "RESEND_API_KEY not configured" 
+        }),
+        { 
+          status: 200, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
-    // Get system name for branding
-    const { data: systemBranding } = await supabase
-      .from("system_branding")
-      .select("system_name")
-      .single();
-    
-    const systemName = systemBranding?.system_name || smtpConfig.from_name || "BarberSmart";
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Calculate the date 7 days from now
     const today = new Date();
@@ -239,10 +200,10 @@ serve(async (req) => {
     let emailsFailed = 0;
 
     for (const subscription of expiringSubscriptions) {
-      // Get barbershop and owner details including email_config
+      // Get barbershop and owner details
       const { data: barbershop, error: barbershopError } = await supabase
         .from("barbershops")
-        .select("name, owner_id, email_config, parent_id, subscription_id")
+        .select("name, owner_id")
         .eq("id", subscription.barbershop_id)
         .single();
 
@@ -251,59 +212,15 @@ serve(async (req) => {
         continue;
       }
 
-      // Determine which SMTP to use (barbershop or global)
-      let smtpToUse: SmtpConfig | null = null;
-      
-      // Check if barbershop has white_label and custom SMTP
-      if (barbershop.subscription_id) {
-        const { data: sub } = await supabase
-          .from("subscriptions")
-          .select("plan_id")
-          .eq("id", barbershop.subscription_id)
-          .single();
-        
-        if (sub) {
-          const { data: plan } = await supabase
-            .from("subscription_plans")
-            .select("feature_flags")
-            .eq("id", sub.plan_id)
-            .single();
-          
-          if (plan?.feature_flags?.white_label && barbershop.email_config?.enabled) {
-            smtpToUse = barbershop.email_config;
-            console.log(`[SMTP] Using barbershop-specific SMTP for ${barbershop.name}`);
-          }
-        }
-      }
-      
-      // Fallback to global SMTP
-      if (!smtpToUse) {
-        if (globalSmtpConfig?.enabled) {
-          smtpToUse = globalSmtpConfig;
-        } else {
-          console.warn(`No SMTP config available for barbershop ${barbershop.name}, skipping`);
-          emailsFailed++;
-          continue;
-        }
-      }
-
-      // Get owner email from profiles
+      // Get owner email
       const { data: owner, error: ownerError } = await supabase
-        .from("profiles")
-        .select("id")
+        .from("users")
+        .select("email")
         .eq("id", barbershop.owner_id)
         .single();
 
-      if (ownerError || !owner) {
+      if (ownerError || !owner?.email) {
         console.error(`Error fetching owner for barbershop ${subscription.barbershop_id}:`, ownerError);
-        continue;
-      }
-
-      // Get email from auth.users
-      const { data: authUser } = await supabase.auth.admin.getUserById(owner.id);
-      
-      if (!authUser?.user?.email) {
-        console.error(`No email found for owner ${owner.id}`);
         continue;
       }
 
@@ -316,19 +233,11 @@ serve(async (req) => {
         barbershop_id: subscription.barbershop_id,
         current_period_end: subscription.current_period_end,
         barbershop_name: barbershop.name,
-        owner_email: authUser.user.email,
+        owner_email: owner.email,
         plan_name: subscription.plan?.name || "Plano Atual",
       };
 
-      // Use the barbershop name as system name if using their SMTP
-      const emailSystemName = smtpToUse === barbershop.email_config 
-        ? (smtpToUse.from_name || barbershop.name)
-        : systemName;
-
-      const subject = `⏰ Sua assinatura expira em ${daysUntilExpiration} dia${daysUntilExpiration > 1 ? 's' : ''} - ${emailSystemName}`;
-      const html = generateExpirationEmailHtml(subscriptionData, daysUntilExpiration, emailSystemName);
-      
-      const sent = await sendViaSmtp(smtpToUse, subscriptionData.owner_email, subject, html);
+      const sent = await sendExpirationEmail(subscriptionData, daysUntilExpiration, resendApiKey);
       
       if (sent) {
         emailsSent++;
@@ -341,9 +250,7 @@ serve(async (req) => {
           details: {
             barbershop_id: subscription.barbershop_id,
             days_until_expiration: daysUntilExpiration,
-            email_sent_to: subscriptionData.owner_email,
-            method: "smtp",
-            smtp_type: smtpToUse === barbershop.email_config ? "barbershop" : "global"
+            email_sent_to: owner.email,
           },
         });
       } else {
@@ -365,7 +272,7 @@ serve(async (req) => {
         headers: { "Content-Type": "application/json", ...corsHeaders } 
       }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error in notify-subscription-expiring:", error);
     return new Response(
       JSON.stringify({ 

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Scissors, Building2, Check, ArrowRight, ArrowLeft, Plus, Trash2, Star, Loader2, MessageCircle, Phone, RefreshCw, Mail, CheckCircle2 } from 'lucide-react';
+import { Scissors, Building2, Check, ArrowRight, ArrowLeft, Plus, Trash2, Star, Loader2, MessageCircle, Phone, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -106,19 +106,14 @@ const Auth = () => {
 
   // Password recovery state
   const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
-  const [recoveryMethod, setRecoveryMethod] = useState<'choose' | 'whatsapp' | 'email'>('choose');
   const [recoveryPhone, setRecoveryPhone] = useState('');
-  const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryOtpCode, setRecoveryOtpCode] = useState('');
-  const [recoveryStep, setRecoveryStep] = useState<'phone' | 'code' | 'newPassword' | 'processing' | 'emailSent'>('phone');
+  const [recoveryStep, setRecoveryStep] = useState<'phone' | 'code' | 'newPassword' | 'processing'>('phone');
   const [recoveryOtpExpiresAt, setRecoveryOtpExpiresAt] = useState<Date | null>(null);
   const [recoveryResendCooldown, setRecoveryResendCooldown] = useState(0);
   const [recoverySessionToken, setRecoverySessionToken] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [isPasswordRecoverySession, setIsPasswordRecoverySession] = useState(false);
-  const [emailResendCooldown, setEmailResendCooldown] = useState(0);
-  const [emailRecoveryToken, setEmailRecoveryToken] = useState<string | null>(null);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -144,44 +139,12 @@ const Auth = () => {
   // Current unit being edited
   const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
 
-  // Listen for PASSWORD_RECOVERY event (email recovery via Supabase native flow - fallback)
-  // And detect custom email recovery token in URL
   useEffect(() => {
-    // Check for custom email recovery token in URL
-    const params = new URLSearchParams(window.location.search);
-    const recovery = params.get('recovery');
-    const token = params.get('token');
-    const email = params.get('email');
-    
-    if (recovery === 'email' && token && email) {
-      setEmailRecoveryToken(token);
-      setRecoveryEmail(decodeURIComponent(email));
-      setShowPasswordRecovery(true);
-      setRecoveryMethod('email');
-      setRecoveryStep('newPassword');
-      // Clean URL params
-      window.history.replaceState({}, '', '/auth');
-    }
-
-    // Also listen for native Supabase PASSWORD_RECOVERY event (legacy fallback)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsPasswordRecoverySession(true);
-        setShowPasswordRecovery(true);
-        setRecoveryMethod('email');
-        setRecoveryStep('newPassword');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (user && !authLoading && userRole !== undefined && !isPasswordRecoverySession) {
+    if (user && !authLoading && userRole !== undefined) {
       const redirectPath = getRedirectPath(userRole);
       navigate(redirectPath);
     }
-  }, [user, userRole, authLoading, navigate, isPasswordRecoverySession]);
+  }, [user, userRole, authLoading, navigate]);
 
   useEffect(() => {
     loadSocialProviders();
@@ -225,14 +188,6 @@ const Auth = () => {
       return () => clearTimeout(timer);
     }
   }, [recoveryResendCooldown]);
-
-  // Email recovery cooldown timer
-  useEffect(() => {
-    if (emailResendCooldown > 0) {
-      const timer = setTimeout(() => setEmailResendCooldown(emailResendCooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [emailResendCooldown]);
 
   // Recovery OTP expiration timer
   useEffect(() => {
@@ -299,15 +254,6 @@ const Auth = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Error codes que indicam problema de configuração (não tentar novamente)
-  const CONFIG_ERROR_CODES = [
-    'EVOLUTION_NOT_CONFIGURED',
-    'OTP_INSTANCE_MISSING', 
-    'OTP_INSTANCE_DISCONNECTED',
-    'NO_AVAILABLE_INSTANCE',
-    'INSTANCE_NOT_FOUND_ON_SEND'
-  ];
-
   const handleSendOTP = async () => {
     setErrors({});
     
@@ -327,58 +273,15 @@ const Auth = () => {
         body: { phone: whatsappPhone }
       });
 
-      if (error) {
-        // Extract error details from FunctionsHttpError
-        const errorBody = error.context?.body;
-        let errorMessage = 'Erro ao enviar código';
-        let errorCode = 'UNKNOWN';
-        let errorDetails: any = null;
-        
-        if (errorBody) {
-          try {
-            const parsed = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
-            errorMessage = parsed.error || errorMessage;
-            errorCode = parsed.error_code || errorCode;
-            errorDetails = parsed.details || null;
-          } catch {
-            errorMessage = error.message || errorMessage;
-          }
-        }
-
-        // Se for erro de configuração, mostrar mensagem especial
-        if (CONFIG_ERROR_CODES.includes(errorCode)) {
-          toast.error('WhatsApp OTP indisponível', {
-            description: 'O sistema de login via WhatsApp está temporariamente indisponível. Use o login por email.',
-            duration: 8000,
-          });
-          return;
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      if (!data?.success) {
-        const errorCode = data?.error_code || 'UNKNOWN';
-        if (CONFIG_ERROR_CODES.includes(errorCode)) {
-          toast.error('WhatsApp OTP indisponível', {
-            description: 'Use o login por email ou contate o suporte.',
-            duration: 8000,
-          });
-          return;
-        }
-        throw new Error(data?.error || 'Erro ao enviar código');
-      }
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
 
       setOtpStep('code');
       setOtpExpiresAt(new Date(data.expiresAt));
       setResendCooldown(60);
       
-      // Mostrar se usou fallback (informativo)
-      const usedFallback = data?.meta?.usedFallback;
       toast.success('Código enviado!', {
-        description: usedFallback 
-          ? 'Verifique seu WhatsApp para o código de verificação'
-          : 'Verifique seu WhatsApp para o código de verificação'
+        description: 'Verifique seu WhatsApp para o código de verificação'
       });
     } catch (error: any) {
       console.error('Erro ao enviar OTP:', error);
@@ -477,43 +380,8 @@ const Auth = () => {
         body: { phone: signupWhatsappPhone }
       });
 
-      if (error) {
-        const errorBody = error.context?.body;
-        let errorMessage = 'Erro ao enviar código';
-        let errorCode = 'UNKNOWN';
-        
-        if (errorBody) {
-          try {
-            const parsed = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
-            errorMessage = parsed.error || errorMessage;
-            errorCode = parsed.error_code || errorCode;
-          } catch {
-            errorMessage = error.message || errorMessage;
-          }
-        }
-        
-        if (CONFIG_ERROR_CODES.includes(errorCode)) {
-          toast.error('WhatsApp OTP indisponível', {
-            description: 'Use o cadastro por email ou contate o suporte.',
-            duration: 8000,
-          });
-          return;
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      if (!data?.success) {
-        const errorCode = data?.error_code || 'UNKNOWN';
-        if (CONFIG_ERROR_CODES.includes(errorCode)) {
-          toast.error('WhatsApp OTP indisponível', {
-            description: 'Use o cadastro por email.',
-            duration: 8000,
-          });
-          return;
-        }
-        throw new Error(data?.error || 'Erro ao enviar código');
-      }
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
 
       setSignupOtpStep('code');
       setSignupOtpExpiresAt(new Date(data.expiresAt));
@@ -599,21 +467,8 @@ const Auth = () => {
         body: { phone: recoveryPhone }
       });
 
-      if (error) {
-        const errorBody = error.context?.body;
-        let errorMessage = 'Erro ao enviar código';
-        if (errorBody) {
-          try {
-            const parsed = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
-            errorMessage = parsed.error || errorMessage;
-          } catch {
-            errorMessage = error.message || errorMessage;
-          }
-        }
-        throw new Error(errorMessage);
-      }
-      
-      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar código');
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
 
       setRecoveryStep('code');
       setRecoveryOtpExpiresAt(new Date(data.expiresAt));
@@ -725,149 +580,6 @@ const Auth = () => {
   const handleRecoveryResendOTP = async () => {
     if (recoveryResendCooldown > 0) return;
     await handleRecoverySendOTP();
-  };
-
-  // Email recovery functions
-  const emailSchema = z.string().email({ message: 'Email inválido' });
-
-  const handleEmailRecovery = async () => {
-    setErrors({});
-    
-    try {
-      emailSchema.parse(recoveryEmail);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        setErrors({ recoveryEmail: error.errors[0].message });
-        return;
-      }
-    }
-
-    setLoading(true);
-
-    try {
-      const redirectUrl = `${window.location.origin}/auth`;
-      
-      console.log('Sending recovery email via Edge Function (custom SMTP)...');
-      
-      const { data, error } = await supabase.functions.invoke('send-recovery-email', {
-        body: { email: recoveryEmail, redirectUrl }
-      });
-
-      if (error) {
-        console.error('Edge function invoke error:', error);
-        throw new Error('Erro ao processar solicitação. Tente novamente.');
-      }
-
-      if (!data?.success) {
-        console.error('Edge function returned error:', data?.error);
-        throw new Error(data?.error || 'Erro ao enviar email de recuperação');
-      }
-
-      console.log('Recovery email sent successfully');
-      setRecoveryStep('emailSent');
-      setEmailResendCooldown(60);
-      
-      toast.success('Email enviado!', {
-        description: 'Verifique sua caixa de entrada e spam'
-      });
-    } catch (error: any) {
-      console.error('Erro ao enviar email de recuperação:', error);
-      toast.error('Erro ao enviar email', {
-        description: error.message || 'Tente novamente em alguns instantes'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmailResendRecovery = async () => {
-    if (emailResendCooldown > 0) return;
-    await handleEmailRecovery();
-  };
-
-  const handleEmailResetPassword = async () => {
-    setErrors({});
-
-    if (newPassword.length < 6) {
-      setErrors({ newPassword: 'Senha deve ter no mínimo 6 caracteres' });
-      return;
-    }
-
-    if (newPassword !== confirmNewPassword) {
-      setErrors({ confirmNewPassword: 'As senhas não coincidem' });
-      return;
-    }
-
-    setLoading(true);
-    setRecoveryStep('processing');
-
-    try {
-      // If we have a custom email recovery token, use our edge function
-      if (emailRecoveryToken) {
-        const { data, error } = await supabase.functions.invoke('verify-email-recovery', {
-          body: { 
-            email: recoveryEmail, 
-            token: emailRecoveryToken,
-            newPassword 
-          }
-        });
-
-        if (error) throw error;
-        if (!data?.success) throw new Error(data?.error || 'Erro ao alterar senha');
-
-        toast.success('Senha alterada com sucesso!', {
-          description: 'Faça login com sua nova senha'
-        });
-
-        // Reset recovery state
-        setShowPasswordRecovery(false);
-        setIsPasswordRecoverySession(false);
-        setEmailRecoveryToken(null);
-        setRecoveryStep('phone');
-        setRecoveryMethod('choose');
-        setRecoveryEmail('');
-        setNewPassword('');
-        setConfirmNewPassword('');
-
-        // Pre-fill email for login
-        if (data.email) {
-          setLoginEmail(data.email);
-        }
-      } else {
-        // Native Supabase recovery session (legacy fallback)
-        const { error } = await supabase.auth.updateUser({
-          password: newPassword
-        });
-
-        if (error) throw error;
-
-        toast.success('Senha alterada com sucesso!', {
-          description: 'Você já está logado com sua nova senha'
-        });
-
-        // Reset recovery state
-        setShowPasswordRecovery(false);
-        setIsPasswordRecoverySession(false);
-        setRecoveryStep('phone');
-        setRecoveryMethod('choose');
-        setRecoveryEmail('');
-        setNewPassword('');
-        setConfirmNewPassword('');
-
-        // Redirect to dashboard
-        await refreshBarbershops();
-        const redirectPath = getRedirectPath(userRole);
-        navigate(redirectPath);
-      }
-    } catch (error: any) {
-      console.error('Erro ao resetar senha via email:', error);
-      setRecoveryStep('newPassword');
-      toast.error('Erro ao alterar senha', {
-        description: error.message || 'Tente novamente'
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
@@ -1352,78 +1064,13 @@ const Auth = () => {
 
   const renderPasswordRecovery = () => (
     <div className="space-y-4">
-      {/* Method Selection */}
-      {recoveryMethod === 'choose' && (
+      {recoveryStep === 'phone' && (
         <>
           <div className="text-center mb-4">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
               <Phone className="h-8 w-8 text-amber-600" />
             </div>
             <h3 className="font-medium">Recuperar Senha</h3>
-            <p className="text-sm text-muted-foreground">
-              Escolha como deseja recuperar sua senha
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <Button 
-              type="button" 
-              variant="outline"
-              className="w-full h-auto p-4 flex items-start gap-4 border-green-200 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
-              onClick={() => setRecoveryMethod('whatsapp')}
-            >
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 shrink-0">
-                <MessageCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium">Recuperar via WhatsApp</p>
-                <p className="text-sm text-muted-foreground">
-                  Receba um código de verificação no seu WhatsApp
-                </p>
-              </div>
-            </Button>
-
-            <Button 
-              type="button" 
-              variant="outline"
-              className="w-full h-auto p-4 flex items-start gap-4 border-blue-200 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-              onClick={() => setRecoveryMethod('email')}
-            >
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 shrink-0">
-                <Mail className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium">Recuperar via Email</p>
-                <p className="text-sm text-muted-foreground">
-                  Receba um link de recuperação no seu email
-                </p>
-              </div>
-            </Button>
-          </div>
-
-          <Button 
-            type="button" 
-            variant="ghost" 
-            className="w-full"
-            onClick={() => {
-              setShowPasswordRecovery(false);
-              setRecoveryMethod('choose');
-            }}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar ao Login
-          </Button>
-        </>
-      )}
-
-      {/* WhatsApp Recovery - Phone Input */}
-      {recoveryMethod === 'whatsapp' && recoveryStep === 'phone' && (
-        <>
-          <div className="text-center mb-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
-              <MessageCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="font-medium">Recuperar via WhatsApp</h3>
             <p className="text-sm text-muted-foreground">
               Digite seu número de WhatsApp cadastrado
             </p>
@@ -1449,7 +1096,7 @@ const Auth = () => {
 
           <Button 
             type="button" 
-            className="w-full bg-green-600 hover:bg-green-700" 
+            className="w-full" 
             onClick={handleRecoverySendOTP}
             disabled={loading}
           >
@@ -1471,145 +1118,28 @@ const Auth = () => {
             variant="ghost" 
             className="w-full"
             onClick={() => {
-              setRecoveryMethod('choose');
+              setShowPasswordRecovery(false);
+              setRecoveryStep('phone');
               setRecoveryPhone('');
             }}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
+            Voltar ao Login
           </Button>
         </>
       )}
 
-      {/* Email Recovery - Email Input */}
-      {recoveryMethod === 'email' && recoveryStep === 'phone' && (
+      {recoveryStep === 'code' && (
         <>
           <div className="text-center mb-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-3">
-              <Mail className="h-8 w-8 text-blue-600" />
-            </div>
-            <h3 className="font-medium">Recuperar via Email</h3>
-            <p className="text-sm text-muted-foreground">
-              Digite seu email cadastrado
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="recovery-email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="recovery-email"
-                type="email"
-                placeholder="seu@email.com"
-                value={recoveryEmail}
-                onChange={(e) => setRecoveryEmail(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            {errors.recoveryEmail && (
-              <p className="text-sm text-destructive">{errors.recoveryEmail}</p>
-            )}
-          </div>
-
-          <Button 
-            type="button" 
-            className="w-full bg-blue-600 hover:bg-blue-700" 
-            onClick={handleEmailRecovery}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              <>
-                <Mail className="mr-2 h-4 w-4" />
-                Enviar link de recuperação
-              </>
-            )}
-          </Button>
-
-          <Button 
-            type="button" 
-            variant="ghost" 
-            className="w-full"
-            onClick={() => {
-              setRecoveryMethod('choose');
-              setRecoveryEmail('');
-            }}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </>
-      )}
-
-      {/* Email Sent Confirmation */}
-      {recoveryStep === 'emailSent' && (
-        <>
-          <div className="text-center mb-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="font-medium">Email Enviado!</h3>
-            <p className="text-sm text-muted-foreground">
-              Enviamos um link de recuperação para
-            </p>
-            <p className="font-medium text-blue-600 mt-1">
-              {recoveryEmail}
-            </p>
-          </div>
-
-          <div className="p-4 bg-muted rounded-lg text-sm text-muted-foreground space-y-2">
-            <p>✓ Verifique sua caixa de entrada</p>
-            <p>✓ Verifique também a pasta de spam</p>
-            <p>✓ O link expira em 1 hora</p>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm"
-              onClick={() => {
-                setShowPasswordRecovery(false);
-                setRecoveryStep('phone');
-                setRecoveryMethod('choose');
-                setRecoveryEmail('');
-              }}
-            >
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              Voltar ao Login
-            </Button>
-
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm"
-              onClick={handleEmailResendRecovery}
-              disabled={emailResendCooldown > 0 || loading}
-            >
-              <RefreshCw className={`mr-1 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              {emailResendCooldown > 0 ? `Reenviar (${emailResendCooldown}s)` : 'Reenviar email'}
-            </Button>
-          </div>
-        </>
-      )}
-
-      {/* WhatsApp OTP Code Input */}
-      {recoveryMethod === 'whatsapp' && recoveryStep === 'code' && (
-        <>
-          <div className="text-center mb-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
-              <MessageCircle className="h-8 w-8 text-green-600" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
+              <MessageCircle className="h-8 w-8 text-amber-600" />
             </div>
             <h3 className="font-medium">Digite o código</h3>
             <p className="text-sm text-muted-foreground">
               Enviamos um código de 6 dígitos para
             </p>
-            <p className="font-medium text-green-600">
+            <p className="font-medium text-amber-600">
               {formatPhoneForDisplay(recoveryPhone)}
             </p>
           </div>
@@ -1643,7 +1173,7 @@ const Auth = () => {
 
           <Button 
             type="button" 
-            className="w-full bg-green-600 hover:bg-green-700" 
+            className="w-full" 
             onClick={handleRecoveryVerifyOTP}
             disabled={loading || recoveryOtpCode.length !== 6}
           >
@@ -1685,7 +1215,6 @@ const Auth = () => {
         </>
       )}
 
-      {/* New Password Form (for both methods) */}
       {recoveryStep === 'newPassword' && (
         <>
           <div className="text-center mb-4">
@@ -1694,10 +1223,7 @@ const Auth = () => {
             </div>
             <h3 className="font-medium">Defina sua nova senha</h3>
             <p className="text-sm text-muted-foreground">
-              {isPasswordRecoverySession 
-                ? 'Email verificado! Crie uma nova senha'
-                : 'Telefone verificado! Crie uma nova senha'
-              }
+              Telefone verificado! Crie uma nova senha
             </p>
           </div>
 
@@ -1734,7 +1260,7 @@ const Auth = () => {
           <Button 
             type="button" 
             className="w-full" 
-            onClick={isPasswordRecoverySession ? handleEmailResetPassword : handleResetPassword}
+            onClick={handleResetPassword}
             disabled={loading}
           >
             {loading ? (
@@ -1747,21 +1273,18 @@ const Auth = () => {
             )}
           </Button>
 
-          {!isPasswordRecoverySession && (
-            <Button 
-              type="button" 
-              variant="ghost" 
-              className="w-full"
-              onClick={() => setRecoveryStep('code')}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
-            </Button>
-          )}
+          <Button 
+            type="button" 
+            variant="ghost" 
+            className="w-full"
+            onClick={() => setRecoveryStep('code')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
         </>
       )}
 
-      {/* Processing */}
       {recoveryStep === 'processing' && (
         <div className="text-center py-8">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />

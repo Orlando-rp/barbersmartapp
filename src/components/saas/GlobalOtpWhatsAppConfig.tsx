@@ -24,32 +24,8 @@ import { QRCodeModal } from "@/components/whatsapp/QRCodeModal";
 
 interface OtpConfig {
   instanceName: string;
-  status: 'disconnected' | 'connecting' | 'connected' | 'missing';
+  status: 'disconnected' | 'connecting' | 'connected';
   phoneNumber?: string;
-}
-
-// Validar nome de instância (sem espaços ou caracteres inválidos)
-function validateInstanceName(name: string): { valid: boolean; normalized: string; error?: string } {
-  const trimmed = name.trim();
-  if (!trimmed) {
-    return { valid: false, normalized: '', error: 'Nome da instância é obrigatório' };
-  }
-  
-  // Normalizar: remover espaços e caracteres inválidos
-  const normalized = trimmed
-    .replace(/\s+/g, '-')
-    .replace(/[^a-zA-Z0-9-_]/g, '')
-    .toLowerCase();
-  
-  if (normalized.length < 3) {
-    return { valid: false, normalized, error: 'Nome deve ter no mínimo 3 caracteres' };
-  }
-  
-  if (normalized !== trimmed.toLowerCase()) {
-    return { valid: true, normalized, error: `Nome será normalizado para: ${normalized}` };
-  }
-  
-  return { valid: true, normalized };
 }
 
 export const GlobalOtpWhatsAppConfig = () => {
@@ -288,8 +264,6 @@ export const GlobalOtpWhatsAppConfig = () => {
         return <Badge className="bg-success text-success-foreground"><Wifi className="h-3 w-3 mr-1" />Conectado</Badge>;
       case 'connecting':
         return <Badge variant="outline" className="text-warning border-warning"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Conectando</Badge>;
-      case 'missing':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Não Existe</Badge>;
       default:
         return <Badge variant="destructive"><WifiOff className="h-3 w-3 mr-1" />Desconectado</Badge>;
     }
@@ -347,34 +321,13 @@ export const GlobalOtpWhatsAppConfig = () => {
             <Input
               id="instance-name"
               value={config.instanceName}
-              onChange={(e) => {
-                const validation = validateInstanceName(e.target.value);
-                setConfig({ ...config, instanceName: e.target.value });
-              }}
+              onChange={(e) => setConfig({ ...config, instanceName: e.target.value })}
               placeholder="otp-auth-global"
               disabled={config.status === 'connected'}
               className="bg-muted border-border text-foreground"
             />
-            {config.instanceName && (() => {
-              const validation = validateInstanceName(config.instanceName);
-              if (validation.error && validation.valid) {
-                return (
-                  <p className="text-xs text-warning">
-                    ⚠️ {validation.error}
-                  </p>
-                );
-              }
-              if (!validation.valid) {
-                return (
-                  <p className="text-xs text-destructive">
-                    ❌ {validation.error}
-                  </p>
-                );
-              }
-              return null;
-            })()}
             <p className="text-xs text-muted-foreground">
-              Identificador único (apenas letras, números, - e _). Servidor: {evolutionConfig?.apiUrl || 'não configurado'}
+              Identificador único para a instância no servidor Evolution
             </p>
           </div>
 
