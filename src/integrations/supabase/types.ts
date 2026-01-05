@@ -1270,7 +1270,7 @@ export type Database = {
           schedule: Json | null
           specialties: string[] | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           active?: boolean | null
@@ -1283,7 +1283,7 @@ export type Database = {
           schedule?: Json | null
           specialties?: string[] | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           active?: boolean | null
@@ -1296,7 +1296,7 @@ export type Database = {
           schedule?: Json | null
           specialties?: string[] | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
