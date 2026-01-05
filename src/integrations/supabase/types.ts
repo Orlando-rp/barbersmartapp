@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      addon_modules: {
+        Row: {
+          active: boolean | null
+          category: string
+          created_at: string | null
+          description: string | null
+          features_enabled: Json
+          icon: string | null
+          id: string
+          name: string
+          price: number
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          features_enabled?: Json
+          icon?: string | null
+          id?: string
+          name: string
+          price?: number
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          features_enabled?: Json
+          icon?: string | null
+          id?: string
+          name?: string
+          price?: number
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           appointment_date: string
@@ -25,15 +70,24 @@ export type Database = {
           created_at: string | null
           duration: number | null
           id: string
+          is_paused: boolean | null
           is_recurring: boolean | null
           notes: string | null
+          original_date: string | null
+          pause_reason: string | null
+          paused_at: string | null
+          paused_until: string | null
           payment_amount: number | null
           payment_gateway: string | null
           payment_id: string | null
           payment_method_chosen: string | null
           payment_status: string | null
+          recurrence_index: number | null
+          recurrence_rule: string | null
           recurring_group_id: string | null
+          reminder_sent: string | null
           reschedule_suggested: boolean | null
+          reschedule_suggested_at: string | null
           service_id: string | null
           service_name: string | null
           service_price: number | null
@@ -51,15 +105,24 @@ export type Database = {
           created_at?: string | null
           duration?: number | null
           id?: string
+          is_paused?: boolean | null
           is_recurring?: boolean | null
           notes?: string | null
+          original_date?: string | null
+          pause_reason?: string | null
+          paused_at?: string | null
+          paused_until?: string | null
           payment_amount?: number | null
           payment_gateway?: string | null
           payment_id?: string | null
           payment_method_chosen?: string | null
           payment_status?: string | null
+          recurrence_index?: number | null
+          recurrence_rule?: string | null
           recurring_group_id?: string | null
+          reminder_sent?: string | null
           reschedule_suggested?: boolean | null
+          reschedule_suggested_at?: string | null
           service_id?: string | null
           service_name?: string | null
           service_price?: number | null
@@ -77,15 +140,24 @@ export type Database = {
           created_at?: string | null
           duration?: number | null
           id?: string
+          is_paused?: boolean | null
           is_recurring?: boolean | null
           notes?: string | null
+          original_date?: string | null
+          pause_reason?: string | null
+          paused_at?: string | null
+          paused_until?: string | null
           payment_amount?: number | null
           payment_gateway?: string | null
           payment_id?: string | null
           payment_method_chosen?: string | null
           payment_status?: string | null
+          recurrence_index?: number | null
+          recurrence_rule?: string | null
           recurring_group_id?: string | null
+          reminder_sent?: string | null
           reschedule_suggested?: boolean | null
+          reschedule_suggested_at?: string | null
           service_id?: string | null
           service_name?: string | null
           service_price?: number | null
@@ -279,6 +351,7 @@ export type Database = {
         Row: {
           active: boolean | null
           address: string | null
+          cnpj: string | null
           created_at: string | null
           custom_branding: Json | null
           email: string | null
@@ -288,6 +361,9 @@ export type Database = {
           name: string
           parent_id: string | null
           phone: string | null
+          responsible_email: string | null
+          responsible_name: string | null
+          responsible_phone: string | null
           settings: Json | null
           slug: string | null
           updated_at: string | null
@@ -295,6 +371,7 @@ export type Database = {
         Insert: {
           active?: boolean | null
           address?: string | null
+          cnpj?: string | null
           created_at?: string | null
           custom_branding?: Json | null
           email?: string | null
@@ -304,6 +381,9 @@ export type Database = {
           name: string
           parent_id?: string | null
           phone?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
           settings?: Json | null
           slug?: string | null
           updated_at?: string | null
@@ -311,6 +391,7 @@ export type Database = {
         Update: {
           active?: boolean | null
           address?: string | null
+          cnpj?: string | null
           created_at?: string | null
           custom_branding?: Json | null
           email?: string | null
@@ -320,6 +401,9 @@ export type Database = {
           name?: string
           parent_id?: string | null
           phone?: string | null
+          responsible_email?: string | null
+          responsible_name?: string | null
+          responsible_phone?: string | null
           settings?: Json | null
           slug?: string | null
           updated_at?: string | null
@@ -454,6 +538,41 @@ export type Database = {
           },
         ]
       }
+      chatbot_conversations: {
+        Row: {
+          barbershop_id: string
+          bot_response: string
+          client_phone: string
+          created_at: string | null
+          id: string
+          user_message: string
+        }
+        Insert: {
+          barbershop_id: string
+          bot_response: string
+          client_phone: string
+          created_at?: string | null
+          id?: string
+          user_message: string
+        }
+        Update: {
+          barbershop_id?: string
+          bot_response?: string
+          client_phone?: string
+          created_at?: string | null
+          id?: string
+          user_message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_conversations_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_users: {
         Row: {
           client_id: string
@@ -490,6 +609,7 @@ export type Database = {
         Row: {
           active: boolean | null
           address: string | null
+          avatar_url: string | null
           barbershop_id: string
           birth_date: string | null
           created_at: string | null
@@ -497,16 +617,21 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          notification_enabled: boolean | null
+          notification_types: Json | null
           notify_email: boolean | null
           notify_sms: boolean | null
           notify_whatsapp: boolean | null
           phone: string | null
+          preferred_name: string | null
+          reminder_hours: number | null
           tags: string[] | null
           updated_at: string | null
         }
         Insert: {
           active?: boolean | null
           address?: string | null
+          avatar_url?: string | null
           barbershop_id: string
           birth_date?: string | null
           created_at?: string | null
@@ -514,16 +639,21 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          notification_enabled?: boolean | null
+          notification_types?: Json | null
           notify_email?: boolean | null
           notify_sms?: boolean | null
           notify_whatsapp?: boolean | null
           phone?: string | null
+          preferred_name?: string | null
+          reminder_hours?: number | null
           tags?: string[] | null
           updated_at?: string | null
         }
         Update: {
           active?: boolean | null
           address?: string | null
+          avatar_url?: string | null
           barbershop_id?: string
           birth_date?: string | null
           created_at?: string | null
@@ -531,10 +661,14 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          notification_enabled?: boolean | null
+          notification_types?: Json | null
           notify_email?: boolean | null
           notify_sms?: boolean | null
           notify_whatsapp?: boolean | null
           phone?: string | null
+          preferred_name?: string | null
+          reminder_hours?: number | null
           tags?: string[] | null
           updated_at?: string | null
         }
@@ -813,6 +947,50 @@ export type Database = {
             columns: ["loyalty_points_id"]
             isOneToOne: false
             referencedRelation: "loyalty_points"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_templates: {
+        Row: {
+          barbershop_id: string
+          content: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          type: string
+          updated_at: string | null
+          variables: string[] | null
+        }
+        Insert: {
+          barbershop_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          type: string
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Update: {
+          barbershop_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          type?: string
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
             referencedColumns: ["id"]
           },
         ]
@@ -1267,6 +1445,7 @@ export type Database = {
           created_at: string | null
           fixed_commission: number | null
           id: string
+          is_also_barber: boolean | null
           schedule: Json | null
           specialties: string[] | null
           updated_at: string | null
@@ -1280,6 +1459,7 @@ export type Database = {
           created_at?: string | null
           fixed_commission?: number | null
           id?: string
+          is_also_barber?: boolean | null
           schedule?: Json | null
           specialties?: string[] | null
           updated_at?: string | null
@@ -1293,6 +1473,7 @@ export type Database = {
           created_at?: string | null
           fixed_commission?: number | null
           id?: string
+          is_also_barber?: boolean | null
           schedule?: Json | null
           specialties?: string[] | null
           updated_at?: string | null
@@ -1398,15 +1579,62 @@ export type Database = {
           },
         ]
       }
+      subscription_addons: {
+        Row: {
+          active: boolean | null
+          added_at: string | null
+          addon_id: string
+          created_at: string | null
+          id: string
+          subscription_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          added_at?: string | null
+          addon_id: string
+          created_at?: string | null
+          id?: string
+          subscription_id: string
+        }
+        Update: {
+          active?: boolean | null
+          added_at?: string | null
+          addon_id?: string
+          created_at?: string | null
+          id?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_addons_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "addon_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_addons_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           active: boolean | null
           billing_period: string
           created_at: string | null
           description: string | null
+          discount_percentage: number | null
           feature_flags: Json | null
           features: Json | null
+          highlight_text: string | null
           id: string
+          included_addons: string[] | null
+          is_base_plan: boolean | null
+          is_bundle: boolean | null
           max_appointments_month: number | null
           max_clients: number | null
           max_staff: number | null
@@ -1420,9 +1648,14 @@ export type Database = {
           billing_period?: string
           created_at?: string | null
           description?: string | null
+          discount_percentage?: number | null
           feature_flags?: Json | null
           features?: Json | null
+          highlight_text?: string | null
           id?: string
+          included_addons?: string[] | null
+          is_base_plan?: boolean | null
+          is_bundle?: boolean | null
           max_appointments_month?: number | null
           max_clients?: number | null
           max_staff?: number | null
@@ -1436,9 +1669,14 @@ export type Database = {
           billing_period?: string
           created_at?: string | null
           description?: string | null
+          discount_percentage?: number | null
           feature_flags?: Json | null
           features?: Json | null
+          highlight_text?: string | null
           id?: string
+          included_addons?: string[] | null
+          is_base_plan?: boolean | null
+          is_bundle?: boolean | null
           max_appointments_month?: number | null
           max_clients?: number | null
           max_staff?: number | null
