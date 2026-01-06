@@ -325,7 +325,6 @@ const SettingsPage = () => {
                       id="cnpj"
                       value={settings.cnpj}
                       onChange={(value) => setSettings({ ...settings, cnpj: value })}
-                      type="cnpj"
                       placeholder="00.000.000/0000-00"
                     />
                   </div>
