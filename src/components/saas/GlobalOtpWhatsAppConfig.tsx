@@ -347,21 +347,21 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
 
       {/* OTP Instance Configuration */}
       <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between text-foreground">
-            <span className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-warning" />
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-foreground">
+            <span className="flex items-center gap-2 text-sm sm:text-base">
+              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
               Instância OTP
             </span>
             {getStatusBadge()}
           </CardTitle>
-          <CardDescription className="text-muted-foreground">
+          <CardDescription className="text-muted-foreground text-xs sm:text-sm">
             WhatsApp dedicado para envio de códigos de verificação
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="p-3 sm:p-6 pt-0 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="instance-name" className="text-foreground">Nome da Instância</Label>
+            <Label htmlFor="instance-name" className="text-foreground text-sm">Nome da Instância</Label>
             <Input
               id="instance-name"
               value={config.instanceName}
@@ -458,29 +458,29 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
       {/* Test OTP Section - Only show when connected */}
       {config.status === 'connected' && (
         <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <TestTube className="h-5 w-5 text-primary" />
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
+              <TestTube className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Testar Envio de OTP
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Envie um código OTP de teste para verificar se a integração está funcionando
+            <CardDescription className="text-muted-foreground text-xs sm:text-sm">
+              Envie um código OTP de teste para verificar a integração
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
+          <CardContent className="p-3 sm:p-6 pt-0 space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <div className="flex-1">
                 <Input
-                  placeholder="Número com DDD (ex: 5541999999999)"
+                  placeholder="Número (ex: 5541999999999)"
                   value={testPhone}
                   onChange={(e) => setTestPhone(e.target.value)}
-                  className="bg-muted border-border text-foreground"
+                  className="bg-muted border-border text-foreground text-sm"
                 />
               </div>
               <Button 
                 onClick={sendTestOtp} 
                 disabled={sendingTest || !testPhone.trim()}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
               >
                 {sendingTest ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -491,7 +491,7 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Um código de 6 dígitos será enviado para o número informado. O código expira em 5 minutos.
+              Código de 6 dígitos expira em 5 minutos.
             </p>
           </CardContent>
         </Card>

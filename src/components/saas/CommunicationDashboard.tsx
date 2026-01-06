@@ -164,28 +164,28 @@ export const CommunicationDashboard = () => {
 
       {/* Tabs Internas */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-          <TabsTrigger value="server" className="gap-2">
-            <Server className="h-4 w-4" />
-            <span className="hidden sm:inline">Servidor</span>
+        <TabsList className="flex flex-wrap gap-1 h-auto p-1 w-full">
+          <TabsTrigger value="server" className="flex-1 min-w-[70px] gap-1.5 text-xs sm:text-sm py-2">
+            <Server className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Servidor</span>
             {serverStatus === "offline" && (
-              <Badge variant="destructive" className="h-5 min-w-5 p-0 text-xs flex items-center justify-center">!</Badge>
+              <Badge variant="destructive" className="h-4 w-4 sm:h-5 sm:min-w-5 p-0 text-[10px] sm:text-xs flex items-center justify-center">!</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="otp" className="gap-2">
-            <Smartphone className="h-4 w-4" />
-            <span className="hidden sm:inline">OTP</span>
+          <TabsTrigger value="otp" className="flex-1 min-w-[70px] gap-1.5 text-xs sm:text-sm py-2">
+            <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">OTP</span>
             {otpStatus === "disconnected" && (
-              <Badge variant="destructive" className="h-5 min-w-5 p-0 text-xs flex items-center justify-center">!</Badge>
+              <Badge variant="destructive" className="h-4 w-4 sm:h-5 sm:min-w-5 p-0 text-[10px] sm:text-xs flex items-center justify-center">!</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="alerts" className="gap-2">
-            <Mail className="h-4 w-4" />
-            <span className="hidden sm:inline">Alertas</span>
+          <TabsTrigger value="alerts" className="flex-1 min-w-[70px] gap-1.5 text-xs sm:text-sm py-2">
+            <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Alertas</span>
           </TabsTrigger>
-          <TabsTrigger value="monitoring" className="gap-2">
-            <Activity className="h-4 w-4" />
-            <span className="hidden sm:inline">Monitoramento</span>
+          <TabsTrigger value="monitoring" className="flex-1 min-w-[70px] gap-1.5 text-xs sm:text-sm py-2">
+            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Monitor</span>
           </TabsTrigger>
         </TabsList>
 

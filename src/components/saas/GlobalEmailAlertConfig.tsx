@@ -212,24 +212,24 @@ export const GlobalEmailAlertConfig = () => {
             Monitoramento automático da instância OTP a cada 5 minutos
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+        <CardContent className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4 bg-muted rounded-lg">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground">Último alerta enviado:</span>
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-foreground">Último alerta:</span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {formatLastAlert() || "Nenhum alerta enviado ainda"}
               </p>
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground">Cooldown:</span>
+                <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-foreground">Cooldown:</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {config.cooldown_minutes} minutos entre alertas
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {config.cooldown_minutes} min entre alertas
               </p>
             </div>
           </div>
