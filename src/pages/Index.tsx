@@ -518,25 +518,25 @@ const Index = () => {
       <PublicBookingLink />
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
-        <div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-stretch">
+        <div className="h-full">
           <AppointmentList />
         </div>
-        <div>
+        <div className="h-full">
           <RevenueChart />
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
-        <Card className="barbershop-card hover:shadow-medium cursor-pointer">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 items-stretch">
+        <Card className="barbershop-card hover:shadow-medium cursor-pointer h-full flex flex-col">
           <CardHeader className="p-3 sm:p-4">
             <CardTitle className="flex items-center gap-2 text-xs sm:text-sm">
               <Scissors className="h-4 w-4 text-primary" />
               Serviços Populares
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
+          <CardContent className="p-3 sm:p-4 pt-0 flex-1">
             <div className="space-y-1.5 sm:space-y-2">
               {currentStats?.popularServices && currentStats.popularServices.length > 0 ? (
                 currentStats.popularServices.map((service, idx) => (
@@ -552,14 +552,14 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        <Card className="barbershop-card hover:shadow-medium cursor-pointer">
+        <Card className="barbershop-card hover:shadow-medium cursor-pointer h-full flex flex-col">
           <CardHeader className="p-3 sm:p-4">
             <CardTitle className="flex items-center gap-2 text-xs sm:text-sm">
               <TrendingUp className="h-4 w-4 text-success" />
               Performance do Mês
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
+          <CardContent className="p-3 sm:p-4 pt-0 flex-1">
             <div className="space-y-1.5 sm:space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs sm:text-sm text-muted-foreground">Ocupação</span>
@@ -577,14 +577,14 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        <Card className="barbershop-card hover:shadow-medium cursor-pointer sm:col-span-2 lg:col-span-1">
+        <Card className="barbershop-card hover:shadow-medium cursor-pointer sm:col-span-2 lg:col-span-1 h-full flex flex-col">
           <CardHeader className="p-3 sm:p-4">
             <CardTitle className="flex items-center gap-2 text-xs sm:text-sm">
               <Clock className="h-4 w-4 text-warning" />
               Horários de Pico
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
+          <CardContent className="p-3 sm:p-4 pt-0 flex-1">
             <div className="space-y-1.5 sm:space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs sm:text-sm text-muted-foreground">Manhã (9h-12h)</span>

@@ -135,59 +135,61 @@ const AppointmentList = () => {
     return statusMap[status];
   };
   if (loading) {
-    return <Card className="barbershop-card">
+    return <Card className="barbershop-card h-full flex flex-col">
         <CardHeader className="p-3 sm:p-4">
           <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
             <Calendar className="h-4 w-4 text-primary" />
             Agendamentos de Hoje
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex justify-center py-4 sm:py-6">
+        <CardContent className="flex justify-center items-center py-4 sm:py-6 flex-1">
           <LoadingSpinner size="sm" />
         </CardContent>
       </Card>;
   }
-  return <Card className="barbershop-card">
+  return <Card className="barbershop-card h-full flex flex-col">
       <CardHeader className="p-3 sm:p-4">
         <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
           <Calendar className="h-4 w-4 text-primary" />
           Agendamentos de Hoje
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-3 sm:p-4 pt-0">
-        {appointments.length === 0 ? <div className="text-center py-4 sm:py-6">
-            <Calendar className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground mx-auto mb-2 sm:mb-3 opacity-50" />
-            <p className="text-xs sm:text-sm text-muted-foreground">Nenhum agendamento para hoje</p>
-          </div> : <div className="space-y-2 sm:space-y-3">
-            {appointments.map(appointment => <div key={appointment.id} className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 p-2 sm:p-3 rounded-lg border border-border hover:bg-accent/50 transition-smooth cursor-pointer">
-                <div className="flex-1 space-y-1.5 sm:space-y-2 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                      <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
-                      <span className="font-medium text-sm sm:text-base text-foreground truncate">{appointment.client_display_name || appointment.client_name}</span>
+      <CardContent className="p-3 sm:p-4 pt-0 flex flex-col flex-1">
+        <div className="flex-1">
+          {appointments.length === 0 ? <div className="text-center py-4 sm:py-6">
+              <Calendar className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground mx-auto mb-2 sm:mb-3 opacity-50" />
+              <p className="text-xs sm:text-sm text-muted-foreground">Nenhum agendamento para hoje</p>
+            </div> : <div className="space-y-2 sm:space-y-3">
+              {appointments.map(appointment => <div key={appointment.id} className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 p-2 sm:p-3 rounded-lg border border-border hover:bg-accent/50 transition-smooth cursor-pointer">
+                  <div className="flex-1 space-y-1.5 sm:space-y-2 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                        <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="font-medium text-sm sm:text-base text-foreground truncate">{appointment.client_display_name || appointment.client_name}</span>
+                      </div>
+                      <Badge className={`${getStatusColor(appointment.status)} text-xs flex-shrink-0`}>
+                        {getStatusText(appointment.status)}
+                      </Badge>
                     </div>
-                    <Badge className={`${getStatusColor(appointment.status)} text-xs flex-shrink-0`}>
-                      {getStatusText(appointment.status)}
-                    </Badge>
+                    <div className="flex items-center flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Scissors className="h-3 w-3" />
+                        <span className="truncate max-w-[100px] sm:max-w-none">{appointment.service_name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{appointment.appointment_time}</span>
+                      </div>
+                      {appointment.barber_name && <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span className="truncate max-w-[80px] sm:max-w-none">{appointment.barber_name}</span>
+                        </div>}
+                    </div>
                   </div>
-                  <div className="flex items-center flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Scissors className="h-3 w-3" />
-                      <span className="truncate max-w-[100px] sm:max-w-none">{appointment.service_name}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{appointment.appointment_time}</span>
-                    </div>
-                    {appointment.barber_name && <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        <span className="truncate max-w-[80px] sm:max-w-none">{appointment.barber_name}</span>
-                      </div>}
-                  </div>
-                </div>
-              </div>)}
-          </div>}
-        <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border">
+                </div>)}
+            </div>}
+        </div>
+        <div className="mt-auto pt-2 sm:pt-3 border-t border-border">
           <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => navigate('/appointments')}>
             <span className="sm:hidden">Ver Todos</span>
             <span className="hidden sm:inline">Ver Todos os Agendamentos</span>
