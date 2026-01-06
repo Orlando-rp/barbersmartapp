@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { apiKey } = await req.json();
+    const { apiKey, isTest = false } = await req.json();
 
     if (!apiKey) {
       return new Response(
@@ -21,10 +21,13 @@ serve(async (req) => {
       );
     }
 
-    console.log('Testing Asaas connection...');
+    // Use sandbox URL for test mode, production URL otherwise
+    const baseUrl = isTest ? 'https://sandbox.asaas.com/api/v3' : 'https://api.asaas.com/v3';
+    
+    console.log(`Testing Asaas connection (${isTest ? 'sandbox' : 'production'})...`);
 
     // Test connection by fetching account info
-    const response = await fetch('https://api.asaas.com/v3/myAccount', {
+    const response = await fetch(`${baseUrl}/myAccount`, {
       method: 'GET',
       headers: {
         'access_token': apiKey,
@@ -56,7 +59,8 @@ serve(async (req) => {
           cpfCnpj: account.cpfCnpj,
           company: account.company,
           tradingName: account.tradingName,
-        }
+        },
+        environment: isTest ? 'sandbox' : 'production'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
