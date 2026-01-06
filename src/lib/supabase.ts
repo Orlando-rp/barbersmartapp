@@ -1,15 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Environment variables - configurable for self-hosting
-// IMPORTANT: When deploying externally, set these via environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nmsblmmhigwsevnqmhwn.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_tDfYcwUClvCdECz1NttPNw_GbBcs-8p';
+// Supabase Externo - Projeto Principal BarberSmart
+// Este arquivo ignora o Lovable Cloud e usa exclusivamente o Supabase externo
+const supabaseUrl = 'https://nmsblmmhigwsevnqmhwn.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tc2JsbW1oaWd3c2V2bnFtaHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5OTE4NzQsImV4cCI6MjA1MDU2Nzg3NH0.bYeX_8AWLKcOaLBxq9RKqNhZ6HGLKAhVNg1Mc4RzPtM';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) are required');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
 
 // Export for use in tenant detection
 export const getSupabaseUrl = () => supabaseUrl;
