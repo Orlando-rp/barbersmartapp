@@ -1,10 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+interface EmailAlertConfig {
+  enabled: boolean;
+  provider: 'resend' | 'smtp';
+  resend_api_key: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_secure: boolean;
+  smtp_user: string;
+  smtp_password: string;
+  smtp_from_email: string;
+  smtp_from_name: string;
+  alert_emails: string;
+  cooldown_minutes: number;
+  last_alert_sent: string | null;
+}
 
 interface EvolutionConfig {
   api_url?: string;
@@ -28,6 +45,97 @@ interface ServerStatus {
   last_check: string;
   response_time_ms?: number;
 }
+
+// Send email via Resend API
+const sendViaResend = async (
+  apiKey: string,
+  to: string[],
+  subject: string,
+  html: string
+) => {
+  console.log("[email] Sending via Resend to:", to);
+  
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      from: "BarberSmart <alertas@resend.dev>",
+      to,
+      subject,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Resend error: ${error}`);
+  }
+
+  return await response.json();
+};
+
+// Send email via SMTP
+const sendViaSmtp = async (
+  config: EmailAlertConfig,
+  to: string[],
+  subject: string,
+  html: string
+) => {
+  console.log("[email] Sending via SMTP to:", to);
+  
+  const client = new SmtpClient();
+
+  try {
+    if (config.smtp_secure && config.smtp_port === 465) {
+      await client.connectTLS({
+        hostname: config.smtp_host,
+        port: config.smtp_port,
+        username: config.smtp_user,
+        password: config.smtp_password,
+      });
+    } else {
+      await client.connect({
+        hostname: config.smtp_host,
+        port: config.smtp_port,
+        username: config.smtp_user,
+        password: config.smtp_password,
+      });
+      
+      if (config.smtp_secure) {
+        await client.starttls();
+      }
+    }
+
+    await client.send({
+      from: `${config.smtp_from_name} <${config.smtp_from_email}>`,
+      to: to,
+      subject,
+      content: html.replace(/<[^>]*>/g, ''),
+      html,
+    });
+
+    console.log("[email] SMTP email sent successfully");
+  } finally {
+    await client.close();
+  }
+};
+
+// Unified email sender
+const sendAlertEmail = async (
+  emailConfig: EmailAlertConfig,
+  to: string[],
+  subject: string,
+  html: string
+) => {
+  if (emailConfig.provider === 'smtp') {
+    await sendViaSmtp(emailConfig, to, subject, html);
+  } else {
+    await sendViaResend(emailConfig.resend_api_key, to, subject, html);
+  }
+};
 
 serve(async (req) => {
   // Handle CORS
@@ -191,39 +299,38 @@ serve(async (req) => {
       console.log(`[whatsapp-status-monitor] Status changed from ${previousStatus} to ${newStatus}`);
       
       // Load email alert config
-      const { data: emailConfig } = await supabase
+      const { data: emailConfigData } = await supabase
         .from("system_config")
         .select("value")
-        .eq("key", "email_alert")
+        .eq("key", "email_alerts")
         .single();
 
-      if (emailConfig?.value?.enabled && emailConfig?.value?.recipients?.length > 0) {
-        const resendApiKey = Deno.env.get("RESEND_API_KEY");
-        if (resendApiKey) {
+      const emailConfig = emailConfigData?.value as EmailAlertConfig | undefined;
+
+      if (emailConfig?.enabled && emailConfig?.alert_emails) {
+        // Check if provider config is valid
+        const canSendEmail = emailConfig.provider === 'smtp'
+          ? (emailConfig.smtp_host && emailConfig.smtp_user && emailConfig.smtp_password && emailConfig.smtp_from_email)
+          : emailConfig.resend_api_key;
+
+        if (canSendEmail) {
           try {
             const statusEmoji = newStatus === 'connected' ? '✅' : '❌';
             const subject = `${statusEmoji} WhatsApp OTP ${newStatus === 'connected' ? 'Conectado' : 'Desconectado'}`;
+            const html = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2>Status do WhatsApp OTP Alterado</h2>
+                <p><strong>Status anterior:</strong> ${previousStatus || 'desconhecido'}</p>
+                <p><strong>Novo status:</strong> ${newStatus}</p>
+                <p><strong>Instância:</strong> ${instanceName}</p>
+                <p><strong>Data/Hora:</strong> ${new Date(now).toLocaleString('pt-BR')}</p>
+              </div>
+            `;
             
-            await fetch("https://api.resend.com/emails", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${resendApiKey}`,
-              },
-              body: JSON.stringify({
-                from: emailConfig.value.from_email || "noreply@resend.dev",
-                to: emailConfig.value.recipients,
-                subject,
-                html: `
-                  <h2>Status do WhatsApp OTP Alterado</h2>
-                  <p><strong>Status anterior:</strong> ${previousStatus || 'desconhecido'}</p>
-                  <p><strong>Novo status:</strong> ${newStatus}</p>
-                  <p><strong>Instância:</strong> ${instanceName}</p>
-                  <p><strong>Data/Hora:</strong> ${new Date(now).toLocaleString('pt-BR')}</p>
-                `,
-              }),
-            });
-            console.log("[whatsapp-status-monitor] Alert email sent");
+            const emails = emailConfig.alert_emails.split(',').map(e => e.trim()).filter(Boolean);
+            await sendAlertEmail(emailConfig, emails, subject, html);
+            
+            console.log(`[whatsapp-status-monitor] Alert email sent via ${emailConfig.provider}`);
           } catch (emailError) {
             console.error("[whatsapp-status-monitor] Failed to send alert email:", emailError);
           }
