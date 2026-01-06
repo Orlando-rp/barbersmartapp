@@ -26,6 +26,13 @@ interface GlobalConfig {
   apiKey: string;
 }
 
+interface ServerStatusData {
+  status: 'online' | 'offline';
+  api_url?: string;
+  last_check?: string;
+  response_time_ms?: number;
+}
+
 interface BarbershopStatus {
   id: string;
   name: string;
@@ -51,12 +58,47 @@ export const GlobalEvolutionConfig = ({
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [serverStatus, setServerStatus] = useState<'unknown' | 'online' | 'offline'>('unknown');
+  const [lastCheck, setLastCheck] = useState<string | null>(null);
   const [barbershopStatuses, setBarbershopStatuses] = useState<BarbershopStatus[]>([]);
   const [loadingStatuses, setLoadingStatuses] = useState(false);
 
   useEffect(() => {
     loadGlobalConfig();
+    loadServerStatus();
   }, []);
+
+  const loadServerStatus = async () => {
+    try {
+      const { data } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'evolution_server_status')
+        .maybeSingle();
+
+      if (data?.value) {
+        const statusData = data.value as ServerStatusData;
+        setServerStatus(statusData.status === 'online' ? 'online' : 'offline');
+        setLastCheck(statusData.last_check || null);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar status do servidor:', error);
+    }
+  };
+
+  const formatLastCheck = (isoDate: string | null): string => {
+    if (!isoDate) return '';
+    const date = new Date(isoDate);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'agora';
+    if (diffMins < 60) return `há ${diffMins} min`;
+    if (diffHours < 24) return `há ${diffHours}h`;
+    return `há ${diffDays}d`;
+  };
 
   const loadGlobalConfig = async () => {
     try {
@@ -138,13 +180,31 @@ export const GlobalEvolutionConfig = ({
 
       if (error) throw error;
 
-      if (data?.success) {
+      const now = new Date().toISOString();
+      const isOnline = data?.success;
+
+      if (isOnline) {
         setServerStatus('online');
         toast.success("Servidor Evolution API está online!");
       } else {
         setServerStatus('offline');
         toast.error("Não foi possível conectar ao servidor");
       }
+
+      // Salvar status no banco
+      await supabase
+        .from('system_config')
+        .upsert({
+          key: 'evolution_server_status',
+          value: {
+            status: isOnline ? 'online' : 'offline',
+            api_url: config.apiUrl,
+            last_check: now,
+          },
+          updated_at: now,
+        }, { onConflict: 'key' });
+
+      setLastCheck(now);
     } catch (error) {
       console.error('Erro ao testar conexão:', error);
       setServerStatus('offline');
@@ -282,7 +342,14 @@ export const GlobalEvolutionConfig = ({
               <Settings className="h-5 w-5 text-warning" />
               Servidor Evolution API
             </span>
-            {getServerStatusBadge()}
+            <div className="flex items-center gap-2">
+              {lastCheck && (
+                <span className="text-xs text-muted-foreground">
+                  Verificado {formatLastCheck(lastCheck)}
+                </span>
+              )}
+              {getServerStatusBadge()}
+            </div>
           </CardTitle>
           <CardDescription className="text-muted-foreground">
             Configuração global do servidor para todas as barbearias

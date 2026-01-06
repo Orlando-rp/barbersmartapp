@@ -28,6 +28,8 @@ interface OtpConfig {
   instanceName: string;
   status: 'disconnected' | 'connecting' | 'connected';
   phoneNumber?: string;
+  lastCheck?: string;
+  lastStatusChange?: string;
 }
 
 // Normaliza status inválidos (ex: "missing") para "disconnected"
@@ -55,6 +57,22 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
   const [evolutionConfig, setEvolutionConfig] = useState<{ apiUrl: string; apiKey: string } | null>(null);
   const [testPhone, setTestPhone] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
+  const [runningAutoCheck, setRunningAutoCheck] = useState(false);
+
+  const formatLastCheck = (isoDate: string | null | undefined): string => {
+    if (!isoDate) return '';
+    const date = new Date(isoDate);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'agora';
+    if (diffMins < 60) return `há ${diffMins} min`;
+    if (diffHours < 24) return `há ${diffHours}h`;
+    return `há ${diffDays}d`;
+  };
 
   useEffect(() => {
     loadConfig();
@@ -89,7 +107,9 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
         setConfig({
           instanceName: otpData.value.instance_name || 'otp-auth-global',
           status: normalizeOtpStatus(otpData.value.status),
-          phoneNumber: otpData.value.phone_number
+          phoneNumber: otpData.value.phone_number,
+          lastCheck: otpData.value.last_check,
+          lastStatusChange: otpData.value.last_status_change
         });
       } else {
         // Se não há config salva, manter status padrão 'disconnected'
@@ -105,9 +125,10 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
     }
   };
 
-  const saveConfig = async (newConfig: Partial<OtpConfig>) => {
+  const saveConfig = async (newConfig: Partial<OtpConfig>, statusChanged = false) => {
     try {
       const updatedConfig = { ...config, ...newConfig };
+      const now = new Date().toISOString();
       
       const { error } = await supabase
         .from('system_config')
@@ -116,18 +137,45 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
           value: {
             instance_name: updatedConfig.instanceName,
             status: updatedConfig.status,
-            phone_number: updatedConfig.phoneNumber
+            phone_number: updatedConfig.phoneNumber,
+            last_check: now,
+            last_status_change: statusChanged ? now : (config.lastStatusChange || now)
           },
-          updated_at: new Date().toISOString()
+          updated_at: now
         }, {
           onConflict: 'key'
         });
 
       if (error) throw error;
-      setConfig(updatedConfig);
+      setConfig({ ...updatedConfig, lastCheck: now, lastStatusChange: statusChanged ? now : config.lastStatusChange });
     } catch (error) {
       console.error('Erro ao salvar config:', error);
       throw error;
+    }
+  };
+
+  const runAutoCheck = async () => {
+    try {
+      setRunningAutoCheck(true);
+      toast.info("Executando verificação de status...");
+
+      const { data, error } = await supabase.functions.invoke('whatsapp-status-monitor');
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success("Verificação concluída!");
+        // Recarregar config para pegar os novos valores
+        await loadConfig();
+        onStatusChange?.();
+      } else {
+        toast.error(data?.error || "Erro na verificação");
+      }
+    } catch (error: any) {
+      console.error('Erro ao executar verificação:', error);
+      toast.error(error.message || "Erro ao executar verificação");
+    } finally {
+      setRunningAutoCheck(false);
     }
   };
 
@@ -224,6 +272,7 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
       if (error) throw error;
 
       const isConnected = data?.state === 'open' || data?.instance?.state === 'open';
+      const statusChanged = (isConnected && config.status !== 'connected') || (!isConnected && config.status === 'connected');
       
       if (isConnected) {
         // Buscar info da instância para pegar o número
@@ -239,12 +288,12 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
         const phoneNumber = infoData?.instance?.ownerJid?.replace('@s.whatsapp.net', '') || 
                            infoData?.ownerJid?.replace('@s.whatsapp.net', '');
 
-        await saveConfig({ status: 'connected', phoneNumber });
+        await saveConfig({ status: 'connected', phoneNumber }, statusChanged);
         setShowQrModal(false);
         onStatusChange?.();
         toast.success("WhatsApp conectado com sucesso!");
       } else {
-        await saveConfig({ status: 'disconnected', phoneNumber: undefined });
+        await saveConfig({ status: 'disconnected', phoneNumber: undefined }, statusChanged);
         toast.info("Instância não está conectada");
       }
     } catch (error: any) {
@@ -368,7 +417,14 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
               <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
               Instância OTP
             </span>
-            {getStatusBadge()}
+            <div className="flex items-center gap-2">
+              {config.lastCheck && (
+                <span className="text-xs text-muted-foreground">
+                  Verificado {formatLastCheck(config.lastCheck)}
+                </span>
+              )}
+              {getStatusBadge()}
+            </div>
           </CardTitle>
           <CardDescription className="text-muted-foreground text-xs sm:text-sm">
             WhatsApp dedicado para envio de códigos de verificação
@@ -455,6 +511,15 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
                 >
                   {checking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                   Verificar Status
+                </Button>
+                <Button 
+                  onClick={runAutoCheck} 
+                  disabled={runningAutoCheck}
+                  variant="outline"
+                  className="border-warning text-warning hover:bg-warning/10"
+                >
+                  {runningAutoCheck ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                  Verificar Agora
                 </Button>
                 <Button 
                   onClick={disconnectInstance} 
