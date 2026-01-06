@@ -841,51 +841,8 @@ const SaasAdminPortal = () => {
           </Card>
         </div>
 
-        {/* Tabs - Hidden on mobile since sidebar handles navigation */}
+        {/* Tabs content - Navigation handled by sidebar */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="hidden md:flex flex-wrap gap-1">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Visão Geral
-            </TabsTrigger>
-            <TabsTrigger value="tenants" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <Building2 className="h-4 w-4 mr-2" />
-              Barbearias
-            </TabsTrigger>
-            <TabsTrigger value="plans" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <Package className="h-4 w-4 mr-2" />
-              Planos
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Mensagens
-            </TabsTrigger>
-            <TabsTrigger value="branding" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <Settings className="h-4 w-4 mr-2" />
-              Branding
-            </TabsTrigger>
-            <TabsTrigger value="integrations" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <Smartphone className="h-4 w-4 mr-2" />
-              Integrações
-            </TabsTrigger>
-            <TabsTrigger value="domains" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <Globe className="h-4 w-4 mr-2" />
-              Domínios
-            </TabsTrigger>
-            <TabsTrigger value="deploy" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <Rocket className="h-4 w-4 mr-2" />
-              Deploy
-            </TabsTrigger>
-            <TabsTrigger value="diagnostic" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <Stethoscope className="h-4 w-4 mr-2" />
-              Diagnóstico
-            </TabsTrigger>
-            <TabsTrigger value="docs" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">
-              <BookOpen className="h-4 w-4 mr-2" />
-              Documentação
-            </TabsTrigger>
-          </TabsList>
-
           {/* Overview Tab */}
           <TabsContent value="overview">
             <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
