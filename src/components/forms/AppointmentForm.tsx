@@ -55,6 +55,7 @@ interface AppointmentFormProps {
 }
 
 type WizardStep = 'unit' | 'professional' | 'service' | 'datetime' | 'recurrence' | 'client' | 'confirm';
+type ViewMode = 'wizard' | 'compact';
 
 export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
   const { barbershopId, barbershops, user } = useAuth();
@@ -63,6 +64,9 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   
   // Filtrar unidades selecionáveis (excluindo matrizes com filiais)
   const { selectableUnits, hasMultipleUnits } = useSelectableUnits(barbershops);
+  
+  // View mode: wizard (step by step) or compact (all in one)
+  const [viewMode, setViewMode] = useState<ViewMode>('compact');
   
   // Se o usuário tem múltiplas unidades, começa na seleção de unidade
   const [currentStep, setCurrentStep] = useState<WizardStep>(hasMultipleUnits ? 'unit' : 'professional');
@@ -1343,11 +1347,11 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
   return (
     <div className="w-full">
       <Card className="barbershop-card w-full border-0 shadow-none">
-        <CardHeader className="space-y-3 sm:space-y-4 px-3 sm:px-6 pt-4 sm:pt-6">
+        <CardHeader className="space-y-2 sm:space-y-3 px-3 sm:px-6 pt-4 sm:pt-6">
           <div className="flex items-start sm:items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-2xl flex-wrap">
-                <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl flex-wrap">
+                <CalendarIcon className="h-5 w-5 text-primary flex-shrink-0" />
                 <span className="truncate">{appointment ? 'Editar Agendamento' : 'Novo Agendamento'}</span>
                 {isEditingRecurring && (
                   <RecurrenceBadge
@@ -1359,7 +1363,37 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                   />
                 )}
               </CardTitle>
-              <CardDescription className="mt-1 sm:mt-2 text-xs sm:text-sm line-clamp-2">
+            </div>
+            
+            {/* Mode Toggle - only show for new appointments without waitlist prefill */}
+            {!appointment && !waitlistPrefill && (
+              <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
+                <Button
+                  type="button"
+                  variant={viewMode === 'compact' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('compact')}
+                  className="h-7 px-2 text-xs"
+                >
+                  Rápido
+                </Button>
+                <Button
+                  type="button"
+                  variant={viewMode === 'wizard' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('wizard')}
+                  className="h-7 px-2 text-xs"
+                >
+                  Passo a passo
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Wizard progress - only show in wizard mode */}
+          {viewMode === 'wizard' && (
+            <>
+              <CardDescription className="text-xs sm:text-sm">
                 {currentStep === 'unit' && 'Selecione a unidade para o agendamento'}
                 {currentStep === 'professional' && 'Escolha o profissional'}
                 {currentStep === 'service' && 'Escolha o serviço desejado'}
@@ -1367,39 +1401,327 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 {currentStep === 'client' && 'Selecione ou cadastre um cliente'}
                 {currentStep === 'confirm' && 'Revise e confirme o agendamento'}
               </CardDescription>
-            </div>
-            <Badge variant="outline" className="text-xs sm:text-sm flex-shrink-0 whitespace-nowrap">
-              Passo {getStepNumber(currentStep)} de {totalSteps}
-            </Badge>
-          </div>
 
-          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-1">
-            {wizardSteps.map((step, index) => (
-              <div key={step} className="flex items-center flex-1 min-w-0">
-                <div className={cn(
-                  "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 transition-all flex-shrink-0",
-                  currentStep === step ? "border-primary bg-primary text-primary-foreground" :
-                  getStepNumber(currentStep) > getStepNumber(step) ? "border-primary bg-primary/10 text-primary" :
-                  "border-muted-foreground/30 text-muted-foreground"
-                )}>
-                  {getStepNumber(currentStep) > getStepNumber(step) ? (
-                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                  ) : (
-                    <span className="text-[10px] sm:text-xs font-semibold">{index + 1}</span>
-                  )}
-                </div>
-                {index < wizardSteps.length - 1 && (
-                  <div className={cn(
-                    "flex-1 h-0.5 mx-0.5 sm:mx-2 transition-all min-w-2",
-                    getStepNumber(currentStep) > getStepNumber(step) ? "bg-primary" : "bg-muted-foreground/30"
-                  )} />
-                )}
+              <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-1">
+                {wizardSteps.map((step, index) => (
+                  <div key={step} className="flex items-center flex-1 min-w-0">
+                    <div className={cn(
+                      "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 transition-all flex-shrink-0",
+                      currentStep === step ? "border-primary bg-primary text-primary-foreground" :
+                      getStepNumber(currentStep) > getStepNumber(step) ? "border-primary bg-primary/10 text-primary" :
+                      "border-muted-foreground/30 text-muted-foreground"
+                    )}>
+                      {getStepNumber(currentStep) > getStepNumber(step) ? (
+                        <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      ) : (
+                        <span className="text-[10px] sm:text-xs font-semibold">{index + 1}</span>
+                      )}
+                    </div>
+                    {index < wizardSteps.length - 1 && (
+                      <div className={cn(
+                        "flex-1 h-0.5 mx-0.5 sm:mx-2 transition-all min-w-2",
+                        getStepNumber(currentStep) > getStepNumber(step) ? "bg-primary" : "bg-muted-foreground/30"
+                      )} />
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </CardHeader>
 
-        <CardContent className="space-y-4 sm:space-y-6 px-3 sm:px-6 pb-4 sm:pb-6">
+        <CardContent className="space-y-4 px-3 sm:px-6 pb-4 sm:pb-6">
+          {/* COMPACT MODE - All fields visible at once */}
+          {viewMode === 'compact' && (
+            <div className="space-y-4">
+              {/* Row 1: Client search + Unit selector */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {/* Client Search/Select */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Cliente
+                  </Label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar ou digitar nome..."
+                      value={clientName || searchTerm}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSearchTerm(value);
+                        if (!clientId) setClientName(value);
+                      }}
+                      className="pl-8 h-9 text-sm"
+                    />
+                    {searchTerm && filteredClients.length > 0 && (
+                      <div className="absolute w-full top-full left-0 mt-1 border rounded-lg max-h-32 overflow-y-auto bg-popover shadow-lg z-50">
+                        {filteredClients.slice(0, 5).map((client) => (
+                          <button
+                            key={client.id}
+                            type="button"
+                            onClick={() => {
+                              selectClient(client);
+                              setSearchTerm("");
+                            }}
+                            className="w-full p-2 text-left hover:bg-muted/50 transition-colors text-sm"
+                          >
+                            <div className="font-medium">{client.name}</div>
+                            <div className="text-xs text-muted-foreground">{client.phone}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {clientId && (
+                    <Badge variant="secondary" className="text-xs gap-1">
+                      <Check className="h-2.5 w-2.5" />
+                      {clientName}
+                      <button 
+                        type="button" 
+                        onClick={() => { setClientId(""); setClientName(""); setClientPhone(""); }}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </Badge>
+                  )}
+                  {!clientId && clientName && (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Telefone"
+                        value={clientPhone}
+                        onChange={(e) => setClientPhone(e.target.value)}
+                        className="h-8 text-xs flex-1"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Unit selector - only if multi-unit */}
+                {hasMultipleUnits && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      Unidade
+                    </Label>
+                    <Select value={selectedUnitId} onValueChange={(val) => {
+                      setSelectedUnitId(val);
+                      setSelectedBarber("");
+                      setDate(undefined);
+                      setSelectedTime("");
+                    }}>
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectableUnits.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id} className="text-sm">
+                            {unit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 2: Professional + Service */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Profissional
+                  </Label>
+                  <Select value={selectedBarber} onValueChange={(val) => {
+                    setSelectedBarber(val);
+                    setDate(undefined);
+                    setSelectedTime("");
+                  }}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staff.map((member) => (
+                        <SelectItem key={member.id} value={member.id} className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <StaffAvatar src={member.avatar_url} alt={member.name} fallbackText={member.name} size="xs" />
+                            <span>{member.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium flex items-center gap-1">
+                    <Scissors className="h-3 w-3" />
+                    Serviço
+                  </Label>
+                  <Select value={selectedService} onValueChange={setSelectedService} disabled={!selectedBarber}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder={selectedBarber ? "Selecione..." : "Escolha o profissional"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services.filter(service => {
+                        if (!staffHasServiceRestrictions(selectedBarber)) return true;
+                        return staffProvidesService(selectedBarber, service.id);
+                      }).map((service) => (
+                        <SelectItem key={service.id} value={service.id} className="text-sm">
+                          <div className="flex justify-between items-center gap-2 w-full">
+                            <span>{service.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDuration(service.duration)} • R${service.price}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 3: Date + Time (side by side) */}
+              {selectedBarber && selectedService && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium flex items-center gap-1">
+                      <CalendarIcon className="h-3 w-3" />
+                      Data
+                    </Label>
+                    <div className="border rounded-lg p-1 overflow-hidden">
+                      <TooltipProvider delayDuration={200}>
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          month={calendarMonth}
+                          onMonthChange={setCalendarMonth}
+                          onSelect={(newDate) => {
+                            if (newDate) {
+                              const validation = validateDateTime(newDate);
+                              if (!validation.isValid) {
+                                sonnerToast.error(validation.reason || "Data indisponível");
+                              } else {
+                                setDate(newDate);
+                                setSelectedTime("");
+                              }
+                            }
+                          }}
+                          disabled={(d) => {
+                            const isPast = d < new Date(new Date().setHours(0, 0, 0, 0));
+                            if (isPast) return true;
+                            const validation = validateDateTime(d);
+                            return !validation.isValid;
+                          }}
+                          locale={ptBR}
+                          className="w-full text-xs"
+                        />
+                      </TooltipProvider>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Horário {date && `(${format(date, "dd/MM")})`}
+                    </Label>
+                    {!date ? (
+                      <div className="border rounded-lg p-4 text-center text-muted-foreground text-xs">
+                        Selecione uma data
+                      </div>
+                    ) : availableSlots.length === 0 ? (
+                      <div className="border rounded-lg p-4 text-center text-muted-foreground text-xs">
+                        Sem horários disponíveis
+                      </div>
+                    ) : (
+                      <div className="border rounded-lg p-2 max-h-[200px] overflow-y-auto">
+                        <div className="grid grid-cols-4 gap-1">
+                          {availableSlots.map((time) => (
+                            <Button
+                              key={time}
+                              type="button"
+                              variant={selectedTime === time ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setSelectedTime(time)}
+                              className={cn(
+                                "h-7 text-xs",
+                                selectedTime === time && "ring-2 ring-primary"
+                              )}
+                            >
+                              {time}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Row 4: Notes (optional) */}
+              {selectedTime && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Observações (opcional)</Label>
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Adicione observações..."
+                    rows={2}
+                    className="text-sm resize-none"
+                  />
+                </div>
+              )}
+
+              {/* Summary + Submit */}
+              {selectedTime && (clientId || (clientName && clientPhone)) && (
+                <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Resumo:</span>
+                    <span className="font-medium">
+                      {selectedServiceData?.name} • {selectedTime} • {date && format(date, "dd/MM")}
+                    </span>
+                  </div>
+                  {selectedServiceData && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Total:</span>
+                      <span className="font-bold text-lg text-primary">R$ {selectedServiceData.price.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onClose}
+                      className="flex-1"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="premium"
+                      onClick={handleSubmitClick}
+                      disabled={loading}
+                      className="flex-1"
+                    >
+                      {loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                      )}
+                      {loading ? 'Salvando...' : 'Confirmar'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* WIZARD MODE - Step by step */}
+          {viewMode === 'wizard' && (
+            <>
+              {/* Step 1: Unit Selection (only for multi-unit users) */}
           {/* Step 1: Unit Selection (only for multi-unit users) */}
           {currentStep === 'unit' && hasMultipleUnits && (
             <div className="space-y-3 sm:space-y-4">
@@ -2227,7 +2549,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
 
-          {/* Navigation Buttons */}
+          {/* Navigation Buttons - only for wizard mode */}
           <div className="flex justify-between pt-4 sm:pt-6 border-t gap-3">
             <Button
               type="button"
@@ -2275,6 +2597,8 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
               </Button>
             )}
           </div>
+            </>
+          )}
         </CardContent>
       </Card>
       
