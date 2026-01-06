@@ -68,7 +68,7 @@ const SortableWidget = ({ id, children, isDragging, isCustomizeMode }: SortableW
   );
 };
 
-export type ColumnConfig = 2 | 3 | 4;
+export type ColumnConfig = 2 | 3 | 4 | 5;
 
 interface DraggableWidgetGridProps {
   widgetOrder: string[];
@@ -83,6 +83,7 @@ const getGridClasses = (columns: ColumnConfig) => {
     case 2: return "grid-cols-2 lg:grid-cols-2";
     case 3: return "grid-cols-2 lg:grid-cols-3";
     case 4: return "grid-cols-2 lg:grid-cols-4";
+    case 5: return "grid-cols-2 lg:grid-cols-5";
   }
 };
 
@@ -90,7 +91,7 @@ export const DraggableWidgetGrid = ({
   widgetOrder,
   onReorder,
   isCustomizeMode,
-  columns = 4,
+  columns = 5,
   children,
 }: DraggableWidgetGridProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
