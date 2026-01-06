@@ -723,8 +723,24 @@ export default function PublicBooking() {
       return;
     }
 
-    const openTime = staffDaySchedule?.start || dayHours.open_time;
-    const closeTime = staffDaySchedule?.end || dayHours.close_time;
+    // Helper to convert time to minutes for comparison
+    const timeToMinutes = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const minutesToTime = (mins: number) => 
+      `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+
+    // For PUBLIC booking: staff schedule is INTERSECTED with business hours
+    // Staff can only restrict, never expand beyond business hours
+    const businessOpen = timeToMinutes(dayHours.open_time);
+    const businessClose = timeToMinutes(dayHours.close_time);
+    const staffOpen = staffDaySchedule?.start ? timeToMinutes(staffDaySchedule.start) : businessOpen;
+    const staffClose = staffDaySchedule?.end ? timeToMinutes(staffDaySchedule.end) : businessClose;
+    
+    // Use the most restrictive hours (intersection)
+    const openTime = minutesToTime(Math.max(staffOpen, businessOpen));
+    const closeTime = minutesToTime(Math.min(staffClose, businessClose));
 
     const slots: string[] = [];
     const [startHour, startMinute] = openTime.split(':').map(Number);
