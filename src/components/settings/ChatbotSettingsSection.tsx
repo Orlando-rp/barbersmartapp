@@ -122,7 +122,17 @@ const ChatbotSettingsSection = () => {
         .eq('provider', 'evolution')
         .maybeSingle();
 
-      setWhatsappConnected(!!config?.config?.instance_name);
+      // Verificar se tem instance_name E está ativo/conectado
+      const hasInstance = !!config?.config?.instance_name;
+      const isConnected = config?.is_active === true || 
+                          config?.config?.connection_status === 'connected';
+      
+      setWhatsappConnected(hasInstance && isConnected);
+      
+      // Se existe config, carregar status do chatbot
+      if (config) {
+        setChatbotEnabled(config.chatbot_enabled || false);
+      }
     } catch (error) {
       console.error('Error checking WhatsApp status:', error);
     }
