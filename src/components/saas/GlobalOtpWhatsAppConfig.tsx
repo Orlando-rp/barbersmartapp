@@ -28,7 +28,11 @@ interface OtpConfig {
   phoneNumber?: string;
 }
 
-export const GlobalOtpWhatsAppConfig = () => {
+interface GlobalOtpWhatsAppConfigProps {
+  onStatusChange?: () => void;
+}
+
+export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppConfigProps) => {
   const [config, setConfig] = useState<OtpConfig>({
     instanceName: 'otp-auth-global',
     status: 'disconnected'
@@ -220,6 +224,7 @@ export const GlobalOtpWhatsAppConfig = () => {
 
         await saveConfig({ status: 'connected', phoneNumber });
         setShowQrModal(false);
+        onStatusChange?.();
         toast.success("WhatsApp conectado com sucesso!");
       } else {
         await saveConfig({ status: 'disconnected', phoneNumber: undefined });
