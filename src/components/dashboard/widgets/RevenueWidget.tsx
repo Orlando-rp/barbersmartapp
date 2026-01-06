@@ -132,7 +132,7 @@ export const RevenueWidget = ({
       onRemove={onRemove} 
       isUpdating={isUpdating}
     >
-      <div className="space-y-1.5 sm:space-y-2">
+      <div className="flex flex-col flex-1 space-y-1.5 sm:space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] text-muted-foreground">Hoje</p>
@@ -166,7 +166,7 @@ export const RevenueWidget = ({
           </Tooltip>
         )}
 
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-1 flex-wrap pt-1.5 border-t border-border mt-auto">
           {growth >= 0 ? (
             <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-success" />
           ) : (
