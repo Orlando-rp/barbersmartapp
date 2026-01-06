@@ -37,6 +37,7 @@ const allFeaturesEnabled: PlanFeatures = {
   audit_logs: true,
   priority_support: true,
   api_access: true,
+  independent_whatsapp: true,
 };
 
 interface UseFeatureFlagsReturn {
