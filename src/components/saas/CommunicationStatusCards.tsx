@@ -52,18 +52,18 @@ export const CommunicationStatusCards = ({
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
       {/* Card Servidor */}
       <Card 
         className="cursor-pointer hover:border-primary transition-colors"
         onClick={() => onTabChange?.("server")}
       >
-        <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-full bg-primary/10">
-            <Server className="h-6 w-6 text-primary" />
+        <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+          <div className="p-2 sm:p-3 rounded-full bg-primary/10">
+            <Server className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">Servidor Evolution</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">Servidor Evolution</p>
             <div className="mt-1">
               {getServerBadge()}
             </div>
@@ -76,12 +76,12 @@ export const CommunicationStatusCards = ({
         className="cursor-pointer hover:border-primary transition-colors"
         onClick={() => onTabChange?.("otp")}
       >
-        <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-full bg-primary/10">
-            <Smartphone className="h-6 w-6 text-primary" />
+        <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+          <div className="p-2 sm:p-3 rounded-full bg-primary/10">
+            <Smartphone className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">WhatsApp OTP</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">WhatsApp OTP</p>
             <div className="mt-1">
               {getOtpBadge()}
             </div>
@@ -94,18 +94,18 @@ export const CommunicationStatusCards = ({
         className="cursor-pointer hover:border-primary transition-colors"
         onClick={() => onTabChange?.("monitoring")}
       >
-        <CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-full bg-primary/10">
-            <Building2 className="h-6 w-6 text-primary" />
+        <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+          <div className="p-2 sm:p-3 rounded-full bg-primary/10">
+            <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">Barbearias Conectadas</p>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold">{barbershopStats.connected}</span>
-              <span className="text-muted-foreground">/ {barbershopStats.total}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">Barbearias Conectadas</p>
+            <div className="flex items-baseline gap-1 sm:gap-2 mt-1 flex-wrap">
+              <span className="text-xl sm:text-2xl font-bold">{barbershopStats.connected}</span>
+              <span className="text-xs sm:text-sm text-muted-foreground">/ {barbershopStats.total}</span>
               {barbershopStats.configured > 0 && barbershopStats.configured !== barbershopStats.connected && (
-                <span className="text-xs text-muted-foreground">
-                  ({barbershopStats.configured} configuradas)
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  ({barbershopStats.configured} config.)
                 </span>
               )}
             </div>
