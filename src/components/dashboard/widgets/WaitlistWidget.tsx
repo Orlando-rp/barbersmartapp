@@ -85,7 +85,7 @@ export const WaitlistWidget = ({ onRemove }: WaitlistWidgetProps) => {
   return (
     <DashboardWidget
       title="Lista de Espera"
-      icon={<Clock className="h-4 w-4" />}
+      icon={<Clock className="h-3.5 w-3.5" />}
       onRemove={onRemove}
     >
       <div 
@@ -94,34 +94,34 @@ export const WaitlistWidget = ({ onRemove }: WaitlistWidgetProps) => {
       >
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-xs text-muted-foreground">Aguardando</p>
-            <p className="text-lg sm:text-2xl font-bold">{stats.waiting}</p>
+            <p className="text-[10px] text-muted-foreground">Aguardando</p>
+            <p className="text-sm sm:text-lg font-bold">{stats.waiting}</p>
           </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-success" />
-            <span className="text-xs font-medium text-success">{stats.conversionRate}%</span>
+          <div className="flex items-center gap-0.5">
+            <TrendingUp className="h-2.5 w-2.5 text-success" />
+            <span className="text-[10px] font-medium text-success">{stats.conversionRate}%</span>
           </div>
         </div>
 
         {/* Sparkline */}
-        <div className="flex-1 flex items-center py-2">
+        <div className="flex-1 flex items-center py-1.5">
           {sparklineData.length > 0 && (
             <div className="w-full">
               <Sparkline 
                 data={sparklineData} 
                 color="primary"
-                height={32}
+                height={24}
               />
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border mt-auto">
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1.5 border-t border-border mt-auto">
           <div className="flex items-center gap-1">
-            <Bell className="h-3 w-3 text-amber-500" />
+            <Bell className="h-2.5 w-2.5 text-amber-500" />
             <span>{stats.notified} notificados</span>
           </div>
-          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
     </DashboardWidget>

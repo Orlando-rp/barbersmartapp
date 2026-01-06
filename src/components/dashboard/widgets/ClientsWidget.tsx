@@ -133,27 +133,27 @@ export const ClientsWidget = ({
   return (
     <DashboardWidget 
       title="Clientes" 
-      icon={<Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} 
+      icon={<Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />} 
       onRemove={onRemove} 
       isUpdating={isUpdating}
     >
       <div className="flex flex-col flex-1">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-xs text-muted-foreground">Total Ativos</p>
-            <p className="font-bold text-lg sm:text-2xl">{activeClients}</p>
+            <p className="text-[10px] text-muted-foreground">Total Ativos</p>
+            <p className="font-bold text-sm sm:text-lg">{activeClients}</p>
           </div>
           <div className="text-right">
             <div className="flex items-center gap-1 justify-end">
-              <UserPlus className="h-3 w-3 text-success" />
-              <span className="text-xs text-muted-foreground">Novos</span>
+              <UserPlus className="h-2.5 w-2.5 text-success" />
+              <span className="text-[10px] text-muted-foreground">Novos</span>
             </div>
-            <p className="font-semibold text-success text-sm">{newClients}</p>
+            <p className="font-semibold text-success text-xs">{newClients}</p>
           </div>
         </div>
 
         {/* Sparkline - Last 7 days new clients */}
-        <div className="flex-1 flex items-center py-2">
+        <div className="flex-1 flex items-center py-1.5">
           {sparklineData.length > 0 && sparklineData.some(v => v > 0) && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -161,7 +161,7 @@ export const ClientsWidget = ({
                   <Sparkline 
                     data={sparklineData} 
                     color={sparklineTrend === "up" ? "success" : "primary"} 
-                    height={32}
+                    height={24}
                   />
                 </div>
               </TooltipTrigger>
@@ -172,14 +172,14 @@ export const ClientsWidget = ({
           )}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border mt-auto">
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1.5 border-t border-border mt-auto">
           <span>Total: {totalClients}</span>
           {weekGrowth !== 0 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               {weekGrowth >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-success" />
+                <TrendingUp className="h-2.5 w-2.5 text-success" />
               ) : (
-                <TrendingDown className="h-3 w-3 text-destructive" />
+                <TrendingDown className="h-2.5 w-2.5 text-destructive" />
               )}
               <span className={weekGrowth >= 0 ? "text-success" : "text-destructive"}>
                 {weekGrowth >= 0 ? '+' : ''}{weekGrowth.toFixed(0)}%
