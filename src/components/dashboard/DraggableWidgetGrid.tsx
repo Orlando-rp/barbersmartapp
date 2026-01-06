@@ -132,9 +132,9 @@ export const DraggableWidgetGrid = ({
   if (!isCustomizeMode) {
     // Non-draggable mode - just render normally
     return (
-      <div className={cn("grid gap-3 sm:gap-4 items-stretch", getGridClasses(columns))}>
+      <div className={cn("grid gap-2 sm:gap-3 items-start", getGridClasses(columns))}>
         {activeWidgets.map((widgetId) => (
-          <div key={widgetId} className="h-full">{children(widgetId)}</div>
+          <div key={widgetId}>{children(widgetId)}</div>
         ))}
       </div>
     );
@@ -149,7 +149,7 @@ export const DraggableWidgetGrid = ({
       onDragCancel={handleDragCancel}
     >
       <SortableContext items={activeWidgets} strategy={rectSortingStrategy}>
-        <div className={cn("grid gap-3 sm:gap-4 items-stretch", getGridClasses(columns))}>
+        <div className={cn("grid gap-2 sm:gap-3 items-start", getGridClasses(columns))}>
           {activeWidgets.map((widgetId) => (
             <SortableWidget
               key={widgetId}

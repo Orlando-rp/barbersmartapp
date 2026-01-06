@@ -85,14 +85,14 @@ const RevenueChart = () => {
   if (loading) {
     return (
       <Card className="barbershop-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
+        <CardHeader className="p-3 sm:p-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <BarChart3 className="h-4 w-4 text-primary" />
             Receita da Semana
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex justify-center py-8">
-          <LoadingSpinner size="md" />
+        <CardContent className="flex justify-center py-4 sm:py-6">
+          <LoadingSpinner size="sm" />
         </CardContent>
       </Card>
     );
@@ -100,9 +100,9 @@ const RevenueChart = () => {
 
   return (
     <Card className="barbershop-card">
-      <CardHeader className="p-4 sm:p-6">
-        <CardTitle className="flex items-center gap-2 text-base sm:text-lg flex-wrap">
-          <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+      <CardHeader className="p-3 sm:p-4">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base flex-wrap">
+          <BarChart3 className="h-4 w-4 text-primary" />
           Receita da Semana
           {isConsolidatedView && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 flex items-center gap-1 ml-auto">
@@ -113,19 +113,19 @@ const RevenueChart = () => {
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-4 sm:p-6 pt-0">
-        <div className="flex items-end justify-between gap-1 sm:space-x-2 h-32 sm:h-40">
+      <CardContent className="p-3 sm:p-4 pt-0">
+        <div className="flex items-end justify-between gap-1 sm:space-x-2 h-24 sm:h-32">
           {revenueData.map((data) => {
             const height = (data.revenue / maxRevenue) * 100;
             return (
               <div key={data.day} className="flex flex-col items-center flex-1 min-w-0">
                 <div className="w-full flex flex-col items-center">
                   <div
-                    className="w-4 sm:w-8 bg-gradient-to-t from-primary to-primary-glow rounded-t transition-all duration-300 hover:from-primary-glow hover:to-primary"
-                    style={{ height: `${height}%`, minHeight: '8px' }}
+                    className="w-3 sm:w-6 bg-gradient-to-t from-primary to-primary-glow rounded-t transition-all duration-300 hover:from-primary-glow hover:to-primary"
+                    style={{ height: `${height}%`, minHeight: '6px' }}
                   />
-                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-2">{data.day}</div>
-                  <div className="text-[10px] sm:text-xs font-medium text-foreground">
+                  <div className="text-[9px] sm:text-[10px] text-muted-foreground mt-1">{data.day}</div>
+                  <div className="text-[9px] sm:text-[10px] font-medium text-foreground">
                     <span className="hidden sm:inline">R$ </span>{data.revenue.toFixed(0)}
                   </div>
                 </div>
@@ -133,8 +133,8 @@ const RevenueChart = () => {
             );
           })}
         </div>
-        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border">
-          <div className="flex justify-between text-xs sm:text-sm">
+        <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border">
+          <div className="flex justify-between text-[10px] sm:text-xs">
             <span className="text-muted-foreground">Total</span>
             <span className="font-semibold text-success">
               R$ {totalWeek.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
