@@ -96,16 +96,8 @@ serve(async (req) => {
       .eq('key', 'evolution_api')
       .maybeSingle();
 
-    if (!evolutionConfig?.value?.api_url || !evolutionConfig?.value?.api_key) {
-      console.error('[Send OTP] Evolution API não configurada globalmente');
-      return new Response(
-        JSON.stringify({ success: false, error: 'WhatsApp não configurado no sistema. Configure o servidor Evolution API no painel SaaS Admin.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    let apiUrl = evolutionConfig.value.api_url;
-    let apiKey = evolutionConfig.value.api_key;
+    let apiUrl = evolutionConfig?.value?.api_url || '';
+    let apiKey = evolutionConfig?.value?.api_key || '';
 
     // Buscar configuração da instância OTP global
     const { data: otpConfig } = await supabase
@@ -117,13 +109,14 @@ serve(async (req) => {
     let instanceName = otpConfig?.value?.instance_name;
     const otpStatus = otpConfig?.value?.status;
 
-    // Se não há instância OTP configurada, tentar usar instância de barbearia
+    // Se não há instância OTP global configurada, tentar usar instância de barbearia
     if (!instanceName) {
       console.log('[Send OTP] Instância OTP global não configurada, buscando instância alternativa...');
 
+      // Buscar uma instância ativa de qualquer barbearia
       const { data: configs, error: configsError } = await supabase
         .from('whatsapp_config')
-        .select('config, is_active')
+        .select('config, is_active, barbershop_id')
         .eq('provider', 'evolution')
         .or('is_active.eq.true,config->>connection_status.eq.connected')
         .limit(1);
@@ -155,8 +148,13 @@ serve(async (req) => {
       };
 
       instanceName = fallbackConfig.instance_name;
-      apiUrl = fallbackConfig.api_url || apiUrl;
-      apiKey = fallbackConfig.api_key || apiKey;
+      
+      // Se a barbearia tem credenciais próprias (white label), usar elas
+      if (fallbackConfig.api_url && fallbackConfig.api_key) {
+        apiUrl = fallbackConfig.api_url;
+        apiKey = fallbackConfig.api_key;
+        console.log(`[Send OTP] Usando credenciais próprias da barbearia ${configs[0].barbershop_id}`);
+      }
 
       console.log(`[Send OTP] Usando instância alternativa: ${instanceName}`);
     } else {
@@ -167,6 +165,15 @@ serve(async (req) => {
       } else {
         console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
       }
+    }
+
+    // Validar que temos as credenciais necessárias
+    if (!apiUrl || !apiKey) {
+      console.error('[Send OTP] Evolution API não configurada');
+      return new Response(
+        JSON.stringify({ success: false, error: 'WhatsApp não configurado no sistema. Configure o servidor Evolution API no painel SaaS Admin.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Mensagem do código OTP
