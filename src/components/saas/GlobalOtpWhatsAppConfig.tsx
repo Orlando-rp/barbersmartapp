@@ -16,7 +16,9 @@ import {
   CheckCircle,
   XCircle,
   QrCode,
-  Smartphone
+  Smartphone,
+  Send,
+  TestTube
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -44,6 +46,8 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [evolutionConfig, setEvolutionConfig] = useState<{ apiUrl: string; apiKey: string } | null>(null);
+  const [testPhone, setTestPhone] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -263,6 +267,41 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
     }
   };
 
+  const sendTestOtp = async () => {
+    if (!testPhone.trim()) {
+      toast.error("Digite um número de telefone");
+      return;
+    }
+
+    const cleanPhone = testPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      toast.error("Número de telefone inválido");
+      return;
+    }
+
+    try {
+      setSendingTest(true);
+
+      const { data, error } = await supabase.functions.invoke('send-otp-whatsapp', {
+        body: { phone: cleanPhone }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`OTP de teste enviado para +${cleanPhone}! Código: ${data.code || 'verifique o WhatsApp'}`);
+        setTestPhone("");
+      } else {
+        throw new Error(data?.error || 'Erro ao enviar OTP');
+      }
+    } catch (error: any) {
+      console.error('Erro ao enviar OTP de teste:', error);
+      toast.error(error.message || "Erro ao enviar OTP de teste");
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   const getStatusBadge = () => {
     switch (config.status) {
       case 'connected':
@@ -415,6 +454,48 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
           </div>
         </CardContent>
       </Card>
+
+      {/* Test OTP Section - Only show when connected */}
+      {config.status === 'connected' && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <TestTube className="h-5 w-5 text-primary" />
+              Testar Envio de OTP
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Envie um código OTP de teste para verificar se a integração está funcionando
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <Input
+                  placeholder="Número com DDD (ex: 5541999999999)"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  className="bg-muted border-border text-foreground"
+                />
+              </div>
+              <Button 
+                onClick={sendTestOtp} 
+                disabled={sendingTest || !testPhone.trim()}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {sendingTest ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                Enviar Teste
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Um código de 6 dígitos será enviado para o número informado. O código expira em 5 minutos.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* QR Code Modal */}
       <QRCodeModal

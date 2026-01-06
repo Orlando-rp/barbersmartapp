@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { Server, Smartphone, Mail, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CommunicationStatusCards } from "./CommunicationStatusCards";
@@ -158,6 +159,7 @@ export const CommunicationDashboard = () => {
         serverStatus={serverStatus}
         otpStatus={otpStatus}
         barbershopStats={barbershopStats}
+        onTabChange={setActiveTab}
       />
 
       {/* Tabs Internas */}
@@ -166,10 +168,16 @@ export const CommunicationDashboard = () => {
           <TabsTrigger value="server" className="gap-2">
             <Server className="h-4 w-4" />
             <span className="hidden sm:inline">Servidor</span>
+            {serverStatus === "offline" && (
+              <Badge variant="destructive" className="h-5 min-w-5 p-0 text-xs flex items-center justify-center">!</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="otp" className="gap-2">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">OTP</span>
+            {otpStatus === "disconnected" && (
+              <Badge variant="destructive" className="h-5 min-w-5 p-0 text-xs flex items-center justify-center">!</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="alerts" className="gap-2">
             <Mail className="h-4 w-4" />
