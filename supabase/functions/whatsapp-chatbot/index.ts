@@ -17,6 +17,13 @@ interface ConversationContext {
     date?: string;
     time?: string;
     clientName?: string;
+    // Client identification
+    existingClient?: { id: string; name: string; preferredName?: string; email?: string };
+    isClientConfirmed?: boolean;
+    // Payment
+    paymentMethod?: 'online' | 'at_location';
+    paymentAmount?: number;
+    paymentUrl?: string;
     // Review data
     reviewAppointmentId?: string;
     reviewRating?: number;
@@ -72,6 +79,18 @@ serve(async (req) => {
       data: {}
     };
 
+    // Check if context expired (30 minutes)
+    const contextAge = Date.now() - (context as any).lastActivity;
+    if (contextAge > 30 * 60 * 1000) {
+      context = {
+        barbershopId,
+        clientPhone: from,
+        step: 'initial',
+        data: {}
+      };
+    }
+    (context as any).lastActivity = Date.now();
+
     // Initialize review mode if triggered
     if (reviewMode && appointmentId) {
       context.step = 'awaiting_rating';
@@ -98,8 +117,6 @@ serve(async (req) => {
       const reviewResult = await handleReviewFlow(supabase, context, message, from, barbershopId, instanceName, apiUrl, apiKey);
       if (reviewResult.handled) {
         conversations.set(conversationKey, reviewResult.context);
-        
-        // Log the conversation
         await logConversation(supabase, barbershopId, from, message, reviewResult.response);
         
         return new Response(
@@ -113,13 +130,83 @@ serve(async (req) => {
       }
     }
 
+    // Handle client confirmation flow
+    if (context.step === 'awaiting_client_confirmation') {
+      const confirmResult = await handleClientConfirmation(supabase, context, message, from, barbershopId, instanceName, apiUrl, apiKey);
+      if (confirmResult.handled) {
+        conversations.set(conversationKey, confirmResult.context);
+        await logConversation(supabase, barbershopId, from, message, confirmResult.response);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            response: confirmResult.response,
+            context: confirmResult.context.step
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Handle client name input flow
+    if (context.step === 'awaiting_client_name') {
+      const nameResult = await handleClientNameInput(supabase, context, message, from, barbershopId, instanceName, apiUrl, apiKey);
+      if (nameResult.handled) {
+        conversations.set(conversationKey, nameResult.context);
+        await logConversation(supabase, barbershopId, from, message, nameResult.response);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            response: nameResult.response,
+            context: nameResult.context.step
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Handle payment choice flow
+    if (context.step === 'awaiting_payment_choice') {
+      const paymentResult = await handlePaymentChoice(supabase, context, message, from, barbershopId, instanceName, apiUrl, apiKey);
+      if (paymentResult.handled) {
+        conversations.set(conversationKey, paymentResult.context);
+        await logConversation(supabase, barbershopId, from, message, paymentResult.response);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            response: paymentResult.response,
+            context: paymentResult.context.step
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Handle final confirmation flow
+    if (context.step === 'awaiting_final_confirmation') {
+      const confirmResult = await handleFinalConfirmation(supabase, context, message, from, barbershopId, instanceName, apiUrl, apiKey);
+      if (confirmResult.handled) {
+        conversations.set(conversationKey, confirmResult.context);
+        await logConversation(supabase, barbershopId, from, message, confirmResult.response);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            response: confirmResult.response,
+            context: confirmResult.context.step
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Handle reschedule flow (when client responds with slot number or confirmation)
     if (context.step === 'awaiting_reschedule_choice' || context.step === 'awaiting_reschedule_confirmation') {
       const rescheduleResult = await handleRescheduleFlow(supabase, context, message, from, barbershopId, instanceName, apiUrl, apiKey);
       if (rescheduleResult.handled) {
         conversations.set(conversationKey, rescheduleResult.context);
-        
-        // Log the conversation
         await logConversation(supabase, barbershopId, from, message, rescheduleResult.response);
         
         return new Response(
@@ -206,8 +293,25 @@ serve(async (req) => {
     
     // Update conversation context based on AI response
     if (aiResponse.action) {
-      context = await handleAction(supabase, context, aiResponse.action, services || [], staffList);
+      context = await handleAction(supabase, context, aiResponse.action, services || [], staffList, barbershop, instanceName, apiUrl, apiKey);
       conversations.set(conversationKey, context);
+    }
+
+    // Check if we need to transition to client identification after datetime selection
+    if (context.step === 'datetime_selected' && context.data.date && context.data.time) {
+      const identifyResult = await identifyClientAndAsk(supabase, context, from, barbershopId, instanceName, apiUrl, apiKey);
+      context = identifyResult.context;
+      conversations.set(conversationKey, context);
+      await logConversation(supabase, barbershopId, from, message, identifyResult.response);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          response: identifyResult.response,
+          context: context.step
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Send response via WhatsApp
@@ -238,6 +342,448 @@ serve(async (req) => {
   }
 });
 
+// Identify client by phone and ask for confirmation
+async function identifyClientAndAsk(
+  supabase: any,
+  context: ConversationContext,
+  phone: string,
+  barbershopId: string,
+  instanceName: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<{ response: string; context: ConversationContext }> {
+  const newContext = { ...context, data: { ...context.data } };
+  
+  // Clean phone for search
+  let searchPhone = phone.replace(/\D/g, '');
+  if (searchPhone.startsWith('55')) {
+    searchPhone = searchPhone.substring(2);
+  }
+  const lastDigits = searchPhone.slice(-9);
+
+  // Search for existing client
+  const { data: existingClient } = await supabase
+    .from('clients')
+    .select('id, name, preferred_name, email')
+    .eq('barbershop_id', barbershopId)
+    .eq('active', true)
+    .or(`phone.ilike.%${lastDigits}`)
+    .maybeSingle();
+
+  let response: string;
+
+  if (existingClient) {
+    const displayName = existingClient.preferred_name || existingClient.name;
+    newContext.data.existingClient = {
+      id: existingClient.id,
+      name: existingClient.name,
+      preferredName: existingClient.preferred_name,
+      email: existingClient.email
+    };
+    newContext.step = 'awaiting_client_confirmation';
+    
+    response = `📱 Encontrei um cadastro com este número!\n\n👤 *${displayName}*\n\nEste agendamento é para você?\nResponda *SIM* ou informe o nome de quem será atendido.`;
+  } else {
+    newContext.step = 'awaiting_client_name';
+    response = `👤 Qual o nome de quem será atendido?`;
+  }
+
+  if (instanceName && apiUrl) {
+    await sendWhatsAppMessage(apiUrl, apiKey, instanceName, phone, response, barbershopId, supabase);
+  }
+
+  return { response, context: newContext };
+}
+
+// Handle client confirmation response
+async function handleClientConfirmation(
+  supabase: any,
+  context: ConversationContext,
+  message: string,
+  from: string,
+  barbershopId: string,
+  instanceName: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<{ handled: boolean; response: string; context: ConversationContext }> {
+  const newContext = { ...context, data: { ...context.data } };
+  const trimmed = message.trim().toLowerCase();
+  
+  const isConfirm = ['sim', 's', 'yes', 'y', 'confirmo', 'sou eu', 'eu', 'isso'].includes(trimmed);
+  
+  let response: string;
+  
+  if (isConfirm && context.data.existingClient) {
+    newContext.data.isClientConfirmed = true;
+    newContext.data.clientName = context.data.existingClient.preferredName || context.data.existingClient.name;
+    
+    // Proceed to payment options
+    const paymentResult = await askPaymentOption(supabase, newContext, from, barbershopId, instanceName, apiUrl, apiKey);
+    return { handled: true, response: paymentResult.response, context: paymentResult.context };
+  } else {
+    // Client provided a different name
+    newContext.data.clientName = message.trim();
+    newContext.data.isClientConfirmed = true;
+    
+    // Proceed to payment options
+    const paymentResult = await askPaymentOption(supabase, newContext, from, barbershopId, instanceName, apiUrl, apiKey);
+    return { handled: true, response: paymentResult.response, context: paymentResult.context };
+  }
+}
+
+// Handle client name input
+async function handleClientNameInput(
+  supabase: any,
+  context: ConversationContext,
+  message: string,
+  from: string,
+  barbershopId: string,
+  instanceName: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<{ handled: boolean; response: string; context: ConversationContext }> {
+  const newContext = { ...context, data: { ...context.data } };
+  
+  const name = message.trim();
+  if (name.length < 2) {
+    const response = 'Por favor, informe um nome válido.';
+    if (instanceName && apiUrl) {
+      await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
+    }
+    return { handled: true, response, context: newContext };
+  }
+  
+  newContext.data.clientName = name;
+  newContext.data.isClientConfirmed = true;
+  
+  // Proceed to payment options
+  const paymentResult = await askPaymentOption(supabase, newContext, from, barbershopId, instanceName, apiUrl, apiKey);
+  return { handled: true, response: paymentResult.response, context: paymentResult.context };
+}
+
+// Ask for payment option
+async function askPaymentOption(
+  supabase: any,
+  context: ConversationContext,
+  from: string,
+  barbershopId: string,
+  instanceName: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<{ response: string; context: ConversationContext }> {
+  const newContext = { ...context, data: { ...context.data } };
+  
+  // Get payment settings
+  const { data: settings } = await supabase
+    .from('payment_settings')
+    .select('*')
+    .eq('barbershop_id', barbershopId)
+    .maybeSingle();
+
+  const servicePrice = context.data.service?.price || 0;
+  let response: string;
+
+  // If no settings or only at_location allowed
+  if (!settings || !settings.allow_online_payment) {
+    newContext.data.paymentMethod = 'at_location';
+    newContext.step = 'awaiting_final_confirmation';
+    response = buildConfirmationMessage(newContext);
+  }
+  // If only online allowed
+  else if (!settings.allow_pay_at_location) {
+    newContext.data.paymentMethod = 'online';
+    newContext.step = 'awaiting_final_confirmation';
+    
+    const depositInfo = settings.require_deposit 
+      ? `Sinal de ${settings.deposit_percentage}% será cobrado` 
+      : 'Pagamento integral online';
+    response = `💳 *Pagamento Online*\n${depositInfo}\n\n` + buildConfirmationMessage(newContext);
+  }
+  // Both options available
+  else {
+    newContext.step = 'awaiting_payment_choice';
+    
+    let depositText = '';
+    if (settings.require_deposit && settings.deposit_percentage) {
+      const depositValue = (servicePrice * settings.deposit_percentage / 100).toFixed(2);
+      depositText = `Sinal de R$ ${depositValue} (${settings.deposit_percentage}%)`;
+    } else {
+      depositText = `R$ ${servicePrice.toFixed(2)}`;
+    }
+    
+    response = `💳 *Como deseja pagar?*\n\n` +
+      `1️⃣ *Pagar Agora (Online)*\n` +
+      `   ${depositText}\n` +
+      `   PIX, Cartão ou Boleto\n\n` +
+      `2️⃣ *Pagar no Local*\n` +
+      `   Pague quando chegar\n\n` +
+      `Responda *1* ou *2*`;
+  }
+
+  if (instanceName && apiUrl) {
+    await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
+  }
+
+  return { response, context: newContext };
+}
+
+// Handle payment choice
+async function handlePaymentChoice(
+  supabase: any,
+  context: ConversationContext,
+  message: string,
+  from: string,
+  barbershopId: string,
+  instanceName: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<{ handled: boolean; response: string; context: ConversationContext }> {
+  const newContext = { ...context, data: { ...context.data } };
+  const trimmed = message.trim();
+  
+  let response: string;
+  
+  if (trimmed === '1' || trimmed.toLowerCase().includes('online') || trimmed.toLowerCase().includes('agora') || trimmed.toLowerCase().includes('pix')) {
+    newContext.data.paymentMethod = 'online';
+    newContext.step = 'awaiting_final_confirmation';
+    response = buildConfirmationMessage(newContext);
+  } else if (trimmed === '2' || trimmed.toLowerCase().includes('local') || trimmed.toLowerCase().includes('lá') || trimmed.toLowerCase().includes('chegando')) {
+    newContext.data.paymentMethod = 'at_location';
+    newContext.step = 'awaiting_final_confirmation';
+    response = buildConfirmationMessage(newContext);
+  } else {
+    response = `Por favor, responda:\n• *1* para pagar online agora\n• *2* para pagar no local`;
+    if (instanceName && apiUrl) {
+      await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
+    }
+    return { handled: true, response, context: newContext };
+  }
+
+  if (instanceName && apiUrl) {
+    await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
+  }
+
+  return { handled: true, response, context: newContext };
+}
+
+// Build confirmation message
+function buildConfirmationMessage(context: ConversationContext): string {
+  const service = context.data.service;
+  const staff = context.data.staff;
+  const date = context.data.date;
+  const time = context.data.time;
+  const clientName = context.data.clientName;
+  const paymentMethod = context.data.paymentMethod;
+
+  // Format date
+  let formattedDate = date || '';
+  if (date) {
+    try {
+      const [year, month, day] = date.split('-');
+      const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const weekdays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      formattedDate = `${weekdays[dateObj.getDay()]}, ${day}/${month}`;
+    } catch {
+      formattedDate = date;
+    }
+  }
+
+  const paymentText = paymentMethod === 'online' ? '💳 Pagamento Online' : '💵 Pagamento no Local';
+
+  return `📋 *Confirme seu agendamento:*\n\n` +
+    `✂️ ${service?.name || 'Serviço'} - R$ ${service?.price?.toFixed(2) || '0.00'}\n` +
+    `👤 ${staff?.name || 'Qualquer profissional'}\n` +
+    `📅 ${formattedDate} às ${time}\n` +
+    `${paymentText}\n\n` +
+    `👤 Cliente: *${clientName}*\n\n` +
+    `Confirma? Responda *SIM* para finalizar ou *NÃO* para cancelar.`;
+}
+
+// Handle final confirmation
+async function handleFinalConfirmation(
+  supabase: any,
+  context: ConversationContext,
+  message: string,
+  from: string,
+  barbershopId: string,
+  instanceName: string,
+  apiUrl: string,
+  apiKey: string
+): Promise<{ handled: boolean; response: string; context: ConversationContext }> {
+  const newContext = { ...context, data: { ...context.data } };
+  const trimmed = message.trim().toLowerCase();
+  
+  const isConfirm = ['sim', 's', 'yes', 'y', 'confirmo', 'confirmar', 'ok'].includes(trimmed);
+  const isCancel = ['não', 'nao', 'n', 'no', 'cancelar', 'cancela'].includes(trimmed);
+  
+  let response: string;
+
+  if (isConfirm) {
+    // Create the appointment
+    const createResult = await createAppointment(supabase, newContext, from, barbershopId);
+    
+    if (createResult.success) {
+      // If online payment, generate payment link
+      if (newContext.data.paymentMethod === 'online') {
+        const paymentResult = await initiatePayment(supabase, barbershopId, createResult.appointmentId!, newContext);
+        
+        if (paymentResult?.paymentUrl) {
+          response = `✅ *Agendamento criado!*\n\n` +
+            `📌 Código: #${createResult.appointmentId?.slice(0, 8)}\n\n` +
+            `💳 *Complete o pagamento:*\n${paymentResult.paymentUrl}\n\n` +
+            `Após o pagamento, seu agendamento será confirmado automaticamente! ✅\n\n` +
+            `Aguardamos você! 💈`;
+        } else {
+          response = `✅ *Agendamento confirmado!*\n\n` +
+            `📌 Código: #${createResult.appointmentId?.slice(0, 8)}\n\n` +
+            `⚠️ Não foi possível gerar o link de pagamento. Por favor, pague no local ou entre em contato.\n\n` +
+            `Aguardamos você! 💈`;
+        }
+      } else {
+        response = `✅ *Agendamento confirmado!*\n\n` +
+          `📌 Código: #${createResult.appointmentId?.slice(0, 8)}\n\n` +
+          `💵 Pagamento: No local\n\n` +
+          `Enviaremos um lembrete antes do horário.\nAguardamos você! 💈`;
+      }
+      
+      // Reset context
+      newContext.step = 'initial';
+      newContext.data = {};
+    } else {
+      response = `❌ Desculpe, houve um erro ao criar o agendamento.\nPor favor, tente novamente ou entre em contato conosco.`;
+    }
+  } else if (isCancel) {
+    response = `Agendamento cancelado. Se precisar, é só me chamar! 👋`;
+    newContext.step = 'initial';
+    newContext.data = {};
+  } else {
+    response = `Por favor, responda:\n• *SIM* para confirmar\n• *NÃO* para cancelar`;
+    if (instanceName && apiUrl) {
+      await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
+    }
+    return { handled: true, response, context: newContext };
+  }
+
+  if (instanceName && apiUrl) {
+    await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
+  }
+
+  return { handled: true, response, context: newContext };
+}
+
+// Create appointment in database
+async function createAppointment(
+  supabase: any,
+  context: ConversationContext,
+  phone: string,
+  barbershopId: string
+): Promise<{ success: boolean; appointmentId?: string }> {
+  try {
+    const { service, staff, date, time, clientName, existingClient, paymentMethod } = context.data;
+    
+    if (!service || !date || !time || !clientName) {
+      console.error('[Chatbot] Missing required data for appointment');
+      return { success: false };
+    }
+
+    // Get or create client
+    let clientId = existingClient?.id;
+    
+    if (!clientId) {
+      // Clean phone
+      let cleanPhone = phone.replace(/\D/g, '');
+      if (!cleanPhone.startsWith('55') && cleanPhone.length <= 11) {
+        cleanPhone = '55' + cleanPhone;
+      }
+      
+      const { data: newClient, error: clientError } = await supabase
+        .from('clients')
+        .insert({
+          barbershop_id: barbershopId,
+          name: clientName,
+          phone: cleanPhone,
+          active: true
+        })
+        .select('id')
+        .single();
+
+      if (clientError) {
+        console.error('[Chatbot] Error creating client:', clientError);
+        return { success: false };
+      }
+      clientId = newClient.id;
+    }
+
+    // Create appointment
+    const { data: appointment, error: appointmentError } = await supabase
+      .from('appointments')
+      .insert({
+        barbershop_id: barbershopId,
+        client_id: clientId,
+        staff_id: staff?.id,
+        service_id: service.id,
+        appointment_date: date,
+        appointment_time: time,
+        duration: service.duration || 30,
+        status: 'agendado',
+        client_name: clientName,
+        client_phone: phone,
+        service_name: service.name,
+        service_price: service.price,
+        payment_method_chosen: paymentMethod || 'at_location',
+        payment_status: 'pending'
+      })
+      .select('id')
+      .single();
+
+    if (appointmentError) {
+      console.error('[Chatbot] Error creating appointment:', appointmentError);
+      return { success: false };
+    }
+
+    return { success: true, appointmentId: appointment.id };
+  } catch (error) {
+    console.error('[Chatbot] Create appointment error:', error);
+    return { success: false };
+  }
+}
+
+// Initiate online payment
+async function initiatePayment(
+  supabase: any,
+  barbershopId: string,
+  appointmentId: string,
+  context: ConversationContext
+): Promise<{ paymentUrl?: string; amount?: number } | null> {
+  try {
+    const { service, clientName } = context.data;
+    
+    const { data, error } = await supabase.functions.invoke('create-payment-preference', {
+      body: {
+        appointmentId,
+        barbershopId,
+        serviceName: service?.name,
+        servicePrice: service?.price,
+        clientName,
+        clientPhone: context.clientPhone
+      }
+    });
+
+    if (error) {
+      console.error('[Chatbot] Payment preference error:', error);
+      return null;
+    }
+
+    return {
+      paymentUrl: data?.init_point || data?.paymentUrl || data?.invoiceUrl,
+      amount: data?.amount || service?.price
+    };
+  } catch (error) {
+    console.error('[Chatbot] Initiate payment error:', error);
+    return null;
+  }
+}
+
 // Handle review flow without AI
 async function handleReviewFlow(
   supabase: any,
@@ -254,7 +800,6 @@ async function handleReviewFlow(
   let handled = true;
 
   if (context.step === 'awaiting_rating') {
-    // Try to parse rating from message
     const ratingMatch = message.match(/[1-5]/);
     
     if (ratingMatch) {
@@ -272,7 +817,6 @@ async function handleReviewFlow(
     const appointmentId = context.data.reviewAppointmentId;
     const comment = message.toLowerCase() === 'não' || message.toLowerCase() === 'nao' ? null : message;
     
-    // Get appointment details to save review
     const { data: appointment } = await supabase
       .from('appointments')
       .select('client_id, staff_id')
@@ -280,7 +824,6 @@ async function handleReviewFlow(
       .single();
 
     if (appointment) {
-      // Get client name from phone
       const { data: client } = await supabase
         .from('clients')
         .select('id, name, preferred_name')
@@ -288,10 +831,8 @@ async function handleReviewFlow(
         .eq('phone', from)
         .maybeSingle();
 
-      // Use preferred_name if available
       const displayName = client?.preferred_name || client?.name || 'Cliente via WhatsApp';
 
-      // Save review
       const { error: reviewError } = await supabase
         .from('reviews')
         .insert({
@@ -300,8 +841,7 @@ async function handleReviewFlow(
           client_id: client?.id || appointment.client_id,
           staff_id: appointment.staff_id,
           rating,
-          comment,
-          client_name: displayName
+          comment
         });
 
       if (reviewError) {
@@ -309,8 +849,6 @@ async function handleReviewFlow(
         response = 'Desculpe, houve um erro ao salvar sua avaliação. Por favor, tente novamente mais tarde.';
       } else {
         response = `✅ Obrigado pela sua avaliação!\n\n${comment ? 'Seu comentário foi registrado. ' : ''}Agradecemos o feedback e esperamos vê-lo novamente em breve! 💈`;
-        
-        // Reset context
         newContext.step = 'initial';
         newContext.data = {};
       }
@@ -323,7 +861,6 @@ async function handleReviewFlow(
     handled = false;
   }
 
-  // Send response if handled
   if (handled && response && instanceName && apiUrl) {
     await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
   }
@@ -338,19 +875,16 @@ async function checkForRescheduleResponse(
   phone: string,
   barbershopId: string
 ): Promise<{ isRescheduleResponse: boolean; appointmentId?: string; suggestedSlots?: any[] }> {
-  // Check if message is a simple number (1, 2, or 3)
   const trimmedMessage = message.trim();
   if (!/^[1-3]$/.test(trimmedMessage)) {
     return { isRescheduleResponse: false };
   }
 
-  // Format phone for search
   let searchPhone = phone.replace(/\D/g, '');
   if (searchPhone.startsWith('55')) {
     searchPhone = searchPhone.substring(2);
   }
 
-  // Look for recent no_show_reschedule log sent to this phone (within last 24h)
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   
   const { data: recentLogs } = await supabase
@@ -367,7 +901,6 @@ async function checkForRescheduleResponse(
     return { isRescheduleResponse: false };
   }
 
-  // Find log matching this phone
   const matchingLog = recentLogs.find((log: any) => {
     const logPhone = (log.phone || log.recipient_phone || '').replace(/\D/g, '');
     return logPhone.includes(searchPhone) || searchPhone.includes(logPhone);
@@ -384,7 +917,7 @@ async function checkForRescheduleResponse(
   };
 }
 
-// Handle reschedule flow - now with confirmation step
+// Handle reschedule flow
 async function handleRescheduleFlow(
   supabase: any,
   context: ConversationContext,
@@ -401,7 +934,6 @@ async function handleRescheduleFlow(
 
   const trimmedMessage = message.trim().toLowerCase();
 
-  // Step 2: Handle confirmation response
   if (context.step === 'awaiting_reschedule_confirmation') {
     const isConfirm = ['sim', 's', 'confirmar', 'confirmo', 'ok', 'yes', '1'].includes(trimmedMessage);
     const isCancel = ['não', 'nao', 'n', 'cancelar', 'no', '2'].includes(trimmedMessage);
@@ -411,7 +943,6 @@ async function handleRescheduleFlow(
       const newAppointmentId = context.data.rescheduleNewAppointmentId;
 
       if (selectedSlot && newAppointmentId) {
-        // Confirm the appointment by changing status
         const { error: updateError } = await supabase
           .from('appointments')
           .update({ status: 'confirmado' })
@@ -421,22 +952,14 @@ async function handleRescheduleFlow(
           console.error('[Chatbot] Error confirming appointment:', updateError);
           response = 'Desculpe, houve um erro ao confirmar. Mas seu horário está reservado! 💈';
         } else {
-          // Get barbershop name
           const { data: barbershop } = await supabase
             .from('barbershops')
             .select('name')
             .eq('id', barbershopId)
             .single();
 
-          response = `✅ *Confirmado!*
+          response = `✅ *Confirmado!*\n\nSeu agendamento para ${selectedSlot.formatted} está confirmado!\n\nEsperamos você! 💈\n\n_${barbershop?.name || 'Barbearia'}_`;
 
-Seu agendamento para ${selectedSlot.formatted} está confirmado!
-
-Esperamos você! 💈
-
-_${barbershop?.name || 'Barbearia'}_`;
-
-          // Log the confirmation
           await supabase.from('whatsapp_logs').insert({
             barbershop_id: barbershopId,
             phone: from,
@@ -455,14 +978,12 @@ _${barbershop?.name || 'Barbearia'}_`;
         response = 'Desculpe, não encontramos os dados do agendamento. Por favor, entre em contato com a barbearia.';
       }
 
-      // Reset context
       newContext.step = 'initial';
       newContext.data = {};
     } else if (isCancel) {
       const newAppointmentId = context.data.rescheduleNewAppointmentId;
 
       if (newAppointmentId) {
-        // Cancel the pending appointment
         await supabase
           .from('appointments')
           .update({ status: 'cancelado', notes: 'Cliente recusou confirmação via WhatsApp' })
@@ -471,20 +992,13 @@ _${barbershop?.name || 'Barbearia'}_`;
         console.log(`[Chatbot] Client declined reschedule appointment ${newAppointmentId}`);
       }
 
-      response = `Tudo bem! O agendamento foi cancelado.
-
-Se quiser agendar outro horário, é só me chamar! 💈`;
-
-      // Reset context
+      response = `Tudo bem! O agendamento foi cancelado.\n\nSe quiser agendar outro horário, é só me chamar! 💈`;
       newContext.step = 'initial';
       newContext.data = {};
     } else {
-      response = `Por favor, responda:
-• *SIM* para confirmar o agendamento
-• *NÃO* para cancelar`;
+      response = `Por favor, responda:\n• *SIM* para confirmar o agendamento\n• *NÃO* para cancelar`;
     }
   } 
-  // Step 1: Handle slot selection
   else if (context.step === 'awaiting_reschedule_choice') {
     const slotIndex = parseInt(trimmedMessage) - 1;
     const slots = context.data.rescheduleSlots || [];
@@ -496,14 +1010,9 @@ Se quiser agendar outro horário, é só me chamar! 💈`;
       const appointmentId = context.data.rescheduleAppointmentId;
       
       try {
-        // Get original appointment details
         const { data: originalAppointment } = await supabase
           .from('appointments')
-          .select(`
-            *,
-            clients!inner (id, name, phone, preferred_name),
-            services (id, name, price, duration)
-          `)
+          .select(`*, clients!inner (id, name, phone, preferred_name), services (id, name, price, duration)`)
           .eq('id', appointmentId)
           .single();
         
@@ -512,7 +1021,6 @@ Se quiser agendar outro horário, é só me chamar! 💈`;
           newContext.step = 'initial';
           newContext.data = {};
         } else {
-          // Create new appointment with status 'agendado' (pending confirmation)
           const { data: newAppointment, error: appointmentError } = await supabase
             .from('appointments')
             .insert({
@@ -520,11 +1028,11 @@ Se quiser agendar outro horário, é só me chamar! 💈`;
               client_id: originalAppointment.client_id,
               staff_id: originalAppointment.staff_id,
               service_id: originalAppointment.service_id,
-              date: selectedSlot.date,
-              time: selectedSlot.time,
+              appointment_date: selectedSlot.date,
+              appointment_time: selectedSlot.time,
               duration: originalAppointment.duration || originalAppointment.services?.duration || 30,
               status: 'agendado',
-              notes: `Reagendamento automático (no-show de ${originalAppointment.date}) - Aguardando confirmação`,
+              notes: `Reagendamento automático (no-show de ${originalAppointment.appointment_date}) - Aguardando confirmação`,
             })
             .select()
             .single();
@@ -535,7 +1043,6 @@ Se quiser agendar outro horário, é só me chamar! 💈`;
             newContext.step = 'initial';
             newContext.data = {};
           } else {
-            // Update original appointment to mark it was rescheduled
             await supabase
               .from('appointments')
               .update({ 
@@ -543,7 +1050,6 @@ Se quiser agendar outro horário, é só me chamar! 💈`;
               })
               .eq('id', appointmentId);
             
-            // Get barbershop name
             const { data: barbershop } = await supabase
               .from('barbershops')
               .select('name')
@@ -553,19 +1059,8 @@ Se quiser agendar outro horário, é só me chamar! 💈`;
             const clientName = originalAppointment.clients?.preferred_name || originalAppointment.clients?.name?.split(' ')[0] || 'Cliente';
             const serviceName = originalAppointment.services?.name || 'serviço';
             
-            response = `Ótimo, ${clientName}! 🎉
-
-Reservamos o seguinte horário para você:
-
-📅 *${selectedSlot.formatted}*
-✂️ ${serviceName}
-
-📍 ${barbershop?.name || 'Barbearia'}
-
-*Deseja confirmar este agendamento?*
-Responda *SIM* para confirmar ou *NÃO* para cancelar.`;
+            response = `Ótimo, ${clientName}! 🎉\n\nReservamos o seguinte horário para você:\n\n📅 *${selectedSlot.formatted}*\n✂️ ${serviceName}\n\n📍 ${barbershop?.name || 'Barbearia'}\n\n*Deseja confirmar este agendamento?*\nResponda *SIM* para confirmar ou *NÃO* para cancelar.`;
             
-            // Log the reschedule creation (pending confirmation)
             await supabase.from('whatsapp_logs').insert({
               barbershop_id: barbershopId,
               phone: from,
@@ -580,7 +1075,6 @@ Responda *SIM* para confirmar ou *NÃO* para cancelar.`;
               },
             });
             
-            // Update context for confirmation step
             newContext.step = 'awaiting_reschedule_confirmation';
             newContext.data.rescheduleSelectedSlot = selectedSlot;
             newContext.data.rescheduleNewAppointmentId = newAppointment.id;
@@ -597,7 +1091,6 @@ Responda *SIM* para confirmar ou *NÃO* para cancelar.`;
     }
   }
   
-  // Send response
   if (handled && response && instanceName && apiUrl) {
     await sendWhatsAppMessage(apiUrl, apiKey, instanceName, from, response, barbershopId, supabase);
   }
@@ -651,14 +1144,17 @@ FLUXO DE AGENDAMENTO:
 1. Cumprimentar e perguntar qual serviço deseja
 2. Perguntar preferência de profissional (ou "qualquer um")
 3. Sugerir datas/horários disponíveis
-4. Confirmar nome do cliente
-5. Confirmar todos os dados e finalizar agendamento
+4. **IMPORTANTE**: Após escolher data/hora, o sistema automaticamente:
+   - Identificará o cliente pelo telefone
+   - Perguntará se o agendamento é para ele
+   - Oferecerá opções de pagamento
+5. NÃO pergunte o nome do cliente diretamente - o sistema fará isso
 
 FORMATO DE RESPOSTA (JSON):
 {
   "response": "sua mensagem para o cliente",
   "action": {
-    "type": "select_service|select_staff|select_datetime|confirm_name|create_appointment|cancel_appointment|none",
+    "type": "select_service|select_staff|select_datetime|none",
     "data": { dados relevantes }
   }
 }
@@ -694,16 +1190,6 @@ async function callOpenAI(
       const errorText = await response.text();
       console.error('[Chatbot] OpenAI API error status:', response.status);
       console.error('[Chatbot] OpenAI API error body:', errorText);
-      
-      // Parse error for more details
-      try {
-        const errorJson = JSON.parse(errorText);
-        console.error('[Chatbot] OpenAI error type:', errorJson.error?.type);
-        console.error('[Chatbot] OpenAI error message:', errorJson.error?.message);
-      } catch {
-        // Ignore parse error
-      }
-      
       return { response: '', error: true };
     }
 
@@ -712,7 +1198,6 @@ async function callOpenAI(
     
     console.log('[Chatbot] AI response:', content);
 
-    // Parse JSON response
     try {
       const parsed = JSON.parse(content);
       return {
@@ -720,17 +1205,12 @@ async function callOpenAI(
         action: parsed.action
       };
     } catch {
-      // If not valid JSON, use content as response
       return { response: content };
     }
 
   } catch (error) {
     console.error('[Chatbot] OpenAI call failed:', error);
-    // Return null to indicate we should NOT send a response (to avoid loops)
-    return { 
-      response: '',
-      error: true
-    };
+    return { response: '', error: true };
   }
 }
 
@@ -739,9 +1219,13 @@ async function handleAction(
   context: ConversationContext,
   action: any,
   services: any[],
-  staff: any[]
+  staff: any[],
+  barbershop: any,
+  instanceName: string,
+  apiUrl: string,
+  apiKey: string
 ): Promise<ConversationContext> {
-  const newContext = { ...context };
+  const newContext = { ...context, data: { ...context.data } };
 
   switch (action.type) {
     case 'select_service':
@@ -766,7 +1250,6 @@ async function handleAction(
           newContext.step = 'staff_selected';
         }
       } else if (action.data?.anyStaff) {
-        // Random staff selection
         if (staff.length > 0) {
           newContext.data.staff = staff[Math.floor(Math.random() * staff.length)];
           newContext.step = 'staff_selected';
@@ -784,82 +1267,6 @@ async function handleAction(
       if (newContext.data.date && newContext.data.time) {
         newContext.step = 'datetime_selected';
       }
-      break;
-
-    case 'confirm_name':
-      if (action.data?.clientName) {
-        newContext.data.clientName = action.data.clientName;
-        newContext.step = 'name_confirmed';
-      }
-      break;
-
-    case 'create_appointment':
-      if (newContext.data.service && newContext.data.staff && 
-          newContext.data.date && newContext.data.time && newContext.data.clientName) {
-        
-        // Check if client exists or create new
-        let clientId: string;
-        const { data: existingClient } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('barbershop_id', context.barbershopId)
-          .eq('phone', context.clientPhone)
-          .maybeSingle();
-
-        if (existingClient) {
-          clientId = existingClient.id;
-        } else {
-          const { data: newClient, error: clientError } = await supabase
-            .from('clients')
-            .insert({
-              barbershop_id: context.barbershopId,
-              name: newContext.data.clientName,
-              phone: context.clientPhone,
-              active: true
-            })
-            .select('id')
-            .single();
-
-          if (clientError) {
-            console.error('[Chatbot] Error creating client:', clientError);
-            break;
-          }
-          clientId = newClient.id;
-        }
-
-        // Create appointment
-        const appointmentTime = `${newContext.data.date}T${newContext.data.time}:00`;
-        
-        const { error: appointmentError } = await supabase
-          .from('appointments')
-          .insert({
-            barbershop_id: context.barbershopId,
-            client_id: clientId,
-            staff_id: newContext.data.staff.id,
-            service_id: newContext.data.service.id,
-            appointment_time: appointmentTime,
-            status: 'pendente',
-            client_name: newContext.data.clientName,
-            client_phone: context.clientPhone,
-            service_name: newContext.data.service.name,
-            service_price: newContext.data.service.price,
-            service_duration: newContext.data.service.duration
-          });
-
-        if (appointmentError) {
-          console.error('[Chatbot] Error creating appointment:', appointmentError);
-        } else {
-          newContext.step = 'appointment_created';
-          // Clear data for new conversation
-          newContext.data = {};
-        }
-      }
-      break;
-
-    case 'cancel_appointment':
-      // Reset conversation
-      newContext.step = 'initial';
-      newContext.data = {};
       break;
   }
 
@@ -900,7 +1307,6 @@ async function sendWhatsAppMessage(
 
     const status = response.ok ? 'sent' : 'failed';
     
-    // Log the outgoing message
     await supabase
       .from('whatsapp_logs')
       .insert({
@@ -936,7 +1342,6 @@ async function logConversation(
         bot_response: botResponse
       });
   } catch (error) {
-    // Table may not exist, just log the error
     console.log('[Chatbot] Could not log conversation:', error);
   }
 }
