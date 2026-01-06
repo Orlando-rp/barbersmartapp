@@ -64,7 +64,7 @@ const Index = () => {
   });
   const [columns, setColumns] = useState<ColumnConfig>(() => {
     const saved = localStorage.getItem('dashboard-columns');
-    return saved ? (parseInt(saved) as ColumnConfig) : 4;
+    return saved ? (parseInt(saved) as ColumnConfig) : 5;
   });
   const [customizeMode, setCustomizeMode] = useState(false);
 

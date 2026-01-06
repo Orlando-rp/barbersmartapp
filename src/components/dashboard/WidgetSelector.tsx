@@ -22,7 +22,7 @@ export interface WidgetConfig {
   enabled: boolean;
 }
 
-export type ColumnConfig = 2 | 3 | 4;
+export type ColumnConfig = 2 | 3 | 4 | 5;
 
 interface WidgetSelectorProps {
   widgets: WidgetConfig[];
@@ -40,7 +40,8 @@ const ColumnPreview = ({ cols, selected }: { cols: number; selected: boolean }) 
       "grid gap-1",
       cols === 2 && "grid-cols-2",
       cols === 3 && "grid-cols-3",
-      cols === 4 && "grid-cols-4"
+      cols === 4 && "grid-cols-4",
+      cols === 5 && "grid-cols-5"
     )}>
       {Array.from({ length: cols * 2 }).map((_, i) => (
         <div 
@@ -86,8 +87,8 @@ export const WidgetSelector = ({ widgets, onToggleWidget, columns, onColumnsChan
             <LayoutGrid className="h-4 w-4 text-primary" />
             <Label className="text-sm font-medium">Layout do Grid</Label>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            {([2, 3, 4] as ColumnConfig[]).map((cols) => (
+          <div className="grid grid-cols-4 gap-2">
+            {([2, 3, 4, 5] as ColumnConfig[]).map((cols) => (
               <div key={cols} onClick={() => onColumnsChange(cols)}>
                 <ColumnPreview cols={cols} selected={columns === cols} />
               </div>
