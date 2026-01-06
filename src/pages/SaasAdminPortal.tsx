@@ -74,11 +74,8 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { GlobalEvolutionConfig } from "@/components/saas/GlobalEvolutionConfig";
-import { GlobalOtpWhatsAppConfig } from "@/components/saas/GlobalOtpWhatsAppConfig";
-import { GlobalEmailAlertConfig } from "@/components/saas/GlobalEmailAlertConfig";
+import { CommunicationDashboard } from "@/components/saas/CommunicationDashboard";
 import { GlobalChatbotConfig } from "@/components/saas/GlobalChatbotConfig";
-import { WhatsAppStatusPanel } from "@/components/saas/WhatsAppStatusPanel";
 import { WhatsAppDiagnosticPanel } from "@/components/saas/WhatsAppDiagnosticPanel";
 import { SocialAuthConfig } from "@/components/saas/SocialAuthConfig";
 import { BrandingConfig } from "@/components/saas/BrandingConfig";
@@ -1379,29 +1376,7 @@ const SaasAdminPortal = () => {
 
           {/* Integrations - Comunicação */}
           <TabsContent value="integrations-communication">
-            <div className="space-y-6 sm:space-y-8">
-              <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2">
-                <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
-                WhatsApp Evolution API
-              </h2>
-              <GlobalEvolutionConfig />
-              
-              <div className="border-t border-border pt-6 sm:pt-8">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-                  🔐 WhatsApp para Autenticação OTP
-                </h3>
-                <GlobalOtpWhatsAppConfig />
-              </div>
-              
-              <div className="border-t border-border pt-6 sm:pt-8">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-                  📧 Alertas de Desconexão OTP
-                </h3>
-                <GlobalEmailAlertConfig />
-              </div>
-              
-              <WhatsAppStatusPanel />
-            </div>
+            <CommunicationDashboard />
           </TabsContent>
 
           {/* Integrations - Autenticação */}
