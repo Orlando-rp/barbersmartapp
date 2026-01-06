@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Server, Smartphone, Mail, Activity } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Server, Smartphone, Mail, Activity, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CommunicationStatusCards } from "./CommunicationStatusCards";
 import { GlobalEvolutionConfig } from "./GlobalEvolutionConfig";
@@ -154,6 +155,19 @@ export const CommunicationDashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Guia de Conexão */}
+      <Alert className="border-primary/30 bg-primary/5">
+        <Info className="h-4 w-4 text-primary" />
+        <AlertTitle className="text-primary">Como funciona a conexão WhatsApp</AlertTitle>
+        <AlertDescription className="text-muted-foreground">
+          <ul className="list-disc pl-4 mt-2 space-y-1 text-sm">
+            <li><strong>Passo 1 - Servidor:</strong> Configure a URL e API Key do Evolution API (usado por todas as barbearias)</li>
+            <li><strong>Passo 2 - OTP:</strong> Configure a instância para login de clientes via WhatsApp (opcional)</li>
+            <li><strong>Passo 3 - Barbearias:</strong> Cada barbearia conecta seu número em <strong>Comunicação → WhatsApp</strong> no painel delas</li>
+          </ul>
+        </AlertDescription>
+      </Alert>
+
       {/* Dashboard de Status */}
       <CommunicationStatusCards
         serverStatus={serverStatus}
