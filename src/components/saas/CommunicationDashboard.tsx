@@ -42,9 +42,12 @@ export const CommunicationDashboard = () => {
         return;
       }
 
-      const config = configData.value as { apiUrl?: string; apiKey?: string };
+      // Suporta tanto snake_case quanto camelCase
+      const config = configData.value as { api_url?: string; api_key?: string; apiUrl?: string; apiKey?: string };
+      const apiUrl = config.api_url || config.apiUrl;
+      const apiKey = config.api_key || config.apiKey;
       
-      if (!config.apiUrl || !config.apiKey) {
+      if (!apiUrl || !apiKey) {
         setServerStatus("offline");
         return;
       }
@@ -53,8 +56,8 @@ export const CommunicationDashboard = () => {
       const { error } = await supabase.functions.invoke("send-whatsapp-evolution", {
         body: {
           action: "checkServer",
-          apiUrl: config.apiUrl,
-          apiKey: config.apiKey,
+          apiUrl,
+          apiKey,
         },
       });
 
@@ -78,9 +81,11 @@ export const CommunicationDashboard = () => {
         return;
       }
 
-      const otpConfig = otpConfigData.value as { instanceName?: string; connectionStatus?: string };
+      // Suporta tanto snake_case quanto camelCase
+      const otpConfig = otpConfigData.value as { instance_name?: string; instanceName?: string; status?: string };
+      const instanceName = otpConfig.instance_name || otpConfig.instanceName;
       
-      if (!otpConfig.instanceName) {
+      if (!instanceName) {
         setOtpStatus("disconnected");
         return;
       }
@@ -97,20 +102,23 @@ export const CommunicationDashboard = () => {
         return;
       }
 
-      const evolutionConfig = evolutionConfigData.value as { apiUrl?: string; apiKey?: string };
+      // Suporta tanto snake_case quanto camelCase
+      const evolutionConfig = evolutionConfigData.value as { api_url?: string; api_key?: string; apiUrl?: string; apiKey?: string };
+      const apiUrl = evolutionConfig.api_url || evolutionConfig.apiUrl;
+      const apiKey = evolutionConfig.api_key || evolutionConfig.apiKey;
 
-      if (!evolutionConfig.apiUrl || !evolutionConfig.apiKey) {
+      if (!apiUrl || !apiKey) {
         setOtpStatus("disconnected");
         return;
       }
 
-      // Check instance status
+      // Check instance status using connectionState action
       const { data, error } = await supabase.functions.invoke("send-whatsapp-evolution", {
         body: {
-          action: "checkStatus",
-          apiUrl: evolutionConfig.apiUrl,
-          apiKey: evolutionConfig.apiKey,
-          instanceName: otpConfig.instanceName,
+          action: "connectionState",
+          apiUrl,
+          apiKey,
+          instanceName,
         },
       });
 
