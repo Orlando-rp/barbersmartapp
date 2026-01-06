@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +9,15 @@ const corsHeaders = {
 
 interface EmailAlertConfig {
   enabled: boolean;
+  provider: 'resend' | 'smtp';
   resend_api_key: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_secure: boolean;
+  smtp_user: string;
+  smtp_password: string;
+  smtp_from_email: string;
+  smtp_from_name: string;
   alert_emails: string;
   cooldown_minutes: number;
   last_alert_sent: string | null;
@@ -27,8 +36,89 @@ interface OtpConfig {
   last_disconnect?: string;
 }
 
+// Send email via Resend API
+const sendViaResend = async (
+  apiKey: string,
+  to: string[],
+  subject: string,
+  html: string
+) => {
+  console.log("[email] Sending via Resend to:", to);
+  
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      from: "BarberSmart <alertas@resend.dev>",
+      to,
+      subject,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Resend error: ${error}`);
+  }
+
+  return await response.json();
+};
+
+// Send email via SMTP
+const sendViaSmtp = async (
+  config: EmailAlertConfig,
+  to: string[],
+  subject: string,
+  html: string
+) => {
+  console.log("[email] Sending via SMTP to:", to);
+  console.log("[email] SMTP host:", config.smtp_host, "port:", config.smtp_port);
+  
+  const client = new SmtpClient();
+
+  try {
+    // Connect based on security setting
+    if (config.smtp_secure && config.smtp_port === 465) {
+      await client.connectTLS({
+        hostname: config.smtp_host,
+        port: config.smtp_port,
+        username: config.smtp_user,
+        password: config.smtp_password,
+      });
+    } else {
+      await client.connect({
+        hostname: config.smtp_host,
+        port: config.smtp_port,
+        username: config.smtp_user,
+        password: config.smtp_password,
+      });
+      
+      // STARTTLS for port 587
+      if (config.smtp_secure) {
+        await client.starttls();
+      }
+    }
+
+    await client.send({
+      from: `${config.smtp_from_name} <${config.smtp_from_email}>`,
+      to: to,
+      subject,
+      content: html.replace(/<[^>]*>/g, ''), // Plain text fallback
+      html,
+    });
+
+    console.log("[email] SMTP email sent successfully");
+  } finally {
+    await client.close();
+  }
+};
+
+// Unified email sender
 const sendAlertEmail = async (
-  resendApiKey: string,
+  emailConfig: EmailAlertConfig,
   emails: string[],
   instanceName: string,
   status: string
@@ -89,26 +179,11 @@ const sendAlertEmail = async (
     </div>
   `;
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${resendApiKey}`,
-    },
-    body: JSON.stringify({
-      from: "BarberSmart <alertas@resend.dev>",
-      to: emails,
-      subject,
-      html,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Falha ao enviar email: ${error}`);
+  if (emailConfig.provider === 'smtp') {
+    await sendViaSmtp(emailConfig, emails, subject, html);
+  } else {
+    await sendViaResend(emailConfig.resend_api_key, emails, subject, html);
   }
-
-  return await response.json();
 };
 
 serve(async (req) => {
@@ -141,26 +216,49 @@ serve(async (req) => {
 
     // Handle test email action
     if (body.action === 'test-email') {
-      if (!emailConfig?.resend_api_key || !emailConfig?.alert_emails) {
+      if (!emailConfig?.alert_emails) {
         return new Response(JSON.stringify({ 
           success: false, 
-          error: "Configure a API Key e emails primeiro" 
+          error: "Configure os emails de destino primeiro" 
         }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
+      // Validate provider-specific config
+      if (emailConfig.provider === 'smtp') {
+        if (!emailConfig.smtp_host || !emailConfig.smtp_user || !emailConfig.smtp_password || !emailConfig.smtp_from_email) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Configure o servidor SMTP completamente" 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        if (!emailConfig.resend_api_key) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Configure a API Key do Resend" 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
       const emails = emailConfig.alert_emails.split(',').map(e => e.trim()).filter(Boolean);
       
       await sendAlertEmail(
-        emailConfig.resend_api_key,
+        emailConfig,
         emails,
         otpConfig?.instance_name || 'barbersmart-otp',
         'disconnected'
       );
 
-      return new Response(JSON.stringify({ success: true }), {
+      return new Response(JSON.stringify({ success: true, provider: emailConfig.provider }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -229,7 +327,13 @@ serve(async (req) => {
 
     // Check if status changed
     const statusChanged = previousStatus !== currentStatus && previousStatus !== 'unknown';
-    const shouldSendAlert = statusChanged && emailConfig.resend_api_key && emailConfig.alert_emails;
+    
+    // Check if email config is valid for the chosen provider
+    const canSendEmail = emailConfig.provider === 'smtp' 
+      ? (emailConfig.smtp_host && emailConfig.smtp_user && emailConfig.smtp_password && emailConfig.smtp_from_email)
+      : emailConfig.resend_api_key;
+    
+    const shouldSendAlert = statusChanged && canSendEmail && emailConfig.alert_emails;
 
     // Check cooldown
     let withinCooldown = false;
@@ -241,13 +345,13 @@ serve(async (req) => {
 
     // Send alert if needed
     if (shouldSendAlert && !withinCooldown) {
-      console.log(`Enviando alerta de ${currentStatus === 'connected' ? 'reconexão' : 'desconexão'}`);
+      console.log(`Enviando alerta de ${currentStatus === 'connected' ? 'reconexão' : 'desconexão'} via ${emailConfig.provider}`);
       
       const emails = emailConfig.alert_emails.split(',').map(e => e.trim()).filter(Boolean);
       
       try {
         await sendAlertEmail(
-          emailConfig.resend_api_key,
+          emailConfig,
           emails,
           otpConfig.instance_name,
           currentStatus
@@ -291,6 +395,7 @@ serve(async (req) => {
       success: true, 
       status: currentStatus,
       previousStatus,
+      provider: emailConfig.provider,
       alertSent: shouldSendAlert && !withinCooldown,
       withinCooldown,
     }), {
