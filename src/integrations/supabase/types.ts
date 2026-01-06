@@ -822,19 +822,26 @@ export type Database = {
           allow_tenant_credentials: boolean | null
           asaas_api_key: string | null
           asaas_enabled: boolean | null
+          asaas_test_api_key: string | null
           asaas_wallet_id: string | null
           asaas_webhook_secret: string | null
           created_at: string | null
           default_gateway: string | null
+          environment: string | null
           id: string
           mercadopago_access_token: string | null
           mercadopago_enabled: boolean | null
           mercadopago_public_key: string | null
+          mercadopago_test_access_token: string | null
+          mercadopago_test_public_key: string | null
           mercadopago_webhook_secret: string | null
           platform_fee_percentage: number | null
           stripe_enabled: boolean | null
           stripe_publishable_key: string | null
           stripe_secret_key: string | null
+          stripe_test_publishable_key: string | null
+          stripe_test_secret_key: string | null
+          stripe_test_webhook_secret: string | null
           stripe_webhook_secret: string | null
           updated_at: string | null
         }
@@ -842,19 +849,26 @@ export type Database = {
           allow_tenant_credentials?: boolean | null
           asaas_api_key?: string | null
           asaas_enabled?: boolean | null
+          asaas_test_api_key?: string | null
           asaas_wallet_id?: string | null
           asaas_webhook_secret?: string | null
           created_at?: string | null
           default_gateway?: string | null
+          environment?: string | null
           id?: string
           mercadopago_access_token?: string | null
           mercadopago_enabled?: boolean | null
           mercadopago_public_key?: string | null
+          mercadopago_test_access_token?: string | null
+          mercadopago_test_public_key?: string | null
           mercadopago_webhook_secret?: string | null
           platform_fee_percentage?: number | null
           stripe_enabled?: boolean | null
           stripe_publishable_key?: string | null
           stripe_secret_key?: string | null
+          stripe_test_publishable_key?: string | null
+          stripe_test_secret_key?: string | null
+          stripe_test_webhook_secret?: string | null
           stripe_webhook_secret?: string | null
           updated_at?: string | null
         }
@@ -862,19 +876,26 @@ export type Database = {
           allow_tenant_credentials?: boolean | null
           asaas_api_key?: string | null
           asaas_enabled?: boolean | null
+          asaas_test_api_key?: string | null
           asaas_wallet_id?: string | null
           asaas_webhook_secret?: string | null
           created_at?: string | null
           default_gateway?: string | null
+          environment?: string | null
           id?: string
           mercadopago_access_token?: string | null
           mercadopago_enabled?: boolean | null
           mercadopago_public_key?: string | null
+          mercadopago_test_access_token?: string | null
+          mercadopago_test_public_key?: string | null
           mercadopago_webhook_secret?: string | null
           platform_fee_percentage?: number | null
           stripe_enabled?: boolean | null
           stripe_publishable_key?: string | null
           stripe_secret_key?: string | null
+          stripe_test_publishable_key?: string | null
+          stripe_test_secret_key?: string | null
+          stripe_test_webhook_secret?: string | null
           stripe_webhook_secret?: string | null
           updated_at?: string | null
         }
