@@ -1480,36 +1480,36 @@ const SaasAdminPortal = () => {
 
         {/* Plan Dialog */}
         <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl w-[calc(100%-2rem)] mx-auto max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{selectedPlan ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
-              <DialogDescription>Configure os limites e funcionalidades do plano</DialogDescription>
+              <DialogTitle className="text-base sm:text-lg">{selectedPlan ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">Configure os limites e funcionalidades do plano</DialogDescription>
             </DialogHeader>
-            <div className="space-y-6 py-4">
+            <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
               {/* Basic Info */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium text-foreground border-b pb-2">Informações Básicas</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Nome</Label>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-xs sm:text-sm font-medium text-foreground border-b pb-2">Informações Básicas</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">Nome</Label>
                     <Input value={planForm.name} onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Slug</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">Slug</Label>
                     <Input value={planForm.slug} onChange={(e) => setPlanForm({ ...planForm, slug: e.target.value })} />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Descrição</Label>
-                  <Textarea value={planForm.description} onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })} />
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm">Descrição</Label>
+                  <Textarea value={planForm.description} onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })} rows={2} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Preço (R$)</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">Preço (R$)</Label>
                     <Input type="number" step="0.01" value={planForm.price} onChange={(e) => setPlanForm({ ...planForm, price: parseFloat(e.target.value) })} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Período</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">Período</Label>
                     <Select value={planForm.billing_period} onValueChange={(v) => setPlanForm({ ...planForm, billing_period: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -1522,19 +1522,19 @@ const SaasAdminPortal = () => {
               </div>
 
               {/* Limits */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium text-foreground border-b pb-2">Limites</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Max Staff</Label>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-xs sm:text-sm font-medium text-foreground border-b pb-2">Limites</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">Max Staff</Label>
                     <Input type="number" value={planForm.max_staff} onChange={(e) => setPlanForm({ ...planForm, max_staff: parseInt(e.target.value) })} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Max Clientes</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">Max Clientes</Label>
                     <Input type="number" value={planForm.max_clients} onChange={(e) => setPlanForm({ ...planForm, max_clients: parseInt(e.target.value) })} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Max Agend./mês</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">Max Agend./mês</Label>
                     <Input type="number" value={planForm.max_appointments_month} onChange={(e) => setPlanForm({ ...planForm, max_appointments_month: parseInt(e.target.value) })} />
                   </div>
                 </div>
@@ -1562,42 +1562,42 @@ const SaasAdminPortal = () => {
               </div>
 
               {/* Display Settings */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium text-foreground border-b pb-2">Configurações de Exibição</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-xs sm:text-sm font-medium text-foreground border-b pb-2">Configurações de Exibição</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-muted/50">
                     <Switch 
                       checked={planForm.is_bundle} 
                       onCheckedChange={(v) => setPlanForm({ ...planForm, is_bundle: v })} 
                     />
-                    <div>
-                      <Label className="text-sm font-medium">Exibir na Landing Page</Label>
-                      <p className="text-xs text-muted-foreground">Plano aparecerá para contratação</p>
+                    <div className="min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Exibir na Landing</Label>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Plano aparecerá para contratação</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+                  <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-muted/50">
                     <Switch 
                       checked={planForm.is_base_plan} 
                       onCheckedChange={(v) => setPlanForm({ ...planForm, is_base_plan: v })} 
                     />
-                    <div>
-                      <Label className="text-sm font-medium">Plano Base (Interno)</Label>
-                      <p className="text-xs text-muted-foreground">Uso interno do sistema</p>
+                    <div className="min-w-0">
+                      <Label className="text-xs sm:text-sm font-medium">Plano Base</Label>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Uso interno do sistema</p>
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Texto de Destaque</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">Texto de Destaque</Label>
                     <Input 
                       value={planForm.highlight_text} 
                       onChange={(e) => setPlanForm({ ...planForm, highlight_text: e.target.value })} 
-                      placeholder="Ex: Mais Popular, Melhor Custo-Benefício"
+                      placeholder="Ex: Mais Popular"
                     />
-                    <p className="text-xs text-muted-foreground">Aparece como badge no card do plano</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Aparece como badge no card</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>% de Economia</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">% de Economia</Label>
                     <Input 
                       type="number" 
                       min="0" 
@@ -1606,7 +1606,7 @@ const SaasAdminPortal = () => {
                       onChange={(e) => setPlanForm({ ...planForm, discount_percentage: parseInt(e.target.value) || 0 })} 
                       placeholder="0"
                     />
-                    <p className="text-xs text-muted-foreground">Mostra badge de desconto</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Mostra badge de desconto</p>
                   </div>
                 </div>
               </div>
@@ -1642,21 +1642,21 @@ const SaasAdminPortal = () => {
 
         {/* Message Dialog */}
         <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
-          <DialogContent>
+          <DialogContent className="w-[calc(100%-2rem)] mx-auto">
             <DialogHeader>
-              <DialogTitle>{selectedMessage ? 'Editar Mensagem' : 'Nova Mensagem'}</DialogTitle>
+              <DialogTitle className="text-base sm:text-lg">{selectedMessage ? 'Editar Mensagem' : 'Nova Mensagem'}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Título</Label>
+            <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">Título</Label>
                 <Input value={messageForm.title} onChange={(e) => setMessageForm({ ...messageForm, title: e.target.value })} />
               </div>
-              <div className="space-y-2">
-                <Label>Mensagem</Label>
-                <Textarea rows={4} value={messageForm.message} onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })} />
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">Mensagem</Label>
+                <Textarea rows={3} value={messageForm.message} onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })} />
               </div>
-              <div className="space-y-2">
-                <Label>Tipo</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">Tipo</Label>
                 <Select value={messageForm.type} onValueChange={(v) => setMessageForm({ ...messageForm, type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1668,52 +1668,52 @@ const SaasAdminPortal = () => {
                 </Select>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setMessageDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleSaveMessage} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setMessageDialogOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
+              <Button onClick={handleSaveMessage} disabled={saving} className="w-full sm:w-auto">{saving ? 'Salvando...' : 'Salvar'}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         {/* Tenant Detail Dialog */}
         <Dialog open={tenantDetailOpen} onOpenChange={setTenantDetailOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg w-[calc(100%-2rem)] mx-auto max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2 flex-wrap text-base sm:text-lg">
                 {selectedTenant?.parent_id ? (
-                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
                 ) : (
-                  <Building2 className="h-5 w-5 text-warning" />
+                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-warning flex-shrink-0" />
                 )}
-                {selectedTenant?.name}
+                <span className="truncate">{selectedTenant?.name}</span>
                 {selectedTenant?.parent_id && (
-                  <Badge variant="outline" className="text-xs">Unidade</Badge>
+                  <Badge variant="outline" className="text-[10px] sm:text-xs">Unidade</Badge>
                 )}
                 {!selectedTenant?.parent_id && selectedTenant?.units && selectedTenant.units.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">Matriz</Badge>
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs">Matriz</Badge>
                 )}
               </DialogTitle>
             </DialogHeader>
             {selectedTenant && (
-              <div className="space-y-4 py-4">
+              <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
                 {/* Tipo */}
-                <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
-                  <p className="text-xs text-muted-foreground">Tipo</p>
-                  <p className="font-medium">
+                <div className="p-2 sm:p-3 rounded-lg bg-warning/10 border border-warning/20">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Tipo</p>
+                  <p className="font-medium text-sm sm:text-base">
                     {selectedTenant.parent_id ? 'Unidade (Filial)' : 'Barbearia (Matriz)'}
                   </p>
                 </div>
                 
                 {/* Unidades (se matriz) */}
                 {!selectedTenant.parent_id && selectedTenant.units && selectedTenant.units.length > 0 && (
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground mb-2">Unidades ({selectedTenant.units.length})</p>
+                  <div className="p-2 sm:p-3 rounded-lg bg-muted/50 max-h-32 overflow-y-auto">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">Unidades ({selectedTenant.units.length})</p>
                     <div className="space-y-1">
                       {selectedTenant.units.map(unit => (
-                        <div key={unit.id} className="flex items-center gap-2 text-sm">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          <span>{unit.name}</span>
-                          <Badge variant={unit.active ? "secondary" : "outline"} className="text-xs ml-auto">
+                        <div key={unit.id} className="flex items-center gap-2 text-xs sm:text-sm">
+                          <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate flex-1">{unit.name}</span>
+                          <Badge variant={unit.active ? "secondary" : "outline"} className="text-[10px]">
                             {unit.active ? 'Ativa' : 'Inativa'}
                           </Badge>
                         </div>
@@ -1722,35 +1722,35 @@ const SaasAdminPortal = () => {
                   </div>
                 )}
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Status</p>
-                    <p className="font-medium">{selectedTenant.active ? 'Ativo' : 'Inativo'}</p>
+                <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                  <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Status</p>
+                    <p className="font-medium text-sm">{selectedTenant.active ? 'Ativo' : 'Inativo'}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Plano</p>
-                    <p className="font-medium">{selectedTenant.subscription?.plan_name || (selectedTenant.parent_id ? '—' : 'Free')}</p>
+                  <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Plano</p>
+                    <p className="font-medium text-sm truncate">{selectedTenant.subscription?.plan_name || (selectedTenant.parent_id ? '—' : 'Free')}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Agendamentos</p>
-                    <p className="font-medium">{selectedTenant.usage?.appointments_count || 0}</p>
+                  <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Agendamentos</p>
+                    <p className="font-medium text-sm">{selectedTenant.usage?.appointments_count || 0}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Clientes</p>
-                    <p className="font-medium">{selectedTenant.usage?.clients_count || 0}</p>
+                  <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Clientes</p>
+                    <p className="font-medium text-sm">{selectedTenant.usage?.clients_count || 0}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Profissionais</p>
-                    <p className="font-medium">{selectedTenant.usage?.staff_count || 0}</p>
+                  <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Profissionais</p>
+                    <p className="font-medium text-sm">{selectedTenant.usage?.staff_count || 0}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Receita (Mês)</p>
-                    <p className="font-medium">R$ {(selectedTenant.usage?.revenue || 0).toFixed(2)}</p>
+                  <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Receita (Mês)</p>
+                    <p className="font-medium text-sm truncate">R$ {(selectedTenant.usage?.revenue || 0).toFixed(2)}</p>
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground">Criado em</p>
-                  <p className="font-medium">{format(new Date(selectedTenant.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+                <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Criado em</p>
+                  <p className="font-medium text-sm">{format(new Date(selectedTenant.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
                 </div>
               </div>
             )}
@@ -1773,39 +1773,39 @@ const SaasAdminPortal = () => {
 
         {/* Link Unit Dialog */}
         <Dialog open={linkUnitDialogOpen} onOpenChange={setLinkUnitDialogOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg w-[calc(100%-2rem)] mx-auto max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Link className="h-5 w-5 text-warning" />
-                Gerenciar Hierarquia de Barbearias
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Link className="h-4 w-4 sm:h-5 sm:w-5 text-warning flex-shrink-0" />
+                <span className="truncate">Gerenciar Hierarquia</span>
               </DialogTitle>
-              <DialogDescription>
-                Vincule uma barbearia como unidade de outra (matriz) ou defina-a como matriz independente.
+              <DialogDescription className="text-xs sm:text-sm">
+                Vincule uma barbearia como unidade de outra (matriz).
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
               {/* Lista de todas as barbearias */}
-              <div className="rounded-lg border p-3 bg-muted/50 max-h-48 overflow-y-auto">
-                <p className="text-xs text-muted-foreground mb-2 font-medium">Barbearias no sistema:</p>
+              <div className="rounded-lg border p-2 sm:p-3 bg-muted/50 max-h-32 sm:max-h-48 overflow-y-auto">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 font-medium">Barbearias no sistema:</p>
                 <div className="space-y-1">
                   {allBarbershops.map(b => {
                     const isMatrix = !b.parent_id;
                     const parentName = b.parent_id ? allBarbershops.find(p => p.id === b.parent_id)?.name : null;
                     return (
-                      <div key={b.id} className="flex items-center gap-2 text-sm py-1">
+                      <div key={b.id} className="flex items-center gap-2 text-xs sm:text-sm py-1">
                         {isMatrix ? (
                           <Building2 className="h-3 w-3 text-warning shrink-0" />
                         ) : (
-                          <MapPin className="h-3 w-3 text-muted-foreground shrink-0 ml-4" />
+                          <MapPin className="h-3 w-3 text-muted-foreground shrink-0 ml-3 sm:ml-4" />
                         )}
-                        <span className={isMatrix ? 'font-medium' : 'text-muted-foreground'}>{b.name}</span>
+                        <span className={`truncate flex-1 ${isMatrix ? 'font-medium' : 'text-muted-foreground'}`}>{b.name}</span>
                         {parentName && (
-                          <Badge variant="outline" className="text-xs ml-auto">
+                          <Badge variant="outline" className="text-[10px] shrink-0">
                             → {parentName}
                           </Badge>
                         )}
                         {isMatrix && (
-                          <Badge variant="secondary" className="text-xs ml-auto">Matriz</Badge>
+                          <Badge variant="secondary" className="text-[10px] shrink-0">Matriz</Badge>
                         )}
                       </div>
                     );
@@ -1814,9 +1814,9 @@ const SaasAdminPortal = () => {
               </div>
 
               {/* Formulário de vinculação */}
-              <div className="space-y-4 border-t pt-4">
-                <div className="space-y-2">
-                  <Label>Barbearia a vincular</Label>
+              <div className="space-y-3 sm:space-y-4 border-t pt-3 sm:pt-4">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm">Barbearia a vincular</Label>
                   <Select value={linkForm.unitId} onValueChange={(v) => setLinkForm({ ...linkForm, unitId: v })}>
                     <SelectTrigger><SelectValue placeholder="Selecione uma barbearia" /></SelectTrigger>
                     <SelectContent>
@@ -1829,18 +1829,18 @@ const SaasAdminPortal = () => {
                   </Select>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label>Vincular como unidade de (matriz)</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm">Vincular como unidade de</Label>
                   <Select 
                     value={linkForm.parentId} 
                     onValueChange={(v) => setLinkForm({ ...linkForm, parentId: v === 'none' ? '' : v })}
                   >
-                    <SelectTrigger><SelectValue placeholder="Selecione a matriz (ou deixe vazio para ser matriz)" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecione a matriz" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">
                         <div className="flex items-center gap-2">
                           <Unlink className="h-3 w-3" />
-                          Nenhuma (será matriz independente)
+                          Nenhuma (matriz independente)
                         </div>
                       </SelectItem>
                       {allBarbershops
@@ -1855,18 +1855,18 @@ const SaasAdminPortal = () => {
                         ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Se deixar vazio, a barbearia será uma matriz independente.
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    Se deixar vazio, será matriz independente.
                   </p>
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setLinkUnitDialogOpen(false)}>Cancelar</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setLinkUnitDialogOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
               <Button 
                 onClick={handleLinkUnit} 
                 disabled={savingLink || !linkForm.unitId}
-                className="bg-warning hover:bg-warning/90 text-warning-foreground"
+                className="bg-warning hover:bg-warning/90 text-warning-foreground w-full sm:w-auto"
               >
                 {savingLink ? 'Salvando...' : 'Salvar Vínculo'}
               </Button>
@@ -1876,20 +1876,20 @@ const SaasAdminPortal = () => {
 
         {/* Subscription Management Dialog */}
         <Dialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md w-[calc(100%-2rem)] mx-auto max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-warning" />
-                Gerenciar Assinatura
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-warning flex-shrink-0" />
+                <span className="truncate">Gerenciar Assinatura</span>
               </DialogTitle>
-              <DialogDescription>
-                {selectedTenant?.name} - Configure o plano e status da assinatura
+              <DialogDescription className="text-xs sm:text-sm truncate">
+                {selectedTenant?.name} - Configure o plano
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
               {/* Plano */}
-              <div className="space-y-2">
-                <Label>Plano de Assinatura</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">Plano de Assinatura</Label>
                 <Select value={subscriptionForm.planId} onValueChange={(v) => setSubscriptionForm({ ...subscriptionForm, planId: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione um plano" /></SelectTrigger>
                   <SelectContent>
@@ -1908,8 +1908,8 @@ const SaasAdminPortal = () => {
               </div>
               
               {/* Status */}
-              <div className="space-y-2">
-                <Label>Status da Assinatura</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">Status da Assinatura</Label>
                 <Select value={subscriptionForm.status} onValueChange={(v) => setSubscriptionForm({ ...subscriptionForm, status: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1942,25 +1942,26 @@ const SaasAdminPortal = () => {
               </div>
               
               {/* Validade */}
-              <div className="space-y-2">
-                <Label>Válido até</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-xs sm:text-sm">Válido até</Label>
                 <Input 
                   type="date" 
                   value={subscriptionForm.validUntil}
                   onChange={(e) => setSubscriptionForm({ ...subscriptionForm, validUntil: e.target.value })}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Data de expiração do período atual da assinatura
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Data de expiração do período atual
                 </p>
               </div>
               
               {/* Ações rápidas */}
-              <div className="border-t pt-4 space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">Ações Rápidas</p>
+              <div className="border-t pt-3 sm:pt-4 space-y-2">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">Ações Rápidas</p>
                 <div className="flex gap-2 flex-wrap">
                   <Button 
                     variant="outline" 
                     size="sm"
+                    className="text-xs"
                     onClick={() => {
                       const nextMonth = new Date();
                       nextMonth.setMonth(nextMonth.getMonth() + 1);
@@ -1972,6 +1973,7 @@ const SaasAdminPortal = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
+                    className="text-xs"
                     onClick={() => {
                       const next3Months = new Date();
                       next3Months.setMonth(next3Months.getMonth() + 3);
@@ -1983,6 +1985,7 @@ const SaasAdminPortal = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
+                    className="text-xs"
                     onClick={() => {
                       const nextYear = new Date();
                       nextYear.setFullYear(nextYear.getFullYear() + 1);
@@ -1994,12 +1997,12 @@ const SaasAdminPortal = () => {
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSubscriptionDialogOpen(false)}>Cancelar</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setSubscriptionDialogOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
               <Button 
                 onClick={handleSaveSubscription} 
                 disabled={savingSubscription || !subscriptionForm.planId}
-                className="bg-warning hover:bg-warning/90 text-warning-foreground"
+                className="bg-warning hover:bg-warning/90 text-warning-foreground w-full sm:w-auto"
               >
                 {savingSubscription ? 'Salvando...' : 'Salvar Assinatura'}
               </Button>
