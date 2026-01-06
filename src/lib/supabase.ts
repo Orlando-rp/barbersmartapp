@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 // Supabase Externo - Projeto Principal BarberSmart
 // Este arquivo ignora o Lovable Cloud e usa exclusivamente o Supabase externo
 const supabaseUrl = 'https://nmsblmmhigwsevnqmhwn.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tc2JsbW1oaWd3c2V2bnFtaHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5OTE4NzQsImV4cCI6MjA1MDU2Nzg3NH0.bYeX_8AWLKcOaLBxq9RKqNhZ6HGLKAhVNg1Mc4RzPtM';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tc2JsbW1oaWd3c2V2bnFtaHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwMjU3NDksImV4cCI6MjA3OTYwMTc0OX0.Y7bKv-8KZ4_pAv97_kgBcgEgJTjJJLxrVK2T5JKiTvI';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
