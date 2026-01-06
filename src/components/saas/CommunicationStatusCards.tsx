@@ -109,6 +109,9 @@ export const CommunicationStatusCards = ({
                 </span>
               )}
             </div>
+            <p className="text-[10px] text-muted-foreground mt-1 hidden sm:block">
+              Conexão via Menu → WhatsApp
+            </p>
           </div>
         </CardContent>
       </Card>

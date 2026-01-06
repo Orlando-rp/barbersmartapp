@@ -338,10 +338,12 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
       {/* Info Alert */}
       <Alert className="border-info/50 bg-info/10">
         <Info className="h-4 w-4 text-info" />
-        <AlertTitle className="text-info">Instância Global para Autenticação</AlertTitle>
+        <AlertTitle className="text-info">WhatsApp OTP - Login de Clientes</AlertTitle>
         <AlertDescription className="text-info/90">
-          Esta instância WhatsApp será usada exclusivamente para enviar códigos OTP de autenticação 
-          (login e cadastro via WhatsApp), independente das instâncias das barbearias.
+          <p>
+            Esta instância é usada <strong>exclusivamente</strong> para enviar códigos de verificação (OTP) 
+            aos clientes durante o login no portal do cliente. É separada das instâncias das barbearias.
+          </p>
         </AlertDescription>
       </Alert>
 

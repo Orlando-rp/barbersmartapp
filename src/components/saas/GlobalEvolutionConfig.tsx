@@ -255,11 +255,12 @@ export const GlobalEvolutionConfig = ({
       {/* Info Alert */}
       <Alert className="border-warning/50 bg-warning/10">
         <Info className="h-4 w-4 text-warning" />
-        <AlertTitle className="text-warning">Configuração Global</AlertTitle>
+        <AlertTitle className="text-warning">Servidor Evolution API (Configuração Global)</AlertTitle>
         <AlertDescription className="text-warning/90">
           <p className="mb-2">
-            Configure aqui o servidor Evolution API global. Todas as barbearias herdarão essas configurações 
-            de servidor, precisando apenas escanear o QR Code para conectar seu WhatsApp.
+            Esta é a configuração do <strong>servidor central</strong>. Todas as barbearias herdam automaticamente 
+            estas credenciais. Cada barbearia conecta seu próprio número escaneando o QR Code no painel delas 
+            em <strong>Comunicação → WhatsApp</strong>.
           </p>
           <a
             href="https://doc.evolution-api.com/v2/pt/get-started/introduction"
