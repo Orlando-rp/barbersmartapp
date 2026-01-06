@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Server, Smartphone, Mail, Activity, Info } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { CommunicationStatusCards } from "./CommunicationStatusCards";
 import { GlobalEvolutionConfig } from "./GlobalEvolutionConfig";
 import { GlobalOtpWhatsAppConfig } from "./GlobalOtpWhatsAppConfig";
