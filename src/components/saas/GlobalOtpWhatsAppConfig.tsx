@@ -30,6 +30,13 @@ interface OtpConfig {
   phoneNumber?: string;
 }
 
+// Normaliza status inválidos (ex: "missing") para "disconnected"
+const normalizeOtpStatus = (rawStatus: string | undefined): 'disconnected' | 'connecting' | 'connected' => {
+  if (rawStatus === 'connected') return 'connected';
+  if (rawStatus === 'connecting') return 'connecting';
+  return 'disconnected';
+};
+
 interface GlobalOtpWhatsAppConfigProps {
   onStatusChange?: () => void;
 }
@@ -81,8 +88,14 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
       if (otpData?.value) {
         setConfig({
           instanceName: otpData.value.instance_name || 'otp-auth-global',
-          status: otpData.value.status || 'disconnected',
+          status: normalizeOtpStatus(otpData.value.status),
           phoneNumber: otpData.value.phone_number
+        });
+      } else {
+        // Se não há config salva, manter status padrão 'disconnected'
+        setConfig({
+          instanceName: 'otp-auth-global',
+          status: 'disconnected'
         });
       }
     } catch (error) {
