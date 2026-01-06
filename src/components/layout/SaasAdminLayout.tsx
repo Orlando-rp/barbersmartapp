@@ -44,36 +44,46 @@ const SaasAdminLayout = ({ children, activeTab = "overview", onTabChange }: Saas
       <SaasAdminSidebar activeTab={activeTab} onTabChange={onTabChange} />
       
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border px-4 py-3">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border px-3 py-2.5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             {currentLogoUrl ? (
               <img 
                 src={currentLogoUrl} 
                 alt={systemName} 
-                className="h-8 w-auto max-w-[120px] object-contain" 
+                className="h-7 w-auto max-w-[100px] object-contain flex-shrink-0" 
               />
             ) : (
               <>
-                <Shield className="h-6 w-6 text-warning" />
-                <span className="font-bold text-foreground">Admin SaaS</span>
+                <Shield className="h-5 w-5 text-warning flex-shrink-0" />
+                <span className="font-bold text-foreground text-sm">Admin</span>
               </>
             )}
           </div>
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0 bg-card border-border">
-              <SaasAdminSidebar 
-                activeTab={activeTab} 
-                onTabChange={handleTabChange} 
-                isMobile 
-              />
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded capitalize truncate max-w-[100px]">
+              {activeTab === 'overview' ? 'Visão Geral' : 
+               activeTab === 'tenants' ? 'Barbearias' :
+               activeTab === 'plans' ? 'Planos' :
+               activeTab === 'integrations' ? 'Integrações' :
+               activeTab === 'branding' ? 'Branding' :
+               activeTab === 'docs' ? 'Docs' : activeTab}
+            </span>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-8 w-8">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0 bg-card border-border">
+                <SaasAdminSidebar 
+                  activeTab={activeTab} 
+                  onTabChange={handleTabChange} 
+                  isMobile 
+                />
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
       
