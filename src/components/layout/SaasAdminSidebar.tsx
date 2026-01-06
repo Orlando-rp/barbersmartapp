@@ -1,18 +1,16 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   Building2,
-  CreditCard,
-  BarChart3,
+  Package,
   MessageSquare,
-  Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Shield,
   LogOut,
   Home,
-  Package,
   LayoutDashboard,
   Smartphone,
   Moon,
@@ -21,11 +19,18 @@ import {
   BookOpen,
   Rocket,
   Stethoscope,
+  Plug,
+  Wrench,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
+import { useSidebarGroups } from "@/hooks/useSidebarGroups";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface NavItem {
   name: string;
@@ -33,16 +38,58 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const saasNavigation: NavItem[] = [
-  { name: "Visão Geral", tab: "overview", icon: LayoutDashboard },
-  { name: "Barbearias", tab: "tenants", icon: Building2 },
-  { name: "Planos", tab: "plans", icon: Package },
-  { name: "Mensagens", tab: "messages", icon: MessageSquare },
-  { name: "Branding", tab: "branding", icon: Palette },
-  { name: "Integrações", tab: "integrations", icon: Smartphone },
-  { name: "Diagnóstico", tab: "diagnostic", icon: Stethoscope },
-  { name: "Deploy", tab: "deploy", icon: Rocket },
-  { name: "Documentação", tab: "docs", icon: BookOpen },
+interface NavGroup {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+}
+
+const saasNavGroups: NavGroup[] = [
+  {
+    id: "principal",
+    name: "Principal",
+    icon: LayoutDashboard,
+    items: [
+      { name: "Visão Geral", tab: "overview", icon: LayoutDashboard },
+    ],
+  },
+  {
+    id: "clientes",
+    name: "Clientes",
+    icon: Users,
+    items: [
+      { name: "Barbearias", tab: "tenants", icon: Building2 },
+      { name: "Planos", tab: "plans", icon: Package },
+      { name: "Mensagens", tab: "messages", icon: MessageSquare },
+    ],
+  },
+  {
+    id: "aparencia",
+    name: "Aparência",
+    icon: Palette,
+    items: [
+      { name: "Branding", tab: "branding", icon: Palette },
+    ],
+  },
+  {
+    id: "integracoes",
+    name: "Integrações",
+    icon: Plug,
+    items: [
+      { name: "Integrações", tab: "integrations", icon: Smartphone },
+    ],
+  },
+  {
+    id: "sistema",
+    name: "Sistema",
+    icon: Wrench,
+    items: [
+      { name: "Diagnóstico", tab: "diagnostic", icon: Stethoscope },
+      { name: "Deploy", tab: "deploy", icon: Rocket },
+      { name: "Documentação", tab: "docs", icon: BookOpen },
+    ],
+  },
 ];
 
 interface SaasAdminSidebarProps {
@@ -60,6 +107,28 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
   const systemName = effectiveBranding?.system_name || "Admin SaaS";
   const logoIconUrl = effectiveBranding?.logo_icon_url;
   const faviconUrl = effectiveBranding?.favicon_url;
+
+  const { openGroups, toggleGroup, openGroup } = useSidebarGroups(
+    "saas-sidebar-groups",
+    { principal: true, clientes: true, aparencia: true, integracoes: true, sistema: true }
+  );
+
+  // Find current group based on active tab
+  const currentGroup = useMemo(() => {
+    for (const group of saasNavGroups) {
+      if (group.items.some(item => item.tab === activeTab)) {
+        return group.id;
+      }
+    }
+    return null;
+  }, [activeTab]);
+
+  // Auto-expand current group
+  useMemo(() => {
+    if (currentGroup) {
+      openGroup(currentGroup);
+    }
+  }, [currentGroup, openGroup]);
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -143,25 +212,79 @@ const SaasAdminSidebar = ({ activeTab = "overview", onTabChange, isMobile = fals
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {saasNavigation.map((item) => (
-          <button
-            key={item.name}
-            onClick={() => handleNavClick(item.tab)}
-            className={cn(
-              "w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors",
-              activeTab === item.tab
-                ? "bg-warning/20 text-warning"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted",
-              isCollapsed && !isMobile && "justify-center px-2"
-            )}
-          >
-            <item.icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-            {!isCollapsed && <span>{item.name}</span>}
-          </button>
-        ))}
-      </nav>
+      {/* Navigation with Groups */}
+      <ScrollArea className="flex-1">
+        <nav className={cn("py-2 space-y-1", isCollapsed ? "px-0" : "px-2")}>
+          {saasNavGroups.map((group) => (
+            <div key={group.id}>
+              {isCollapsed && !isMobile ? (
+                // Collapsed mode: show items directly with tooltips
+                <div className="space-y-1 flex flex-col items-center">
+                  {group.items.map((item) => (
+                    <Tooltip key={item.name} delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleNavClick(item.tab)}
+                          className={cn(
+                            "flex items-center justify-center px-2 py-2.5 rounded-lg transition-all duration-200 relative group",
+                            activeTab === item.tab
+                              ? "bg-warning/20 text-warning"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                        >
+                          {activeTab === item.tab && (
+                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-warning to-warning/50 rounded-r-full" />
+                          )}
+                          <item.icon className="h-5 w-5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent 
+                        side="right" 
+                        className="bg-popover text-popover-foreground border border-border px-3 py-2"
+                      >
+                        <p>{item.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              ) : (
+                // Expanded mode: show collapsible groups
+                <Collapsible open={openGroups[group.id]} onOpenChange={() => toggleGroup(group.id)}>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors rounded-lg hover:bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <group.icon className="h-4 w-4" />
+                        <span>{group.name}</span>
+                      </div>
+                      <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", openGroups[group.id] && "rotate-180")} />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 mt-1">
+                    {group.items.map((item) => (
+                      <button
+                        key={item.name}
+                        onClick={() => handleNavClick(item.tab)}
+                        className={cn(
+                          "w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ml-2 relative",
+                          activeTab === item.tab
+                            ? "bg-warning/20 text-warning"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        {activeTab === item.tab && (
+                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-warning to-warning/50 rounded-r-full" />
+                        )}
+                        <item.icon className="h-4 w-4 mr-3" />
+                        <span>{item.name}</span>
+                      </button>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </div>
+          ))}
+        </nav>
+      </ScrollArea>
 
       {/* Bottom Actions */}
       <div className="p-3 border-t border-border space-y-2">
