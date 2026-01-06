@@ -10,12 +10,14 @@ interface CommunicationStatusCardsProps {
     connected: number;
     configured: number;
   };
+  onTabChange?: (tab: string) => void;
 }
 
 export const CommunicationStatusCards = ({
   serverStatus,
   otpStatus,
   barbershopStats,
+  onTabChange,
 }: CommunicationStatusCardsProps) => {
   const getServerBadge = () => {
     if (serverStatus === "loading") {
@@ -52,7 +54,10 @@ export const CommunicationStatusCards = ({
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {/* Card Servidor */}
-      <Card>
+      <Card 
+        className="cursor-pointer hover:border-primary transition-colors"
+        onClick={() => onTabChange?.("server")}
+      >
         <CardContent className="p-4 flex items-center gap-4">
           <div className="p-3 rounded-full bg-primary/10">
             <Server className="h-6 w-6 text-primary" />
@@ -67,7 +72,10 @@ export const CommunicationStatusCards = ({
       </Card>
 
       {/* Card OTP */}
-      <Card>
+      <Card 
+        className="cursor-pointer hover:border-primary transition-colors"
+        onClick={() => onTabChange?.("otp")}
+      >
         <CardContent className="p-4 flex items-center gap-4">
           <div className="p-3 rounded-full bg-primary/10">
             <Smartphone className="h-6 w-6 text-primary" />
@@ -82,7 +90,10 @@ export const CommunicationStatusCards = ({
       </Card>
 
       {/* Card Barbearias */}
-      <Card>
+      <Card 
+        className="cursor-pointer hover:border-primary transition-colors"
+        onClick={() => onTabChange?.("monitoring")}
+      >
         <CardContent className="p-4 flex items-center gap-4">
           <div className="p-3 rounded-full bg-primary/10">
             <Building2 className="h-6 w-6 text-primary" />
