@@ -1409,8 +1409,19 @@ const SaasAdminPortal = () => {
             <BrandingConfig />
           </TabsContent>
 
-          {/* Integrations Tab */}
-          <TabsContent value="integrations">
+          {/* Integrations - Pagamentos */}
+          <TabsContent value="integrations-payments">
+            <div className="space-y-6">
+              <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2">
+                <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+                Gateways de Pagamento
+              </h2>
+              <GlobalPaymentConfig />
+            </div>
+          </TabsContent>
+
+          {/* Integrations - Comunicação */}
+          <TabsContent value="integrations-communication">
             <div className="space-y-6 sm:space-y-8">
               <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2">
                 <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
@@ -1433,27 +1444,27 @@ const SaasAdminPortal = () => {
               </div>
               
               <WhatsAppStatusPanel />
-              
-              <div className="border-t border-border pt-6 sm:pt-8">
-                <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
-                  🤖 Chatbot IA (OpenAI)
-                </h2>
-                <GlobalChatbotConfig />
-              </div>
+            </div>
+          </TabsContent>
 
-              <div className="border-t border-border pt-6 sm:pt-8">
-                <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
-                  🔐 Login Social (OAuth)
-                </h2>
-                <SocialAuthConfig />
-              </div>
+          {/* Integrations - Autenticação */}
+          <TabsContent value="integrations-auth">
+            <div className="space-y-6">
+              <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2">
+                <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+                Login Social (OAuth)
+              </h2>
+              <SocialAuthConfig />
+            </div>
+          </TabsContent>
 
-              <div className="border-t border-border pt-6 sm:pt-8">
-                <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2 mb-4">
-                  💳 Gateways de Pagamento
-                </h2>
-                <GlobalPaymentConfig />
-              </div>
+          {/* Integrations - IA */}
+          <TabsContent value="integrations-ai">
+            <div className="space-y-6">
+              <h2 className="text-base sm:text-xl font-semibold text-foreground flex items-center gap-2">
+                🤖 Chatbot IA (OpenAI)
+              </h2>
+              <GlobalChatbotConfig />
             </div>
           </TabsContent>
 

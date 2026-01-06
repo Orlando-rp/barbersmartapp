@@ -22,6 +22,8 @@ import {
   Plug,
   Wrench,
   Users,
+  CreditCard,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -77,7 +79,10 @@ const saasNavGroups: NavGroup[] = [
     name: "Integrações",
     icon: Plug,
     items: [
-      { name: "Integrações", tab: "integrations", icon: Smartphone },
+      { name: "Pagamentos", tab: "integrations-payments", icon: CreditCard },
+      { name: "Comunicação", tab: "integrations-communication", icon: MessageSquare },
+      { name: "Autenticação", tab: "integrations-auth", icon: Shield },
+      { name: "Inteligência Artificial", tab: "integrations-ai", icon: Bot },
     ],
   },
   {
