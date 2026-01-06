@@ -11,8 +11,15 @@
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
--- 2. Remover job anterior se existir
-SELECT cron.unschedule('whatsapp-status-monitor-12h');
+-- 2. Remover job anterior se existir (ignora erro se não existir)
+DO $$
+BEGIN
+  PERFORM cron.unschedule('whatsapp-status-monitor-12h');
+EXCEPTION WHEN OTHERS THEN
+  -- Job não existe ainda, ignorar
+  NULL;
+END;
+$$;
 
 -- 3. Criar cron job para verificar a cada 12 horas (8h e 20h)
 SELECT cron.schedule(
