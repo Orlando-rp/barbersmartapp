@@ -120,30 +120,30 @@ export const AppointmentsWidget = ({
   return (
     <DashboardWidget 
       title="Agendamentos" 
-      icon={<Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} 
+      icon={<Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />} 
       onRemove={onRemove} 
       isUpdating={isUpdating}
     >
       <div className="flex flex-col flex-1">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-xs text-muted-foreground">Hoje</p>
-            <p className="font-bold text-lg sm:text-2xl">{todayAppointments}</p>
+            <p className="text-[10px] text-muted-foreground">Hoje</p>
+            <p className="font-bold text-sm sm:text-lg">{todayAppointments}</p>
           </div>
           <div className="flex items-center gap-1">
             {weekGrowth >= 0 ? (
-              <TrendingUp className="h-3 w-3 text-success" />
+              <TrendingUp className="h-2.5 w-2.5 text-success" />
             ) : (
-              <TrendingDown className="h-3 w-3 text-destructive" />
+              <TrendingDown className="h-2.5 w-2.5 text-destructive" />
             )}
-            <span className={`text-xs font-medium ${weekGrowth >= 0 ? "text-success" : "text-destructive"}`}>
+            <span className={`text-[10px] font-medium ${weekGrowth >= 0 ? "text-success" : "text-destructive"}`}>
               {weekGrowth >= 0 ? '+' : ''}{weekGrowth.toFixed(0)}%
             </span>
           </div>
         </div>
 
         {/* Sparkline - Last 7 days */}
-        <div className="flex-1 flex items-center py-2">
+        <div className="flex-1 flex items-center py-1.5">
           {sparklineData.length > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -151,7 +151,7 @@ export const AppointmentsWidget = ({
                   <Sparkline 
                     data={sparklineData} 
                     color={sparklineTrend === "up" ? "success" : sparklineTrend === "down" ? "destructive" : "primary"} 
-                    height={32}
+                    height={24}
                   />
                 </div>
               </TooltipTrigger>
@@ -162,19 +162,19 @@ export const AppointmentsWidget = ({
           )}
         </div>
         
-        <div className="border-t border-border pt-2 mt-auto">
+        <div className="border-t border-border pt-1.5 mt-auto">
           {nextAppointment ? (
-            <div className="flex items-center gap-2">
-              <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-              <span className="font-medium text-xs sm:text-sm">
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-2.5 w-2.5 text-muted-foreground flex-shrink-0" />
+              <span className="font-medium text-[10px] sm:text-xs">
                 {format(new Date(nextAppointment.appointment_time), "HH:mm", { locale: ptBR })}
               </span>
-              <span className="text-xs text-muted-foreground truncate">
+              <span className="text-[10px] text-muted-foreground truncate">
                 {nextAppointment.client_name}
               </span>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Sem próximo agendamento</p>
+            <p className="text-[10px] text-muted-foreground">Sem próximo agendamento</p>
           )}
         </div>
       </div>

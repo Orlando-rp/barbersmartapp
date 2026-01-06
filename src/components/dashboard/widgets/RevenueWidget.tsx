@@ -128,21 +128,21 @@ export const RevenueWidget = ({
   return (
     <DashboardWidget 
       title={title} 
-      icon={<DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />} 
+      icon={<DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />} 
       onRemove={onRemove} 
       isUpdating={isUpdating}
     >
-      <div className="space-y-2 sm:space-y-3">
+      <div className="space-y-1.5 sm:space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground">Hoje</p>
-            <p className="font-bold text-sm sm:text-lg truncate">
+            <p className="text-[10px] text-muted-foreground">Hoje</p>
+            <p className="font-bold text-xs sm:text-sm truncate">
               R$ {todayRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground">Este Mês</p>
-            <p className="font-bold text-sm sm:text-lg truncate">
+            <p className="text-[10px] text-muted-foreground">Este Mês</p>
+            <p className="font-bold text-xs sm:text-sm truncate">
               R$ {monthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
           </div>
@@ -154,9 +154,9 @@ export const RevenueWidget = ({
             <TooltipTrigger asChild>
               <div className="cursor-help">
                 <Sparkline 
-                  data={sparklineData} 
+                  data={sparklineData}
                   color={sparklineTrend === "up" ? "success" : sparklineTrend === "down" ? "destructive" : "primary"} 
-                  height={36}
+                  height={28}
                 />
               </div>
             </TooltipTrigger>
@@ -166,13 +166,13 @@ export const RevenueWidget = ({
           </Tooltip>
         )}
 
-        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+        <div className="flex items-center gap-1 flex-wrap">
           {growth >= 0 ? (
-            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
+            <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-success" />
           ) : (
-            <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
+            <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-destructive" />
           )}
-          <span className={`text-xs sm:text-sm font-medium ${growth >= 0 ? "text-success" : "text-destructive"}`}>
+          <span className={`text-[10px] sm:text-xs font-medium ${growth >= 0 ? "text-success" : "text-destructive"}`}>
             {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
           </span>
           <span className="text-xs text-muted-foreground hidden sm:inline">vs mês anterior</span>
