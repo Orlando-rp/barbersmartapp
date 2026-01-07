@@ -55,9 +55,9 @@ SELECT
   ') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, price = EXCLUDED.price, features_enabled = EXCLUDED.features_enabled, active = EXCLUDED.active;' as sql
 FROM addon_modules;
 
--- 0.3 global_payment_config
+-- 0.3 global_payment_config (versão simplificada - colunas que existem no banco externo)
 SELECT 
-  'INSERT INTO global_payment_config (id, default_gateway, platform_fee_percentage, allow_tenant_credentials, mercadopago_enabled, mercadopago_access_token, mercadopago_public_key, mercadopago_webhook_secret, mercadopago_test_access_token, mercadopago_test_public_key, stripe_enabled, stripe_secret_key, stripe_publishable_key, stripe_webhook_secret, stripe_test_secret_key, stripe_test_publishable_key, stripe_test_webhook_secret, asaas_enabled, asaas_api_key, asaas_wallet_id, asaas_webhook_secret, asaas_test_api_key, environment, created_at, updated_at) VALUES (' ||
+  'INSERT INTO global_payment_config (id, default_gateway, platform_fee_percentage, allow_tenant_credentials, mercadopago_enabled, mercadopago_access_token, mercadopago_public_key, asaas_enabled, asaas_api_key, asaas_wallet_id, environment, created_at, updated_at) VALUES (' ||
   quote_literal(id) || ', ' ||
   COALESCE(quote_literal(default_gateway), '''mercadopago''') || ', ' ||
   COALESCE(platform_fee_percentage::text, '0') || ', ' ||
@@ -65,25 +65,13 @@ SELECT
   COALESCE(mercadopago_enabled::text, 'false') || ', ' ||
   COALESCE(quote_literal(mercadopago_access_token), 'NULL') || ', ' ||
   COALESCE(quote_literal(mercadopago_public_key), 'NULL') || ', ' ||
-  COALESCE(quote_literal(mercadopago_webhook_secret), 'NULL') || ', ' ||
-  COALESCE(quote_literal(mercadopago_test_access_token), 'NULL') || ', ' ||
-  COALESCE(quote_literal(mercadopago_test_public_key), 'NULL') || ', ' ||
-  COALESCE(stripe_enabled::text, 'false') || ', ' ||
-  COALESCE(quote_literal(stripe_secret_key), 'NULL') || ', ' ||
-  COALESCE(quote_literal(stripe_publishable_key), 'NULL') || ', ' ||
-  COALESCE(quote_literal(stripe_webhook_secret), 'NULL') || ', ' ||
-  COALESCE(quote_literal(stripe_test_secret_key), 'NULL') || ', ' ||
-  COALESCE(quote_literal(stripe_test_publishable_key), 'NULL') || ', ' ||
-  COALESCE(quote_literal(stripe_test_webhook_secret), 'NULL') || ', ' ||
   COALESCE(asaas_enabled::text, 'false') || ', ' ||
   COALESCE(quote_literal(asaas_api_key), 'NULL') || ', ' ||
   COALESCE(quote_literal(asaas_wallet_id), 'NULL') || ', ' ||
-  COALESCE(quote_literal(asaas_webhook_secret), 'NULL') || ', ' ||
-  COALESCE(quote_literal(asaas_test_api_key), 'NULL') || ', ' ||
   COALESCE(quote_literal(environment), '''test''') || ', ' ||
   quote_literal(created_at::text) || ', ' ||
   quote_literal(updated_at::text) || 
-  ') ON CONFLICT (id) DO UPDATE SET default_gateway = EXCLUDED.default_gateway, mercadopago_enabled = EXCLUDED.mercadopago_enabled, stripe_enabled = EXCLUDED.stripe_enabled, asaas_enabled = EXCLUDED.asaas_enabled, environment = EXCLUDED.environment;' as sql
+  ') ON CONFLICT (id) DO UPDATE SET default_gateway = EXCLUDED.default_gateway, mercadopago_enabled = EXCLUDED.mercadopago_enabled, asaas_enabled = EXCLUDED.asaas_enabled, environment = EXCLUDED.environment;' as sql
 FROM global_payment_config;
 
 -- 0.4 system_branding
