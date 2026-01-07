@@ -117,9 +117,9 @@ export const AnimatedRoutes = () => {
   const location = useLocation();
 
   return (
-    <AnimatePresence mode="wait">
-      <Suspense fallback={<PageLoader />} key={location.pathname}>
-        <Routes location={location}>
+    <Suspense fallback={<PageLoader />}>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
           {/* Public Routes */}
           <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
           <Route path="/agendar/:barbershopId" element={<PageTransition><PublicBooking /></PageTransition>} />
@@ -182,7 +182,7 @@ export const AnimatedRoutes = () => {
           {/* Catch-all */}
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
-      </Suspense>
-    </AnimatePresence>
+      </AnimatePresence>
+    </Suspense>
   );
 };
