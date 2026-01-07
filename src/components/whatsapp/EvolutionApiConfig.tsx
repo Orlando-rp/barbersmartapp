@@ -200,11 +200,18 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         return;
       }
 
-      const isConnected = data?.state === 'open' || data?.instance?.state === 'open';
+      // Verificar múltiplos formatos de retorno da Evolution API
+      const isConnected = data?.state === 'open' || 
+                          data?.instance?.state === 'open' ||
+                          data?.connectionStatus === 'open';
       
       if (isConnected) {
         setConnectionStatus('connected');
         await fetchInstanceInfo();
+        // Garantir que o status está salvo como conectado
+        if (savedStatus !== 'connected') {
+          await updateConnectionInDatabase('connected');
+        }
       } else {
         setConnectionStatus('disconnected');
         setConnectedPhone(null);
@@ -299,24 +306,30 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
       if (error) throw error;
 
-      if (data?.state === 'open' || data?.instance?.state === 'open') {
-        setConnectionStatus('connected');
-        // Buscar informações da instância incluindo número - retorna o telefone encontrado
-        const phone = await fetchInstanceInfo();
-        // Não verificar webhook automaticamente para evitar erro se ação não existir
-        // Usuário pode clicar em "Reconfigurar Webhook" manualmente
-        setWebhookStatus('unknown');
-        if (phone) {
-          toast.success(`WhatsApp conectado: +${phone}`);
+        // Verificar múltiplos formatos de retorno da Evolution API
+        const isConnected = data?.state === 'open' || 
+                            data?.instance?.state === 'open' ||
+                            data?.connectionStatus === 'open';
+        
+        if (isConnected) {
+          setConnectionStatus('connected');
+          // Buscar informações da instância incluindo número - retorna o telefone encontrado
+          const phone = await fetchInstanceInfo();
+          // Salvar status conectado explicitamente no banco
+          await updateConnectionInDatabase('connected');
+          // Não verificar webhook automaticamente para evitar erro se ação não existir
+          setWebhookStatus('unknown');
+          if (phone) {
+            toast.success(`WhatsApp conectado: +${phone}`);
+          } else {
+            toast.success("WhatsApp conectado!");
+          }
         } else {
-          toast.success("WhatsApp conectado!");
+          setConnectionStatus('disconnected');
+          setConnectedPhone(null);
+          await updateConnectionInDatabase('disconnected');
+          toast.info("WhatsApp não está conectado");
         }
-      } else {
-        setConnectionStatus('disconnected');
-        setConnectedPhone(null);
-        await updateConnectionInDatabase('disconnected');
-        toast.info("WhatsApp não está conectado");
-      }
     } catch (error) {
       console.error('Erro ao verificar conexão:', error);
       setConnectionStatus('error');
@@ -380,7 +393,12 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           }
         });
 
-        if (data?.state === 'open' || data?.instance?.state === 'open') {
+        // Verificar múltiplos formatos de retorno da Evolution API
+        const isConnected = data?.state === 'open' || 
+                            data?.instance?.state === 'open' ||
+                            data?.connectionStatus === 'open';
+        
+        if (isConnected) {
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
           }
@@ -390,6 +408,9 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           
           setConnectionStatus('connected');
           setQrModalOpen(false);
+          
+          // Salvar status conectado explicitamente no banco
+          await updateConnectionInDatabase('connected');
           
           // Não verificar webhook automaticamente - usuário pode clicar em "Reconfigurar Webhook"
           setWebhookStatus('unknown');
