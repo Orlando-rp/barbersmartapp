@@ -1,5 +1,5 @@
-// Evolution API Webhook Handler v2.2 - Receives incoming WhatsApp messages and stores them
-// Updated: 2025-12-11 - Added message storage for chat UI
+// Evolution API Webhook Handler v2.3 - Receives incoming WhatsApp messages and stores them
+// Updated: 2026-01-07 - Fixed event filtering and removed overly aggressive filters
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -8,15 +8,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to get Supabase client - prioritize external if configured
+function getSupabaseClient() {
+  const externalUrl = 'https://nmsblmmhigwsevnqmhwn.supabase.co';
+  const externalKey = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY');
+  const standardUrl = Deno.env.get('SUPABASE_URL');
+  const standardKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  // Use external if key is configured
+  if (externalKey) {
+    console.log('[Evolution Webhook] Using EXTERNAL Supabase:', externalUrl);
+    return createClient(externalUrl, externalKey);
+  }
+  
+  // Fallback to standard
+  console.log('[Evolution Webhook] Using STANDARD Supabase:', standardUrl);
+  return createClient(standardUrl!, standardKey!);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Use external Supabase (nmsblmmhigwsevnqmhwn) for data operations
-  const EXTERNAL_SUPABASE_URL = 'https://nmsblmmhigwsevnqmhwn.supabase.co';
-  const externalServiceKey = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(EXTERNAL_SUPABASE_URL, externalServiceKey);
+  const supabase = getSupabaseClient();
   
   // Lovable Cloud URL for calling other edge functions
   const lovableCloudUrl = Deno.env.get('SUPABASE_URL')!;
@@ -45,13 +60,19 @@ serve(async (req) => {
       );
     }
 
-    const data = payload.data;
+    // Support payload.data as object or array
+    let data = payload.data;
+    if (Array.isArray(data)) {
+      data = data[0]; // Process first message if array
+      console.log('[Evolution Webhook] Data was array, using first element');
+    }
+    
     const instance = payload.instance;
     
     // Evolution API 2.0 - instance can be a string OR an object
     const instanceName = typeof instance === 'string' 
       ? instance 
-      : (instance?.instanceName || payload.instanceName || payload.instance_name);
+      : (instance?.instanceName || payload.instanceName || payload.instance_name || instance?.instance?.instanceName);
     
     console.log('[Evolution Webhook] Instance value:', instance);
     console.log('[Evolution Webhook] Extracted instanceName:', instanceName);
@@ -73,18 +94,7 @@ serve(async (req) => {
       );
     }
 
-    // Additional check: skip if sender is the connected WhatsApp number
-    const senderNumber = payload.sender?.split('@')[0];
-    const connectedNumber = payload.destination?.includes('evolution-webhook') ? null : senderNumber;
-    
-    // Check if this is a bot response by looking at message source
-    if (data?.source === 'web' || data?.source === 'api') {
-      console.log('[Evolution Webhook] Ignoring API/web originated message');
-      return new Response(
-        JSON.stringify({ success: true, message: 'API message ignored' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // NOTE: Removed filter for data.source === 'web' || 'api' as it was blocking valid messages
 
     // Get sender phone number
     const remoteJid = key?.remoteJid || data?.remoteJid;

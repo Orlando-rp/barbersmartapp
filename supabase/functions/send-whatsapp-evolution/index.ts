@@ -1,4 +1,4 @@
-// Evolution API WhatsApp integration - v2.5 - Added getWebhook action for status check
+// Evolution API WhatsApp integration - v2.6 - Fixed DB persistence to use external Supabase
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -7,6 +7,24 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Helper to get Supabase client - prioritize external if configured
+function getSupabaseClient() {
+  const externalUrl = 'https://nmsblmmhigwsevnqmhwn.supabase.co';
+  const externalKey = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY');
+  const standardUrl = Deno.env.get('SUPABASE_URL');
+  const standardKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  // Use external if key is configured
+  if (externalKey) {
+    console.log('[Evolution API] Using EXTERNAL Supabase for persistence:', externalUrl);
+    return createClient(externalUrl, externalKey);
+  }
+  
+  // Fallback to standard
+  console.log('[Evolution API] Using STANDARD Supabase for persistence:', standardUrl);
+  return createClient(standardUrl!, standardKey!);
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -306,9 +324,8 @@ serve(async (req) => {
       console.log('[Evolution API] Response OK:', response.ok, 'Status:', response.status);
       
       try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        // Use the helper to get correct Supabase client
+        const supabase = getSupabaseClient();
 
         // Log to whatsapp_logs (existing behavior)
         const logEntry = {
