@@ -43,11 +43,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Use external Supabase (nmsblmmhigwsevnqmhwn) for data operations
-  const EXTERNAL_SUPABASE_URL = 'https://nmsblmmhigwsevnqmhwn.supabase.co';
-  const externalServiceKey = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY')!;
+  // Use standard Supabase env vars
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-  const supabase = createClient(EXTERNAL_SUPABASE_URL, externalServiceKey);
+  console.log('[Chatbot] Using Supabase:', supabaseUrl);
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
     const { 
