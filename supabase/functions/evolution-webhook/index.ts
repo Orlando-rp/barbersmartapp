@@ -28,11 +28,17 @@ serve(async (req) => {
     console.log('[Evolution Webhook] Received payload:', JSON.stringify(payload, null, 2));
 
     // Evolution API sends different event types
-    const event = payload.event;
+    const eventRaw = payload.event || '';
+    // Normalize event: lowercase and replace underscores/hyphens with dots
+    const eventNormalized = eventRaw.toLowerCase().replace(/[_-]/g, '.');
     
-    // Only process incoming messages (not sent messages)
-    if (event !== 'messages.upsert') {
-      console.log('[Evolution Webhook] Ignoring event:', event);
+    console.log('[Evolution Webhook] Event raw:', eventRaw, '| Normalized:', eventNormalized);
+    
+    // Accept variations: messages.upsert, MESSAGES_UPSERT, MESSAGES-UPSERT, etc.
+    const isMessageEvent = eventNormalized === 'messages.upsert';
+    
+    if (!isMessageEvent) {
+      console.log('[Evolution Webhook] Ignoring event:', eventRaw);
       return new Response(
         JSON.stringify({ success: true, message: 'Event ignored' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
