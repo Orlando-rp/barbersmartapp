@@ -91,15 +91,16 @@ const ChatbotSettings = () => {
         });
       }
 
-      // Fetch chatbot settings
+      // Fetch chatbot settings - chatbot_enabled está dentro do config JSONB
       const { data: configData } = await supabase
         .from('whatsapp_config')
-        .select('chatbot_enabled')
+        .select('config, is_active')
         .eq('barbershop_id', barbershopId)
+        .eq('provider', 'evolution')
         .maybeSingle();
 
-      if (configData) {
-        setChatbotEnabled(configData.chatbot_enabled || false);
+      if (configData?.config) {
+        setChatbotEnabled(configData.config.chatbot_enabled || false);
       }
 
       // Count chatbot-created appointments
@@ -122,18 +123,67 @@ const ChatbotSettings = () => {
 
   const checkWhatsAppStatus = async () => {
     try {
-      // Verificar se existe configuração Evolution API (não precisa estar ativa para habilitar chatbot)
+      // Buscar configuração Evolution API
       const { data: config } = await supabase
         .from('whatsapp_config')
-        .select('*')
+        .select('config, is_active')
         .eq('barbershop_id', barbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
 
-      // Considera conectado se existir uma configuração com instance_name
-      setWhatsappConnected(!!config?.config?.instance_name);
+      if (!config?.config?.instance_name) {
+        setWhatsappConnected(false);
+        return;
+      }
+
+      const savedStatus = config.config.connection_status;
+      
+      // Se está marcado como conectado, verificar status real com Evolution API
+      if (savedStatus === 'connected' || config.is_active) {
+        try {
+          // Buscar config global para obter api_url e api_key
+          const { data: globalData } = await supabase.functions.invoke('get-evolution-config');
+          
+          if (globalData?.success && globalData?.config?.api_url && globalData?.config?.api_key) {
+            const { data: statusData } = await supabase.functions.invoke('send-whatsapp-evolution', {
+              body: {
+                action: 'connectionState',
+                apiUrl: globalData.config.api_url,
+                apiKey: globalData.config.api_key,
+                instanceName: config.config.instance_name
+              }
+            });
+
+            const isReallyConnected = statusData?.state === 'open' || statusData?.instance?.state === 'open';
+            setWhatsappConnected(isReallyConnected);
+            
+            // Atualizar banco se status mudou
+            if (!isReallyConnected && savedStatus === 'connected') {
+              await supabase
+                .from('whatsapp_config')
+                .update({
+                  config: { ...config.config, connection_status: 'disconnected' },
+                  is_active: false,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('barbershop_id', barbershopId)
+                .eq('provider', 'evolution');
+            }
+          } else {
+            // Sem config global, usar status salvo
+            setWhatsappConnected(savedStatus === 'connected');
+          }
+        } catch (apiError) {
+          console.error('Error checking real status:', apiError);
+          // Fallback para status salvo
+          setWhatsappConnected(savedStatus === 'connected');
+        }
+      } else {
+        setWhatsappConnected(savedStatus === 'connected');
+      }
     } catch (error) {
       console.error('Error checking WhatsApp status:', error);
+      setWhatsappConnected(false);
     }
   };
 
@@ -141,25 +191,31 @@ const ChatbotSettings = () => {
     try {
       const newValue = !chatbotEnabled;
       
-      // First, check if config exists
+      // Buscar config existente
       const { data: existing } = await supabase
         .from('whatsapp_config')
-        .select('id')
+        .select('config')
         .eq('barbershop_id', barbershopId)
+        .eq('provider', 'evolution')
         .maybeSingle();
 
       if (existing) {
+        // chatbot_enabled fica dentro do config JSONB
         await supabase
           .from('whatsapp_config')
-          .update({ chatbot_enabled: newValue })
-          .eq('barbershop_id', barbershopId);
+          .update({ 
+            config: { ...existing.config, chatbot_enabled: newValue },
+            updated_at: new Date().toISOString()
+          })
+          .eq('barbershop_id', barbershopId)
+          .eq('provider', 'evolution');
       } else {
         await supabase
           .from('whatsapp_config')
           .insert({
             barbershop_id: barbershopId,
-            chatbot_enabled: newValue,
-            provider: 'evolution'
+            provider: 'evolution',
+            config: { chatbot_enabled: newValue }
           });
       }
 
