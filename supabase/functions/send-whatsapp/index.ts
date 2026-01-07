@@ -22,6 +22,18 @@ serve(async (req) => {
 
     console.log("WhatsApp request received:", { to, type, barbershopId });
 
+    // Validate phone number
+    if (!to) {
+      console.error("Phone number (to) is required");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Número de telefone é obrigatório" 
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const WHATSAPP_TOKEN = Deno.env.get("WHATSAPP_API_TOKEN");
     const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
