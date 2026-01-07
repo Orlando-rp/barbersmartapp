@@ -211,17 +211,19 @@ serve(async (req) => {
       }
     }
 
-    // Check chatbot
+    // Check chatbot - chatbot_enabled is stored in config JSONB
     const { data: chatbotConfig } = await supabase
       .from('whatsapp_config')
-      .select('chatbot_enabled, config')
+      .select('config')
       .eq('barbershop_id', barbershopId)
       .eq('provider', 'evolution')
       .maybeSingle();
 
     console.log('[Evolution Webhook] Chatbot config:', JSON.stringify(chatbotConfig, null, 2));
 
-    if (!chatbotConfig?.chatbot_enabled) {
+    const isChatbotEnabled = chatbotConfig?.config?.chatbot_enabled === true;
+    
+    if (!isChatbotEnabled) {
       console.log('[Evolution Webhook] Chatbot not enabled for barbershop:', barbershopId);
       return new Response(
         JSON.stringify({ success: true, message: 'Message stored, chatbot not enabled' }),

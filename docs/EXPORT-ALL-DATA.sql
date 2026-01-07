@@ -283,20 +283,25 @@ SELECT
   ') ON CONFLICT (id) DO UPDATE SET require_deposit = EXCLUDED.require_deposit, allow_online_payment = EXCLUDED.allow_online_payment;' as sql
 FROM payment_settings;
 
--- 2.9 whatsapp_config
+-- 2.9 whatsapp_config (chatbot_enabled agora está dentro do config JSONB)
 SELECT 
-  'INSERT INTO whatsapp_config (id, barbershop_id, provider, config, is_active, chatbot_enabled, health_status, last_health_check, created_at, updated_at) VALUES (' ||
+  'INSERT INTO whatsapp_config (id, barbershop_id, provider, config, is_active, health_status, last_health_check, created_at, updated_at) VALUES (' ||
   quote_literal(id) || ', ' ||
   quote_literal(barbershop_id) || ', ' ||
   quote_literal(provider) || ', ' ||
-  quote_literal(config::text) || '::jsonb, ' ||
+  quote_literal(
+    CASE 
+      WHEN chatbot_enabled IS NOT NULL AND chatbot_enabled = true 
+      THEN jsonb_set(COALESCE(config, '{}'::jsonb), '{chatbot_enabled}', 'true'::jsonb)
+      ELSE COALESCE(config, '{}'::jsonb)
+    END::text
+  ) || '::jsonb, ' ||
   COALESCE(is_active::text, 'false') || ', ' ||
-  COALESCE(chatbot_enabled::text, 'false') || ', ' ||
   COALESCE(quote_literal(health_status), '''unknown''') || ', ' ||
   COALESCE(quote_literal(last_health_check::text), 'NULL') || ', ' ||
   quote_literal(created_at::text) || ', ' ||
   quote_literal(updated_at::text) || 
-  ') ON CONFLICT (id) DO UPDATE SET config = EXCLUDED.config, is_active = EXCLUDED.is_active, chatbot_enabled = EXCLUDED.chatbot_enabled;' as sql
+  ') ON CONFLICT (id) DO UPDATE SET config = EXCLUDED.config, is_active = EXCLUDED.is_active;' as sql
 FROM whatsapp_config;
 
 -- 2.10 message_templates

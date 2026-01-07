@@ -91,16 +91,17 @@ const ChatbotSettings = () => {
         });
       }
 
-      // Fetch chatbot settings - chatbot_enabled é uma coluna própria
+      // Fetch chatbot settings - chatbot_enabled armazenado no config JSONB
       const { data: configData } = await supabase
         .from('whatsapp_config')
-        .select('chatbot_enabled, config, is_active')
+        .select('config, is_active')
         .eq('barbershop_id', barbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
 
-      if (configData) {
-        setChatbotEnabled(configData.chatbot_enabled || false);
+      if (configData?.config) {
+        const config = configData.config as Record<string, unknown>;
+        setChatbotEnabled(config.chatbot_enabled === true);
       }
 
       // Count chatbot-created appointments
@@ -205,10 +206,10 @@ const ChatbotSettings = () => {
     try {
       const newValue = !chatbotEnabled;
       
-      // Atualizar coluna chatbot_enabled diretamente
+      // Atualizar chatbot_enabled dentro do config JSONB
       const { data: existing, error: fetchError } = await supabase
         .from('whatsapp_config')
-        .select('id')
+        .select('id, config')
         .eq('barbershop_id', barbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
@@ -219,11 +220,12 @@ const ChatbotSettings = () => {
       }
 
       if (existing) {
-        // Atualiza a coluna chatbot_enabled
+        // Atualiza chatbot_enabled dentro do config JSONB
+        const currentConfig = (existing.config as Record<string, unknown>) || {};
         const { error: updateError } = await supabase
           .from('whatsapp_config')
           .update({ 
-            chatbot_enabled: newValue,
+            config: { ...currentConfig, chatbot_enabled: newValue },
             updated_at: new Date().toISOString()
           })
           .eq('barbershop_id', barbershopId)
@@ -234,14 +236,13 @@ const ChatbotSettings = () => {
           throw updateError;
         }
       } else {
-        // Cria nova entrada com chatbot_enabled
+        // Cria nova entrada com chatbot_enabled no config
         const { error: insertError } = await supabase
           .from('whatsapp_config')
           .insert({
             barbershop_id: barbershopId,
             provider: 'evolution',
-            chatbot_enabled: newValue,
-            config: {}
+            config: { chatbot_enabled: newValue }
           });
 
         if (insertError) {
