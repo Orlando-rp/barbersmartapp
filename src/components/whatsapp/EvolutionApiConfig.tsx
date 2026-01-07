@@ -142,54 +142,84 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         console.error('Erro ao carregar config:', error);
       }
 
-      const finalApiUrl = data?.config?.api_url || globalApiUrl;
-      const finalApiKey = data?.config?.api_key || globalApiKey;
       const finalInstanceName = data?.config?.instance_name || generatedInstanceName;
 
       console.log('[EvolutionApiConfig] Final config:', { 
-        hasUrl: !!finalApiUrl, 
-        hasKey: !!finalApiKey, 
+        hasUrl: !!globalApiUrl, 
+        hasKey: !!globalApiKey, 
         instanceName: finalInstanceName 
       });
 
-      if (data?.config) {
-        // Tenant sempre usa credenciais globais do servidor, apenas instance_name é local
-        setConfig({
-          apiUrl: globalApiUrl,
-          apiKey: globalApiKey,
-          instanceName: finalInstanceName
-        });
-        if (data.config.connection_status) {
-          setConnectionStatus(data.config.connection_status);
-        }
-        if (data.config.connected_phone) {
-          setConnectedPhone(data.config.connected_phone);
-        }
-        
-        // Sempre usa config global do servidor
-        setIsUsingGlobalConfig(!!globalApiUrl && !!globalApiKey);
-        
-        // Se já está marcado como conectado, verificar status real com o config carregado
-        if (data.config.connection_status === 'connected') {
-          setTimeout(() => checkConnection({ apiUrl: globalApiUrl, apiKey: globalApiKey, instanceName: finalInstanceName }), 1000);
-        }
-      } else if (globalApiUrl || globalApiKey) {
-        // Usar config global com instanceName local
-        setConfig({
-          apiUrl: globalApiUrl,
-          apiKey: globalApiKey,
-          instanceName: generatedInstanceName
-        });
-        setIsUsingGlobalConfig(true);
-      } else {
-        // Sem nenhuma config, apenas usar instanceName gerado
-        setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
-        setIsUsingGlobalConfig(false);
+      // Tenant sempre usa credenciais globais do servidor
+      setConfig({
+        apiUrl: globalApiUrl,
+        apiKey: globalApiKey,
+        instanceName: finalInstanceName
+      });
+      
+      setIsUsingGlobalConfig(!!globalApiUrl && !!globalApiKey);
+      
+      if (data?.config?.connected_phone) {
+        setConnectedPhone(data.config.connected_phone);
+      }
+
+      // SEMPRE verificar status real ao carregar, independente do status salvo
+      if (globalApiUrl && globalApiKey && finalInstanceName) {
+        await checkConnectionOnLoad(globalApiUrl, globalApiKey, finalInstanceName, data?.config?.connection_status);
+      } else if (data?.config?.connection_status) {
+        // Sem config global, usar status salvo mas marcar como desconectado
+        setConnectionStatus('disconnected');
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
     } finally {
       setLoadingConfig(false);
+    }
+  };
+
+  const checkConnectionOnLoad = async (apiUrl: string, apiKey: string, instanceName: string, savedStatus?: string) => {
+    try {
+      setCheckingConnection(true);
+      
+      const { data } = await supabase.functions.invoke('send-whatsapp-evolution', {
+        body: {
+          action: 'connectionState',
+          apiUrl,
+          apiKey,
+          instanceName
+        }
+      });
+
+      // Handle instance not found (404) - treat as disconnected
+      if (data?.success === false && data?.details?.status === 404) {
+        setConnectionStatus('disconnected');
+        setConnectedPhone(null);
+        if (savedStatus === 'connected') {
+          await updateConnectionInDatabase('disconnected');
+        }
+        return;
+      }
+
+      const isConnected = data?.state === 'open' || data?.instance?.state === 'open';
+      
+      if (isConnected) {
+        setConnectionStatus('connected');
+        await fetchInstanceInfo();
+      } else {
+        setConnectionStatus('disconnected');
+        setConnectedPhone(null);
+        if (savedStatus === 'connected') {
+          await updateConnectionInDatabase('disconnected');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar conexão ao carregar:', error);
+      // Em caso de erro de rede, manter status salvo
+      if (savedStatus) {
+        setConnectionStatus(savedStatus as ConnectionStatus);
+      }
+    } finally {
+      setCheckingConnection(false);
     }
   };
 
