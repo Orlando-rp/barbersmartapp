@@ -109,9 +109,9 @@ FROM system_config;
 -- NÍVEL 1: BARBERSHOPS (BASE PARA QUASE TUDO)
 -- ============================================================
 
--- Versão simplificada sem coluna slug (não existe no banco externo)
+-- Versão compatível com schema externo (sem slug e email_config)
 SELECT 
-  'INSERT INTO barbershops (id, parent_id, name, address, phone, email, cnpj, logo_url, settings, custom_branding, responsible_name, responsible_phone, responsible_email, email_config, active, created_at, updated_at) VALUES (' ||
+  'INSERT INTO barbershops (id, parent_id, name, address, phone, email, cnpj, logo_url, settings, custom_branding, responsible_name, responsible_phone, responsible_email, active, created_at, updated_at) VALUES (' ||
   quote_literal(id) || ', ' ||
   COALESCE(quote_literal(parent_id), 'NULL') || ', ' ||
   quote_literal(name) || ', ' ||
@@ -125,7 +125,6 @@ SELECT
   COALESCE(quote_literal(responsible_name), 'NULL') || ', ' ||
   COALESCE(quote_literal(responsible_phone), 'NULL') || ', ' ||
   COALESCE(quote_literal(responsible_email), 'NULL') || ', ' ||
-  COALESCE(quote_literal(email_config::text) || '::jsonb', 'NULL') || ', ' ||
   active || ', ' ||
   quote_literal(created_at::text) || ', ' ||
   quote_literal(updated_at::text) || 
@@ -151,12 +150,11 @@ SELECT
   ') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, color = EXCLUDED.color, active = EXCLUDED.active;' as sql
 FROM service_categories;
 
--- 2.2 services
+-- 2.2 services (sem category_id - apenas category text no banco externo)
 SELECT 
-  'INSERT INTO services (id, barbershop_id, category_id, name, description, category, price, duration, image_url, active, created_at, updated_at) VALUES (' ||
+  'INSERT INTO services (id, barbershop_id, name, description, category, price, duration, image_url, active, created_at, updated_at) VALUES (' ||
   quote_literal(id) || ', ' ||
   quote_literal(barbershop_id) || ', ' ||
-  COALESCE(quote_literal(category_id), 'NULL') || ', ' ||
   quote_literal(name) || ', ' ||
   COALESCE(quote_literal(description), 'NULL') || ', ' ||
   quote_literal(category) || ', ' ||
@@ -208,15 +206,17 @@ SELECT
   ') ON CONFLICT (id) DO UPDATE SET is_open = EXCLUDED.is_open, open_time = EXCLUDED.open_time, close_time = EXCLUDED.close_time;' as sql
 FROM business_hours;
 
--- 2.5 special_hours
+-- 2.5 special_hours (com break_start e break_end do banco externo)
 SELECT 
-  'INSERT INTO special_hours (id, barbershop_id, special_date, is_open, open_time, close_time, reason, created_at, updated_at) VALUES (' ||
+  'INSERT INTO special_hours (id, barbershop_id, special_date, is_open, open_time, close_time, break_start, break_end, reason, created_at, updated_at) VALUES (' ||
   quote_literal(id) || ', ' ||
   quote_literal(barbershop_id) || ', ' ||
   quote_literal(special_date::text) || ', ' ||
   COALESCE(is_open::text, 'true') || ', ' ||
   COALESCE(quote_literal(open_time), 'NULL') || ', ' ||
   COALESCE(quote_literal(close_time), 'NULL') || ', ' ||
+  COALESCE(quote_literal(break_start), 'NULL') || ', ' ||
+  COALESCE(quote_literal(break_end), 'NULL') || ', ' ||
   quote_literal(reason) || ', ' ||
   quote_literal(created_at::text) || ', ' ||
   quote_literal(updated_at::text) || 
