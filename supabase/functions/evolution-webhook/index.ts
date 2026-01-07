@@ -13,9 +13,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  // Use external Supabase (nmsblmmhigwsevnqmhwn) for data operations
+  const EXTERNAL_SUPABASE_URL = 'https://nmsblmmhigwsevnqmhwn.supabase.co';
+  const externalServiceKey = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(EXTERNAL_SUPABASE_URL, externalServiceKey);
+  
+  // Lovable Cloud URL for calling other edge functions
+  const lovableCloudUrl = Deno.env.get('SUPABASE_URL')!;
+  const lovableCloudKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
   try {
     const payload = await req.json();
@@ -284,12 +289,12 @@ serve(async (req) => {
 
     console.log('[Evolution Webhook] Forwarding to chatbot:', JSON.stringify(chatbotPayload, null, 2));
 
-    // Call the chatbot function
-    const chatbotResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-chatbot`, {
+    // Call the chatbot function via Lovable Cloud
+    const chatbotResponse = await fetch(`${lovableCloudUrl}/functions/v1/whatsapp-chatbot`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseServiceKey}`
+        'Authorization': `Bearer ${lovableCloudKey}`
       },
       body: JSON.stringify(chatbotPayload)
     });
