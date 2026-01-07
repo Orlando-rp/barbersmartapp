@@ -284,18 +284,37 @@ Esperamos você em breve! 💈
 
 _${barbershop.name}_`;
         
-        // Send WhatsApp message via Evolution API
-        const { data: whatsappConfig } = await supabase
-          .from('whatsapp_config')
-          .select('*')
-          .eq('barbershop_id', appointment.barbershop_id)
-          .single();
-        
-        if (!whatsappConfig?.api_url || !whatsappConfig?.api_key || !whatsappConfig?.instance_name) {
-          console.log(`[suggest-reschedule-noshow] No WhatsApp config for barbershop ${appointment.barbershop_id}, skipping`);
+        // Get global Evolution API config
+        const { data: globalConfig } = await supabase
+          .from('system_config')
+          .select('value')
+          .eq('key', 'evolution_api')
+          .maybeSingle();
+
+        if (!globalConfig?.value?.api_url || !globalConfig?.value?.api_key) {
+          console.log(`[suggest-reschedule-noshow] Evolution API global not configured, skipping`);
           skippedCount++;
           continue;
         }
+
+        const apiUrl = globalConfig.value.api_url;
+        const apiKey = globalConfig.value.api_key;
+
+        // Get tenant's WhatsApp instance
+        const { data: whatsappConfig } = await supabase
+          .from('whatsapp_config')
+          .select('config, is_active')
+          .eq('barbershop_id', appointment.barbershop_id)
+          .eq('provider', 'evolution')
+          .maybeSingle();
+        
+        if (!whatsappConfig?.is_active || !whatsappConfig?.config?.instance_name) {
+          console.log(`[suggest-reschedule-noshow] No WhatsApp instance for barbershop ${appointment.barbershop_id}, skipping`);
+          skippedCount++;
+          continue;
+        }
+
+        const instanceName = whatsappConfig.config.instance_name;
         
         // Format phone number
         let phone = client.phone.replace(/\D/g, '');
@@ -303,12 +322,13 @@ _${barbershop.name}_`;
           phone = '55' + phone;
         }
         
-        // Send message
-        const sendResponse = await fetch(`${whatsappConfig.api_url}/message/sendText/${whatsappConfig.instance_name}`, {
+        // Send message (global server + tenant instance)
+        const cleanApiUrl = apiUrl.replace(/\/$/, '');
+        const sendResponse = await fetch(`${cleanApiUrl}/message/sendText/${instanceName}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': whatsappConfig.api_key,
+            'apikey': apiKey,
           },
           body: JSON.stringify({
             number: phone,

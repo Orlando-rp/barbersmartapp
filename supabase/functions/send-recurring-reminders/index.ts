@@ -103,7 +103,22 @@ serve(async (req) => {
           continue;
         }
 
-        // Get WhatsApp Evolution config
+        // Get global Evolution API config
+        const { data: globalConfig } = await supabase
+          .from('system_config')
+          .select('value')
+          .eq('key', 'evolution_api')
+          .maybeSingle();
+
+        if (!globalConfig?.value?.api_url || !globalConfig?.value?.api_key) {
+          console.log(`⚠️ Evolution API global não configurada`);
+          continue;
+        }
+
+        const apiUrl = globalConfig.value.api_url;
+        const apiKey = globalConfig.value.api_key;
+
+        // Get tenant's WhatsApp instance
         const { data: whatsappConfig } = await supabase
           .from('whatsapp_config')
           .select('config, is_active')
@@ -111,16 +126,12 @@ serve(async (req) => {
           .eq('provider', 'evolution')
           .maybeSingle();
 
-        if (!whatsappConfig?.is_active || !whatsappConfig?.config) {
-          console.log(`⚠️ WhatsApp não configurado para barbearia ${barbershopId}`);
+        if (!whatsappConfig?.is_active || !whatsappConfig?.config?.instance_name) {
+          console.log(`⚠️ Instância WhatsApp não configurada para barbearia ${barbershopId}`);
           continue;
         }
 
-        const evolutionConfig = whatsappConfig.config as {
-          api_url: string;
-          api_key: string;
-          instance_name: string;
-        };
+        const instanceName = whatsappConfig.config.instance_name;
 
         // Check client notification preferences
         let displayName = clientName;
@@ -183,13 +194,13 @@ Caso precise reagendar algum horário, entre em contato conosco com antecedênci
           phoneNumber = '55' + phoneNumber;
         }
 
-        // Send via Evolution API
-        const apiUrl = evolutionConfig.api_url.replace(/\/$/, '');
-        const response = await fetch(`${apiUrl}/message/sendText/${evolutionConfig.instance_name}`, {
+        // Send via Evolution API (global server + tenant instance)
+        const cleanApiUrl = apiUrl.replace(/\/$/, '');
+        const response = await fetch(`${cleanApiUrl}/message/sendText/${instanceName}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': evolutionConfig.api_key
+            'apikey': apiKey
           },
           body: JSON.stringify({
             number: phoneNumber,

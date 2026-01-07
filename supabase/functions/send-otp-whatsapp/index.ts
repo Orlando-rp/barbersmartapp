@@ -142,20 +142,11 @@ serve(async (req) => {
       }
 
       const fallbackConfig = configs[0].config as {
-        api_url?: string;
-        api_key?: string;
         instance_name: string;
       };
 
+      // Usa apenas o instance_name do tenant (credenciais do servidor são sempre globais)
       instanceName = fallbackConfig.instance_name;
-      
-      // Se a barbearia tem credenciais próprias (white label), usar elas
-      if (fallbackConfig.api_url && fallbackConfig.api_key) {
-        apiUrl = fallbackConfig.api_url;
-        apiKey = fallbackConfig.api_key;
-        console.log(`[Send OTP] Usando credenciais próprias da barbearia ${configs[0].barbershop_id}`);
-      }
-
       console.log(`[Send OTP] Usando instância alternativa: ${instanceName}`);
     } else {
       if (otpStatus !== 'connected') {

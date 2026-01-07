@@ -75,7 +75,6 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
   const [isUsingGlobalConfig, setIsUsingGlobalConfig] = useState(false);
-  const [useOwnCredentials, setUseOwnCredentials] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<'unknown' | 'configured' | 'not_configured'>('unknown');
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
 
@@ -154,13 +153,10 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       });
 
       if (data?.config) {
-        // Check if tenant has own credentials configured
-        const hasOwnCredentials = !!(data.config.api_url && data.config.api_key);
-        
-        // Usa config local, mas herda api_url e api_key da global se não existir local
+        // Tenant sempre usa credenciais globais do servidor, apenas instance_name é local
         setConfig({
-          apiUrl: finalApiUrl,
-          apiKey: finalApiKey,
+          apiUrl: globalApiUrl,
+          apiKey: globalApiKey,
           instanceName: finalInstanceName
         });
         if (data.config.connection_status) {
@@ -170,13 +166,12 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           setConnectedPhone(data.config.connected_phone);
         }
         
-        // Define se está usando config própria ou global
-        setUseOwnCredentials(hasOwnCredentials);
-        setIsUsingGlobalConfig(!hasOwnCredentials && (!!globalApiUrl || !!globalApiKey));
+        // Sempre usa config global do servidor
+        setIsUsingGlobalConfig(!!globalApiUrl && !!globalApiKey);
         
         // Se já está marcado como conectado, verificar status real com o config carregado
         if (data.config.connection_status === 'connected') {
-          setTimeout(() => checkConnection({ apiUrl: finalApiUrl, apiKey: finalApiKey, instanceName: finalInstanceName }), 1000);
+          setTimeout(() => checkConnection({ apiUrl: globalApiUrl, apiKey: globalApiKey, instanceName: finalInstanceName }), 1000);
         }
       } else if (globalApiUrl || globalApiKey) {
         // Usar config global com instanceName local
@@ -186,12 +181,10 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           instanceName: generatedInstanceName
         });
         setIsUsingGlobalConfig(true);
-        setUseOwnCredentials(false);
       } else {
         // Sem nenhuma config, apenas usar instanceName gerado
         setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
         setIsUsingGlobalConfig(false);
-        setUseOwnCredentials(false);
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
@@ -738,120 +731,61 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
       {/* Statistics Dashboard - Always on top */}
       <WhatsAppStats provider="evolution" />
 
-      {/* Independent WhatsApp Configuration - For White Label Plans */}
+      {/* Independent WhatsApp Instance - For White Label Plans */}
       {!isSaasAdmin && canUseIndependentWhatsApp && (
         <Card className="border-primary/20">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Server className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              Servidor WhatsApp Próprio
+              WhatsApp Próprio
               <Badge variant="secondary" className="ml-2 text-[10px]">White Label</Badge>
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Configure seu próprio servidor Evolution API para ter controle total sobre as mensagens
+              Conecte seu próprio número de WhatsApp para ter controle total sobre as mensagens
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
-            {/* Toggle para usar credenciais próprias */}
-            <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-lg">
-              <div className="space-y-0.5">
-                <Label htmlFor="use-own-credentials" className="text-xs sm:text-sm font-medium">
-                  Usar servidor próprio
-                </Label>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  {useOwnCredentials 
-                    ? "Suas mensagens usarão seu próprio servidor Evolution API" 
-                    : "Usando servidor compartilhado do SaaS"}
-                </p>
+            <Alert className="border-primary/50 bg-primary/5">
+              <Wifi className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-xs">
+                Com o plano White Label, você pode conectar seu próprio número de WhatsApp. 
+                Todas as mensagens (chatbot, OTP, lembretes) serão enviadas usando seu número.
+              </AlertDescription>
+            </Alert>
+
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-medium">Instância:</span>
+                <Badge variant="outline" className="text-xs">{config.instanceName}</Badge>
               </div>
-              <Switch
-                id="use-own-credentials"
-                checked={useOwnCredentials}
-                onCheckedChange={(checked) => {
-                  setUseOwnCredentials(checked);
-                  if (!checked) {
-                    // Se desativar, recarregar config global
-                    loadConfig();
-                  }
-                }}
-              />
+              {connectedPhone && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs sm:text-sm font-medium">Número conectado:</span>
+                  <Badge className="bg-success/10 text-success text-xs">+{connectedPhone}</Badge>
+                </div>
+              )}
             </div>
 
-            {/* Campos de configuração - só mostra se toggle ativo */}
-            {useOwnCredentials && (
-              <>
-                <Alert className="border-warning/50 bg-warning/10">
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                  <AlertDescription className="text-xs text-warning">
-                    Ao usar seu próprio servidor, você é responsável pela manutenção e disponibilidade. 
-                    As configurações abaixo serão usadas para chatbot, OTP e todas as notificações desta barbearia.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="own-api-url" className="text-xs sm:text-sm">URL do Servidor</Label>
-                  <Input
-                    id="own-api-url"
-                    type="url"
-                    value={config.apiUrl}
-                    onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
-                    placeholder="https://api.evolution.seudominio.com"
-                    className="text-sm"
-                  />
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    URL base do seu servidor Evolution API
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="own-api-key" className="text-xs sm:text-sm">API Key</Label>
-                  <Input
-                    id="own-api-key"
-                    type="password"
-                    value={config.apiKey}
-                    onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-                    placeholder="sua-api-key"
-                    className="text-sm"
-                  />
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Chave de API do seu servidor Evolution
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="own-instance-name" className="text-xs sm:text-sm">Nome da Instância</Label>
-                    <Badge variant="secondary" className="text-[10px] sm:text-xs">Auto</Badge>
-                  </div>
-                  <Input
-                    id="own-instance-name"
-                    type="text"
-                    value={config.instanceName}
-                    readOnly
-                    className="bg-muted cursor-not-allowed text-sm"
-                  />
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Identificador único da sua instância
-                  </p>
-                </div>
-
-                <Button onClick={saveConfig} disabled={saving} className="w-full text-xs sm:text-sm" size="sm">
-                  <Save className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  {saving ? "Salvando..." : "Salvar Configuração Própria"}
-                </Button>
-              </>
-            )}
-
-            {!useOwnCredentials && isUsingGlobalConfig && (
+            {isUsingGlobalConfig && (
               <div className="p-3 bg-success/10 border border-success/20 rounded-lg">
                 <div className="flex items-center gap-2 text-success">
                   <CheckCircle className="h-4 w-4" />
-                  <span className="text-xs sm:text-sm font-medium">Usando configuração global do SaaS</span>
+                  <span className="text-xs sm:text-sm font-medium">Servidor Evolution API configurado</span>
                 </div>
                 <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                  As mensagens serão enviadas através do servidor compartilhado.
+                  A infraestrutura do servidor é gerenciada pelo SaaS. Você pode conectar seu próprio número abaixo.
                 </p>
               </div>
+            )}
+
+            {!isUsingGlobalConfig && !config.apiUrl && (
+              <Alert className="border-warning/50 bg-warning/10">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-xs text-warning">
+                  O servidor Evolution API ainda não foi configurado pelo administrador do SaaS.
+                  Entre em contato com o suporte.
+                </AlertDescription>
+              </Alert>
             )}
           </CardContent>
         </Card>
