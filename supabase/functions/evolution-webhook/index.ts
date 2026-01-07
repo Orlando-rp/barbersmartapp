@@ -1,5 +1,4 @@
-// Evolution API Webhook Handler v2.3 - Receives incoming WhatsApp messages and stores them
-// Updated: 2026-01-07 - Fixed event filtering and removed overly aggressive filters
+// Evolution API Webhook Handler v3.0 - Simplified for external Supabase
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -8,22 +7,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper to get Supabase client - prioritize external if configured
+// Helper to get Supabase client - uses standard env vars
 function getSupabaseClient() {
-  const externalUrl = 'https://nmsblmmhigwsevnqmhwn.supabase.co';
-  const externalKey = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY');
-  const standardUrl = Deno.env.get('SUPABASE_URL');
-  const standardKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  
-  // Use external if key is configured
-  if (externalKey) {
-    console.log('[Evolution Webhook] Using EXTERNAL Supabase:', externalUrl);
-    return createClient(externalUrl, externalKey);
-  }
-  
-  // Fallback to standard
-  console.log('[Evolution Webhook] Using STANDARD Supabase:', standardUrl);
-  return createClient(standardUrl!, standardKey!);
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  console.log('[Evolution Webhook] Using Supabase:', supabaseUrl);
+  return createClient(supabaseUrl, supabaseKey);
 }
 
 serve(async (req) => {
@@ -33,23 +22,20 @@ serve(async (req) => {
 
   const supabase = getSupabaseClient();
   
-  // Lovable Cloud URL for calling other edge functions
-  const lovableCloudUrl = Deno.env.get('SUPABASE_URL')!;
-  const lovableCloudKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  // Use same Supabase URL for calling chatbot function
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
   try {
     const payload = await req.json();
     
     console.log('[Evolution Webhook] Received payload:', JSON.stringify(payload, null, 2));
 
-    // Evolution API sends different event types
     const eventRaw = payload.event || '';
-    // Normalize event: lowercase and replace underscores/hyphens with dots
     const eventNormalized = eventRaw.toLowerCase().replace(/[_-]/g, '.');
     
     console.log('[Evolution Webhook] Event raw:', eventRaw, '| Normalized:', eventNormalized);
     
-    // Accept variations: messages.upsert, MESSAGES_UPSERT, MESSAGES-UPSERT, etc.
     const isMessageEvent = eventNormalized === 'messages.upsert';
     
     if (!isMessageEvent) {
@@ -60,16 +46,14 @@ serve(async (req) => {
       );
     }
 
-    // Support payload.data as object or array
     let data = payload.data;
     if (Array.isArray(data)) {
-      data = data[0]; // Process first message if array
+      data = data[0];
       console.log('[Evolution Webhook] Data was array, using first element');
     }
     
     const instance = payload.instance;
     
-    // Evolution API 2.0 - instance can be a string OR an object
     const instanceName = typeof instance === 'string' 
       ? instance 
       : (instance?.instanceName || payload.instanceName || payload.instance_name || instance?.instance?.instanceName);
@@ -77,15 +61,12 @@ serve(async (req) => {
     console.log('[Evolution Webhook] Instance value:', instance);
     console.log('[Evolution Webhook] Extracted instanceName:', instanceName);
     
-    // Get API URL and key from payload or environment
     const apiUrl = payload.server_url || payload.apiUrl || Deno.env.get('EVOLUTION_API_URL');
     const payloadApiKey = payload.apikey;
 
-    // Extract message details from Evolution API format
     const messageData = data?.message || data;
     const key = data?.key || messageData?.key;
     
-    // Skip if it's a message from the bot itself (fromMe = true)
     if (key?.fromMe === true) {
       console.log('[Evolution Webhook] Ignoring outgoing message (fromMe)');
       return new Response(
@@ -94,9 +75,6 @@ serve(async (req) => {
       );
     }
 
-    // NOTE: Removed filter for data.source === 'web' || 'api' as it was blocking valid messages
-
-    // Get sender phone number
     const remoteJid = key?.remoteJid || data?.remoteJid;
     if (!remoteJid) {
       console.log('[Evolution Webhook] No remoteJid found');
@@ -106,10 +84,8 @@ serve(async (req) => {
       );
     }
 
-    // Extract phone number from JID (format: 5511999999999@s.whatsapp.net)
     const from = remoteJid.split('@')[0];
 
-    // Get message text - Evolution API can have different message types
     let messageText = '';
     let messageType = 'text';
     const message = messageData?.message || messageData;
@@ -134,21 +110,18 @@ serve(async (req) => {
       messageText = message;
     }
 
-    // Get contact name if available
     const contactName = data?.pushName || payload.pushName || null;
 
     console.log(`[Evolution Webhook] Message from ${from} (${contactName}): ${messageText}`);
 
-    // Find barbershop - try multiple strategies
+    // Find barbershop
     let barbershopId: string | null = null;
 
-    // Strategy 1: Extract from instance name pattern: barbershop-{uuid}
     if (instanceName?.startsWith('barbershop-')) {
       barbershopId = instanceName.replace('barbershop-', '');
       console.log('[Evolution Webhook] Found barbershop from instance name pattern:', barbershopId);
     }
 
-    // Strategy 2: Look up by instance_name in whatsapp_config (handles bs-{shortId} pattern)
     if (!barbershopId && instanceName) {
       const { data: configs, error: configError } = await supabase
         .from('whatsapp_config')
@@ -160,10 +133,8 @@ serve(async (req) => {
       } else {
         console.log('[Evolution Webhook] Found configs:', configs?.length, 'Looking for instance:', instanceName);
         
-        // Try exact match first
         let matchingConfig = configs?.find(c => c.config?.instance_name === instanceName);
         
-        // If no exact match and instanceName is bs-{shortId}, try to find by shortId prefix
         if (!matchingConfig && instanceName.startsWith('bs-')) {
           const shortId = instanceName.replace('bs-', '');
           matchingConfig = configs?.find(c => c.barbershop_id?.startsWith(shortId));
@@ -179,13 +150,10 @@ serve(async (req) => {
       }
     }
 
-    // Strategy 3: Look up by connected_phone number (most reliable)
     if (!barbershopId) {
-      // The "to" number (recipient of incoming message) is the connected WhatsApp
       const ownerJid = data?.key?.participant || instance?.owner || payload.owner;
       let ownerPhone = ownerJid?.split('@')[0];
       
-      // Also try to find by any config that has this webhook configured
       const { data: configs } = await supabase
         .from('whatsapp_config')
         .select('barbershop_id, config')
@@ -193,12 +161,10 @@ serve(async (req) => {
         .eq('is_active', true);
 
       if (configs && configs.length > 0) {
-        // If only one active Evolution config, use it
         if (configs.length === 1) {
           barbershopId = configs[0].barbershop_id;
           console.log('[Evolution Webhook] Found single active barbershop:', barbershopId);
         } else if (ownerPhone) {
-          // Try to match by connected phone
           const matchingConfig = configs.find(c => 
             c.config?.connected_phone?.includes(ownerPhone) ||
             ownerPhone.includes(c.config?.connected_phone)
@@ -212,14 +178,14 @@ serve(async (req) => {
     }
 
     if (!barbershopId) {
-      console.error('[Evolution Webhook] Could not determine barbershop. Instance:', instanceName, 'Payload keys:', Object.keys(payload));
+      console.error('[Evolution Webhook] Could not determine barbershop. Instance:', instanceName);
       return new Response(
         JSON.stringify({ error: 'Barbershop not found for instance' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Always store incoming message for chat UI (regardless of chatbot status)
+    // Store incoming message
     if (messageText) {
       console.log('[Evolution Webhook] Storing incoming message for chat UI');
       const { error: msgError } = await supabase
@@ -245,7 +211,7 @@ serve(async (req) => {
       }
     }
 
-    // Check if chatbot is enabled for this barbershop
+    // Check chatbot
     const { data: chatbotConfig } = await supabase
       .from('whatsapp_config')
       .select('chatbot_enabled, config')
@@ -264,20 +230,19 @@ serve(async (req) => {
     }
 
     if (!messageText) {
-      console.log('[Evolution Webhook] No text message found, might be media only');
+      console.log('[Evolution Webhook] No text message found');
       return new Response(
         JSON.stringify({ success: true, message: 'No text content for chatbot' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get Evolution API config from chatbot config or global
+    // Get Evolution API config
     let evolutionApiUrl = chatbotConfig?.config?.api_url || apiUrl;
     let evolutionApiKey = chatbotConfig?.config?.api_key;
     const configInstanceName = chatbotConfig?.config?.instance_name || instanceName;
 
     if (!evolutionApiUrl || !evolutionApiKey) {
-      // Try to get from global system_config
       const { data: globalConfig } = await supabase
         .from('system_config')
         .select('value')
@@ -293,7 +258,7 @@ serve(async (req) => {
     console.log('[Evolution Webhook] API URL:', evolutionApiUrl);
     console.log('[Evolution Webhook] Instance:', configInstanceName);
 
-    // Forward to chatbot function
+    // Forward to chatbot
     const chatbotPayload = {
       message: messageText,
       from: from,
@@ -305,12 +270,12 @@ serve(async (req) => {
 
     console.log('[Evolution Webhook] Forwarding to chatbot:', JSON.stringify(chatbotPayload, null, 2));
 
-    // Call the chatbot function via Lovable Cloud
-    const chatbotResponse = await fetch(`${lovableCloudUrl}/functions/v1/whatsapp-chatbot`, {
+    // Call chatbot function using same Supabase URL
+    const chatbotResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-chatbot`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${lovableCloudKey}`
+        'Authorization': `Bearer ${supabaseKey}`
       },
       body: JSON.stringify(chatbotPayload)
     });
