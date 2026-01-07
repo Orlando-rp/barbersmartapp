@@ -66,6 +66,10 @@ interface Client {
 export const WhatsAppChat = () => {
   const { barbershopId, user } = useAuth();
   const { sharedBarbershopId } = useSharedBarbershopId();
+  
+  // IMPORTANT: Use consistent barbershopId for all operations (matriz for shared data)
+  const chatBarbershopId = sharedBarbershopId || barbershopId;
+  
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
@@ -94,17 +98,19 @@ export const WhatsAppChat = () => {
   }, [selectedPhone]);
 
   useEffect(() => {
-    if (barbershopId) {
+    if (chatBarbershopId) {
       loadEvolutionConfig();
       loadConversations();
       loadCurrentUserName();
       loadClients();
     }
-  }, [barbershopId, sharedBarbershopId]);
+  }, [chatBarbershopId]);
 
   // Setup realtime separadamente para poder usar a ref
   useEffect(() => {
-    if (!barbershopId || !tableExists) return;
+    if (!chatBarbershopId || !tableExists) return;
+    
+    console.log('[WhatsApp Chat] Setting up realtime for barbershop:', chatBarbershopId);
     
     const channel = supabase
       .channel('whatsapp-messages-changes')
@@ -114,11 +120,11 @@ export const WhatsAppChat = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'whatsapp_messages',
-          filter: `barbershop_id=eq.${barbershopId}`
+          filter: `barbershop_id=eq.${chatBarbershopId}`
         },
         (payload) => {
           const newMsg = payload.new as Message;
-          console.log('[WhatsApp Chat] Nova mensagem recebida:', newMsg);
+          console.log('[WhatsApp Chat] Nova mensagem recebida via realtime:', newMsg);
           
           // Usar ref para pegar o valor atual
           if (selectedPhoneRef.current === newMsg.phone_number) {
@@ -142,7 +148,7 @@ export const WhatsAppChat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [barbershopId, tableExists]);
+  }, [chatBarbershopId, tableExists]);
 
   useEffect(() => {
     if (selectedPhone) {
@@ -177,27 +183,27 @@ export const WhatsAppChat = () => {
   };
 
   const loadEvolutionConfig = async () => {
-    if (!barbershopId) return;
+    if (!chatBarbershopId) return;
 
     try {
-      console.log('[WhatsAppChat] Loading Evolution config for:', barbershopId);
+      console.log('[WhatsAppChat] Loading Evolution config for:', chatBarbershopId);
       
       // Get global config
       const { data: globalData, error: globalError } = await supabase.functions.invoke('get-evolution-config');
       console.log('[WhatsAppChat] Global config:', { globalData, globalError });
       
-      // Get barbershop config
+      // Get barbershop config - try chatBarbershopId first
       const { data: localConfig, error: localError } = await supabase
         .from('whatsapp_config')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', chatBarbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
 
       console.log('[WhatsAppChat] Local config:', { localConfig, localError });
 
       // Generate instanceName if not in local config
-      const generatedInstanceName = `bs-${barbershopId.split('-')[0]}`;
+      const generatedInstanceName = `bs-${chatBarbershopId.split('-')[0]}`;
       
       const finalConfig = {
         apiUrl: localConfig?.config?.api_url || globalData?.config?.api_url || '',
@@ -222,16 +228,18 @@ export const WhatsAppChat = () => {
   };
 
   const loadConversations = async () => {
-    if (!barbershopId) return;
+    if (!chatBarbershopId) return;
 
     try {
       setLoading(true);
+      
+      console.log('[WhatsAppChat] Loading conversations for:', chatBarbershopId);
       
       // Get unique conversations with last message
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', chatBarbershopId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -246,12 +254,11 @@ export const WhatsAppChat = () => {
 
       setTableExists(true);
 
-      // Get clients to match phone numbers
-      const clientBarbershopId = sharedBarbershopId || barbershopId;
+      // Get clients to match phone numbers (use chatBarbershopId)
       const { data: clientsData } = await supabase
         .from('clients')
         .select('id, name, phone, avatar_url')
-        .eq('barbershop_id', clientBarbershopId);
+        .eq('barbershop_id', chatBarbershopId);
 
       // Create a map of phone to client for quick lookup
       const clientMap = new Map<string, Client>();
@@ -297,14 +304,13 @@ export const WhatsAppChat = () => {
   };
 
   const loadClients = async () => {
-    const clientBarbershopId = sharedBarbershopId || barbershopId;
-    if (!clientBarbershopId) return;
+    if (!chatBarbershopId) return;
 
     try {
       const { data, error } = await supabase
         .from('clients')
         .select('id, name, phone, avatar_url')
-        .eq('barbershop_id', clientBarbershopId)
+        .eq('barbershop_id', chatBarbershopId)
         .eq('active', true)
         .order('name');
 
@@ -316,18 +322,21 @@ export const WhatsAppChat = () => {
   };
 
   const loadMessages = async (phoneNumber: string) => {
-    if (!barbershopId || !tableExists) return;
+    if (!chatBarbershopId || !tableExists) return;
 
     try {
+      console.log('[WhatsAppChat] Loading messages for:', phoneNumber, 'barbershop:', chatBarbershopId);
+      
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select('*')
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', chatBarbershopId)
         .eq('phone_number', phoneNumber)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
+      console.log('[WhatsAppChat] Loaded messages:', data?.length || 0);
       setMessages(data || []);
     } catch (error) {
       console.error('Erro ao carregar mensagens:', error);
@@ -337,7 +346,7 @@ export const WhatsAppChat = () => {
   // setupRealtimeSubscription movido para o useEffect acima
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedPhone || !barbershopId || !evolutionConfig) {
+    if (!newMessage.trim() || !selectedPhone || !chatBarbershopId || !evolutionConfig) {
       if (!evolutionConfig) {
         toast.error('Configure a Evolution API primeiro');
       }
@@ -352,6 +361,8 @@ export const WhatsAppChat = () => {
         ? `*${currentUserName}:*\n${newMessage}`
         : newMessage;
 
+      console.log('[WhatsAppChat] Sending message to:', selectedPhone, 'barbershop:', chatBarbershopId);
+
       // Send via Evolution API - the edge function will store the message
       const { data, error } = await supabase.functions.invoke('send-whatsapp-evolution', {
         body: {
@@ -362,7 +373,7 @@ export const WhatsAppChat = () => {
           to: selectedPhone,
           message: formattedMessage,
           originalMessage: newMessage, // Store original without staff name prefix
-          barbershopId: barbershopId,
+          barbershopId: chatBarbershopId, // Use consistent ID
           sentByUserId: user?.id,
           sentByName: currentUserName
         }
@@ -474,7 +485,7 @@ export const WhatsAppChat = () => {
   );
 
   const deleteConversation = async (phoneNumber: string) => {
-    if (!barbershopId) return;
+    if (!chatBarbershopId) return;
     
     try {
       setDeletingConversation(phoneNumber);
@@ -482,13 +493,13 @@ export const WhatsAppChat = () => {
       // Normalize phone number (remove non-digits)
       const normalizedPhone = phoneNumber.replace(/\D/g, '');
       
-      console.log('[WhatsApp Chat] Excluindo conversa:', { phoneNumber, normalizedPhone, barbershopId });
+      console.log('[WhatsApp Chat] Excluindo conversa:', { phoneNumber, normalizedPhone, chatBarbershopId });
       
       // First, try to delete with exact phone number
       const { error: error1, count: count1 } = await supabase
         .from('whatsapp_messages')
         .delete({ count: 'exact' })
-        .eq('barbershop_id', barbershopId)
+        .eq('barbershop_id', chatBarbershopId)
         .eq('phone_number', phoneNumber);
 
       console.log('[WhatsApp Chat] Delete 1 (exact):', { error: error1, count: count1 });
@@ -498,7 +509,7 @@ export const WhatsAppChat = () => {
         const { error: error2, count: count2 } = await supabase
           .from('whatsapp_messages')
           .delete({ count: 'exact' })
-          .eq('barbershop_id', barbershopId)
+          .eq('barbershop_id', chatBarbershopId)
           .eq('phone_number', normalizedPhone);
         
         console.log('[WhatsApp Chat] Delete 2 (normalized):', { error: error2, count: count2 });
@@ -512,7 +523,7 @@ export const WhatsAppChat = () => {
         await supabase
           .from('whatsapp_messages')
           .delete({ count: 'exact' })
-          .eq('barbershop_id', barbershopId)
+          .eq('barbershop_id', chatBarbershopId)
           .eq('phone_number', withCountryCode);
         console.log('[WhatsApp Chat] Delete 3 (with country code):', withCountryCode);
       }
@@ -521,7 +532,7 @@ export const WhatsAppChat = () => {
         await supabase
           .from('whatsapp_messages')
           .delete({ count: 'exact' })
-          .eq('barbershop_id', barbershopId)
+          .eq('barbershop_id', chatBarbershopId)
           .eq('phone_number', withoutCountryCode);
         console.log('[WhatsApp Chat] Delete 4 (without country code):', withoutCountryCode);
       }
