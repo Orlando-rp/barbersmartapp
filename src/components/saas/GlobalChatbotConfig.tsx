@@ -183,7 +183,7 @@ FLUXO DE AGENDAMENTO:
       for (const shop of barbershops || []) {
         const { data: whatsappConfig } = await supabase
           .from('whatsapp_config')
-          .select('chatbot_enabled')
+          .select('config')
           .eq('barbershop_id', shop.id)
           .maybeSingle();
 
@@ -193,11 +193,12 @@ FLUXO DE AGENDAMENTO:
           .eq('barbershop_id', shop.id);
 
         const appointmentsCreated = 0;
+        const config = whatsappConfig?.config as Record<string, unknown> | null;
 
         statuses.push({
           id: shop.id,
           name: shop.name,
-          chatbotEnabled: whatsappConfig?.chatbot_enabled || false,
+          chatbotEnabled: config?.chatbot_enabled === true,
           conversationsCount: conversationsCount || 0,
           appointmentsCreated
         });

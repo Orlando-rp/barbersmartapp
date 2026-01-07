@@ -88,12 +88,13 @@ const ChatbotSettingsSection = () => {
 
       const { data: configData } = await supabase
         .from('whatsapp_config')
-        .select('chatbot_enabled')
+        .select('config')
         .eq('barbershop_id', barbershopId)
         .maybeSingle();
 
-      if (configData) {
-        setChatbotEnabled(configData.chatbot_enabled || false);
+      if (configData?.config) {
+        const config = configData.config as Record<string, unknown>;
+        setChatbotEnabled(config.chatbot_enabled === true);
       }
 
       const { count } = await supabase
@@ -130,8 +131,9 @@ const ChatbotSettingsSection = () => {
       setWhatsappConnected(hasInstance && isConnected);
       
       // Se existe config, carregar status do chatbot
-      if (config) {
-        setChatbotEnabled(config.chatbot_enabled || false);
+      if (config?.config) {
+        const configJson = config.config as Record<string, unknown>;
+        setChatbotEnabled(configJson.chatbot_enabled === true);
       }
     } catch (error) {
       console.error('Error checking WhatsApp status:', error);
@@ -144,21 +146,25 @@ const ChatbotSettingsSection = () => {
       
       const { data: existing } = await supabase
         .from('whatsapp_config')
-        .select('id')
+        .select('id, config')
         .eq('barbershop_id', barbershopId)
         .maybeSingle();
 
       if (existing) {
+        const currentConfig = (existing.config as Record<string, unknown>) || {};
         await supabase
           .from('whatsapp_config')
-          .update({ chatbot_enabled: newValue })
+          .update({ 
+            config: { ...currentConfig, chatbot_enabled: newValue },
+            updated_at: new Date().toISOString()
+          })
           .eq('barbershop_id', barbershopId);
       } else {
         await supabase
           .from('whatsapp_config')
           .insert({
             barbershop_id: barbershopId,
-            chatbot_enabled: newValue,
+            config: { chatbot_enabled: newValue },
             provider: 'evolution'
           });
       }
