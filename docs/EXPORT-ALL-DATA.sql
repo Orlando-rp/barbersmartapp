@@ -109,12 +109,12 @@ FROM system_config;
 -- NÍVEL 1: BARBERSHOPS (BASE PARA QUASE TUDO)
 -- ============================================================
 
+-- Versão simplificada sem coluna slug (não existe no banco externo)
 SELECT 
-  'INSERT INTO barbershops (id, parent_id, name, slug, address, phone, email, cnpj, logo_url, settings, custom_branding, responsible_name, responsible_phone, responsible_email, email_config, active, created_at, updated_at) VALUES (' ||
+  'INSERT INTO barbershops (id, parent_id, name, address, phone, email, cnpj, logo_url, settings, custom_branding, responsible_name, responsible_phone, responsible_email, email_config, active, created_at, updated_at) VALUES (' ||
   quote_literal(id) || ', ' ||
   COALESCE(quote_literal(parent_id), 'NULL') || ', ' ||
   quote_literal(name) || ', ' ||
-  COALESCE(quote_literal(slug), 'NULL') || ', ' ||
   COALESCE(quote_literal(address), 'NULL') || ', ' ||
   COALESCE(quote_literal(phone), 'NULL') || ', ' ||
   COALESCE(quote_literal(email), 'NULL') || ', ' ||
@@ -129,7 +129,7 @@ SELECT
   active || ', ' ||
   quote_literal(created_at::text) || ', ' ||
   quote_literal(updated_at::text) || 
-  ') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, address = EXCLUDED.address, phone = EXCLUDED.phone, email = EXCLUDED.email, settings = EXCLUDED.settings, active = EXCLUDED.active, updated_at = EXCLUDED.updated_at;' as sql
+  ') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, address = EXCLUDED.address, phone = EXCLUDED.phone, email = EXCLUDED.email, settings = EXCLUDED.settings, active = EXCLUDED.active, updated_at = EXCLUDED.updated_at;' as sql
 FROM barbershops
 ORDER BY parent_id NULLS FIRST;
 
