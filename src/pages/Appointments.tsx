@@ -1111,7 +1111,7 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                             setEditingAppointment(appointment);
                             setIsDialogOpen(true);
                           }}
-                          className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9"
+                          className="flex-1 md:flex-none md:min-w-[100px] md:max-w-[140px] text-xs md:text-sm h-8 md:h-9"
                         >
                           <Edit className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                           Editar
@@ -1121,7 +1121,7 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                             variant="default"
                             size="sm"
                             onClick={() => openPaymentModal(appointment)}
-                            className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9 bg-green-600 hover:bg-green-700"
+                            className="flex-1 md:flex-none md:min-w-[100px] md:max-w-[140px] text-xs md:text-sm h-8 md:h-9 bg-green-600 hover:bg-green-700"
                           >
                             <CheckCircle2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                             <span className="hidden md:inline">Marcar Pago</span>
@@ -1133,7 +1133,7 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                             variant="outline"
                             size="sm"
                             onClick={() => handleCancelClick(appointment)}
-                            className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="flex-1 md:flex-none md:min-w-[100px] md:max-w-[140px] text-xs md:text-sm h-8 md:h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                             Cancelar
@@ -1143,7 +1143,7 @@ Obrigado por nos visitar hoje! Esperamos que tenha gostado do atendimento.
                           value={appointment.status}
                           onValueChange={(value) => updateStatus(appointment.id, value)}
                         >
-                          <SelectTrigger className="flex-1 md:flex-none md:w-[130px] text-xs md:text-sm h-8 md:h-9">
+                          <SelectTrigger className="flex-1 md:flex-none md:min-w-[100px] md:max-w-[140px] text-xs md:text-sm h-8 md:h-9">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
