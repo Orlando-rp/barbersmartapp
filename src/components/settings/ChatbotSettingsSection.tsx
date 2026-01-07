@@ -302,17 +302,27 @@ const ChatbotSettingsSection = () => {
                     id="chatbot-toggle"
                     checked={chatbotEnabled}
                     onCheckedChange={toggleChatbot}
-                    disabled={!whatsappConnected}
                   />
                 </div>
 
-                {!whatsappConnected && (
+                {!whatsappConnected && chatbotEnabled && (
                   <div className="p-2.5 sm:p-3 bg-warning/10 border border-warning/20 rounded-lg space-y-1.5 sm:space-y-2">
                     <p className="text-xs sm:text-sm font-medium text-warning">
-                      ⚠️ WhatsApp não configurado
+                      ⚠️ WhatsApp desconectado
                     </p>
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      Configure o WhatsApp na seção "WhatsApp" primeiro.
+                      O chatbot está ativado, mas só funcionará quando o WhatsApp estiver conectado.
+                    </p>
+                  </div>
+                )}
+
+                {!whatsappConnected && !chatbotEnabled && (
+                  <div className="p-2.5 sm:p-3 bg-muted/50 border border-border rounded-lg space-y-1.5 sm:space-y-2">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                      💡 Dica
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      Você pode ativar o chatbot agora. Ele começará a responder assim que o WhatsApp for conectado.
                     </p>
                   </div>
                 )}
