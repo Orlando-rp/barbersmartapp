@@ -1,4 +1,4 @@
-project_id = "nmsblmmhigwsevnqmhwn"
+project_id = "ivakuaptgwhdyfntonxh"
 
 [functions.send-whatsapp]
 verify_jwt = false
@@ -127,4 +127,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.whatsapp-status-monitor]
+verify_jwt = false
+
+[functions.migration-helper]
 verify_jwt = false
