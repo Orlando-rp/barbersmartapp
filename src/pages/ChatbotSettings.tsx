@@ -91,16 +91,16 @@ const ChatbotSettings = () => {
         });
       }
 
-      // Fetch chatbot settings - chatbot_enabled está dentro do config JSONB
+      // Fetch chatbot settings - chatbot_enabled é uma coluna própria
       const { data: configData } = await supabase
         .from('whatsapp_config')
-        .select('config, is_active')
+        .select('chatbot_enabled, config, is_active')
         .eq('barbershop_id', barbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
 
-      if (configData?.config) {
-        setChatbotEnabled(configData.config.chatbot_enabled || false);
+      if (configData) {
+        setChatbotEnabled(configData.chatbot_enabled || false);
       }
 
       // Count chatbot-created appointments
@@ -191,32 +191,49 @@ const ChatbotSettings = () => {
     try {
       const newValue = !chatbotEnabled;
       
-      // Buscar config existente
-      const { data: existing } = await supabase
+      // Atualizar coluna chatbot_enabled diretamente
+      const { data: existing, error: fetchError } = await supabase
         .from('whatsapp_config')
-        .select('config')
+        .select('id')
         .eq('barbershop_id', barbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
 
+      if (fetchError) {
+        console.error('Error fetching config:', fetchError);
+        throw fetchError;
+      }
+
       if (existing) {
-        // chatbot_enabled fica dentro do config JSONB
-        await supabase
+        // Atualiza a coluna chatbot_enabled
+        const { error: updateError } = await supabase
           .from('whatsapp_config')
           .update({ 
-            config: { ...existing.config, chatbot_enabled: newValue },
+            chatbot_enabled: newValue,
             updated_at: new Date().toISOString()
           })
           .eq('barbershop_id', barbershopId)
           .eq('provider', 'evolution');
+
+        if (updateError) {
+          console.error('Error updating chatbot_enabled:', updateError);
+          throw updateError;
+        }
       } else {
-        await supabase
+        // Cria nova entrada com chatbot_enabled
+        const { error: insertError } = await supabase
           .from('whatsapp_config')
           .insert({
             barbershop_id: barbershopId,
             provider: 'evolution',
-            config: { chatbot_enabled: newValue }
+            chatbot_enabled: newValue,
+            config: {}
           });
+
+        if (insertError) {
+          console.error('Error inserting config:', insertError);
+          throw insertError;
+        }
       }
 
       setChatbotEnabled(newValue);
@@ -228,9 +245,10 @@ const ChatbotSettings = () => {
           : "O chatbot foi desativado. Mensagens não serão respondidas automaticamente.",
       });
     } catch (error: any) {
+      console.error('toggleChatbot error:', error);
       toast({
-        title: "Erro",
-        description: error.message,
+        title: "Erro ao alterar chatbot",
+        description: error.message || "Verifique se você tem permissão de admin para esta barbearia.",
         variant: "destructive"
       });
     }
