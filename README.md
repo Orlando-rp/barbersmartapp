@@ -1,5 +1,6 @@
 # BarberSmart
 
+
 ![Version](https://img.shields.io/github/v/release/seu-usuario/barbersmart?label=vers%C3%A3o&color=8B5CF6)
 ![License](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
 ![Build](https://img.shields.io/github/actions/workflow/status/seu-usuario/barbersmart/build-push.yml?label=build)
