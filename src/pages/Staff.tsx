@@ -186,25 +186,36 @@ const Staff = () => {
       // Buscar staff de todas as unidades
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
-        .select(`
-          *,
-          profiles!staff_user_id_fkey(
-            full_name, 
-            phone, 
-            avatar_url,
-            preferred_name
-          )
-        `)
+        .select('*')
         .in('barbershop_id', allBarbershopIds)
         .order('active', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (staffError) throw staffError;
 
+      // Buscar profiles separadamente
+      const userIds = [...new Set(staffData?.map(s => s.user_id).filter(Boolean) || [])];
+      let profilesMap = new Map<string, { full_name: string | null; phone: string | null; avatar_url: string | null; preferred_name: string | null }>();
+      
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone, avatar_url, preferred_name')
+          .in('id', userIds);
+        
+        profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      }
+
+      // Combinar staff com profiles
+      const staffWithProfiles = staffData?.map(s => ({
+        ...s,
+        profiles: s.user_id ? profilesMap.get(s.user_id) || null : null
+      })) || [];
+
       // Group by user_id to avoid duplicates, keeping info about which units
       const userStaffMap = new Map<string, StaffMember & { units: string[] }>();
       
-      for (const member of staffData || []) {
+      for (const member of staffWithProfiles || []) {
         const existing = userStaffMap.get(member.user_id);
         const unitName = barbershopNames.get(member.barbershop_id) || 'Unidade';
         
