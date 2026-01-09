@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-
+import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -139,14 +139,16 @@ const Reviews = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <LoadingSpinner size="lg" />
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <LoadingSpinner size="lg" />
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <>
+    <Layout>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -297,7 +299,7 @@ const Reviews = () => {
           </CardContent>
         </Card>
       </div>
-    </>
+    </Layout>
   );
 };
 

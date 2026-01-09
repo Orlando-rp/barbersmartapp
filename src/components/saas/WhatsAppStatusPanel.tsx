@@ -46,11 +46,7 @@ interface BarbershopWhatsAppStatus {
   };
 }
 
-interface WhatsAppStatusPanelProps {
-  onRefresh?: () => void;
-}
-
-export const WhatsAppStatusPanel = ({ onRefresh }: WhatsAppStatusPanelProps) => {
+export const WhatsAppStatusPanel = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [barbershops, setBarbershops] = useState<BarbershopWhatsAppStatus[]>([]);
@@ -178,7 +174,6 @@ export const WhatsAppStatusPanel = ({ onRefresh }: WhatsAppStatusPanelProps) => 
 
       toast.success(`${shop.name}: ${isConnected ? 'Conectado' : 'Desconectado'}`);
       fetchData();
-      onRefresh?.();
     } catch (error) {
       console.error('Erro ao verificar status:', error);
       toast.error(`Erro ao verificar ${shop.name}`);

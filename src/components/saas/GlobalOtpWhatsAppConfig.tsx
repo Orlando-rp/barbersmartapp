@@ -16,9 +16,7 @@ import {
   CheckCircle,
   XCircle,
   QrCode,
-  Smartphone,
-  Send,
-  TestTube
+  Smartphone
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -28,22 +26,9 @@ interface OtpConfig {
   instanceName: string;
   status: 'disconnected' | 'connecting' | 'connected';
   phoneNumber?: string;
-  lastCheck?: string;
-  lastStatusChange?: string;
 }
 
-// Normaliza status inválidos (ex: "missing") para "disconnected"
-const normalizeOtpStatus = (rawStatus: string | undefined): 'disconnected' | 'connecting' | 'connected' => {
-  if (rawStatus === 'connected') return 'connected';
-  if (rawStatus === 'connecting') return 'connecting';
-  return 'disconnected';
-};
-
-interface GlobalOtpWhatsAppConfigProps {
-  onStatusChange?: () => void;
-}
-
-export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppConfigProps) => {
+export const GlobalOtpWhatsAppConfig = () => {
   const [config, setConfig] = useState<OtpConfig>({
     instanceName: 'otp-auth-global',
     status: 'disconnected'
@@ -55,24 +40,6 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [evolutionConfig, setEvolutionConfig] = useState<{ apiUrl: string; apiKey: string } | null>(null);
-  const [testPhone, setTestPhone] = useState("");
-  const [sendingTest, setSendingTest] = useState(false);
-  const [runningAutoCheck, setRunningAutoCheck] = useState(false);
-
-  const formatLastCheck = (isoDate: string | null | undefined): string => {
-    if (!isoDate) return '';
-    const date = new Date(isoDate);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return 'agora';
-    if (diffMins < 60) return `há ${diffMins} min`;
-    if (diffHours < 24) return `há ${diffHours}h`;
-    return `há ${diffDays}d`;
-  };
 
   useEffect(() => {
     loadConfig();
@@ -106,16 +73,8 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
       if (otpData?.value) {
         setConfig({
           instanceName: otpData.value.instance_name || 'otp-auth-global',
-          status: normalizeOtpStatus(otpData.value.status),
-          phoneNumber: otpData.value.phone_number,
-          lastCheck: otpData.value.last_check,
-          lastStatusChange: otpData.value.last_status_change
-        });
-      } else {
-        // Se não há config salva, manter status padrão 'disconnected'
-        setConfig({
-          instanceName: 'otp-auth-global',
-          status: 'disconnected'
+          status: otpData.value.status || 'disconnected',
+          phoneNumber: otpData.value.phone_number
         });
       }
     } catch (error) {
@@ -125,10 +84,9 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
     }
   };
 
-  const saveConfig = async (newConfig: Partial<OtpConfig>, statusChanged = false) => {
+  const saveConfig = async (newConfig: Partial<OtpConfig>) => {
     try {
       const updatedConfig = { ...config, ...newConfig };
-      const now = new Date().toISOString();
       
       const { error } = await supabase
         .from('system_config')
@@ -137,45 +95,18 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
           value: {
             instance_name: updatedConfig.instanceName,
             status: updatedConfig.status,
-            phone_number: updatedConfig.phoneNumber,
-            last_check: now,
-            last_status_change: statusChanged ? now : (config.lastStatusChange || now)
+            phone_number: updatedConfig.phoneNumber
           },
-          updated_at: now
+          updated_at: new Date().toISOString()
         }, {
           onConflict: 'key'
         });
 
       if (error) throw error;
-      setConfig({ ...updatedConfig, lastCheck: now, lastStatusChange: statusChanged ? now : config.lastStatusChange });
+      setConfig(updatedConfig);
     } catch (error) {
       console.error('Erro ao salvar config:', error);
       throw error;
-    }
-  };
-
-  const runAutoCheck = async () => {
-    try {
-      setRunningAutoCheck(true);
-      toast.info("Executando verificação de status...");
-
-      const { data, error } = await supabase.functions.invoke('whatsapp-status-monitor');
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast.success("Verificação concluída!");
-        // Recarregar config para pegar os novos valores
-        await loadConfig();
-        onStatusChange?.();
-      } else {
-        toast.error(data?.error || "Erro na verificação");
-      }
-    } catch (error: any) {
-      console.error('Erro ao executar verificação:', error);
-      toast.error(error.message || "Erro ao executar verificação");
-    } finally {
-      setRunningAutoCheck(false);
     }
   };
 
@@ -272,7 +203,6 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
       if (error) throw error;
 
       const isConnected = data?.state === 'open' || data?.instance?.state === 'open';
-      const statusChanged = (isConnected && config.status !== 'connected') || (!isConnected && config.status === 'connected');
       
       if (isConnected) {
         // Buscar info da instância para pegar o número
@@ -288,12 +218,11 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
         const phoneNumber = infoData?.instance?.ownerJid?.replace('@s.whatsapp.net', '') || 
                            infoData?.ownerJid?.replace('@s.whatsapp.net', '');
 
-        await saveConfig({ status: 'connected', phoneNumber }, statusChanged);
+        await saveConfig({ status: 'connected', phoneNumber });
         setShowQrModal(false);
-        onStatusChange?.();
         toast.success("WhatsApp conectado com sucesso!");
       } else {
-        await saveConfig({ status: 'disconnected', phoneNumber: undefined }, statusChanged);
+        await saveConfig({ status: 'disconnected', phoneNumber: undefined });
         toast.info("Instância não está conectada");
       }
     } catch (error: any) {
@@ -326,41 +255,6 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
       toast.error("Erro ao desconectar");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const sendTestOtp = async () => {
-    if (!testPhone.trim()) {
-      toast.error("Digite um número de telefone");
-      return;
-    }
-
-    const cleanPhone = testPhone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      toast.error("Número de telefone inválido");
-      return;
-    }
-
-    try {
-      setSendingTest(true);
-
-      const { data, error } = await supabase.functions.invoke('send-otp-whatsapp', {
-        body: { phone: cleanPhone }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast.success(`OTP de teste enviado para +${cleanPhone}! Código: ${data.code || 'verifique o WhatsApp'}`);
-        setTestPhone("");
-      } else {
-        throw new Error(data?.error || 'Erro ao enviar OTP');
-      }
-    } catch (error: any) {
-      console.error('Erro ao enviar OTP de teste:', error);
-      toast.error(error.message || "Erro ao enviar OTP de teste");
-    } finally {
-      setSendingTest(false);
     }
   };
 
@@ -400,39 +294,30 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
       {/* Info Alert */}
       <Alert className="border-info/50 bg-info/10">
         <Info className="h-4 w-4 text-info" />
-        <AlertTitle className="text-info">WhatsApp OTP - Login de Clientes</AlertTitle>
+        <AlertTitle className="text-info">Instância Global para Autenticação</AlertTitle>
         <AlertDescription className="text-info/90">
-          <p>
-            Esta instância é usada <strong>exclusivamente</strong> para enviar códigos de verificação (OTP) 
-            aos clientes durante o login no portal do cliente. É separada das instâncias das barbearias.
-          </p>
+          Esta instância WhatsApp será usada exclusivamente para enviar códigos OTP de autenticação 
+          (login e cadastro via WhatsApp), independente das instâncias das barbearias.
         </AlertDescription>
       </Alert>
 
       {/* OTP Instance Configuration */}
       <Card className="bg-card border-border">
-        <CardHeader className="p-3 sm:p-6">
-          <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-foreground">
-            <span className="flex items-center gap-2 text-sm sm:text-base">
-              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between text-foreground">
+            <span className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-warning" />
               Instância OTP
             </span>
-            <div className="flex items-center gap-2">
-              {config.lastCheck && (
-                <span className="text-xs text-muted-foreground">
-                  Verificado {formatLastCheck(config.lastCheck)}
-                </span>
-              )}
-              {getStatusBadge()}
-            </div>
+            {getStatusBadge()}
           </CardTitle>
-          <CardDescription className="text-muted-foreground text-xs sm:text-sm">
+          <CardDescription className="text-muted-foreground">
             WhatsApp dedicado para envio de códigos de verificação
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-3 sm:p-6 pt-0 space-y-4">
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="instance-name" className="text-foreground text-sm">Nome da Instância</Label>
+            <Label htmlFor="instance-name" className="text-foreground">Nome da Instância</Label>
             <Input
               id="instance-name"
               value={config.instanceName}
@@ -513,15 +398,6 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
                   Verificar Status
                 </Button>
                 <Button 
-                  onClick={runAutoCheck} 
-                  disabled={runningAutoCheck}
-                  variant="outline"
-                  className="border-warning text-warning hover:bg-warning/10"
-                >
-                  {runningAutoCheck ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                  Verificar Agora
-                </Button>
-                <Button 
                   onClick={disconnectInstance} 
                   disabled={saving}
                   variant="destructive"
@@ -534,48 +410,6 @@ export const GlobalOtpWhatsAppConfig = ({ onStatusChange }: GlobalOtpWhatsAppCon
           </div>
         </CardContent>
       </Card>
-
-      {/* Test OTP Section - Only show when connected */}
-      {config.status === 'connected' && (
-        <Card className="bg-card border-border">
-          <CardHeader className="p-3 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
-              <TestTube className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              Testar Envio de OTP
-            </CardTitle>
-            <CardDescription className="text-muted-foreground text-xs sm:text-sm">
-              Envie um código OTP de teste para verificar a integração
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 space-y-3 sm:space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <div className="flex-1">
-                <Input
-                  placeholder="Número (ex: 5541999999999)"
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                  className="bg-muted border-border text-foreground text-sm"
-                />
-              </div>
-              <Button 
-                onClick={sendTestOtp} 
-                disabled={sendingTest || !testPhone.trim()}
-                className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
-              >
-                {sendingTest ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                Enviar Teste
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Código de 6 dígitos expira em 5 minutos.
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* QR Code Modal */}
       <QRCodeModal

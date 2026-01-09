@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import Layout from "@/components/layout/Layout";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -149,14 +149,16 @@ export default function AuditLogs() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <LoadingSpinner />
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center h-full">
+          <LoadingSpinner />
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <>
+    <Layout>
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -467,6 +469,6 @@ export default function AuditLogs() {
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </Layout>
   );
 }

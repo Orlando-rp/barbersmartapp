@@ -444,11 +444,11 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
         )}
 
         {settings.layout === 'carousel' && (
-          <div className="flex overflow-x-auto gap-4 md:gap-6 pb-4 snap-x snap-mandatory -mx-4 px-4">
+          <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory">
             {displayServices.map((service) => (
               <Card 
                 key={service.id} 
-                className={cn('min-w-[240px] sm:min-w-[280px] max-w-[320px] snap-center flex-shrink-0', cardStyleClass)}
+                className={cn('min-w-[280px] max-w-[320px] snap-center flex-shrink-0', cardStyleClass)}
                 style={{ borderRadius: 'var(--landing-radius)' }}
               >
                 {settings.show_images && service.image_url && (

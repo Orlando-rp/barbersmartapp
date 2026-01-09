@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { formatDuration } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays, addWeeks, isBefore, startOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, addDays, isBefore, startOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar } from '@/components/ui/calendar';
@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star, Bug, ChevronDown, ChevronUp, Copy, CheckCheck, CreditCard, Wallet, Repeat, CalendarDays, X } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Clock, User, Scissors, Phone, Check, ArrowLeft, ArrowRight, Bell, AlertCircle, Building2, MapPin, Star, Bug, ChevronDown, ChevronUp, Copy, CheckCheck, CreditCard, Wallet } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,12 +26,11 @@ import {
   businessHoursToStandard,
   DEFAULT_DAY_SCHEDULE
 } from '@/types/schedule';
-import { generateRecurrenceGroupId } from '@/lib/recurrenceUtils';
 
 // Animation variants for step transitions
 const stepVariants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? 30 : -30,
+    x: direction > 0 ? 50 : -50,
     opacity: 0,
   }),
   center: {
@@ -39,19 +38,16 @@ const stepVariants = {
     opacity: 1,
   },
   exit: (direction: number) => ({
-    x: direction < 0 ? 30 : -30,
+    x: direction < 0 ? 50 : -50,
     opacity: 0,
   }),
 };
 
 const stepTransition = {
   type: 'spring' as const,
-  stiffness: 400,
-  damping: 35,
+  stiffness: 300,
+  damping: 30,
 };
-
-// Special "Any Available Professional" option
-const ANY_PROFESSIONAL_ID = 'ANY_AVAILABLE';
 
 interface Barbershop {
   id: string;
@@ -216,13 +212,6 @@ export default function PublicBooking() {
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
-  
-  // Recurring booking state
-  const [recurringMode, setRecurringMode] = useState<'single' | 'weekly'>('single');
-  const [recurringWeeks, setRecurringWeeks] = useState<number>(4);
-  const [recurringDates, setRecurringDates] = useState<Date[]>([]);
-  const [recurringAvailability, setRecurringAvailability] = useState<Map<string, boolean>>(new Map());
-  const [checkingRecurring, setCheckingRecurring] = useState(false);
   
   // Waitlist state
   const [showWaitlistForm, setShowWaitlistForm] = useState(false);
@@ -726,24 +715,8 @@ export default function PublicBooking() {
       return;
     }
 
-    // Helper to convert time to minutes for comparison
-    const timeToMinutes = (t: string) => {
-      const [h, m] = t.split(':').map(Number);
-      return h * 60 + m;
-    };
-    const minutesToTime = (mins: number) => 
-      `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
-
-    // For PUBLIC booking: staff schedule is INTERSECTED with business hours
-    // Staff can only restrict, never expand beyond business hours
-    const businessOpen = timeToMinutes(dayHours.open_time);
-    const businessClose = timeToMinutes(dayHours.close_time);
-    const staffOpen = staffDaySchedule?.start ? timeToMinutes(staffDaySchedule.start) : businessOpen;
-    const staffClose = staffDaySchedule?.end ? timeToMinutes(staffDaySchedule.end) : businessClose;
-    
-    // Use the most restrictive hours (intersection)
-    const openTime = minutesToTime(Math.max(staffOpen, businessOpen));
-    const closeTime = minutesToTime(Math.min(staffClose, businessClose));
+    const openTime = staffDaySchedule?.start || dayHours.open_time;
+    const closeTime = staffDaySchedule?.end || dayHours.close_time;
 
     const slots: string[] = [];
     const [startHour, startMinute] = openTime.split(':').map(Number);
@@ -942,8 +915,8 @@ export default function PublicBooking() {
     }
 
     // Validate payment method if payment step is shown
-    const showPaymentStepForSubmit = paymentSettings?.allow_online_payment && paymentSettings?.allow_pay_at_location;
-    if (showPaymentStepForSubmit && !paymentMethod) {
+    const showPaymentStep = paymentSettings?.allow_online_payment && paymentSettings?.allow_pay_at_location;
+    if (showPaymentStep && !paymentMethod) {
       toast({ title: 'Selecione a forma de pagamento', variant: 'destructive' });
       return;
     }
@@ -959,121 +932,28 @@ export default function PublicBooking() {
         return;
       }
 
-      // Handle "Any Professional" - pick first available for selected time
-      let actualStaffId = selectedStaff.id;
+      // Create appointment via RPC
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('create_public_appointment', {
+        p_barbershop_id: effectiveUnitId,
+        p_staff_id: selectedStaff.id,
+        p_service_id: selectedService.id,
+        p_appointment_date: format(selectedDate, 'yyyy-MM-dd'),
+        p_appointment_time: selectedTime,
+        p_duration: selectedService.duration,
+        p_service_price: selectedService.price,
+        p_service_name: selectedService.name,
+        p_client_name: clientName.trim(),
+        p_client_phone: clientPhone.replace(/\D/g, ''),
+        p_client_email: clientEmail?.trim() || null
+      });
+
+      if (rpcError) throw rpcError;
       
-      if (selectedStaff.id === ANY_PROFESSIONAL_ID) {
-        // Find first available staff for the selected date/time
-        const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-        
-        // Check each staff for availability
-        for (const staff of staffList) {
-          // Check if staff works on this day
-          if (!staffWorksOnDate(staff, selectedDate)) continue;
-          
-          // Check if time slot is available for this staff
-          const { data: existingAppointments } = await supabase.rpc('get_occupied_slots', {
-            p_barbershop_id: effectiveUnitId,
-            p_staff_id: staff.id,
-            p_date: formattedDate
-          });
-          
-          const hasConflict = (existingAppointments || []).some((apt: any) => {
-            const [aptHour, aptMin] = apt.appointment_time.split(':').map(Number);
-            const [selHour, selMin] = selectedTime.split(':').map(Number);
-            const aptStart = aptHour * 60 + aptMin;
-            const aptEnd = aptStart + (apt.duration || 30);
-            const selStart = selHour * 60 + selMin;
-            const selEnd = selStart + selectedService.duration;
-            return selStart < aptEnd && selEnd > aptStart;
-          });
-          
-          if (!hasConflict) {
-            actualStaffId = staff.id;
-            break;
-          }
-        }
-        
-        if (actualStaffId === ANY_PROFESSIONAL_ID) {
-          toast({ title: 'Nenhum profissional disponível neste horário', variant: 'destructive' });
-          setSubmitting(false);
-          return;
-        }
+      if (!rpcResult?.success) {
+        throw new Error(rpcResult?.error || 'Erro ao criar agendamento');
       }
 
-      // Determine which dates to book
-      let datesToBook: Date[] = [selectedDate];
-      let recurrenceGroupId: string | null = null;
-
-      if (recurringMode === 'weekly' && recurringDates.length > 1) {
-        // Filter to only available dates
-        datesToBook = recurringDates.filter((date, index) => {
-          if (index === 0) return true; // First date is always the selected one
-          const dateStr = format(date, 'yyyy-MM-dd');
-          return recurringAvailability.get(dateStr) !== false;
-        });
-        
-        if (datesToBook.length > 1) {
-          recurrenceGroupId = generateRecurrenceGroupId();
-        }
-      }
-
-      const createdAppointments: string[] = [];
-      let firstAppointmentId: string | null = null;
-
-      // Create appointments for each date
-      for (let i = 0; i < datesToBook.length; i++) {
-        const date = datesToBook[i];
-        
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('create_public_appointment', {
-          p_barbershop_id: effectiveUnitId,
-          p_staff_id: actualStaffId,
-          p_service_id: selectedService.id,
-          p_appointment_date: format(date, 'yyyy-MM-dd'),
-          p_appointment_time: selectedTime,
-          p_duration: selectedService.duration,
-          p_service_price: selectedService.price,
-          p_service_name: selectedService.name,
-          p_client_name: clientName.trim(),
-          p_client_phone: clientPhone.replace(/\D/g, ''),
-          p_client_email: clientEmail?.trim() || null
-        });
-
-        if (rpcError) {
-          console.error(`Error creating appointment for ${format(date, 'yyyy-MM-dd')}:`, rpcError);
-          continue;
-        }
-        
-        if (!rpcResult?.success) {
-          console.error(`Failed to create appointment for ${format(date, 'yyyy-MM-dd')}:`, rpcResult?.error);
-          continue;
-        }
-
-        const appointmentId = rpcResult?.appointment_id;
-        if (appointmentId) {
-          createdAppointments.push(appointmentId);
-          if (i === 0) firstAppointmentId = appointmentId;
-
-          // Update with recurrence info if applicable
-          if (recurrenceGroupId && datesToBook.length > 1) {
-            await supabase
-              .from('appointments')
-              .update({
-                recurrence_group_id: recurrenceGroupId,
-                recurrence_rule: 'weekly',
-                is_recurring: true,
-                recurrence_index: i,
-              })
-              .eq('id', appointmentId);
-          }
-        }
-      }
-
-      if (createdAppointments.length === 0) {
-        throw new Error('Não foi possível criar nenhum agendamento');
-      }
-
-      const appointmentId = firstAppointmentId;
+      const appointmentId = rpcResult?.appointment_id;
 
       // Handle online payment
       const shouldPayOnline = paymentMethod === 'online' || 
@@ -1154,23 +1034,7 @@ export default function PublicBooking() {
             clientDisplayName = existingClient.preferred_name || existingClient.name || clientName;
           }
           
-          // Adjust message for recurring appointments
-          const isRecurring = createdAppointments.length > 1;
-          const message = isRecurring
-            ? `Olá ${clientDisplayName}! 👋
-
-✅ Seus ${createdAppointments.length} agendamentos foram confirmados!
-
-🔁 Agendamento Semanal:
-${datesToBook.filter((d, i) => i === 0 || recurringAvailability.get(format(d, 'yyyy-MM-dd')) !== false).map(d => `📅 ${format(d, "dd/MM/yyyy", { locale: ptBR })}`).join('\n')}
-
-⏰ Horário: ${selectedTime}
-✂️ Serviço: ${selectedService.name}
-💈 Profissional: ${staffName}
-💰 Valor Total: R$ ${(selectedService.price * createdAppointments.length).toFixed(2)}
-
-Aguardamos você! 💈`
-            : `Olá ${clientDisplayName}! 👋
+          const message = `Olá ${clientDisplayName}! 👋
 
 ✅ Seu agendamento foi confirmado!
 
@@ -1353,99 +1217,10 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
     }
   };
 
-  // Generate recurring dates when mode changes
-  const generateRecurringDates = useCallback(() => {
-    if (!selectedDate || recurringMode !== 'weekly') {
-      setRecurringDates([]);
-      return;
-    }
-
-    const dates: Date[] = [selectedDate];
-    for (let i = 1; i < recurringWeeks; i++) {
-      dates.push(addWeeks(selectedDate, i));
-    }
-    setRecurringDates(dates);
-  }, [selectedDate, recurringMode, recurringWeeks]);
-
-  // Check availability for recurring dates
-  const checkRecurringAvailability = useCallback(async () => {
-    if (recurringDates.length <= 1 || !selectedStaff || !selectedTime || !selectedService) {
-      return;
-    }
-
-    setCheckingRecurring(true);
-    const availabilityMap = new Map<string, boolean>();
-    const effectiveUnitId = selectedUnit?.id || barbershop?.id;
-
-    if (!effectiveUnitId) {
-      setCheckingRecurring(false);
-      return;
-    }
-
-    try {
-      // Check each date in parallel
-      await Promise.all(
-        recurringDates.map(async (date) => {
-          const dateStr = format(date, 'yyyy-MM-dd');
-          
-          // Check if staff works on this day
-          if (!staffWorksOnDate(selectedStaff, date)) {
-            availabilityMap.set(dateStr, false);
-            return;
-          }
-
-          // Check for existing appointments
-          const { data: existingAppointments } = await supabase
-            .from('appointments')
-            .select('id')
-            .eq('barbershop_id', effectiveUnitId)
-            .eq('staff_id', selectedStaff.id)
-            .eq('appointment_date', dateStr)
-            .eq('appointment_time', selectedTime)
-            .in('status', ['pendente', 'confirmado']);
-
-          availabilityMap.set(dateStr, !existingAppointments || existingAppointments.length === 0);
-        })
-      );
-
-      setRecurringAvailability(availabilityMap);
-    } catch (error) {
-      console.error('Error checking recurring availability:', error);
-    } finally {
-      setCheckingRecurring(false);
-    }
-  }, [recurringDates, selectedStaff, selectedTime, selectedService, selectedUnit, barbershop, staffWorksOnDate]);
-
-  // Effect to generate dates when mode or base date changes
-  useEffect(() => {
-    generateRecurringDates();
-  }, [generateRecurringDates]);
-
-  // Effect to check availability when dates change
-  useEffect(() => {
-    if (recurringDates.length > 1) {
-      checkRecurringAvailability();
-    }
-  }, [recurringDates, checkRecurringAvailability]);
-
-  // Reset recurring mode when time changes
-  useEffect(() => {
-    if (selectedTime) {
-      setRecurringAvailability(new Map());
-      if (recurringMode === 'weekly') {
-        checkRecurringAvailability();
-      }
-    }
-  }, [selectedTime]);
-
-  const availableRecurringCount = Array.from(recurringAvailability.values()).filter(v => v).length;
-
   useEffect(() => {
     setShowWaitlistForm(false);
     setWaitlistSuccess(false);
     setWaitlistPosition(null);
-    setRecurringMode('single');
-    setRecurringDates([]);
   }, [selectedDate]);
 
   // Loading state
@@ -1617,8 +1392,6 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
   }
 
   // Success state
-  const appointmentsCount = recurringMode === 'weekly' ? Math.max(availableRecurringCount, 1) : 1;
-  
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/50 flex items-center justify-center p-4">
@@ -1628,47 +1401,19 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
             <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
               <Check className="h-10 w-10 text-white" />
             </div>
-            <h2 className="text-2xl font-serif font-semibold text-white">
-              {appointmentsCount > 1 
-                ? `${appointmentsCount} Agendamentos Confirmados!` 
-                : 'Agendamento Confirmado!'}
-            </h2>
-            {appointmentsCount > 1 && (
-              <Badge className="mt-2 bg-white/20 text-white border-white/30">
-                <Repeat className="h-3 w-3 mr-1" />
-                Série Semanal
-              </Badge>
-            )}
+            <h2 className="text-2xl font-serif font-semibold text-white">Agendamento Confirmado!</h2>
           </div>
           
           <CardContent className="p-6 space-y-4">
             <div className="space-y-3 text-sm">
-              {appointmentsCount > 1 ? (
-                <div className="py-2 border-b border-border/50">
-                  <span className="text-muted-foreground block mb-2">Datas Agendadas</span>
-                  <div className="space-y-1">
-                    {recurringDates
-                      .filter((d, i) => i === 0 || recurringAvailability.get(format(d, 'yyyy-MM-dd')) !== false)
-                      .map((date) => (
-                        <div key={format(date, 'yyyy-MM-dd')} className="flex justify-between text-sm">
-                          <span className="font-medium">{format(date, "EEE, dd/MM/yyyy", { locale: ptBR })}</span>
-                          <span className="text-muted-foreground">{selectedTime}</span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">Data</span>
-                    <span className="font-medium">{selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">Horário</span>
-                    <span className="font-medium">{selectedTime}</span>
-                  </div>
-                </>
-              )}
+              <div className="flex items-center justify-between py-2 border-b border-border/50">
+                <span className="text-muted-foreground">Data</span>
+                <span className="font-medium">{selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border/50">
+                <span className="text-muted-foreground">Horário</span>
+                <span className="font-medium">{selectedTime}</span>
+              </div>
               <div className="flex items-center justify-between py-2 border-b border-border/50">
                 <span className="text-muted-foreground">Serviço</span>
                 <span className="font-medium truncate ml-4">{selectedService?.name}</span>
@@ -1686,15 +1431,8 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 </div>
               </div>
               <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Valor Total</span>
-                <span className="font-semibold text-lg text-accent">
-                  R$ {((selectedService?.price || 0) * appointmentsCount).toFixed(2)}
-                  {appointmentsCount > 1 && (
-                    <span className="text-xs font-normal text-muted-foreground ml-1">
-                      ({appointmentsCount}x)
-                    </span>
-                  )}
-                </span>
+                <span className="text-muted-foreground">Valor</span>
+                <span className="font-semibold text-lg text-accent">R$ {selectedService?.price.toFixed(2)}</span>
               </div>
             </div>
             
@@ -1710,19 +1448,12 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
   // Determine if payment step should be shown
   const showPaymentStep = paymentSettings?.allow_online_payment && paymentSettings?.allow_pay_at_location;
 
-  // Check if "Any Professional" is selected
-  const isAnyProfessionalSelected = selectedStaff?.id === ANY_PROFESSIONAL_ID;
-
-  // Calculate total steps and labels - OPTIMIZED FLOW: 3 steps instead of 4-5
-  // Step 0 (optional): Unit selection
-  // Step 1: Professional + Service (combined)
-  // Step 2: Date + Time + Client Data (combined) 
-  // Step 3 (optional): Payment
+  // Calculate total steps and labels
   const getStepsConfig = () => {
-    const baseSteps = hasMultipleUnits ? 3 : 2;
+    const baseSteps = hasMultipleUnits ? 5 : 4;
     const baseLabels = hasMultipleUnits 
-      ? ['Unidade', 'Serviço', 'Agendar']
-      : ['Serviço', 'Agendar'];
+      ? ['Unidade', 'Profissional', 'Serviço', 'Data', 'Dados']
+      : ['Profissional', 'Serviço', 'Data', 'Dados'];
     
     if (showPaymentStep) {
       return {
@@ -1737,10 +1468,11 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
   const { totalSteps, stepLabels } = getStepsConfig();
   
   // Last step for navigation - where confirm button appears
-  const lastStep = hasMultipleUnits ? (showPaymentStep ? 3 : 2) : (showPaymentStep ? 2 : 1);
+  const lastStep = totalSteps - 1;
   
-  // Payment step index
-  const paymentStepIndex = hasMultipleUnits ? 3 : 2;
+  // Payment step index (different based on hasMultipleUnits)
+  // Payment step is always step 5 (after client data step 4)
+  const paymentStepIndex = 5;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
@@ -1795,8 +1527,8 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
           {/* Progress Steps - Modern Style */}
           <div className="flex items-center justify-center gap-2 sm:gap-3">
             {(() => {
-              // Build steps array based on new optimized flow: 2-3 steps
-              const baseSteps = hasMultipleUnits ? [0, 1, 2] : [1, 2];
+              // Build steps array based on configuration
+              const baseSteps = hasMultipleUnits ? [0, 1, 2, 3, 4] : [1, 2, 3, 4];
               const stepsArray = showPaymentStep ? [...baseSteps, paymentStepIndex] : baseSteps;
               
               return stepsArray.map((s, index) => (
@@ -1828,7 +1560,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
           
           {/* Step Label */}
           <p className="text-center text-xs text-muted-foreground mt-3">
-            {stepLabels[hasMultipleUnits ? step : step] || stepLabels[stepLabels.length - 1]}
+            {stepLabels[hasMultipleUnits ? step : step - 1] || stepLabels[stepLabels.length - 1]}
           </p>
         </div>
       </div>
@@ -1839,8 +1571,10 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
           <CardHeader className="px-4 sm:px-6 pb-2">
             <CardTitle className="flex items-center gap-3 text-lg sm:text-xl">
               {step === 0 && <><Building2 className="h-5 w-5 text-accent" /> Escolha a Unidade</>}
-              {step === 1 && <><Scissors className="h-5 w-5 text-accent" /> O que você precisa?</>}
-              {((hasMultipleUnits && step === 2) || (!hasMultipleUnits && step === 1 && selectedService && selectedStaff)) && <><CalendarIcon className="h-5 w-5 text-accent" /> Agendar</>}
+              {step === 1 && <><User className="h-5 w-5 text-accent" /> Escolha o Profissional</>}
+              {step === 2 && <><Scissors className="h-5 w-5 text-accent" /> Escolha o Serviço</>}
+              {step === 3 && <><CalendarIcon className="h-5 w-5 text-accent" /> Data e Horário</>}
+              {step === 4 && <><Phone className="h-5 w-5 text-accent" /> Seus Dados</>}
               {step === paymentStepIndex && showPaymentStep && <><CreditCard className="h-5 w-5 text-accent" /> Forma de Pagamento</>}
             </CardTitle>
           </CardHeader>
@@ -1901,7 +1635,7 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 </motion.div>
               )}
 
-            {/* Step 1: Combined Service + Professional Selection */}
+            {/* Step 1: Staff Selection (Profissional primeiro) */}
             {step === 1 && (
               <motion.div
                 key="step-1"
@@ -1911,532 +1645,435 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 animate="center"
                 exit="exit"
                 transition={stepTransition}
-                className="space-y-6"
+                className="grid gap-3"
               >
-                {/* Service Selection */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Scissors className="h-4 w-4" />
-                    <span>Qual serviço você deseja?</span>
+                {filteredStaffList.length === 0 ? (
+                  <div className="text-center py-12">
+                    <User className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nenhum profissional disponível</p>
                   </div>
-                  
-                  {services.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Scissors className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
-                      <p className="text-muted-foreground text-sm">Nenhum serviço disponível</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-2 max-h-[280px] overflow-y-auto pr-1">
-                      {services.map((service, index) => (
-                        <motion.div
-                          key={service.id}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.02 }}
-                          onClick={() => {
-                            setSelectedService(service);
-                            // If "Any Professional" is selected, keep it
-                            if (!isAnyProfessionalSelected && selectedStaff) {
-                              // Check if current staff provides this service
-                              const staffHasServiceEntries = staffServices.some(ss => ss.staff_id === selectedStaff.id);
-                              if (staffHasServiceEntries) {
-                                const providesService = staffServices.some(ss => ss.staff_id === selectedStaff.id && ss.service_id === service.id);
-                                if (!providesService) {
-                                  setSelectedStaff(null);
-                                }
-                              }
-                            }
-                          }}
-                          className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-150 hover:shadow-sm ${
-                            selectedService?.id === service.id
-                              ? 'border-accent bg-accent/5 shadow-sm'
-                              : 'border-border hover:border-accent/40'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {service.image_url && (
-                              <img 
-                                src={service.image_url} 
-                                alt={service.name}
-                                className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                              />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-sm truncate">{service.name}</h3>
-                              <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                <span>{formatDuration(service.duration)}</span>
-                              </div>
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <span className="font-bold text-accent">R$ {service.price.toFixed(2)}</span>
-                              {selectedService?.id === service.id && (
-                                <Check className="h-4 w-4 text-accent ml-auto mt-1" />
-                              )}
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Divider */}
-                {selectedService && (
-                  <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }}
-                    className="relative"
-                  >
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">com quem?</span>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Professional Selection - Only shows after service is selected */}
-                {selectedService && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-3"
-                  >
-                    {/* "Any Available" option */}
+                ) : (
+                  filteredStaffList.map((staff, index) => (
                     <motion.div
-                      initial={{ opacity: 0, y: 10 }}
+                      key={staff.id}
+                      initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
                       onClick={() => {
-                        setSelectedStaff({ id: ANY_PROFESSIONAL_ID, user_id: '', schedule: null, profiles: { full_name: 'Qualquer Profissional', avatar_url: null } } as Staff);
+                        setSelectedStaff(staff);
+                        setSelectedService(null); // Reset service when staff changes
                         setSelectedDate(undefined);
                         setSelectedTime('');
                       }}
-                      className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-150 hover:shadow-sm ${
-                        isAnyProfessionalSelected
-                          ? 'border-accent bg-gradient-to-r from-accent/10 to-accent/5 shadow-sm'
-                          : 'border-dashed border-accent/50 hover:border-accent'
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                        selectedStaff?.id === staff.id
+                          ? 'border-accent bg-accent/5 shadow-md'
+                          : 'border-border hover:border-accent/50'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-accent/30 to-accent/10 flex items-center justify-center">
-                          <User className="h-5 w-5 text-accent" />
-                        </div>
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-14 w-14 border-2 border-background shadow">
+                          <AvatarImage src={getStaffAvatar(staff) || undefined} alt={getStaffName(staff)} />
+                          <AvatarFallback className="bg-gradient-to-br from-accent/20 to-accent/10 text-accent font-semibold text-lg">
+                            {getStaffInitials(staff)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1">
-                          <h3 className="font-medium text-sm">Qualquer Profissional</h3>
-                          <p className="text-xs text-muted-foreground">O primeiro disponível</p>
+                          <h3 className="font-semibold text-base">{getStaffName(staff)}</h3>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Star className="h-3.5 w-3.5 fill-warning text-warning" />
+                            <span className="text-xs text-muted-foreground">Profissional</span>
+                          </div>
                         </div>
-                        {isAnyProfessionalSelected && (
+                        {selectedStaff?.id === staff.id && (
                           <Check className="h-5 w-5 text-accent" />
                         )}
                       </div>
                     </motion.div>
-
-                    {/* Staff list filtered by service */}
-                    <div className="grid gap-2 max-h-[200px] overflow-y-auto pr-1">
-                      {filteredStaffList.map((staff, index) => {
-                        // Filter by service if staff has service restrictions
-                        const staffHasServiceEntries = staffServices.some(ss => ss.staff_id === staff.id);
-                        const providesService = !staffHasServiceEntries || staffServices.some(ss => ss.staff_id === staff.id && ss.service_id === selectedService.id);
-                        
-                        if (!providesService) return null;
-                        
-                        return (
-                          <motion.div
-                            key={staff.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.03 }}
-                            onClick={() => {
-                              setSelectedStaff(staff);
-                              setSelectedDate(undefined);
-                              setSelectedTime('');
-                            }}
-                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-150 hover:shadow-sm ${
-                              selectedStaff?.id === staff.id && !isAnyProfessionalSelected
-                                ? 'border-accent bg-accent/5 shadow-sm'
-                                : 'border-border hover:border-accent/40'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10 border border-background shadow-sm">
-                                <AvatarImage src={getStaffAvatar(staff) || undefined} alt={getStaffName(staff)} />
-                                <AvatarFallback className="bg-gradient-to-br from-accent/20 to-accent/10 text-accent font-medium text-sm">
-                                  {getStaffInitials(staff)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1">
-                                <h3 className="font-medium text-sm">{getStaffName(staff)}</h3>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  <Star className="h-3 w-3 fill-warning text-warning" />
-                                  <span className="text-xs text-muted-foreground">Profissional</span>
-                                </div>
-                              </div>
-                              {selectedStaff?.id === staff.id && !isAnyProfessionalSelected && (
-                                <Check className="h-5 w-5 text-accent" />
-                              )}
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
+                  ))
                 )}
               </motion.div>
             )}
 
-            {/* Step 2 (or Step 1 for single unit): Combined Date + Time + Client Info */}
-            {((hasMultipleUnits && step === 2) || (!hasMultipleUnits && step === 1 && selectedService && selectedStaff)) && (
+            {/* Step 2: Service Selection (Serviço filtrado pelo profissional) */}
+            {step === 2 && (
               <motion.div
-                key="step-booking"
+                key="step-2"
                 custom={direction}
                 variants={stepVariants}
                 initial="enter"
                 animate="center"
                 exit="exit"
                 transition={stepTransition}
-                className="space-y-4"
+                className="grid gap-3"
               >
-                {/* Summary of selection */}
-                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Scissors className="h-4 w-4 text-accent flex-shrink-0" />
-                      <span className="font-medium truncate">{selectedService?.name}</span>
+                {filteredServices.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Scissors className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nenhum serviço disponível para este profissional</p>
+                    <Button variant="link" onClick={() => { setDirection(-1); setStep(1); }} className="mt-2">
+                      Escolher outro profissional
+                    </Button>
+                  </div>
+                ) : (
+                  filteredServices.map((service, index) => (
+                    <motion.div
+                      key={service.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                      onClick={() => setSelectedService(service)}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                        selectedService?.id === service.id
+                          ? 'border-accent bg-accent/5 shadow-md'
+                          : 'border-border hover:border-accent/50'
+                      }`}
+                    >
+                      <div className="flex gap-4">
+                        {service.image_url && (
+                          <img 
+                            src={service.image_url} 
+                            alt={service.name}
+                            className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-base truncate">{service.name}</h3>
+                              {service.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{service.description}</p>
+                              )}
+                            </div>
+                            <span className="text-lg font-bold text-accent flex-shrink-0">
+                              R$ {service.price.toFixed(2)}
+                            </span>
+                          </div>
+                          <Badge variant="secondary" className="mt-2 text-xs">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {formatDuration(service.duration)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </motion.div>
+            )}
+
+            {/* Step 3: Date & Time Selection */}
+            {step === 3 && (
+              <motion.div
+                key="step-3"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="space-y-6"
+              >
+                <div>
+                  <Label className="text-sm font-medium mb-3 block">Selecione a Data</Label>
+                  
+                  {/* Legend */}
+                  <div className="flex items-center justify-center gap-4 mb-4 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-success" />
+                      <span>Disponível</span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                      <User className="h-3 w-3" />
-                      <span>{isAnyProfessionalSelected ? 'Primeiro disponível' : getStaffName(selectedStaff)}</span>
-                      <span>•</span>
-                      <span>{formatDuration(selectedService?.duration || 30)}</span>
-                      <span>•</span>
-                      <span className="font-medium text-accent">R$ {selectedService?.price.toFixed(2)}</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-warning" />
+                      <span>Poucos</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-destructive" />
+                      <span>Lotado</span>
                     </div>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => { setDirection(-1); setStep(hasMultipleUnits ? 1 : 0); }}
-                    className="text-xs"
-                  >
-                    Alterar
-                  </Button>
+
+                  <div className="flex justify-center">
+                    <TooltipProvider>
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => {
+                          setSelectedDate(date);
+                          setSelectedTime('');
+                        }}
+                        disabled={isDateDisabledForStaff}
+                        fromDate={new Date()}
+                        toDate={addDays(new Date(), 60)}
+                        locale={ptBR}
+                        className="rounded-xl border p-3"
+                        modifiers={{
+                          available: (date) => getDateAvailabilityStatus(date) === 'available',
+                          partial: (date) => getDateAvailabilityStatus(date) === 'partial',
+                          full: (date) => getDateAvailabilityStatus(date) === 'full',
+                        }}
+                        components={{
+                          DayContent: ({ date }) => {
+                            const dayInfo = renderDayContent(date);
+                            const isDisabled = isDateDisabledForStaff(date);
+                            
+                            if (isDisabled) {
+                              return <span>{date.getDate()}</span>;
+                            }
+                            
+                            return (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="relative w-full h-full flex items-center justify-center">
+                                    <span>{date.getDate()}</span>
+                                    {dayInfo.indicatorClass && (
+                                      <div 
+                                        className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${dayInfo.indicatorClass}`}
+                                      />
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  {dayInfo.tooltipText}
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          }
+                        }}
+                      />
+                    </TooltipProvider>
+                  </div>
                 </div>
 
-                {/* Grid layout for desktop: Calendar + Time side by side */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Calendar Column */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4 text-accent" />
-                      Data
-                    </Label>
-                    
-                    {/* Legend */}
-                    <div className="flex items-center justify-center gap-3 text-[10px]">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-success" />
-                        <span>Livre</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-warning" />
-                        <span>Poucos</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-destructive" />
-                        <span>Lotado</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-center">
-                      <TooltipProvider>
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => {
-                            setSelectedDate(date);
-                            setSelectedTime('');
-                          }}
-                          disabled={isAnyProfessionalSelected ? undefined : isDateDisabledForStaff}
-                          fromDate={new Date()}
-                          toDate={addDays(new Date(), 60)}
-                          locale={ptBR}
-                          className="rounded-xl border p-2 text-sm"
-                          modifiers={{
-                            available: (date) => !isAnyProfessionalSelected && getDateAvailabilityStatus(date) === 'available',
-                            partial: (date) => !isAnyProfessionalSelected && getDateAvailabilityStatus(date) === 'partial',
-                            full: (date) => !isAnyProfessionalSelected && getDateAvailabilityStatus(date) === 'full',
-                          }}
-                          components={{
-                            DayContent: ({ date }) => {
-                              if (isAnyProfessionalSelected) {
-                                return <span>{date.getDate()}</span>;
-                              }
-                              const dayInfo = renderDayContent(date);
-                              const isDisabled = isDateDisabledForStaff(date);
-                              
-                              if (isDisabled) {
-                                return <span>{date.getDate()}</span>;
-                              }
-                              
-                              return (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="relative w-full h-full flex items-center justify-center">
-                                      <span>{date.getDate()}</span>
-                                      {dayInfo.indicatorClass && (
-                                        <div 
-                                          className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${dayInfo.indicatorClass}`}
-                                        />
-                                      )}
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="text-xs">
-                                    {dayInfo.tooltipText}
-                                  </TooltipContent>
-                                </Tooltip>
-                              );
-                            }
-                          }}
-                        />
-                      </TooltipProvider>
-                    </div>
-                  </div>
-
-                  {/* Time + Client Data Column */}
-                  <div className="space-y-4">
-                    {/* Time slots */}
-                    {selectedDate && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-3"
-                      >
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-accent" />
-                          Horário
-                        </Label>
-                        
-                        {availableSlots.length === 0 ? (
-                          <div className="p-4 text-center border rounded-lg bg-muted/30">
-                            <AlertCircle className="h-8 w-8 text-warning mx-auto mb-2" />
-                            <p className="text-sm font-medium">Sem horários</p>
-                            <p className="text-xs text-muted-foreground mt-1">Escolha outra data</p>
-                            {!showWaitlistForm ? (
-                              <Button 
-                                variant="link" 
-                                size="sm" 
-                                onClick={() => setShowWaitlistForm(true)}
-                                className="mt-2 text-xs"
-                              >
-                                <Bell className="h-3 w-3 mr-1" />
-                                Lista de Espera
-                              </Button>
-                            ) : (
-                              <div className="mt-3 space-y-2 text-left">
-                                <Input
-                                  placeholder="Seu nome"
-                                  value={clientName}
-                                  onChange={(e) => setClientName(e.target.value)}
-                                  className="h-9 text-sm"
-                                />
-                                <Input
-                                  placeholder="WhatsApp"
-                                  value={clientPhone}
-                                  onChange={(e) => setClientPhone(formatPhone(e.target.value))}
-                                  className="h-9 text-sm"
-                                />
-                                <div className="flex gap-2">
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => setShowWaitlistForm(false)}
-                                    className="flex-1"
-                                  >
-                                    Cancelar
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    onClick={handleWaitlistSubmit}
-                                    disabled={submittingWaitlist || !clientName || !clientPhone}
-                                    className="flex-1 bg-accent"
-                                  >
-                                    Entrar
-                                  </Button>
-                                </div>
-                              </div>
+                {selectedDate && (
+                  <div>
+                    <Label className="text-sm font-medium mb-3 block">Horários Disponíveis</Label>
+                    {availableSlots.length === 0 ? (
+                      <div className="space-y-4">
+                        {!showWaitlistForm && !waitlistSuccess ? (
+                          <div className="text-center py-8 bg-warning/5 rounded-xl border border-warning/20">
+                            <AlertCircle className="h-12 w-12 text-warning mx-auto mb-3" />
+                            <p className="font-medium mb-2">Nenhum horário disponível</p>
+                            <p className="text-sm text-muted-foreground mb-4 px-4">
+                              Entre na lista de espera e avisaremos quando abrir vaga!
+                            </p>
+                            <Button onClick={() => setShowWaitlistForm(true)} variant="outline" className="gap-2">
+                              <Bell className="h-4 w-4" />
+                              Entrar na Lista de Espera
+                            </Button>
+                          </div>
+                        ) : waitlistSuccess ? (
+                          <div className="text-center py-8 bg-success/5 rounded-xl border border-success/20">
+                            <Check className="h-12 w-12 text-success mx-auto mb-3" />
+                            <p className="font-medium mb-2">Você está na lista!</p>
+                            {waitlistPosition && (
+                              <Badge className="mb-3 bg-accent text-accent-foreground">
+                                Posição #{waitlistPosition}
+                              </Badge>
                             )}
+                            <p className="text-sm text-muted-foreground">
+                              Avisaremos pelo WhatsApp quando houver vaga.
+                            </p>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-4 gap-1.5 max-h-[180px] overflow-y-auto pr-1">
-                            {availableSlots.map((slot) => (
+                          <div className="p-4 bg-muted/30 rounded-xl border space-y-4">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Bell className="h-4 w-4" />
+                              <span>Lista de Espera para {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}</span>
+                            </div>
+                            
+                            <div className="grid gap-3">
+                              <div className="space-y-1.5">
+                                <Label htmlFor="waitlistName" className="text-sm">Seu Nome *</Label>
+                                <Input
+                                  id="waitlistName"
+                                  value={clientName}
+                                  onChange={(e) => setClientName(e.target.value)}
+                                  placeholder="Digite seu nome"
+                                  className="h-11"
+                                />
+                              </div>
+                              
+                              <div className="space-y-1.5">
+                                <Label htmlFor="waitlistPhone" className="text-sm">Seu WhatsApp *</Label>
+                                <Input
+                                  id="waitlistPhone"
+                                  value={clientPhone}
+                                  onChange={(e) => setClientPhone(formatPhone(e.target.value))}
+                                  placeholder="(00) 00000-0000"
+                                  maxLength={15}
+                                  className="h-11"
+                                />
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="timeStart" className="text-xs">Horário início</Label>
+                                  <Input
+                                    id="timeStart"
+                                    type="time"
+                                    value={waitlistPreferredTimeStart}
+                                    onChange={(e) => setWaitlistPreferredTimeStart(e.target.value)}
+                                    className="h-10"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="timeEnd" className="text-xs">Horário fim</Label>
+                                  <Input
+                                    id="timeEnd"
+                                    type="time"
+                                    value={waitlistPreferredTimeEnd}
+                                    onChange={(e) => setWaitlistPreferredTimeEnd(e.target.value)}
+                                    className="h-10"
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-1.5">
+                                <Label htmlFor="waitlistNotes" className="text-xs">Observações</Label>
+                                <Textarea
+                                  id="waitlistNotes"
+                                  value={waitlistNotes}
+                                  onChange={(e) => setWaitlistNotes(e.target.value)}
+                                  placeholder="Ex: Prefiro manhã..."
+                                  rows={2}
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-2 pt-2">
                               <Button
-                                key={slot}
-                                variant={selectedTime === slot ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => setSelectedTime(slot)}
-                                className={`text-xs h-8 ${
-                                  selectedTime === slot 
-                                    ? 'bg-accent hover:bg-accent/90 text-accent-foreground' 
-                                    : ''
-                                }`}
+                                variant="outline"
+                                onClick={() => setShowWaitlistForm(false)}
+                                className="flex-1"
                               >
-                                {slot}
+                                Cancelar
                               </Button>
-                            ))}
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-
-                    {/* Client info - appears when time is selected */}
-                    {selectedTime && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-3 pt-3 border-t"
-                      >
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-accent" />
-                          Seus Dados
-                        </Label>
-                        
-                        <div className="grid gap-2">
-                          <Input
-                            placeholder="Seu nome"
-                            value={clientName}
-                            onChange={(e) => setClientName(e.target.value)}
-                            className="h-10"
-                          />
-                          <Input
-                            placeholder="WhatsApp (00) 00000-0000"
-                            value={clientPhone}
-                            onChange={(e) => setClientPhone(formatPhone(e.target.value))}
-                            maxLength={15}
-                            className="h-10"
-                          />
-                          <Input
-                            type="email"
-                            placeholder="Email (opcional)"
-                            value={clientEmail}
-                            onChange={(e) => setClientEmail(e.target.value)}
-                            className="h-10"
-                          />
-                        </div>
-                      </motion.div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Recurring option - compact */}
-                {selectedTime && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="p-3 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg border border-primary/20"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Repeat className="h-4 w-4 text-primary" />
-                        <span className="font-medium">Agendar semanalmente?</span>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={recurringMode === 'single' ? 'default' : 'outline'}
-                          onClick={() => setRecurringMode('single')}
-                          className={`h-7 text-xs px-3 ${recurringMode === 'single' ? 'bg-accent' : ''}`}
-                        >
-                          Não
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={recurringMode === 'weekly' ? 'default' : 'outline'}
-                          onClick={() => setRecurringMode('weekly')}
-                          className={`h-7 text-xs px-3 ${recurringMode === 'weekly' ? 'bg-accent' : ''}`}
-                        >
-                          Sim
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {recurringMode === 'weekly' && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="mt-3 pt-3 border-t border-primary/20"
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Label className="text-xs">Repetir por</Label>
-                          <Select
-                            value={recurringWeeks.toString()}
-                            onValueChange={(v) => setRecurringWeeks(parseInt(v))}
-                          >
-                            <SelectTrigger className="w-[100px] h-7 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="2">2 semanas</SelectItem>
-                              <SelectItem value="3">3 semanas</SelectItem>
-                              <SelectItem value="4">4 semanas</SelectItem>
-                              <SelectItem value="6">6 semanas</SelectItem>
-                              <SelectItem value="8">8 semanas</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        {recurringDates.length > 0 && (
-                          <div className="bg-background/50 rounded p-2 max-h-[80px] overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-1 text-[10px]">
-                              {recurringDates.map((date, i) => {
-                                const dateStr = format(date, 'yyyy-MM-dd');
-                                const isAvailable = i === 0 || recurringAvailability.get(dateStr) !== false;
-                                return (
-                                  <div 
-                                    key={dateStr} 
-                                    className={`flex items-center gap-1 ${!isAvailable ? 'text-orange-500' : ''}`}
-                                  >
-                                    {isAvailable ? <Check className="h-2 w-2 text-green-500" /> : <X className="h-2 w-2" />}
-                                    <span>{format(date, "dd/MM", { locale: ptBR })}</span>
-                                  </div>
-                                );
-                              })}
+                              <Button
+                                onClick={handleWaitlistSubmit}
+                                disabled={submittingWaitlist || !clientName || !clientPhone}
+                                className="flex-1 bg-accent hover:bg-accent/90"
+                              >
+                                {submittingWaitlist ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Bell className="h-4 w-4 mr-2" />
+                                )}
+                                Confirmar
+                              </Button>
                             </div>
                           </div>
                         )}
-                      </motion.div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+                        {availableSlots.map((slot) => (
+                          <Button
+                            key={slot}
+                            variant={selectedTime === slot ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSelectedTime(slot)}
+                            className={`text-sm font-medium ${
+                              selectedTime === slot 
+                                ? 'bg-accent hover:bg-accent/90 text-accent-foreground shadow-md' 
+                                : 'hover:border-accent/50'
+                            }`}
+                          >
+                            {slot}
+                          </Button>
+                        ))}
+                      </div>
                     )}
-                  </motion.div>
+                  </div>
                 )}
+              </motion.div>
+            )}
 
-                {/* Summary footer */}
-                {selectedTime && clientName && clientPhone && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-3 bg-accent/10 rounded-lg border border-accent/20"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Total: </span>
-                        <span className="font-bold text-accent text-lg">
-                          R$ {((selectedService?.price || 0) * (recurringMode === 'weekly' ? Math.max(availableRecurringCount, 1) : 1)).toFixed(2)}
-                        </span>
-                        {recurringMode === 'weekly' && availableRecurringCount > 1 && (
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({availableRecurringCount}x)
-                          </span>
-                        )}
+            {/* Step 4: Client Info */}
+            {step === 4 && (
+              <motion.div
+                key="step-4"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="space-y-5"
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor="clientName" className="text-sm font-medium">Seu Nome</Label>
+                  <Input
+                    id="clientName"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Digite seu nome completo"
+                    className="h-12 text-base"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clientPhone" className="text-sm font-medium">Seu WhatsApp</Label>
+                  <Input
+                    id="clientPhone"
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(formatPhone(e.target.value))}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                    className="h-12 text-base"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clientEmail" className="text-sm font-medium">
+                    Seu Email <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </Label>
+                  <Input
+                    id="clientEmail"
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    className="h-12 text-base"
+                  />
+                </div>
+
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="mt-6 p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-xl border"
+                >
+                  <h4 className="font-semibold mb-4 flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-accent" />
+                    Resumo do Agendamento
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    {hasMultipleUnits && selectedUnit && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Unidade</span>
+                        <span className="font-medium truncate ml-4">{selectedUnit.name}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {selectedDate && format(selectedDate, "dd/MM", { locale: ptBR })} às {selectedTime}
-                      </div>
+                    )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Serviço</span>
+                      <span className="font-medium truncate ml-4">{selectedService?.name}</span>
                     </div>
-                  </motion.div>
-                )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Profissional</span>
+                      <span className="font-medium">{getStaffName(selectedStaff)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Data</span>
+                      <span className="font-medium">{selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Horário</span>
+                      <span className="font-medium">{selectedTime}</span>
+                    </div>
+                    <div className="pt-3 mt-3 border-t border-border/50 flex justify-between items-center">
+                      <span className="text-muted-foreground">Valor Total</span>
+                      <span className="text-xl font-bold text-accent">R$ {selectedService?.price.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
 
@@ -2554,20 +2191,16 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 onClick={() => {
                   setDirection(-1);
                   if (step === 1 && hasMultipleUnits) {
-                    // Going back to unit selection - reset selections
+                    // Going back to unit selection - reset all selections
                     setSelectedStaff(null);
                     setSelectedService(null);
                     setSelectedDate(undefined);
                     setSelectedTime('');
                     setStep(0);
-                  } else if (step === 2 && hasMultipleUnits) {
-                    // Going back to service selection
-                    setSelectedDate(undefined);
-                    setSelectedTime('');
+                  } else if (step === 2) {
+                    // Going back to staff selection - reset service selection
+                    setSelectedService(null);
                     setStep(1);
-                  } else if (step === 1 && !hasMultipleUnits) {
-                    // Single unit - can't go back from first step
-                    return;
                   } else {
                     setStep(step - 1);
                   }
@@ -2579,57 +2212,45 @@ Entraremos em contato assim que um horário ficar disponível! 📲`;
                 Voltar
               </Button>
 
-              {/* Determine if we should show Next or Confirm */}
-              {(() => {
-                const isLastStep = step === lastStep || 
-                  (step === 1 && !hasMultipleUnits && selectedService && selectedStaff && selectedDate && selectedTime && clientName && clientPhone) ||
-                  (step === 2 && hasMultipleUnits && selectedDate && selectedTime && clientName && clientPhone);
-                
-                const canProceedFromStep1 = selectedService && selectedStaff;
-                const canProceedFromStep2 = selectedDate && selectedTime && clientName && clientPhone;
-                
-                // For step 1, only show "Next" if we need to go to booking step (not showing inline booking)
-                const showNextButton = step === 0 || 
-                  (step === 1 && !(!hasMultipleUnits && selectedService && selectedStaff));
-                
-                if (showNextButton && step < lastStep) {
-                  return (
-                    <Button
-                      onClick={() => {
-                        setDirection(1);
-                        setStep(step + 1);
-                      }}
-                      disabled={
-                        (step === 0 && !selectedUnit) ||
-                        (step === 1 && !canProceedFromStep1)
-                      }
-                      className="h-11 bg-accent hover:bg-accent/90 text-accent-foreground"
-                    >
-                      Próximo
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  );
-                }
-                
-                // Show confirm button when all data is filled
-                const canConfirm = selectedService && selectedStaff && selectedDate && selectedTime && clientName && clientPhone && 
-                  (!showPaymentStep || paymentMethod);
-                
-                return (
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={submitting || processingPayment || !canConfirm}
-                    className="h-11 bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]"
-                  >
-                    {submitting || processingPayment ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4 mr-2" />
-                    )}
-                    {processingPayment ? 'Redirecionando...' : 'Confirmar'}
-                  </Button>
-                );
-              })()}
+              {step < lastStep ? (
+                <Button
+                  onClick={() => {
+                    setDirection(1);
+                    setStep(step + 1);
+                  }}
+                  disabled={
+                    (step === 0 && !selectedUnit) ||
+                    (step === 1 && !selectedStaff) ||
+                    (step === 2 && !selectedService) ||
+                    (step === 3 && (!selectedDate || !selectedTime)) ||
+                    (step === 4 && (!clientName || !clientPhone)) ||
+                    (step === paymentStepIndex && showPaymentStep && !paymentMethod)
+                  }
+                  className="h-11 bg-accent hover:bg-accent/90 text-accent-foreground"
+                >
+                  Próximo
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={
+                    submitting || 
+                    processingPayment || 
+                    !clientName || 
+                    !clientPhone ||
+                    (showPaymentStep && !paymentMethod)
+                  }
+                  className="h-11 bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]"
+                >
+                  {submitting || processingPayment ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  {processingPayment ? 'Redirecionando...' : 'Confirmar'}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

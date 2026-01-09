@@ -48,7 +48,7 @@ const SortableWidget = ({ id, children, isDragging, isCustomizeMode }: SortableW
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative group h-full",
+        "relative group",
         (isDragging || isSorting) && "z-50",
         isSorting && "opacity-50"
       )}
@@ -68,7 +68,7 @@ const SortableWidget = ({ id, children, isDragging, isCustomizeMode }: SortableW
   );
 };
 
-export type ColumnConfig = 2 | 3 | 4 | 5;
+export type ColumnConfig = 2 | 3 | 4;
 
 interface DraggableWidgetGridProps {
   widgetOrder: string[];
@@ -83,7 +83,6 @@ const getGridClasses = (columns: ColumnConfig) => {
     case 2: return "grid-cols-2 lg:grid-cols-2";
     case 3: return "grid-cols-2 lg:grid-cols-3";
     case 4: return "grid-cols-2 lg:grid-cols-4";
-    case 5: return "grid-cols-2 lg:grid-cols-5";
   }
 };
 
@@ -91,7 +90,7 @@ export const DraggableWidgetGrid = ({
   widgetOrder,
   onReorder,
   isCustomizeMode,
-  columns = 5,
+  columns = 4,
   children,
 }: DraggableWidgetGridProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -133,7 +132,7 @@ export const DraggableWidgetGrid = ({
   if (!isCustomizeMode) {
     // Non-draggable mode - just render normally
     return (
-      <div className={cn("grid gap-2 sm:gap-3 items-stretch", getGridClasses(columns))}>
+      <div className={cn("grid gap-3 sm:gap-4 items-stretch", getGridClasses(columns))}>
         {activeWidgets.map((widgetId) => (
           <div key={widgetId} className="h-full">{children(widgetId)}</div>
         ))}
@@ -150,7 +149,7 @@ export const DraggableWidgetGrid = ({
       onDragCancel={handleDragCancel}
     >
       <SortableContext items={activeWidgets} strategy={rectSortingStrategy}>
-        <div className={cn("grid gap-2 sm:gap-3 items-stretch", getGridClasses(columns))}>
+        <div className={cn("grid gap-3 sm:gap-4 items-stretch", getGridClasses(columns))}>
           {activeWidgets.map((widgetId) => (
             <SortableWidget
               key={widgetId}

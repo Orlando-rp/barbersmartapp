@@ -44,15 +44,29 @@ const SaasAdminLayout = ({ children, activeTab = "overview", onTabChange }: Saas
       <SaasAdminSidebar activeTab={activeTab} onTabChange={onTabChange} />
       
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border px-3 py-2.5 safe-area-top">
-        <div className="flex items-center justify-between gap-2">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {currentLogoUrl ? (
+              <img 
+                src={currentLogoUrl} 
+                alt={systemName} 
+                className="h-8 w-auto max-w-[120px] object-contain" 
+              />
+            ) : (
+              <>
+                <Shield className="h-6 w-6 text-warning" />
+                <span className="font-bold text-foreground">Admin SaaS</span>
+              </>
+            )}
+          </div>
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9 flex-shrink-0">
-                <Menu className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] sm:w-72 p-0 bg-card border-border">
+            <SheetContent side="left" className="w-72 p-0 bg-card border-border">
               <SaasAdminSidebar 
                 activeTab={activeTab} 
                 onTabChange={handleTabChange} 
@@ -60,32 +74,6 @@ const SaasAdminLayout = ({ children, activeTab = "overview", onTabChange }: Saas
               />
             </SheetContent>
           </Sheet>
-          
-          <div className="flex items-center gap-2 min-w-0 flex-1 justify-center">
-            {currentLogoUrl ? (
-              <img 
-                src={currentLogoUrl} 
-                alt={systemName} 
-                className="h-7 w-auto max-w-[120px] object-contain" 
-              />
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <Shield className="h-5 w-5 text-warning flex-shrink-0" />
-                <span className="font-bold text-foreground text-sm">{systemName}</span>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex-shrink-0 w-9">
-            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded capitalize block text-center truncate">
-              {activeTab === 'overview' ? 'Geral' : 
-               activeTab === 'tenants' ? 'Lojas' :
-               activeTab === 'plans' ? 'Planos' :
-               activeTab === 'integrations' ? 'Integ.' :
-               activeTab === 'branding' ? 'Brand' :
-               activeTab === 'docs' ? 'Docs' : activeTab?.slice(0, 5)}
-            </span>
-          </div>
         </div>
       </div>
       

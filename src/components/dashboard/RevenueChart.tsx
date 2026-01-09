@@ -84,28 +84,28 @@ const RevenueChart = () => {
 
   if (loading) {
     return (
-      <Card className="barbershop-card h-full flex flex-col">
-        <CardHeader className="p-3 sm:p-4">
-          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-            <BarChart3 className="h-4 w-4 text-primary" />
+      <Card className="barbershop-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
             Receita da Semana
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex justify-center items-center py-4 sm:py-6 flex-1">
-          <LoadingSpinner size="sm" />
+        <CardContent className="flex justify-center py-8">
+          <LoadingSpinner size="md" />
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="barbershop-card h-full flex flex-col">
-      <CardHeader className="p-3 sm:p-4">
-        <CardTitle className="flex items-center gap-2 text-sm sm:text-base min-w-0">
-          <BarChart3 className="h-4 w-4 text-primary shrink-0" />
-          <span className="truncate">Receita da Semana</span>
+    <Card className="barbershop-card">
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg flex-wrap">
+          <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          Receita da Semana
           {isConsolidatedView && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 flex items-center gap-1 ml-auto shrink-0">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 flex items-center gap-1 ml-auto">
               <Building2 className="h-2.5 w-2.5" />
               <span className="hidden sm:inline">{barbershops.length} unidades</span>
               <span className="sm:hidden">{barbershops.length}</span>
@@ -113,19 +113,19 @@ const RevenueChart = () => {
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-3 sm:p-4 pt-0 flex flex-col flex-1">
-        <div className="flex items-end justify-between gap-1 sm:space-x-2 h-24 sm:h-32 flex-1">
+      <CardContent className="p-4 sm:p-6 pt-0">
+        <div className="flex items-end justify-between gap-1 sm:space-x-2 h-32 sm:h-40">
           {revenueData.map((data) => {
             const height = (data.revenue / maxRevenue) * 100;
             return (
               <div key={data.day} className="flex flex-col items-center flex-1 min-w-0">
                 <div className="w-full flex flex-col items-center">
                   <div
-                    className="w-3 sm:w-6 bg-gradient-to-t from-primary to-primary-glow rounded-t transition-all duration-300 hover:from-primary-glow hover:to-primary"
-                    style={{ height: `${height}%`, minHeight: '6px' }}
+                    className="w-4 sm:w-8 bg-gradient-to-t from-primary to-primary-glow rounded-t transition-all duration-300 hover:from-primary-glow hover:to-primary"
+                    style={{ height: `${height}%`, minHeight: '8px' }}
                   />
-                  <div className="text-[9px] sm:text-[10px] text-muted-foreground mt-1">{data.day}</div>
-                  <div className="text-[9px] sm:text-[10px] font-medium text-foreground">
+                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-2">{data.day}</div>
+                  <div className="text-[10px] sm:text-xs font-medium text-foreground">
                     <span className="hidden sm:inline">R$ </span>{data.revenue.toFixed(0)}
                   </div>
                 </div>
@@ -133,8 +133,8 @@ const RevenueChart = () => {
             );
           })}
         </div>
-        <div className="mt-auto pt-2 sm:pt-3 border-t border-border">
-          <div className="flex justify-between text-[10px] sm:text-xs">
+        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border">
+          <div className="flex justify-between text-xs sm:text-sm">
             <span className="text-muted-foreground">Total</span>
             <span className="font-semibold text-success">
               R$ {totalWeek.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

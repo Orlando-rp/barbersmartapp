@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StaffAvatar } from "@/components/ui/smart-avatar";
-import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2, Repeat, AlertCircle, Check, X, Loader2 } from "lucide-react";
+import { CalendarIcon, Clock, User, Scissors, CheckCircle2, ChevronRight, ChevronLeft, Search, Bell, ListPlus, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, formatDuration } from "@/lib/utils";
@@ -22,22 +22,6 @@ import { useStaffServices } from "@/hooks/useStaffServices";
 import { useSelectableUnits } from "@/hooks/useSelectableUnits";
 import { toast as sonnerToast } from "sonner";
 import { DayProps, DayContent } from "react-day-picker";
-import { RecurrenceSelector, RecurrenceType } from "@/components/booking/RecurrenceSelector";
-import { RecurrenceConflictDialog } from "@/components/booking/RecurrenceConflictDialog";
-import { RecurrenceActionDialog, RecurrenceActionScope } from "@/components/booking/RecurrenceActionDialog";
-import { RecurrenceBadge } from "@/components/booking/RecurrenceBadge";
-import { 
-  RecurrenceConfig, 
-  GeneratedDate, 
-  generateRecurrenceGroupId,
-  calculateTotalPrice,
-  formatRecurrenceSummary,
-  generateRecurringDates,
-  RecurrenceRule,
-  getRecurrenceLabel,
-  RECURRENCE_RULE_OPTIONS,
-  getRecurrenceCountOptions,
-} from "@/lib/recurrenceUtils";
 
 interface WaitlistPrefill {
   clientName?: string;
@@ -54,8 +38,7 @@ interface AppointmentFormProps {
   waitlistPrefill?: WaitlistPrefill;
 }
 
-type WizardStep = 'unit' | 'professional' | 'service' | 'datetime' | 'recurrence' | 'client' | 'confirm';
-type ViewMode = 'wizard' | 'compact';
+type WizardStep = 'unit' | 'professional' | 'service' | 'datetime' | 'client' | 'confirm';
 
 export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: AppointmentFormProps) => {
   const { barbershopId, barbershops, user } = useAuth();
@@ -64,9 +47,6 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   
   // Filtrar unidades selecionáveis (excluindo matrizes com filiais)
   const { selectableUnits, hasMultipleUnits } = useSelectableUnits(barbershops);
-  
-  // View mode: wizard (step by step) or compact (all in one)
-  const [viewMode, setViewMode] = useState<ViewMode>('compact');
   
   // Se o usuário tem múltiplas unidades, começa na seleção de unidade
   const [currentStep, setCurrentStep] = useState<WizardStep>(hasMultipleUnits ? 'unit' : 'professional');
@@ -108,24 +88,6 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
   const [showWaitlistForm, setShowWaitlistForm] = useState(false);
   const [waitlistNotes, setWaitlistNotes] = useState("");
   const [savingWaitlist, setSavingWaitlist] = useState(false);
-  
-  // Recurrence edit state
-  const [recurrenceActionOpen, setRecurrenceActionOpen] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState(false);
-  const [recurrenceScope, setRecurrenceScope] = useState<RecurrenceActionScope>('single');
-  
-  // Recurrence state for new appointments
-  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('single');
-  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>('weekly');
-  const [recurrenceCount, setRecurrenceCount] = useState<number>(4);
-  const [customIntervalDays, setCustomIntervalDays] = useState<number>(7);
-  const [generatedDates, setGeneratedDates] = useState<GeneratedDate[]>([]);
-  const [dateAvailability, setDateAvailability] = useState<Map<string, { available: boolean; checking: boolean; reason?: string }>>(new Map());
-  const [checkingAvailability, setCheckingAvailability] = useState(false);
-  
-  // Check if editing a recurring appointment
-  const isEditingRecurring = appointment?.is_recurring && appointment?.recurrence_group_id;
-  const isNewAppointment = !appointment;
   
   // Refs para controlar quando resetar as seleções
   const isFirstRender = useRef(true);
@@ -176,110 +138,6 @@ export const AppointmentForm = ({ appointment, onClose, waitlistPrefill }: Appoi
       setSelectedTime("");
     }
   }, [date, selectedBarber, selectedService]);
-
-  // Generate recurring dates when configuration changes
-  useEffect(() => {
-    if (isNewAppointment && recurrenceType === 'recurring' && date) {
-      const config: RecurrenceConfig = {
-        rule: recurrenceRule,
-        count: recurrenceCount,
-        customIntervalDays: recurrenceRule === 'custom' ? customIntervalDays : undefined,
-      };
-      const dates = generateRecurringDates(date, config);
-      setGeneratedDates(dates);
-      // Reset availability when dates change
-      setDateAvailability(new Map());
-    } else if (recurrenceType === 'single' && date) {
-      setGeneratedDates([{
-        date: date,
-        index: 0,
-        formattedDate: format(date, 'yyyy-MM-dd'),
-      }]);
-      setDateAvailability(new Map());
-    } else {
-      setGeneratedDates([]);
-      setDateAvailability(new Map());
-    }
-  }, [isNewAppointment, recurrenceType, recurrenceRule, recurrenceCount, customIntervalDays, date]);
-
-  // Check availability for recurring dates
-  useEffect(() => {
-    if (recurrenceType !== 'recurring' || generatedDates.length <= 1 || !selectedTime || !selectedBarber || !effectiveBarbershopId) {
-      return;
-    }
-
-    const checkRecurringAvailability = async () => {
-      setCheckingAvailability(true);
-      const service = services.find(s => s.id === selectedService);
-      const serviceDuration = service?.duration || 30;
-      
-      // Initialize all dates as checking
-      const initialMap = new Map<string, { available: boolean; checking: boolean; reason?: string }>();
-      generatedDates.forEach(d => {
-        initialMap.set(d.formattedDate, { available: true, checking: true });
-      });
-      setDateAvailability(initialMap);
-
-      // Check availability for each date (skip the first one as it's already validated)
-      const results = new Map<string, { available: boolean; checking: boolean; reason?: string }>();
-      
-      for (const genDate of generatedDates) {
-        try {
-          // Check business hours validation
-          const validation = validateDateTime(genDate.date, selectedTime, selectedBarber);
-          
-          if (!validation.isValid) {
-            results.set(genDate.formattedDate, { 
-              available: false, 
-              checking: false, 
-              reason: validation.reason || 'Horário indisponível' 
-            });
-            continue;
-          }
-
-          // Check for existing appointments
-          const { data: existingAppointments, error } = await supabase
-            .from('appointments')
-            .select('id, appointment_time, service_id')
-            .eq('barbershop_id', effectiveBarbershopId)
-            .eq('staff_id', selectedBarber)
-            .eq('appointment_date', genDate.formattedDate)
-            .in('status', ['pendente', 'confirmado', 'concluido']);
-
-          if (error) {
-            results.set(genDate.formattedDate, { available: true, checking: false });
-            continue;
-          }
-
-          // Check for time conflicts
-          const bookedAppointments = (existingAppointments || []).map(apt => {
-            const bookedService = services.find(s => s.id === apt.service_id);
-            return {
-              time: apt.appointment_time,
-              duration: bookedService?.duration || 30
-            };
-          });
-
-          const hasConflict = checkTimeOverlap(selectedTime, serviceDuration, bookedAppointments);
-          
-          results.set(genDate.formattedDate, { 
-            available: !hasConflict, 
-            checking: false,
-            reason: hasConflict ? 'Horário já ocupado' : undefined
-          });
-        } catch (err) {
-          results.set(genDate.formattedDate, { available: true, checking: false });
-        }
-      }
-
-      setDateAvailability(results);
-      setCheckingAvailability(false);
-    };
-
-    // Debounce the check
-    const timeoutId = setTimeout(checkRecurringAvailability, 500);
-    return () => clearTimeout(timeoutId);
-  }, [generatedDates, selectedTime, selectedBarber, effectiveBarbershopId, recurrenceType, selectedService, services]);
 
   // Fetch day availability for calendar visualization
   useEffect(() => {
@@ -971,27 +829,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
     }
   };
 
-  // Handle submit with recurrence scope check
-  const handleSubmitClick = async () => {
-    // If editing a recurring appointment, show scope dialog first
-    if (isEditingRecurring && !pendingSubmit) {
-      setRecurrenceActionOpen(true);
-      return;
-    }
-    
-    await handleSubmit(recurrenceScope);
-  };
-
-  // Handle recurrence action confirmation
-  const handleRecurrenceConfirm = async (scope: RecurrenceActionScope) => {
-    setRecurrenceScope(scope);
-    setPendingSubmit(true);
-    setRecurrenceActionOpen(false);
-    await handleSubmit(scope);
-    setPendingSubmit(false);
-  };
-
-  const handleSubmit = async (scope: RecurrenceActionScope = 'single') => {
+  const handleSubmit = async () => {
     if (!date) {
       toast({
         title: "Erro",
@@ -1102,109 +940,44 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
       };
 
       if (appointment) {
-        // Handle recurring appointment updates based on scope
-        if (isEditingRecurring && scope !== 'single') {
-          const service = services.find(s => s.id === selectedService);
-          
-          // Calculate date difference for future/all updates
-          const originalDate = new Date(appointment.appointment_date);
-          const newDate = date;
-          const daysDiff = Math.floor((newDate.getTime() - originalDate.getTime()) / (1000 * 60 * 60 * 24));
-          
-          if (scope === 'all') {
-            // Update all appointments in series
-            const { data: seriesAppointments, error: fetchError } = await supabase
-              .from('appointments')
-              .select('id, appointment_date')
-              .eq('recurrence_group_id', appointment.recurrence_group_id)
-              .neq('status', 'cancelado')
-              .neq('status', 'concluido');
-            
-            if (fetchError) throw fetchError;
-            
-            // Update each appointment with the same relative change
-            for (const apt of seriesAppointments || []) {
-              const aptDate = new Date(apt.appointment_date);
-              aptDate.setDate(aptDate.getDate() + daysDiff);
-              
-              await supabase
-                .from('appointments')
-                .update({
-                  staff_id: selectedBarber,
-                  service_id: selectedService,
-                  appointment_date: format(aptDate, "yyyy-MM-dd"),
-                  appointment_time: selectedTime,
-                  notes,
-                  service_name: service?.name,
-                  service_price: service?.price,
-                })
-                .eq('id', apt.id);
-            }
-            
-            toast({
-              title: "Série Atualizada!",
-              description: `Todos os agendamentos da série foram atualizados.`,
-            });
-          } else if (scope === 'future') {
-            // Update this and future appointments
-            const { data: futureAppointments, error: fetchError } = await supabase
-              .from('appointments')
-              .select('id, appointment_date')
-              .eq('recurrence_group_id', appointment.recurrence_group_id)
-              .gte('recurrence_index', appointment.recurrence_index)
-              .neq('status', 'cancelado')
-              .neq('status', 'concluido');
-            
-            if (fetchError) throw fetchError;
-            
-            for (const apt of futureAppointments || []) {
-              const aptDate = new Date(apt.appointment_date);
-              aptDate.setDate(aptDate.getDate() + daysDiff);
-              
-              await supabase
-                .from('appointments')
-                .update({
-                  staff_id: selectedBarber,
-                  service_id: selectedService,
-                  appointment_date: format(aptDate, "yyyy-MM-dd"),
-                  appointment_time: selectedTime,
-                  notes,
-                  service_name: service?.name,
-                  service_price: service?.price,
-                })
-                .eq('id', apt.id);
-            }
-            
-            toast({
-              title: "Agendamentos Atualizados!",
-              description: `Este e os próximos agendamentos foram atualizados.`,
-            });
-          }
-        } else {
-          // Single appointment update (regular or single from recurring)
-          const updateData: any = {
-            ...appointmentData,
-          };
-          
-          // If editing single from recurring, save original_date
-          if (isEditingRecurring && scope === 'single') {
-            updateData.original_date = appointment.appointment_date;
-          }
-          
-          const { error: appointmentError } = await supabase
-            .from('appointments')
-            .update(updateData)
-            .eq('id', appointment.id);
+        const { error: appointmentError } = await supabase
+          .from('appointments')
+          .update(appointmentData)
+          .eq('id', appointment.id);
 
-          if (appointmentError) throw appointmentError;
+        if (appointmentError) throw appointmentError;
 
-          toast({
-            title: "Agendamento Atualizado!",
-            description: `Agendamento para ${clientName} atualizado com sucesso.`,
-          });
+        toast({
+          title: "Agendamento Atualizado!",
+          description: `Agendamento para ${clientName} atualizado com sucesso.`,
+        });
 
-          // Enviar notificação de alteração via WhatsApp
-          sendWhatsAppUpdateNotification(appointment.id, {
+        // Enviar notificação de alteração via WhatsApp
+        sendWhatsAppUpdateNotification(appointment.id, {
+          clientName,
+          clientPhone,
+          date,
+          time: selectedTime,
+          serviceName: service?.name || 'Serviço',
+          barberName: selectedBarberData?.name || 'Profissional'
+        });
+      } else {
+        const { data: insertedData, error: appointmentError } = await supabase
+          .from('appointments')
+          .insert(appointmentData)
+          .select()
+          .single();
+
+        if (appointmentError) throw appointmentError;
+
+        toast({
+          title: "Agendamento Criado!",
+          description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
+        });
+
+        // Enviar confirmação via WhatsApp (não bloqueia o fechamento)
+        if (insertedData?.id) {
+          sendWhatsAppConfirmation(insertedData.id, {
             clientName,
             clientPhone,
             date,
@@ -1212,103 +985,6 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             serviceName: service?.name || 'Serviço',
             barberName: selectedBarberData?.name || 'Profissional'
           });
-        }
-      } else {
-        // New appointment - handle recurring if enabled
-        if (isNewAppointment && recurrenceType === 'recurring' && generatedDates.length > 1) {
-          // Filter only available dates
-          const availableDates = generatedDates.filter(genDate => {
-            const availability = dateAvailability.get(genDate.formattedDate);
-            return availability?.available !== false; // Include if available or not checked
-          });
-
-          if (availableDates.length === 0) {
-            toast({
-              title: "Nenhuma data disponível",
-              description: "Todas as datas selecionadas estão ocupadas. Tente outros horários ou datas.",
-              variant: "destructive",
-            });
-            setLoading(false);
-            return;
-          }
-
-          const skippedCount = generatedDates.length - availableDates.length;
-
-          // Create recurring appointments for available dates only
-          const recurrenceGroupId = generateRecurrenceGroupId();
-          const appointmentsToCreate = availableDates.map((genDate, index) => ({
-            barbershop_id: effectiveBarbershopId,
-            client_id: finalClientId,
-            staff_id: selectedBarber,
-            service_id: selectedService,
-            appointment_date: genDate.formattedDate,
-            appointment_time: selectedTime,
-            status: 'pendente',
-            notes: index === 0 ? notes : `${notes || ''} (Recorrência ${index + 1}/${availableDates.length})`.trim(),
-            client_name: clientName,
-            client_phone: clientPhone,
-            service_name: service?.name,
-            service_price: service?.price,
-            is_recurring: true,
-            recurrence_group_id: recurrenceGroupId,
-            recurrence_rule: recurrenceRule,
-            recurrence_index: index,
-          }));
-
-          const { data: insertedData, error: appointmentError } = await supabase
-            .from('appointments')
-            .insert(appointmentsToCreate)
-            .select();
-
-          if (appointmentError) throw appointmentError;
-
-          const description = skippedCount > 0 
-            ? `${availableDates.length} agendamentos criados para ${clientName}. ${skippedCount} data(s) indisponível(is) foram ignoradas.`
-            : `${availableDates.length} agendamentos criados para ${clientName}, ${getRecurrenceLabel(recurrenceRule)}.`;
-
-          toast({
-            title: "Série de Agendamentos Criada!",
-            description,
-          });
-
-          // Enviar confirmação apenas do primeiro agendamento
-          if (insertedData && insertedData.length > 0) {
-            const firstApt = insertedData[0];
-            sendWhatsAppConfirmation(firstApt.id, {
-              clientName,
-              clientPhone,
-              date: availableDates[0].date,
-              time: selectedTime,
-              serviceName: service?.name || 'Serviço',
-              barberName: selectedBarberData?.name || 'Profissional'
-            });
-          }
-        } else {
-          // Single appointment
-          const { data: insertedData, error: appointmentError } = await supabase
-            .from('appointments')
-            .insert(appointmentData)
-            .select()
-            .single();
-
-          if (appointmentError) throw appointmentError;
-
-          toast({
-            title: "Agendamento Criado!",
-            description: `Agendamento para ${clientName} em ${format(date, "dd/MM/yyyy")} às ${selectedTime}`,
-          });
-
-          // Enviar confirmação via WhatsApp (não bloqueia o fechamento)
-          if (insertedData?.id) {
-            sendWhatsAppConfirmation(insertedData.id, {
-              clientName,
-              clientPhone,
-              date,
-              time: selectedTime,
-              serviceName: service?.name || 'Serviço',
-              barberName: selectedBarberData?.name || 'Profissional'
-            });
-          }
         }
       }
 
@@ -1347,53 +1023,14 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
   return (
     <div className="w-full">
       <Card className="barbershop-card w-full border-0 shadow-none">
-        <CardHeader className="space-y-2 sm:space-y-3 px-3 sm:px-6 pt-4 sm:pt-6">
+        <CardHeader className="space-y-3 sm:space-y-4 px-3 sm:px-6 pt-4 sm:pt-6">
           <div className="flex items-start sm:items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl flex-wrap">
-                <CalendarIcon className="h-5 w-5 text-primary flex-shrink-0" />
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-2xl">
+                <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
                 <span className="truncate">{appointment ? 'Editar Agendamento' : 'Novo Agendamento'}</span>
-                {isEditingRecurring && (
-                  <RecurrenceBadge
-                    recurrenceIndex={appointment?.recurrence_index ?? 0}
-                    totalInSeries={appointment?.totalInSeries}
-                    recurrenceRule={appointment?.recurrence_rule}
-                    isRescheduled={appointment?.original_date && appointment?.original_date !== appointment?.appointment_date}
-                    className="text-xs"
-                  />
-                )}
               </CardTitle>
-            </div>
-            
-            {/* Mode Toggle - only show for new appointments without waitlist prefill */}
-            {!appointment && !waitlistPrefill && (
-              <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
-                <Button
-                  type="button"
-                  variant={viewMode === 'compact' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('compact')}
-                  className="h-7 px-2 text-xs"
-                >
-                  Rápido
-                </Button>
-                <Button
-                  type="button"
-                  variant={viewMode === 'wizard' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('wizard')}
-                  className="h-7 px-2 text-xs"
-                >
-                  Passo a passo
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Wizard progress - only show in wizard mode */}
-          {viewMode === 'wizard' && (
-            <>
-              <CardDescription className="text-xs sm:text-sm">
+              <CardDescription className="mt-1 sm:mt-2 text-xs sm:text-sm line-clamp-2">
                 {currentStep === 'unit' && 'Selecione a unidade para o agendamento'}
                 {currentStep === 'professional' && 'Escolha o profissional'}
                 {currentStep === 'service' && 'Escolha o serviço desejado'}
@@ -1401,327 +1038,39 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 {currentStep === 'client' && 'Selecione ou cadastre um cliente'}
                 {currentStep === 'confirm' && 'Revise e confirme o agendamento'}
               </CardDescription>
+            </div>
+            <Badge variant="outline" className="text-xs sm:text-sm flex-shrink-0 whitespace-nowrap">
+              Passo {getStepNumber(currentStep)} de {totalSteps}
+            </Badge>
+          </div>
 
-              <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-1">
-                {wizardSteps.map((step, index) => (
-                  <div key={step} className="flex items-center flex-1 min-w-0">
-                    <div className={cn(
-                      "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 transition-all flex-shrink-0",
-                      currentStep === step ? "border-primary bg-primary text-primary-foreground" :
-                      getStepNumber(currentStep) > getStepNumber(step) ? "border-primary bg-primary/10 text-primary" :
-                      "border-muted-foreground/30 text-muted-foreground"
-                    )}>
-                      {getStepNumber(currentStep) > getStepNumber(step) ? (
-                        <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                      ) : (
-                        <span className="text-[10px] sm:text-xs font-semibold">{index + 1}</span>
-                      )}
-                    </div>
-                    {index < wizardSteps.length - 1 && (
-                      <div className={cn(
-                        "flex-1 h-0.5 mx-0.5 sm:mx-2 transition-all min-w-2",
-                        getStepNumber(currentStep) > getStepNumber(step) ? "bg-primary" : "bg-muted-foreground/30"
-                      )} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </CardHeader>
-
-        <CardContent className="space-y-4 px-3 sm:px-6 pb-4 sm:pb-6">
-          {/* COMPACT MODE - All fields visible at once */}
-          {viewMode === 'compact' && (
-            <div className="space-y-4">
-              {/* Row 1: Client search + Unit selector */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                {/* Client Search/Select */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    Cliente
-                  </Label>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar ou digitar nome..."
-                      value={clientName || searchTerm}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setSearchTerm(value);
-                        if (!clientId) setClientName(value);
-                      }}
-                      className="pl-8 h-9 text-sm"
-                    />
-                    {searchTerm && filteredClients.length > 0 && (
-                      <div className="absolute w-full top-full left-0 mt-1 border rounded-lg max-h-32 overflow-y-auto bg-popover shadow-lg z-50">
-                        {filteredClients.slice(0, 5).map((client) => (
-                          <button
-                            key={client.id}
-                            type="button"
-                            onClick={() => {
-                              selectClient(client);
-                              setSearchTerm("");
-                            }}
-                            className="w-full p-2 text-left hover:bg-muted/50 transition-colors text-sm"
-                          >
-                            <div className="font-medium">{client.name}</div>
-                            <div className="text-xs text-muted-foreground">{client.phone}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {clientId && (
-                    <Badge variant="secondary" className="text-xs gap-1">
-                      <Check className="h-2.5 w-2.5" />
-                      {clientName}
-                      <button 
-                        type="button" 
-                        onClick={() => { setClientId(""); setClientName(""); setClientPhone(""); }}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-2.5 w-2.5" />
-                      </button>
-                    </Badge>
-                  )}
-                  {!clientId && clientName && (
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Telefone"
-                        value={clientPhone}
-                        onChange={(e) => setClientPhone(e.target.value)}
-                        className="h-8 text-xs flex-1"
-                      />
-                    </div>
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-1">
+            {wizardSteps.map((step, index) => (
+              <div key={step} className="flex items-center flex-1 min-w-0">
+                <div className={cn(
+                  "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 transition-all flex-shrink-0",
+                  currentStep === step ? "border-primary bg-primary text-primary-foreground" :
+                  getStepNumber(currentStep) > getStepNumber(step) ? "border-primary bg-primary/10 text-primary" :
+                  "border-muted-foreground/30 text-muted-foreground"
+                )}>
+                  {getStepNumber(currentStep) > getStepNumber(step) ? (
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                  ) : (
+                    <span className="text-[10px] sm:text-xs font-semibold">{index + 1}</span>
                   )}
                 </div>
-
-                {/* Unit selector - only if multi-unit */}
-                {hasMultipleUnits && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium flex items-center gap-1">
-                      <Building2 className="h-3 w-3" />
-                      Unidade
-                    </Label>
-                    <Select value={selectedUnitId} onValueChange={(val) => {
-                      setSelectedUnitId(val);
-                      setSelectedBarber("");
-                      setDate(undefined);
-                      setSelectedTime("");
-                    }}>
-                      <SelectTrigger className="h-9 text-sm">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {selectableUnits.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.id} className="text-sm">
-                            {unit.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {index < wizardSteps.length - 1 && (
+                  <div className={cn(
+                    "flex-1 h-0.5 mx-0.5 sm:mx-2 transition-all min-w-2",
+                    getStepNumber(currentStep) > getStepNumber(step) ? "bg-primary" : "bg-muted-foreground/30"
+                  )} />
                 )}
               </div>
+            ))}
+          </div>
+        </CardHeader>
 
-              {/* Row 2: Professional + Service */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    Profissional
-                  </Label>
-                  <Select value={selectedBarber} onValueChange={(val) => {
-                    setSelectedBarber(val);
-                    setDate(undefined);
-                    setSelectedTime("");
-                  }}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staff.map((member) => (
-                        <SelectItem key={member.id} value={member.id} className="text-sm">
-                          <div className="flex items-center gap-2">
-                            <StaffAvatar src={member.avatar_url} alt={member.name} fallbackText={member.name} size="xs" />
-                            <span>{member.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium flex items-center gap-1">
-                    <Scissors className="h-3 w-3" />
-                    Serviço
-                  </Label>
-                  <Select value={selectedService} onValueChange={setSelectedService} disabled={!selectedBarber}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder={selectedBarber ? "Selecione..." : "Escolha o profissional"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {services.filter(service => {
-                        if (!staffHasServiceRestrictions(selectedBarber)) return true;
-                        return staffProvidesService(selectedBarber, service.id);
-                      }).map((service) => (
-                        <SelectItem key={service.id} value={service.id} className="text-sm">
-                          <div className="flex justify-between items-center gap-2 w-full">
-                            <span>{service.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDuration(service.duration)} • R${service.price}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 3: Date + Time (side by side) */}
-              {selectedBarber && selectedService && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium flex items-center gap-1">
-                      <CalendarIcon className="h-3 w-3" />
-                      Data
-                    </Label>
-                    <div className="border rounded-lg p-1 overflow-hidden">
-                      <TooltipProvider delayDuration={200}>
-                        <Calendar
-                          mode="single"
-                          selected={date}
-                          month={calendarMonth}
-                          onMonthChange={setCalendarMonth}
-                          onSelect={(newDate) => {
-                            if (newDate) {
-                              const validation = validateDateTime(newDate);
-                              if (!validation.isValid) {
-                                sonnerToast.error(validation.reason || "Data indisponível");
-                              } else {
-                                setDate(newDate);
-                                setSelectedTime("");
-                              }
-                            }
-                          }}
-                          disabled={(d) => {
-                            const isPast = d < new Date(new Date().setHours(0, 0, 0, 0));
-                            if (isPast) return true;
-                            const validation = validateDateTime(d);
-                            return !validation.isValid;
-                          }}
-                          locale={ptBR}
-                          className="w-full text-xs"
-                        />
-                      </TooltipProvider>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      Horário {date && `(${format(date, "dd/MM")})`}
-                    </Label>
-                    {!date ? (
-                      <div className="border rounded-lg p-4 text-center text-muted-foreground text-xs">
-                        Selecione uma data
-                      </div>
-                    ) : availableSlots.length === 0 ? (
-                      <div className="border rounded-lg p-4 text-center text-muted-foreground text-xs">
-                        Sem horários disponíveis
-                      </div>
-                    ) : (
-                      <div className="border rounded-lg p-2 max-h-[200px] overflow-y-auto">
-                        <div className="grid grid-cols-4 gap-1">
-                          {availableSlots.map((time) => (
-                            <Button
-                              key={time}
-                              type="button"
-                              variant={selectedTime === time ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setSelectedTime(time)}
-                              className={cn(
-                                "h-7 text-xs",
-                                selectedTime === time && "ring-2 ring-primary"
-                              )}
-                            >
-                              {time}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Row 4: Notes (optional) */}
-              {selectedTime && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Observações (opcional)</Label>
-                  <Textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Adicione observações..."
-                    rows={2}
-                    className="text-sm resize-none"
-                  />
-                </div>
-              )}
-
-              {/* Summary + Submit */}
-              {selectedTime && (clientId || (clientName && clientPhone)) && (
-                <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Resumo:</span>
-                    <span className="font-medium">
-                      {selectedServiceData?.name} • {selectedTime} • {date && format(date, "dd/MM")}
-                    </span>
-                  </div>
-                  {selectedServiceData && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Total:</span>
-                      <span className="font-bold text-lg text-primary">R$ {selectedServiceData.price.toFixed(2)}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={onClose}
-                      className="flex-1"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="premium"
-                      onClick={handleSubmitClick}
-                      disabled={loading}
-                      className="flex-1"
-                    >
-                      {loading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                      )}
-                      {loading ? 'Salvando...' : 'Confirmar'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* WIZARD MODE - Step by step */}
-          {viewMode === 'wizard' && (
-            <>
-              {/* Step 1: Unit Selection (only for multi-unit users) */}
+        <CardContent className="space-y-4 sm:space-y-6 px-3 sm:px-6 pb-4 sm:pb-6">
           {/* Step 1: Unit Selection (only for multi-unit users) */}
           {currentStep === 'unit' && hasMultipleUnits && (
             <div className="space-y-3 sm:space-y-4">
@@ -2260,196 +1609,6 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                     </div>
                   )}
                 </div>
-                
-                {/* Recurrence Options - only for new appointments when time is selected */}
-                {isNewAppointment && selectedTime && date && (
-                  <div className="space-y-3 pt-4 border-t">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Repeat className="h-4 w-4 text-primary" />
-                      <span>Repetição</span>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={recurrenceType === 'single' ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setRecurrenceType('single')}
-                        className="flex-1 text-xs sm:text-sm"
-                      >
-                        Só essa data
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={recurrenceType === 'recurring' ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setRecurrenceType('recurring')}
-                        className="flex-1 text-xs sm:text-sm gap-1"
-                      >
-                        <Repeat className="h-3 w-3" />
-                        Recorrente
-                      </Button>
-                    </div>
-                    
-                    {recurrenceType === 'recurring' && (
-                      <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Frequência</Label>
-                            <Select 
-                              value={recurrenceRule} 
-                              onValueChange={(val) => setRecurrenceRule(val as RecurrenceRule)}
-                            >
-                              <SelectTrigger className="text-xs h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {RECURRENCE_RULE_OPTIONS.map(opt => (
-                                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Repetições</Label>
-                            <Select 
-                              value={recurrenceCount.toString()} 
-                              onValueChange={(val) => setRecurrenceCount(parseInt(val))}
-                            >
-                              <SelectTrigger className="text-xs h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getRecurrenceCountOptions(recurrenceRule, customIntervalDays).map(opt => (
-                                  <SelectItem key={opt.value} value={opt.value.toString()} className="text-xs">
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        {recurrenceRule === 'custom' && (
-                          <div className="space-y-1">
-                            <Label className="text-xs">Intervalo em dias</Label>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={90}
-                              value={customIntervalDays}
-                              onChange={(e) => setCustomIntervalDays(parseInt(e.target.value) || 7)}
-                              className="text-xs h-8"
-                            />
-                          </div>
-                        )}
-                        
-                        {/* Preview of recurring dates with availability */}
-                        {generatedDates.length > 0 && (
-                          <div className="space-y-2">
-                            {/* Summary header */}
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground">
-                                  {generatedDates.length} agendamentos
-                                </span>
-                                {checkingAvailability && (
-                                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                                )}
-                              </div>
-                              {selectedServiceData && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Total: R$ {calculateTotalPrice(selectedServiceData.price, generatedDates.length).toFixed(2)}
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {/* Availability summary badges */}
-                            {!checkingAvailability && dateAvailability.size > 0 && (
-                              <div className="flex gap-2 flex-wrap">
-                                {(() => {
-                                  const available = Array.from(dateAvailability.values()).filter(d => d.available).length;
-                                  const unavailable = Array.from(dateAvailability.values()).filter(d => !d.available).length;
-                                  return (
-                                    <>
-                                      {available > 0 && (
-                                        <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600">
-                                          <Check className="h-3 w-3" />
-                                          {available} disponíveis
-                                        </Badge>
-                                      )}
-                                      {unavailable > 0 && (
-                                        <Badge variant="outline" className="text-xs gap-1 border-destructive/50 text-destructive">
-                                          <X className="h-3 w-3" />
-                                          {unavailable} indisponíveis
-                                        </Badge>
-                                      )}
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                            )}
-                            
-                            {/* Date list with availability indicators */}
-                            <div className="max-h-32 overflow-y-auto space-y-1">
-                              {generatedDates.map((genDate, idx) => {
-                                const availability = dateAvailability.get(genDate.formattedDate);
-                                const isAvailable = availability?.available ?? true;
-                                const isChecking = availability?.checking ?? false;
-                                
-                                return (
-                                  <div 
-                                    key={idx} 
-                                    className={cn(
-                                      "flex items-center justify-between text-xs p-1.5 rounded",
-                                      isChecking ? "bg-muted/50" :
-                                      isAvailable ? "bg-green-500/10" : "bg-destructive/10"
-                                    )}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      {isChecking ? (
-                                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                                      ) : isAvailable ? (
-                                        <Check className="h-3 w-3 text-green-600" />
-                                      ) : (
-                                        <X className="h-3 w-3 text-destructive" />
-                                      )}
-                                      <span className={cn(!isAvailable && "text-destructive")}>
-                                        {format(genDate.date, "dd/MM/yyyy (EEE)", { locale: ptBR })}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      {!isAvailable && availability?.reason && (
-                                        <span className="text-destructive text-[10px]">{availability.reason}</span>
-                                      )}
-                                      <span className={cn(
-                                        "text-muted-foreground",
-                                        !isAvailable && "line-through"
-                                      )}>{selectedTime}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            
-                            {/* Warning if there are unavailable dates */}
-                            {!checkingAvailability && Array.from(dateAvailability.values()).some(d => !d.available) && (
-                              <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                                <div className="text-xs text-amber-700">
-                                  <strong>Atenção:</strong> Algumas datas têm conflitos. 
-                                  Apenas as datas disponíveis serão agendadas.
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -2514,23 +1673,6 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                         <p className="text-xs sm:text-sm text-muted-foreground">{selectedTime}</p>
                       </div>
                     </div>
-                    
-                    {/* Show recurrence info if recurring */}
-                    {isNewAppointment && recurrenceType === 'recurring' && generatedDates.length > 1 && (
-                      <div className="flex items-start gap-2 sm:gap-3">
-                        <Repeat className="h-4 w-4 sm:h-5 sm:w-5 text-primary mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm text-muted-foreground">Recorrência</p>
-                          <p className="font-semibold text-sm sm:text-base">
-                            {getRecurrenceLabel(recurrenceRule, customIntervalDays)}
-                          </p>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            {generatedDates.length} agendamentos
-                            {selectedServiceData && ` • Total: R$ ${calculateTotalPrice(selectedServiceData.price, generatedDates.length).toFixed(2)}`}
-                          </p>
-                        </div>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 
@@ -2549,7 +1691,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
             </div>
           )}
 
-          {/* Navigation Buttons - only for wizard mode */}
+          {/* Navigation Buttons */}
           <div className="flex justify-between pt-4 sm:pt-6 border-t gap-3">
             <Button
               type="button"
@@ -2569,7 +1711,7 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
                 type="button"
                 variant="premium"
                 size="sm"
-                onClick={handleSubmitClick}
+                onClick={handleSubmit}
                 disabled={loading}
                 className="text-xs sm:text-sm"
               >
@@ -2597,22 +1739,8 @@ Se tiver alguma dúvida, entre em contato conosco. 💈`;
               </Button>
             )}
           </div>
-            </>
-          )}
         </CardContent>
       </Card>
-      
-      {/* Recurrence Action Dialog for editing recurring appointments */}
-      {isEditingRecurring && (
-        <RecurrenceActionDialog
-          open={recurrenceActionOpen}
-          onOpenChange={setRecurrenceActionOpen}
-          action="reschedule"
-          currentIndex={appointment?.recurrence_index ?? 0}
-          totalInSeries={appointment?.totalInSeries ?? 0}
-          onConfirm={handleRecurrenceConfirm}
-        />
-      )}
     </div>
   );
 };

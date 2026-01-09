@@ -1,4 +1,4 @@
-project_id = "ivakuaptgwhdyfntonxh"
+project_id = "nmsblmmhigwsevnqmhwn"
 
 [functions.send-whatsapp]
 verify_jwt = false
@@ -69,21 +69,6 @@ verify_jwt = false
 [functions.test-stripe-connection]
 verify_jwt = false
 
-[functions.test-asaas-connection]
-verify_jwt = false
-
-[functions.create-asaas-payment]
-verify_jwt = false
-
-[functions.create-stripe-payment]
-verify_jwt = false
-
-[functions.asaas-webhook]
-verify_jwt = false
-
-[functions.stripe-webhook]
-verify_jwt = false
-
 [functions.generate-branding-images]
 verify_jwt = true
 
@@ -118,16 +103,4 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.check-cpanel-ssl]
-verify_jwt = false
-
-[functions.send-recurring-reminders]
-verify_jwt = false
-
-[functions.otp-status-monitor]
-verify_jwt = false
-
-[functions.whatsapp-status-monitor]
-verify_jwt = false
-
-[functions.migration-helper]
 verify_jwt = false

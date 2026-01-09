@@ -26,13 +26,6 @@ interface GlobalConfig {
   apiKey: string;
 }
 
-interface ServerStatusData {
-  status: 'online' | 'offline';
-  api_url?: string;
-  last_check?: string;
-  response_time_ms?: number;
-}
-
 interface BarbershopStatus {
   id: string;
   name: string;
@@ -41,15 +34,7 @@ interface BarbershopStatus {
   isActive: boolean;
 }
 
-interface GlobalEvolutionConfigProps {
-  showBarbershopStatus?: boolean;
-  onStatusChange?: () => void;
-}
-
-export const GlobalEvolutionConfig = ({ 
-  showBarbershopStatus = true,
-  onStatusChange 
-}: GlobalEvolutionConfigProps) => {
+export const GlobalEvolutionConfig = () => {
   const [config, setConfig] = useState<GlobalConfig>({
     apiUrl: '',
     apiKey: ''
@@ -58,47 +43,12 @@ export const GlobalEvolutionConfig = ({
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [serverStatus, setServerStatus] = useState<'unknown' | 'online' | 'offline'>('unknown');
-  const [lastCheck, setLastCheck] = useState<string | null>(null);
   const [barbershopStatuses, setBarbershopStatuses] = useState<BarbershopStatus[]>([]);
   const [loadingStatuses, setLoadingStatuses] = useState(false);
 
   useEffect(() => {
     loadGlobalConfig();
-    loadServerStatus();
   }, []);
-
-  const loadServerStatus = async () => {
-    try {
-      const { data } = await supabase
-        .from('system_config')
-        .select('value')
-        .eq('key', 'evolution_server_status')
-        .maybeSingle();
-
-      if (data?.value) {
-        const statusData = data.value as ServerStatusData;
-        setServerStatus(statusData.status === 'online' ? 'online' : 'offline');
-        setLastCheck(statusData.last_check || null);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar status do servidor:', error);
-    }
-  };
-
-  const formatLastCheck = (isoDate: string | null): string => {
-    if (!isoDate) return '';
-    const date = new Date(isoDate);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return 'agora';
-    if (diffMins < 60) return `há ${diffMins} min`;
-    if (diffHours < 24) return `há ${diffHours}h`;
-    return `há ${diffDays}d`;
-  };
 
   const loadGlobalConfig = async () => {
     try {
@@ -152,7 +102,6 @@ export const GlobalEvolutionConfig = ({
       if (error) throw error;
 
       toast.success("Configuração global salva com sucesso!");
-      onStatusChange?.();
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
       toast.error("Erro ao salvar configuração");
@@ -180,31 +129,13 @@ export const GlobalEvolutionConfig = ({
 
       if (error) throw error;
 
-      const now = new Date().toISOString();
-      const isOnline = data?.success;
-
-      if (isOnline) {
+      if (data?.success) {
         setServerStatus('online');
         toast.success("Servidor Evolution API está online!");
       } else {
         setServerStatus('offline');
         toast.error("Não foi possível conectar ao servidor");
       }
-
-      // Salvar status no banco
-      await supabase
-        .from('system_config')
-        .upsert({
-          key: 'evolution_server_status',
-          value: {
-            status: isOnline ? 'online' : 'offline',
-            api_url: config.apiUrl,
-            last_check: now,
-          },
-          updated_at: now,
-        }, { onConflict: 'key' });
-
-      setLastCheck(now);
     } catch (error) {
       console.error('Erro ao testar conexão:', error);
       setServerStatus('offline');
@@ -315,12 +246,11 @@ export const GlobalEvolutionConfig = ({
       {/* Info Alert */}
       <Alert className="border-warning/50 bg-warning/10">
         <Info className="h-4 w-4 text-warning" />
-        <AlertTitle className="text-warning">Servidor Evolution API (Configuração Global)</AlertTitle>
+        <AlertTitle className="text-warning">Configuração Global</AlertTitle>
         <AlertDescription className="text-warning/90">
           <p className="mb-2">
-            Esta é a configuração do <strong>servidor central</strong>. Todas as barbearias herdam automaticamente 
-            estas credenciais. Cada barbearia conecta seu próprio número escaneando o QR Code no painel delas 
-            em <strong>Comunicação → WhatsApp</strong>.
+            Configure aqui o servidor Evolution API global. Todas as barbearias herdarão essas configurações 
+            de servidor, precisando apenas escanear o QR Code para conectar seu WhatsApp.
           </p>
           <a
             href="https://doc.evolution-api.com/v2/pt/get-started/introduction"
@@ -342,14 +272,7 @@ export const GlobalEvolutionConfig = ({
               <Settings className="h-5 w-5 text-warning" />
               Servidor Evolution API
             </span>
-            <div className="flex items-center gap-2">
-              {lastCheck && (
-                <span className="text-xs text-muted-foreground">
-                  Verificado {formatLastCheck(lastCheck)}
-                </span>
-              )}
-              {getServerStatusBadge()}
-            </div>
+            {getServerStatusBadge()}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
             Configuração global do servidor para todas as barbearias
@@ -409,56 +332,54 @@ export const GlobalEvolutionConfig = ({
       </Card>
 
       {/* Barbershop Instances */}
-      {showBarbershopStatus && (
-        <Card className="bg-card border-border">
-          <CardHeader className="p-3 sm:p-6">
-            <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-foreground">
-              <span className="flex items-center gap-2 text-sm sm:text-base">
-                <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
-                Instâncias das Barbearias
-              </span>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={loadBarbershopStatuses}
-                disabled={loadingStatuses || !config.apiUrl || !config.apiKey}
-                className="border-border text-foreground hover:bg-muted w-full sm:w-auto"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${loadingStatuses ? 'animate-spin' : ''}`} />
-                Atualizar Status
-              </Button>
-            </CardTitle>
-            <CardDescription className="text-muted-foreground text-xs sm:text-sm">
-              Status de conexão WhatsApp de cada barbearia
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0">
-            {barbershopStatuses.length === 0 ? (
-              <div className="text-center py-6 sm:py-8 text-muted-foreground">
-                <Building2 className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">Clique em "Atualizar Status" para ver as instâncias</p>
-              </div>
-            ) : (
-              <div className="space-y-2 sm:space-y-3">
-                {barbershopStatuses.map((shop) => (
-                  <div 
-                    key={shop.id} 
-                    className="flex items-center justify-between p-2 sm:p-3 bg-muted rounded-lg gap-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-foreground font-medium text-sm truncate">{shop.name}</p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Instância: {shop.instanceName}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {getConnectionBadge(shop.connectionStatus)}
-                    </div>
+      <Card className="bg-card border-border">
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-foreground">
+            <span className="flex items-center gap-2 text-sm sm:text-base">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+              Instâncias das Barbearias
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={loadBarbershopStatuses}
+              disabled={loadingStatuses || !config.apiUrl || !config.apiKey}
+              className="border-border text-foreground hover:bg-muted w-full sm:w-auto"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${loadingStatuses ? 'animate-spin' : ''}`} />
+              Atualizar Status
+            </Button>
+          </CardTitle>
+          <CardDescription className="text-muted-foreground text-xs sm:text-sm">
+            Status de conexão WhatsApp de cada barbearia
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-6 pt-0">
+          {barbershopStatuses.length === 0 ? (
+            <div className="text-center py-6 sm:py-8 text-muted-foreground">
+              <Building2 className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">Clique em "Atualizar Status" para ver as instâncias</p>
+            </div>
+          ) : (
+            <div className="space-y-2 sm:space-y-3">
+              {barbershopStatuses.map((shop) => (
+                <div 
+                  key={shop.id} 
+                  className="flex items-center justify-between p-2 sm:p-3 bg-muted rounded-lg gap-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-foreground font-medium text-sm truncate">{shop.name}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Instância: {shop.instanceName}</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {getConnectionBadge(shop.connectionStatus)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -88,13 +88,12 @@ const ChatbotSettingsSection = () => {
 
       const { data: configData } = await supabase
         .from('whatsapp_config')
-        .select('config')
+        .select('chatbot_enabled')
         .eq('barbershop_id', barbershopId)
         .maybeSingle();
 
-      if (configData?.config) {
-        const config = configData.config as Record<string, unknown>;
-        setChatbotEnabled(config.chatbot_enabled === true);
+      if (configData) {
+        setChatbotEnabled(configData.chatbot_enabled || false);
       }
 
       const { count } = await supabase
@@ -123,18 +122,7 @@ const ChatbotSettingsSection = () => {
         .eq('provider', 'evolution')
         .maybeSingle();
 
-      // Verificar se tem instance_name E está ativo/conectado
-      const hasInstance = !!config?.config?.instance_name;
-      const isConnected = config?.is_active === true || 
-                          config?.config?.connection_status === 'connected';
-      
-      setWhatsappConnected(hasInstance && isConnected);
-      
-      // Se existe config, carregar status do chatbot
-      if (config?.config) {
-        const configJson = config.config as Record<string, unknown>;
-        setChatbotEnabled(configJson.chatbot_enabled === true);
-      }
+      setWhatsappConnected(!!config?.config?.instance_name);
     } catch (error) {
       console.error('Error checking WhatsApp status:', error);
     }
@@ -146,25 +134,21 @@ const ChatbotSettingsSection = () => {
       
       const { data: existing } = await supabase
         .from('whatsapp_config')
-        .select('id, config')
+        .select('id')
         .eq('barbershop_id', barbershopId)
         .maybeSingle();
 
       if (existing) {
-        const currentConfig = (existing.config as Record<string, unknown>) || {};
         await supabase
           .from('whatsapp_config')
-          .update({ 
-            config: { ...currentConfig, chatbot_enabled: newValue },
-            updated_at: new Date().toISOString()
-          })
+          .update({ chatbot_enabled: newValue })
           .eq('barbershop_id', barbershopId);
       } else {
         await supabase
           .from('whatsapp_config')
           .insert({
             barbershop_id: barbershopId,
-            config: { chatbot_enabled: newValue },
+            chatbot_enabled: newValue,
             provider: 'evolution'
           });
       }
@@ -308,27 +292,17 @@ const ChatbotSettingsSection = () => {
                     id="chatbot-toggle"
                     checked={chatbotEnabled}
                     onCheckedChange={toggleChatbot}
+                    disabled={!whatsappConnected}
                   />
                 </div>
 
-                {!whatsappConnected && chatbotEnabled && (
+                {!whatsappConnected && (
                   <div className="p-2.5 sm:p-3 bg-warning/10 border border-warning/20 rounded-lg space-y-1.5 sm:space-y-2">
                     <p className="text-xs sm:text-sm font-medium text-warning">
-                      ⚠️ WhatsApp desconectado
+                      ⚠️ WhatsApp não configurado
                     </p>
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      O chatbot está ativado, mas só funcionará quando o WhatsApp estiver conectado.
-                    </p>
-                  </div>
-                )}
-
-                {!whatsappConnected && !chatbotEnabled && (
-                  <div className="p-2.5 sm:p-3 bg-muted/50 border border-border rounded-lg space-y-1.5 sm:space-y-2">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                      💡 Dica
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      Você pode ativar o chatbot agora. Ele começará a responder assim que o WhatsApp for conectado.
+                      Configure o WhatsApp na seção "WhatsApp" primeiro.
                     </p>
                   </div>
                 )}

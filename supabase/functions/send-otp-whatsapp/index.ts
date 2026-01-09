@@ -96,8 +96,16 @@ serve(async (req) => {
       .eq('key', 'evolution_api')
       .maybeSingle();
 
-    let apiUrl = evolutionConfig?.value?.api_url || '';
-    let apiKey = evolutionConfig?.value?.api_key || '';
+    if (!evolutionConfig?.value?.api_url || !evolutionConfig?.value?.api_key) {
+      console.error('[Send OTP] Evolution API não configurada globalmente');
+      return new Response(
+        JSON.stringify({ success: false, error: 'WhatsApp não configurado no sistema. Configure o servidor Evolution API no painel SaaS Admin.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const apiUrl = evolutionConfig.value.api_url;
+    const apiKey = evolutionConfig.value.api_key;
 
     // Buscar configuração da instância OTP global
     const { data: otpConfig } = await supabase
@@ -109,62 +117,32 @@ serve(async (req) => {
     let instanceName = otpConfig?.value?.instance_name;
     const otpStatus = otpConfig?.value?.status;
 
-    // Se não há instância OTP global configurada, tentar usar instância de barbearia
-    if (!instanceName) {
-      console.log('[Send OTP] Instância OTP global não configurada, buscando instância alternativa...');
-
-      // Buscar uma instância ativa de qualquer barbearia
-      const { data: configs, error: configsError } = await supabase
+    // Se não há instância OTP configurada ou não está conectada, tentar usar instância de barbearia
+    if (!instanceName || otpStatus !== 'connected') {
+      console.log('[Send OTP] Instância OTP global não disponível, buscando instância alternativa...');
+      
+      const { data: configs } = await supabase
         .from('whatsapp_config')
-        .select('config, is_active, barbershop_id')
+        .select('instance_name, status')
         .eq('provider', 'evolution')
-        .or('is_active.eq.true,config->>connection_status.eq.connected')
+        .eq('status', 'connected')
         .limit(1);
 
-      if (configsError) {
-        console.error('[Send OTP] Erro ao buscar whatsapp_config:', configsError);
-      }
-
-      if (!configs || configs.length === 0 || !configs[0].config?.instance_name) {
+      if (!configs || configs.length === 0) {
         console.error('[Send OTP] Nenhuma instância WhatsApp conectada');
         return new Response(
-          JSON.stringify({
-            success: false,
-            error:
-              'Nenhuma instância WhatsApp disponível. Conecte a instância OTP global no painel SaaS Admin (Configurações > OTP WhatsApp) ou conecte o WhatsApp de alguma barbearia.',
-            details: {
-              otp_instance_configured: !!otpConfig?.value?.instance_name,
-              otp_status: otpStatus || null,
-            },
+          JSON.stringify({ 
+            success: false, 
+            error: 'Nenhuma instância WhatsApp disponível. Configure a instância OTP global no painel SaaS Admin.' 
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const fallbackConfig = configs[0].config as {
-        instance_name: string;
-      };
-
-      // Usa apenas o instance_name do tenant (credenciais do servidor são sempre globais)
-      instanceName = fallbackConfig.instance_name;
+      instanceName = configs[0].instance_name;
       console.log(`[Send OTP] Usando instância alternativa: ${instanceName}`);
     } else {
-      if (otpStatus !== 'connected') {
-        console.log(
-          `[Send OTP] Instância OTP global com status "${otpStatus || 'unknown'}"; tentando enviar mesmo assim: ${instanceName}`
-        );
-      } else {
-        console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
-      }
-    }
-
-    // Validar que temos as credenciais necessárias
-    if (!apiUrl || !apiKey) {
-      console.error('[Send OTP] Evolution API não configurada');
-      return new Response(
-        JSON.stringify({ success: false, error: 'WhatsApp não configurado no sistema. Configure o servidor Evolution API no painel SaaS Admin.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log(`[Send OTP] Usando instância OTP global: ${instanceName}`);
     }
 
     // Mensagem do código OTP
@@ -172,7 +150,7 @@ serve(async (req) => {
 
     // Enviar via Evolution API
     const evolutionUrl = `${apiUrl.replace(/\/+$/, '')}/message/sendText/${instanceName}`;
-
+    
     const response = await fetch(evolutionUrl, {
       method: 'POST',
       headers: {
@@ -190,9 +168,9 @@ serve(async (req) => {
     if (!response.ok) {
       console.error('[Send OTP] Erro ao enviar WhatsApp:', responseData);
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: responseData?.error || responseData?.message || 'Erro ao enviar código via WhatsApp',
+        JSON.stringify({ 
+          success: false, 
+          error: 'Erro ao enviar código via WhatsApp' 
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

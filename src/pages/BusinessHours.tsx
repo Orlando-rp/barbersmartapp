@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-
+import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -532,14 +532,16 @@ const BusinessHours = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <LoadingSpinner size="lg" />
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <LoadingSpinner size="lg" />
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <>
+    <Layout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Horários de Funcionamento</h1>
@@ -1000,7 +1002,7 @@ const BusinessHours = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </Layout>
   );
 };
 

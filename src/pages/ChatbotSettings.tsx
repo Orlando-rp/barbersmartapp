@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -91,17 +91,15 @@ const ChatbotSettings = () => {
         });
       }
 
-      // Fetch chatbot settings - chatbot_enabled armazenado no config JSONB
+      // Fetch chatbot settings
       const { data: configData } = await supabase
         .from('whatsapp_config')
-        .select('config, is_active')
+        .select('chatbot_enabled')
         .eq('barbershop_id', barbershopId)
-        .eq('provider', 'evolution')
         .maybeSingle();
 
-      if (configData?.config) {
-        const config = configData.config as Record<string, unknown>;
-        setChatbotEnabled(config.chatbot_enabled === true);
+      if (configData) {
+        setChatbotEnabled(configData.chatbot_enabled || false);
       }
 
       // Count chatbot-created appointments
@@ -124,81 +122,18 @@ const ChatbotSettings = () => {
 
   const checkWhatsAppStatus = async () => {
     try {
-      // Buscar configuração Evolution API
+      // Verificar se existe configuração Evolution API (não precisa estar ativa para habilitar chatbot)
       const { data: config } = await supabase
         .from('whatsapp_config')
-        .select('config, is_active')
+        .select('*')
         .eq('barbershop_id', barbershopId)
         .eq('provider', 'evolution')
         .maybeSingle();
 
-      if (!config?.config?.instance_name) {
-        setWhatsappConnected(false);
-        return;
-      }
-
-      const savedStatus = config.config.connection_status;
-      
-      // SEMPRE verificar status real se existe instance_name
-      try {
-        // Buscar config global para obter api_url e api_key
-        const { data: globalData } = await supabase.functions.invoke('get-evolution-config');
-        
-        if (globalData?.success && globalData?.config?.api_url && globalData?.config?.api_key) {
-          const { data: statusData } = await supabase.functions.invoke('send-whatsapp-evolution', {
-            body: {
-              action: 'connectionState',
-              apiUrl: globalData.config.api_url,
-              apiKey: globalData.config.api_key,
-              instanceName: config.config.instance_name
-            }
-          });
-
-          // Handle 404 (instance not found) as disconnected
-          if (statusData?.success === false && statusData?.details?.status === 404) {
-            setWhatsappConnected(false);
-            return;
-          }
-
-          const isReallyConnected = statusData?.state === 'open' || 
-                                    statusData?.instance?.state === 'open' ||
-                                    statusData?.connectionStatus === 'open';
-          setWhatsappConnected(isReallyConnected);
-          
-          // Atualizar banco se status mudou
-          if (isReallyConnected && savedStatus !== 'connected') {
-            await supabase
-              .from('whatsapp_config')
-              .update({
-                config: { ...config.config, connection_status: 'connected' },
-                is_active: true,
-                updated_at: new Date().toISOString()
-              })
-              .eq('barbershop_id', barbershopId)
-              .eq('provider', 'evolution');
-          } else if (!isReallyConnected && savedStatus === 'connected') {
-            await supabase
-              .from('whatsapp_config')
-              .update({
-                config: { ...config.config, connection_status: 'disconnected' },
-                is_active: false,
-                updated_at: new Date().toISOString()
-              })
-              .eq('barbershop_id', barbershopId)
-              .eq('provider', 'evolution');
-          }
-        } else {
-          // Sem config global, usar status salvo
-          setWhatsappConnected(savedStatus === 'connected' || config.is_active === true);
-        }
-      } catch (apiError) {
-        console.error('Error checking real status:', apiError);
-        // Fallback para status salvo
-        setWhatsappConnected(savedStatus === 'connected' || config.is_active === true);
-      }
+      // Considera conectado se existir uma configuração com instance_name
+      setWhatsappConnected(!!config?.config?.instance_name);
     } catch (error) {
       console.error('Error checking WhatsApp status:', error);
-      setWhatsappConnected(false);
     }
   };
 
@@ -206,49 +141,26 @@ const ChatbotSettings = () => {
     try {
       const newValue = !chatbotEnabled;
       
-      // Atualizar chatbot_enabled dentro do config JSONB
-      const { data: existing, error: fetchError } = await supabase
+      // First, check if config exists
+      const { data: existing } = await supabase
         .from('whatsapp_config')
-        .select('id, config')
+        .select('id')
         .eq('barbershop_id', barbershopId)
-        .eq('provider', 'evolution')
         .maybeSingle();
 
-      if (fetchError) {
-        console.error('Error fetching config:', fetchError);
-        throw fetchError;
-      }
-
       if (existing) {
-        // Atualiza chatbot_enabled dentro do config JSONB
-        const currentConfig = (existing.config as Record<string, unknown>) || {};
-        const { error: updateError } = await supabase
+        await supabase
           .from('whatsapp_config')
-          .update({ 
-            config: { ...currentConfig, chatbot_enabled: newValue },
-            updated_at: new Date().toISOString()
-          })
-          .eq('barbershop_id', barbershopId)
-          .eq('provider', 'evolution');
-
-        if (updateError) {
-          console.error('Error updating chatbot_enabled:', updateError);
-          throw updateError;
-        }
+          .update({ chatbot_enabled: newValue })
+          .eq('barbershop_id', barbershopId);
       } else {
-        // Cria nova entrada com chatbot_enabled no config
-        const { error: insertError } = await supabase
+        await supabase
           .from('whatsapp_config')
           .insert({
             barbershop_id: barbershopId,
-            provider: 'evolution',
-            config: { chatbot_enabled: newValue }
+            chatbot_enabled: newValue,
+            provider: 'evolution'
           });
-
-        if (insertError) {
-          console.error('Error inserting config:', insertError);
-          throw insertError;
-        }
       }
 
       setChatbotEnabled(newValue);
@@ -260,10 +172,9 @@ const ChatbotSettings = () => {
           : "O chatbot foi desativado. Mensagens não serão respondidas automaticamente.",
       });
     } catch (error: any) {
-      console.error('toggleChatbot error:', error);
       toast({
-        title: "Erro ao alterar chatbot",
-        description: error.message || "Verifique se você tem permissão de admin para esta barbearia.",
+        title: "Erro",
+        description: error.message,
         variant: "destructive"
       });
     }
@@ -279,14 +190,16 @@ const ChatbotSettings = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner size="lg" />
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" />
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <>
+    <Layout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -417,29 +330,24 @@ const ChatbotSettings = () => {
                       id="chatbot-toggle"
                       checked={chatbotEnabled}
                       onCheckedChange={toggleChatbot}
+                      disabled={!whatsappConnected}
                     />
                   </div>
 
-                  {!whatsappConnected && chatbotEnabled && (
+                  {!whatsappConnected && (
                     <div className="p-2.5 sm:p-3 bg-warning/10 border border-warning/20 rounded-lg space-y-1.5 sm:space-y-2">
                       <p className="text-xs sm:text-sm font-medium text-warning">
-                        ⚠️ WhatsApp desconectado
+                        ⚠️ WhatsApp não configurado
                       </p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        O chatbot está ativado, mas só funcionará quando o WhatsApp estiver conectado.
-                        Vá em <strong>WhatsApp → Evolution API</strong> para conectar.
+                        Para usar o chatbot, você precisa:
                       </p>
-                    </div>
-                  )}
-
-                  {!whatsappConnected && !chatbotEnabled && (
-                    <div className="p-2.5 sm:p-3 bg-muted/50 border border-border rounded-lg space-y-1.5 sm:space-y-2">
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                        💡 Dica
-                      </p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        Você pode ativar o chatbot agora. Ele começará a responder assim que o WhatsApp for conectado.
-                      </p>
+                      <ol className="text-[10px] sm:text-xs text-muted-foreground list-decimal list-inside space-y-0.5 sm:space-y-1">
+                        <li>Ir em <strong>WhatsApp → Evolution API</strong></li>
+                        <li>Clicar em "Conectar" e escanear o QR Code</li>
+                        <li>Aguardar a conexão</li>
+                        <li>Voltar aqui e ativar o chatbot</li>
+                      </ol>
                     </div>
                   )}
 
@@ -629,7 +537,7 @@ const ChatbotSettings = () => {
         </Tabs>
         </FeatureGate>
       </div>
-    </>
+    </Layout>
   );
 };
 

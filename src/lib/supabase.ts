@@ -1,16 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Lovable Cloud - Usando variáveis de ambiente
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Environment variables - configurable for self-hosting
+// IMPORTANT: When deploying externally, set these via environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nmsblmmhigwsevnqmhwn.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_tDfYcwUClvCdECz1NttPNw_GbBcs-8p';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Supabase environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) are required');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Export for use in tenant detection
 export const getSupabaseUrl = () => supabaseUrl;

@@ -22,21 +22,21 @@ export const DashboardWidget = ({
   isUpdating = false
 }: DashboardWidgetProps) => {
   return <Card className={cn("barbershop-card relative h-full flex flex-col", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 sm:p-2.5 pb-1 sm:pb-1.5">
-        <CardTitle className="font-semibold flex items-center gap-1 text-[11px] sm:text-xs truncate">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2 sm:pb-4 flex-shrink-0">
+        <CardTitle className="font-semibold flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm truncate">
           {icon}
           <span className="truncate">{title}</span>
-          {isUpdating && <span className="inline-flex h-1.5 w-1.5 rounded-full bg-primary animate-pulse flex-shrink-0" />}
+          {isUpdating && <span className="inline-flex h-2 w-2 rounded-full bg-primary animate-pulse flex-shrink-0" />}
         </CardTitle>
-        <div className="flex gap-0.5 flex-shrink-0">
-          {onMaximize && <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onMaximize}>
-              <Maximize2 className="h-2.5 w-2.5" />
+        <div className="flex gap-1 flex-shrink-0">
+          {onMaximize && <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7" onClick={onMaximize}>
+              <Maximize2 className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>}
-          {onRemove && <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onRemove}>
-              <X className="h-2.5 w-2.5" />
+          {onRemove && <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7" onClick={onRemove}>
+              <X className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>}
         </div>
       </CardHeader>
-      <CardContent className="p-2 sm:p-2.5 pt-0 flex flex-col flex-1 min-h-[100px]">{children}</CardContent>
+      <CardContent className="p-3 sm:p-4 pt-0 flex-1 flex flex-col">{children}</CardContent>
     </Card>;
 };

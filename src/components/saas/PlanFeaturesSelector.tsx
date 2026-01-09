@@ -79,7 +79,6 @@ export interface PlanFeatures {
   audit_logs: boolean;
   priority_support: boolean;
   api_access: boolean;
-  independent_whatsapp: boolean; // WhatsApp com credenciais próprias (para white label)
 }
 
 export const defaultPlanFeatures: PlanFeatures = {
@@ -134,7 +133,6 @@ export const defaultPlanFeatures: PlanFeatures = {
   audit_logs: false,
   priority_support: false,
   api_access: false,
-  independent_whatsapp: false,
 };
 
 // Planos pré-configurados para facilitar
@@ -226,7 +224,6 @@ export const planPresets = {
     audit_logs: true,
     priority_support: true,
     api_access: true,
-    independent_whatsapp: true,
   },
 };
 
@@ -486,13 +483,6 @@ const featuresList: FeatureItem[] = [
     label: 'Acesso à API',
     description: 'Integração via API',
     icon: FileText,
-    category: 'enterprise',
-  },
-  {
-    key: 'independent_whatsapp',
-    label: 'WhatsApp Independente',
-    description: 'Usar servidor Evolution API próprio',
-    icon: MessageSquare,
     category: 'enterprise',
   },
 ];

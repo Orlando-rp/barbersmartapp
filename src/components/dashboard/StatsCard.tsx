@@ -49,24 +49,24 @@ const StatsCard = ({
 
   return (
     <Card className={cn("transition-smooth hover:shadow-medium", variants[variant])}>
-      <CardHeader className="p-2.5 sm:p-3 pb-1">
+      <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-xs font-medium text-muted-foreground truncate">{title}</div>
-          <Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0", iconVariants[variant])} />
+          <div className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</div>
+          <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0", iconVariants[variant])} />
         </div>
       </CardHeader>
-      <CardContent className="p-2.5 sm:p-3 pt-1">
-        <div className="text-base sm:text-xl font-bold text-foreground truncate">{value}</div>
+      <CardContent className="p-3 sm:p-4 pt-1 sm:pt-2">
+        <div className="text-lg sm:text-2xl font-bold text-foreground truncate">{value}</div>
         
         {/* Sparkline */}
         {sparklineData && sparklineData.length > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="mt-1.5 cursor-help">
+              <div className="mt-2 cursor-help">
                 <Sparkline 
                   data={sparklineData} 
                   color={sparklineColors[variant]} 
-                  height={24}
+                  height={28}
                 />
               </div>
             </TooltipTrigger>
@@ -77,7 +77,7 @@ const StatsCard = ({
         )}
 
         {change && (
-          <div className="flex items-center flex-wrap text-xs mt-1">
+          <div className="flex items-center flex-wrap text-xs mt-1 sm:mt-2">
             <span
               className={cn(
                 "font-medium",

@@ -16,7 +16,6 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { PlanSelectionStep } from '@/components/auth/PlanSelectionStep';
-import { WhatsAppDiagnostic } from '@/components/auth/WhatsAppDiagnostic';
 
 interface SocialProviders {
   google: { enabled: boolean };
@@ -1979,16 +1978,16 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <Card className="w-full max-w-lg barbershop-card">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-4 animate-fade-in">
             {currentLogoUrl ? (
               <img 
                 src={currentLogoUrl} 
                 alt={effectiveBranding?.system_name || 'Logo'} 
-                className="h-28 w-auto max-w-[280px] object-contain animate-enter"
+                className="h-20 w-auto object-contain"
               />
             ) : (
-              <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
-                <Scissors className="h-12 w-12 text-primary" />
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Scissors className="h-8 w-8 text-primary" />
               </div>
             )}
           </div>
@@ -2145,9 +2144,6 @@ const Auth = () => {
               )}
             </TabsContent>
           </Tabs>
-          
-          {/* Diagnóstico WhatsApp - apenas para admins */}
-          <WhatsAppDiagnostic />
         </CardContent>
       </Card>
     </div>

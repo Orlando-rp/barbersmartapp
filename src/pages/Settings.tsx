@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-
+import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,12 +21,11 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { 
   Save, User, Bell, Clock, Globe, Image, Sparkles, 
   Shield, Settings, ChevronRight, Building2, Link2, RotateCcw, LayoutTemplate,
-  MessageSquare, Bot, FileText, CreditCard, Briefcase
+  MessageSquare, Bot, FileText, CreditCard
 } from "lucide-react";
 import PaymentSettingsSection from "@/components/settings/PaymentSettingsSection";
 import LandingPageBuilder from "@/components/settings/LandingPageBuilder";
 import { toast } from "sonner";
-import { CPFCNPJInput } from "@/components/ui/cpf-cnpj-input";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -35,10 +34,6 @@ interface BarbershopSettings {
   address: string;
   phone: string;
   email: string;
-  cnpj: string;
-  responsible_name: string;
-  responsible_phone: string;
-  responsible_email: string;
   settings: {
     notifications: {
       whatsapp: boolean;
@@ -119,10 +114,6 @@ const SettingsPage = () => {
     address: '',
     phone: '',
     email: '',
-    cnpj: '',
-    responsible_name: '',
-    responsible_phone: '',
-    responsible_email: '',
     settings: {
       notifications: {
         whatsapp: false,
@@ -155,7 +146,7 @@ const SettingsPage = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('barbershops')
-        .select('name, address, phone, email, settings, cnpj, responsible_name, responsible_phone, responsible_email')
+        .select('name, address, phone, email, settings')
         .eq('id', barbershopId)
         .single();
 
@@ -168,10 +159,6 @@ const SettingsPage = () => {
           address: data.address || '',
           phone: data.phone || '',
           email: data.email || '',
-          cnpj: data.cnpj || '',
-          responsible_name: data.responsible_name || '',
-          responsible_phone: data.responsible_phone || '',
-          responsible_email: data.responsible_email || '',
           settings: {
             notifications: {
               whatsapp: dbSettings.notifications?.whatsapp ?? false,
@@ -200,10 +187,6 @@ const SettingsPage = () => {
           address: settings.address,
           phone: settings.phone,
           email: settings.email,
-          cnpj: settings.cnpj,
-          responsible_name: settings.responsible_name,
-          responsible_phone: settings.responsible_phone,
-          responsible_email: settings.responsible_email,
           settings: settings.settings
         })
         .eq('id', barbershopId);
@@ -255,16 +238,8 @@ const SettingsPage = () => {
               <h2 className="text-lg font-semibold text-foreground mb-1">Perfil da Barbearia</h2>
               <p className="text-sm text-muted-foreground">Informações básicas do seu estabelecimento</p>
             </div>
-            
-            {/* Dados do Estabelecimento */}
             <Card className="barbershop-card">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  Dados do Estabelecimento
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="pt-6 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="barbershop-name">Nome da Barbearia</Label>
@@ -303,83 +278,27 @@ const SettingsPage = () => {
                     placeholder="contato@barbearia.com"
                   />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Dados da Empresa */}
-            <Card className="barbershop-card">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Briefcase className="h-4 w-4 text-primary" />
-                  Dados da Empresa
-                </CardTitle>
-                <CardDescription>
-                  Informações legais e do responsável
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="cnpj">CNPJ</Label>
-                    <CPFCNPJInput 
-                      id="cnpj"
-                      value={settings.cnpj}
-                      onChange={(value) => setSettings({ ...settings, cnpj: value })}
-                      placeholder="00.000.000/0000-00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="responsible-name">Nome do Responsável</Label>
-                    <Input 
-                      id="responsible-name" 
-                      value={settings.responsible_name}
-                      onChange={(e) => setSettings({ ...settings, responsible_name: e.target.value })}
-                      placeholder="Nome completo do responsável"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="responsible-phone">Telefone do Responsável</Label>
-                    <Input 
-                      id="responsible-phone" 
-                      value={settings.responsible_phone}
-                      onChange={(e) => setSettings({ ...settings, responsible_phone: e.target.value })}
-                      placeholder="(11) 99999-9999"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="responsible-email">Email do Responsável</Label>
-                    <Input 
-                      id="responsible-email" 
-                      type="email"
-                      value={settings.responsible_email}
-                      onChange={(e) => setSettings({ ...settings, responsible_email: e.target.value })}
-                      placeholder="responsavel@email.com"
-                    />
-                  </div>
+                <div className="pt-4 flex flex-col sm:flex-row justify-between gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      resetTour();
+                      toast.success('Tour reiniciado! Navegue para o Dashboard para ver o tour.');
+                    }}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reiniciar Tour
+                  </Button>
+                  <Button 
+                    variant="premium" 
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? 'Salvando...' : <><Save className="mr-2 h-4 w-4" /> Salvar Alterações</>}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Ações */}
-            <div className="flex flex-col sm:flex-row justify-between gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  resetTour();
-                  toast.success('Tour reiniciado! Navegue para o Dashboard para ver o tour.');
-                }}
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reiniciar Tour
-              </Button>
-              <Button 
-                variant="premium" 
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? 'Salvando...' : <><Save className="mr-2 h-4 w-4" /> Salvar Alterações</>}
-              </Button>
-            </div>
           </div>
         );
 
@@ -569,7 +488,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <>
+    <Layout>
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div>
@@ -686,7 +605,7 @@ const SettingsPage = () => {
           </main>
         </div>
       </div>
-    </>
+    </Layout>
   );
 };
 

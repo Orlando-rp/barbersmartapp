@@ -150,23 +150,23 @@ export function useScheduleConflictValidation(
         continue;
       }
 
-      // Check if staff start time is before business opens - this is now an ERROR (blocking)
+      // Check if staff start time is before business opens
       if (timeToMinutes(normalizedStaff.start) < timeToMinutes(businessDay.start)) {
         result.push({
           day,
           type: 'outside_hours',
           message: `Entrada (${normalizedStaff.start}) é antes da abertura da barbearia (${businessDay.start})`,
-          severity: 'error',
+          severity: 'warning',
         });
       }
 
-      // Check if staff end time is after business closes - this is now an ERROR (blocking)
+      // Check if staff end time is after business closes
       if (timeToMinutes(normalizedStaff.end) > timeToMinutes(businessDay.end)) {
         result.push({
           day,
           type: 'outside_hours',
           message: `Saída (${normalizedStaff.end}) é depois do fechamento da barbearia (${businessDay.end})`,
-          severity: 'error',
+          severity: 'warning',
         });
       }
     }
@@ -189,9 +189,6 @@ export function useScheduleConflictValidation(
     return businessHoursMap[day];
   };
 
-  // Check if there are any critical errors that should block saving
-  const canSave = !conflicts.some((c) => c.severity === 'error');
-
   return {
     conflicts,
     getConflictsForDay,
@@ -202,6 +199,5 @@ export function useScheduleConflictValidation(
     hasConflicts: conflicts.length > 0,
     errorCount: conflicts.filter((c) => c.severity === 'error').length,
     warningCount: conflicts.filter((c) => c.severity === 'warning').length,
-    canSave,
   };
 }

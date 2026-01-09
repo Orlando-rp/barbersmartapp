@@ -36,7 +36,6 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
-import { useSidebarGroups } from "@/hooks/useSidebarGroups";
 import { PlanFeatures } from "@/components/saas/PlanFeaturesSelector";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -59,7 +58,7 @@ interface NavItem {
   adminOnly?: boolean;
   requiredFeature?: keyof PlanFeatures;
   permission?: string;
-  group: "operacoes" | "negocios" | "unidades" | "comunicacao" | "conta" | "config" | "admin";
+  group: "operacoes" | "gestao" | "marketing" | "config" | "admin";
   tourId?: string;
 }
 
@@ -78,32 +77,28 @@ const navigation: NavItem[] = [
   { name: "Clientes", href: "/clients", icon: Users, requiredFeature: 'clients', permission: 'clients', group: "operacoes", tourId: "clients" },
   { name: "Horários", href: "/business-hours", icon: Clock, requiredFeature: 'business_hours', permission: 'business_hours', group: "operacoes", tourId: "hours" },
   
-  // Negócios
-  { name: "Serviços", href: "/services", icon: Scissors, requiredFeature: 'services', permission: 'services', group: "negocios", tourId: "services" },
-  { name: "Equipe", href: "/staff", icon: UserCog, requiredFeature: 'staff_basic', permission: 'staff', group: "negocios", tourId: "staff" },
-  { name: "Financeiro", href: "/finance", icon: DollarSign, requiredFeature: 'finance_basic', permission: 'finance', group: "negocios", tourId: "finance" },
-  { name: "Relatórios", href: "/reports", icon: BarChart3, requiredFeature: 'basic_reports', permission: 'reports', group: "negocios", tourId: "reports" },
+  // Gestão
+  { name: "Serviços", href: "/services", icon: Scissors, requiredFeature: 'services', permission: 'services', group: "gestao", tourId: "services" },
+  { name: "Equipe", href: "/staff", icon: UserCog, requiredFeature: 'staff_basic', permission: 'staff', group: "gestao", tourId: "staff" },
+  { name: "Financeiro", href: "/finance", icon: DollarSign, requiredFeature: 'finance_basic', permission: 'finance', group: "gestao", tourId: "finance" },
+  { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet, requiredFeature: 'staff_earnings', permission: 'meus_ganhos', group: "gestao" },
+  { name: "Relatórios", href: "/reports", icon: BarChart3, requiredFeature: 'basic_reports', permission: 'reports', group: "gestao", tourId: "reports" },
+  { name: "Minhas Unidades", href: "/barbershops", icon: Building2, adminOnly: true, group: "gestao" },
+  { name: "Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit', group: "gestao" },
+  { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit_reports', group: "gestao" },
   
-  // Unidades (Multi-unit)
-  { name: "Minhas Unidades", href: "/barbershops", icon: Building2, adminOnly: true, group: "unidades" },
-  { name: "Dashboard Multi-Unidade", href: "/multi-unit", icon: Building2, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit', group: "unidades" },
-  { name: "Relatórios Multi-Unidade", href: "/multi-unit-reports", icon: BarChart3, multiUnitOnly: true, adminOnly: true, requiredFeature: 'multi_unit_reports', group: "unidades" },
+  // Marketing
+  { name: "Marketing", href: "/marketing", icon: MessageSquare, requiredFeature: 'marketing_campaigns', permission: 'marketing', group: "marketing" },
+  { name: "Avaliações", href: "/reviews", icon: StarIcon, requiredFeature: 'reviews', permission: 'reviews', group: "marketing" },
+  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, requiredFeature: 'whatsapp_notifications', permission: 'whatsapp', group: "marketing", tourId: "whatsapp" },
+  { name: "Chat WhatsApp", href: "/whatsapp-chat", icon: MessageCircle, requiredFeature: 'whatsapp_chat', permission: 'whatsapp_chat', group: "marketing" },
+  { name: "Chatbot IA", href: "/chatbot", icon: Bot, requiredFeature: 'whatsapp_chatbot', permission: 'chatbot', group: "marketing" },
   
-  // Comunicação
-  { name: "Campanhas", href: "/marketing", icon: MessageSquare, requiredFeature: 'marketing_campaigns', permission: 'marketing', group: "comunicacao" },
-  { name: "Avaliações", href: "/reviews", icon: StarIcon, requiredFeature: 'reviews', permission: 'reviews', group: "comunicacao" },
-  { name: "WhatsApp", href: "/whatsapp", icon: MessageSquare, requiredFeature: 'whatsapp_notifications', permission: 'whatsapp', group: "comunicacao", tourId: "whatsapp" },
-  { name: "Chat WhatsApp", href: "/whatsapp-chat", icon: MessageCircle, requiredFeature: 'whatsapp_chat', permission: 'whatsapp_chat', group: "comunicacao" },
-  { name: "Chatbot IA", href: "/chatbot", icon: Bot, requiredFeature: 'whatsapp_chatbot', permission: 'chatbot', group: "comunicacao" },
-  
-  // Minha Conta
-  { name: "Meus Ganhos", href: "/meus-ganhos", icon: Wallet, requiredFeature: 'staff_earnings', permission: 'meus_ganhos', group: "conta" },
-  { name: "Minha Assinatura", href: "/subscription/manage", icon: Wallet, adminOnly: true, group: "conta" },
-  { name: "Upgrade", href: "/upgrade", icon: Sparkles, adminOnly: true, group: "conta" },
-  
-  // Sistema
+  // Config
   { name: "Configurações", href: "/settings", icon: Settings, permission: 'settings', group: "config", tourId: "settings" },
   { name: "Auditoria", href: "/audit", icon: Shield, requiredFeature: 'audit_logs', permission: 'audit', group: "config" },
+  { name: "Minha Assinatura", href: "/subscription/manage", icon: Wallet, adminOnly: true, group: "config" },
+  { name: "Upgrade", href: "/upgrade", icon: Sparkles, adminOnly: true, group: "config" },
   
   // Admin
   { name: "Admin SaaS", href: "/saas-admin", icon: Shield, superAdminOnly: true, group: "admin" },
@@ -111,11 +106,9 @@ const navigation: NavItem[] = [
 
 const navGroups: Omit<NavGroup, "items">[] = [
   { id: "operacoes", name: "Operações", icon: Briefcase },
-  { id: "negocios", name: "Negócios", icon: BarChart3 },
-  { id: "unidades", name: "Unidades", icon: Building2 },
-  { id: "comunicacao", name: "Comunicação", icon: Megaphone },
-  { id: "conta", name: "Minha Conta", icon: Wallet },
-  { id: "config", name: "Sistema", icon: Wrench },
+  { id: "gestao", name: "Gestão", icon: BarChart3 },
+  { id: "marketing", name: "Marketing", icon: Megaphone },
+  { id: "config", name: "Configurações", icon: Wrench },
   { id: "admin", name: "Administração", icon: Shield },
 ];
 
@@ -195,11 +188,11 @@ export const MobileSidebar = () => {
       <SheetContent side="left" className="w-72 p-0">
         <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
         <div className="flex flex-col h-full bg-card">
-          <div className="flex items-center justify-center px-4 py-5 border-b border-border">
+          <div className="flex items-center justify-between p-4 border-b border-border">
             <img 
               src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="h-14 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </div>
 
@@ -283,10 +276,10 @@ const SubscriptionInfo = ({ subscription, loading }: { subscription: any; loadin
 // Desktop Sidebar
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const { openGroups, toggleGroup, openGroup } = useSidebarGroups(
-    'sidebar-groups',
-    { operacoes: true, negocios: true, unidades: true, comunicacao: true, conta: true, config: true, admin: true }
-  );
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('sidebar-groups');
+    return saved ? JSON.parse(saved) : { operacoes: true, gestao: true, marketing: true, config: true, admin: true };
+  });
   
   const { barbershops, userRole } = useAuth();
   const { effectiveBranding, currentLogoUrl } = useBranding();
@@ -320,10 +313,19 @@ const Sidebar = () => {
   // Check if current route is in a group to auto-expand it
   useEffect(() => {
     const currentGroup = navigation.find(item => item.href === location.pathname)?.group;
-    if (currentGroup) {
-      openGroup(currentGroup);
+    if (currentGroup && !openGroups[currentGroup]) {
+      setOpenGroups(prev => ({ ...prev, [currentGroup]: true }));
     }
-  }, [location.pathname, openGroup]);
+  }, [location.pathname]);
+
+  // Persist open groups state
+  useEffect(() => {
+    localStorage.setItem('sidebar-groups', JSON.stringify(openGroups));
+  }, [openGroups]);
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   return (
     <div className={cn(
@@ -331,30 +333,32 @@ const Sidebar = () => {
       collapsed ? "w-16" : "w-64"
     )}>
       {/* Logo + Toggle */}
-      <div className="relative flex items-center justify-center px-4 py-5 border-b border-border min-h-[88px]">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         {!collapsed ? (
-          <>
+          <div className="flex items-center justify-center flex-1">
             <img 
               src={currentLogoUrl || (theme === 'dark' ? logoDark : logoLight)} 
               alt={effectiveBranding?.system_name || 'Barber Smart'} 
-              className="h-20 w-auto max-w-[200px] object-contain"
+              className="h-16 w-auto max-w-[220px] object-contain mx-auto"
             />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCollapsed(!collapsed)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          </>
+          </div>
         ) : (
-          <img 
-            src={logoIconUrl || faviconUrl || currentLogoUrl || logoIcon} 
-            alt={effectiveBranding?.system_name || 'Barber Smart'} 
-            className="w-14 h-14 rounded-lg object-contain"
-          />
+          <div className="flex items-center justify-center w-full">
+            <img 
+              src={logoIconUrl || faviconUrl || currentLogoUrl || logoIcon} 
+              alt={effectiveBranding?.system_name || 'Barber Smart'} 
+              className="w-12 h-12 rounded-lg object-contain"
+            />
+          </div>
         )}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setCollapsed(!collapsed)}
+          className={cn("h-8 w-8 shrink-0", collapsed && "hidden")}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Expand button when collapsed */}

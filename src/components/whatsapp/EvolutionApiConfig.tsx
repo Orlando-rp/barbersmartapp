@@ -1,14 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Send, 
   CheckCircle, 
@@ -20,8 +17,6 @@ import {
   RefreshCw,
   Loader2,
   Save,
-  Server,
-  AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -50,11 +45,7 @@ const generateInstanceName = (barbershopId: string): string => {
 
 export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigProps) => {
   const { user, barbershopId } = useAuth();
-  const { hasFeature, loading: loadingFeatures } = useFeatureFlags();
   const generatedInstanceName = barbershopId ? generateInstanceName(barbershopId) : '';
-  
-  // Verifica se o plano permite WhatsApp independente (white_label ou independent_whatsapp)
-  const canUseIndependentWhatsApp = hasFeature('white_label') || hasFeature('independent_whatsapp' as any);
   
   const [config, setConfig] = useState<EvolutionConfig>({
     apiUrl: '',
@@ -142,91 +133,52 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
         console.error('Erro ao carregar config:', error);
       }
 
+      const finalApiUrl = data?.config?.api_url || globalApiUrl;
+      const finalApiKey = data?.config?.api_key || globalApiKey;
       const finalInstanceName = data?.config?.instance_name || generatedInstanceName;
 
       console.log('[EvolutionApiConfig] Final config:', { 
-        hasUrl: !!globalApiUrl, 
-        hasKey: !!globalApiKey, 
+        hasUrl: !!finalApiUrl, 
+        hasKey: !!finalApiKey, 
         instanceName: finalInstanceName 
       });
 
-      // Tenant sempre usa credenciais globais do servidor
-      setConfig({
-        apiUrl: globalApiUrl,
-        apiKey: globalApiKey,
-        instanceName: finalInstanceName
-      });
-      
-      setIsUsingGlobalConfig(!!globalApiUrl && !!globalApiKey);
-      
-      if (data?.config?.connected_phone) {
-        setConnectedPhone(data.config.connected_phone);
-      }
-
-      // SEMPRE verificar status real ao carregar, independente do status salvo
-      if (globalApiUrl && globalApiKey && finalInstanceName) {
-        await checkConnectionOnLoad(globalApiUrl, globalApiKey, finalInstanceName, data?.config?.connection_status);
-      } else if (data?.config?.connection_status) {
-        // Sem config global, usar status salvo mas marcar como desconectado
-        setConnectionStatus('disconnected');
+      if (data?.config) {
+        // Usa config local, mas herda api_url e api_key da global se não existir local
+        setConfig({
+          apiUrl: finalApiUrl,
+          apiKey: finalApiKey,
+          instanceName: finalInstanceName
+        });
+        if (data.config.connection_status) {
+          setConnectionStatus(data.config.connection_status);
+        }
+        if (data.config.connected_phone) {
+          setConnectedPhone(data.config.connected_phone);
+        }
+        setIsUsingGlobalConfig(!data.config.api_url && !data.config.api_key && (!!globalApiUrl || !!globalApiKey));
+        
+        // Se já está marcado como conectado, verificar status real com o config carregado
+        if (data.config.connection_status === 'connected') {
+          setTimeout(() => checkConnection({ apiUrl: finalApiUrl, apiKey: finalApiKey, instanceName: finalInstanceName }), 1000);
+        }
+      } else if (globalApiUrl || globalApiKey) {
+        // Usar config global com instanceName local
+        setConfig({
+          apiUrl: globalApiUrl,
+          apiKey: globalApiKey,
+          instanceName: generatedInstanceName
+        });
+        setIsUsingGlobalConfig(true);
+      } else {
+        // Sem nenhuma config, apenas usar instanceName gerado
+        setConfig(prev => ({ ...prev, instanceName: generatedInstanceName }));
+        setIsUsingGlobalConfig(false);
       }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
     } finally {
       setLoadingConfig(false);
-    }
-  };
-
-  const checkConnectionOnLoad = async (apiUrl: string, apiKey: string, instanceName: string, savedStatus?: string) => {
-    try {
-      setCheckingConnection(true);
-      
-      const { data } = await supabase.functions.invoke('send-whatsapp-evolution', {
-        body: {
-          action: 'connectionState',
-          apiUrl,
-          apiKey,
-          instanceName
-        }
-      });
-
-      // Handle instance not found (404) - treat as disconnected
-      if (data?.success === false && data?.details?.status === 404) {
-        setConnectionStatus('disconnected');
-        setConnectedPhone(null);
-        if (savedStatus === 'connected') {
-          await updateConnectionInDatabase('disconnected');
-        }
-        return;
-      }
-
-      // Verificar múltiplos formatos de retorno da Evolution API
-      const isConnected = data?.state === 'open' || 
-                          data?.instance?.state === 'open' ||
-                          data?.connectionStatus === 'open';
-      
-      if (isConnected) {
-        setConnectionStatus('connected');
-        await fetchInstanceInfo();
-        // Garantir que o status está salvo como conectado
-        if (savedStatus !== 'connected') {
-          await updateConnectionInDatabase('connected');
-        }
-      } else {
-        setConnectionStatus('disconnected');
-        setConnectedPhone(null);
-        if (savedStatus === 'connected') {
-          await updateConnectionInDatabase('disconnected');
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao verificar conexão ao carregar:', error);
-      // Em caso de erro de rede, manter status salvo
-      if (savedStatus) {
-        setConnectionStatus(savedStatus as ConnectionStatus);
-      }
-    } finally {
-      setCheckingConnection(false);
     }
   };
 
@@ -306,30 +258,24 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
 
       if (error) throw error;
 
-        // Verificar múltiplos formatos de retorno da Evolution API
-        const isConnected = data?.state === 'open' || 
-                            data?.instance?.state === 'open' ||
-                            data?.connectionStatus === 'open';
-        
-        if (isConnected) {
-          setConnectionStatus('connected');
-          // Buscar informações da instância incluindo número - retorna o telefone encontrado
-          const phone = await fetchInstanceInfo();
-          // Salvar status conectado explicitamente no banco
-          await updateConnectionInDatabase('connected');
-          // Não verificar webhook automaticamente para evitar erro se ação não existir
-          setWebhookStatus('unknown');
-          if (phone) {
-            toast.success(`WhatsApp conectado: +${phone}`);
-          } else {
-            toast.success("WhatsApp conectado!");
-          }
+      if (data?.state === 'open' || data?.instance?.state === 'open') {
+        setConnectionStatus('connected');
+        // Buscar informações da instância incluindo número - retorna o telefone encontrado
+        const phone = await fetchInstanceInfo();
+        // Não verificar webhook automaticamente para evitar erro se ação não existir
+        // Usuário pode clicar em "Reconfigurar Webhook" manualmente
+        setWebhookStatus('unknown');
+        if (phone) {
+          toast.success(`WhatsApp conectado: +${phone}`);
         } else {
-          setConnectionStatus('disconnected');
-          setConnectedPhone(null);
-          await updateConnectionInDatabase('disconnected');
-          toast.info("WhatsApp não está conectado");
+          toast.success("WhatsApp conectado!");
         }
+      } else {
+        setConnectionStatus('disconnected');
+        setConnectedPhone(null);
+        await updateConnectionInDatabase('disconnected');
+        toast.info("WhatsApp não está conectado");
+      }
     } catch (error) {
       console.error('Erro ao verificar conexão:', error);
       setConnectionStatus('error');
@@ -393,12 +339,7 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           }
         });
 
-        // Verificar múltiplos formatos de retorno da Evolution API
-        const isConnected = data?.state === 'open' || 
-                            data?.instance?.state === 'open' ||
-                            data?.connectionStatus === 'open';
-        
-        if (isConnected) {
+        if (data?.state === 'open' || data?.instance?.state === 'open') {
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
           }
@@ -408,9 +349,6 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
           
           setConnectionStatus('connected');
           setQrModalOpen(false);
-          
-          // Salvar status conectado explicitamente no banco
-          await updateConnectionInDatabase('connected');
           
           // Não verificar webhook automaticamente - usuário pode clicar em "Reconfigurar Webhook"
           setWebhookStatus('unknown');
@@ -781,66 +719,6 @@ export const EvolutionApiConfig = ({ isSaasAdmin = false }: EvolutionApiConfigPr
     <div className="space-y-6">
       {/* Statistics Dashboard - Always on top */}
       <WhatsAppStats provider="evolution" />
-
-      {/* Independent WhatsApp Instance - For White Label Plans */}
-      {!isSaasAdmin && canUseIndependentWhatsApp && (
-        <Card className="border-primary/20">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <Server className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              WhatsApp Próprio
-              <Badge variant="secondary" className="ml-2 text-[10px]">White Label</Badge>
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              Conecte seu próprio número de WhatsApp para ter controle total sobre as mensagens
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
-            <Alert className="border-primary/50 bg-primary/5">
-              <Wifi className="h-4 w-4 text-primary" />
-              <AlertDescription className="text-xs">
-                Com o plano White Label, você pode conectar seu próprio número de WhatsApp. 
-                Todas as mensagens (chatbot, OTP, lembretes) serão enviadas usando seu número.
-              </AlertDescription>
-            </Alert>
-
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm font-medium">Instância:</span>
-                <Badge variant="outline" className="text-xs">{config.instanceName}</Badge>
-              </div>
-              {connectedPhone && (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs sm:text-sm font-medium">Número conectado:</span>
-                  <Badge className="bg-success/10 text-success text-xs">+{connectedPhone}</Badge>
-                </div>
-              )}
-            </div>
-
-            {isUsingGlobalConfig && (
-              <div className="p-3 bg-success/10 border border-success/20 rounded-lg">
-                <div className="flex items-center gap-2 text-success">
-                  <CheckCircle className="h-4 w-4" />
-                  <span className="text-xs sm:text-sm font-medium">Servidor Evolution API configurado</span>
-                </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                  A infraestrutura do servidor é gerenciada pelo SaaS. Você pode conectar seu próprio número abaixo.
-                </p>
-              </div>
-            )}
-
-            {!isUsingGlobalConfig && !config.apiUrl && (
-              <Alert className="border-warning/50 bg-warning/10">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                <AlertDescription className="text-xs text-warning">
-                  O servidor Evolution API ainda não foi configurado pelo administrador do SaaS.
-                  Entre em contato com o suporte.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Server Configuration - Only for SaaS Admin */}
       {isSaasAdmin && (

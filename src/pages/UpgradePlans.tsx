@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -155,14 +155,16 @@ const UpgradePlans = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner size="lg" />
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner size="lg" />
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <>
+    <Layout>
       <div className="space-y-6 sm:space-y-8">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto">
@@ -495,7 +497,7 @@ const UpgradePlans = () => {
         onClose={() => setShowBuilder(false)}
         onContinue={handleBuilderContinue}
       />
-    </>
+    </Layout>
   );
 };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-
+import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -445,14 +445,16 @@ const Barbershops = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <LoadingSpinner size="lg" />
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <LoadingSpinner size="lg" />
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <>
+    <Layout>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -482,50 +484,50 @@ const Barbershops = () => {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
-                <div className="h-full min-h-[72px] rounded-lg border border-border/60 bg-background/60 p-3 flex flex-col justify-between">
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Nome</p>
-                  <p className="font-medium truncate" title={matriz.name}>{matriz.name}</p>
+                  <p className="font-medium">{matriz.name}</p>
                 </div>
                 {matriz.cnpj && (
-                  <div className="h-full min-h-[72px] rounded-lg border border-border/60 bg-background/60 p-3 flex flex-col justify-between">
+                  <div className="space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <FileText className="h-3 w-3" /> CNPJ
                     </p>
-                    <p className="font-medium truncate" title={matriz.cnpj}>{matriz.cnpj}</p>
+                    <p className="font-medium">{matriz.cnpj}</p>
                   </div>
                 )}
                 {matriz.address && (
-                  <div className="h-full min-h-[72px] rounded-lg border border-border/60 bg-background/60 p-3 flex flex-col justify-between">
+                  <div className="space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <MapPin className="h-3 w-3" /> Endereço
                     </p>
-                    <p className="font-medium truncate" title={matriz.address}>{matriz.address}</p>
+                    <p className="font-medium">{matriz.address}</p>
                   </div>
                 )}
                 {matriz.phone && (
-                  <div className="h-full min-h-[72px] rounded-lg border border-border/60 bg-background/60 p-3 flex flex-col justify-between">
+                  <div className="space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Phone className="h-3 w-3" /> Telefone
                     </p>
-                    <p className="font-medium truncate" title={matriz.phone}>{matriz.phone}</p>
+                    <p className="font-medium">{matriz.phone}</p>
                   </div>
                 )}
                 {matriz.email && (
-                  <div className="h-full min-h-[72px] rounded-lg border border-border/60 bg-background/60 p-3 flex flex-col justify-between">
+                  <div className="space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Mail className="h-3 w-3" /> Email
                     </p>
-                    <p className="font-medium truncate" title={matriz.email}>{matriz.email}</p>
+                    <p className="font-medium">{matriz.email}</p>
                   </div>
                 )}
                 {matriz.responsible_name && (
-                  <div className="h-full min-h-[72px] rounded-lg border border-border/60 bg-background/60 p-3 flex flex-col justify-between">
+                  <div className="space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <User className="h-3 w-3" /> Responsável
                     </p>
-                    <p className="font-medium truncate" title={matriz.responsible_name}>{matriz.responsible_name}</p>
+                    <p className="font-medium">{matriz.responsible_name}</p>
                   </div>
                 )}
               </div>
@@ -1129,7 +1131,7 @@ const Barbershops = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </>
+    </Layout>
   );
 };
 

@@ -1,4 +1,4 @@
-// Evolution API WhatsApp integration - v3.0 - Simplified for external Supabase
+// Evolution API WhatsApp integration - v2.5 - Added getWebhook action for status check
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -7,14 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// Helper to get Supabase client - uses standard env vars
-function getSupabaseClient() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  console.log('[Evolution API] Using Supabase:', supabaseUrl);
-  return createClient(supabaseUrl, supabaseKey);
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -28,11 +20,11 @@ serve(async (req) => {
       apiUrl, 
       apiKey, 
       instanceName,
-      instanceToken,
-      phoneNumber,
+      instanceToken, // Token específico para a instância
+      phoneNumber,   // Número do telefone (opcional)
       to, 
       message,
-      originalMessage,
+      originalMessage, // Mensagem original sem formatação (para armazenamento)
       barbershopId, 
       recipientName, 
       createdBy,
@@ -40,8 +32,10 @@ serve(async (req) => {
       sentByName
     } = await req.json();
 
-    console.log(`[Evolution API v3.0] Action received: "${action}", Instance: ${instanceName || 'N/A'}`);
+    console.log(`[Evolution API v2.5] Action received: "${action}", Instance: ${instanceName || 'N/A'}`);
+    console.log(`[Evolution API v2.5] All supported actions: checkApi, checkServer, createInstance, connect, connectionState, instanceInfo, fetchInstances, logout, deleteInstance, restart, getWebhook, setWebhook, sendText`);
 
+    // Use provided credentials or fall back to env vars
     const evolutionApiUrl = apiUrl || Deno.env.get('EVOLUTION_API_URL');
     const evolutionApiKey = apiKey || Deno.env.get('EVOLUTION_API_KEY');
 
@@ -53,6 +47,7 @@ serve(async (req) => {
       );
     }
 
+    // Remove trailing slash from URL
     const baseUrl = evolutionApiUrl.replace(/\/+$/, '');
 
     const headers: Record<string, string> = {
@@ -67,50 +62,54 @@ serve(async (req) => {
     let method = 'GET';
     let body: string | undefined = undefined;
 
-    // Get webhook URL from SUPABASE_URL
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook`;
-
     switch (action) {
       case 'checkApi':
       case 'checkServer':
+        // Check if API is online
         endpoint = '/';
         method = 'GET';
         break;
 
       case 'createInstance': {
+        // Create new instance with webhook configured
         endpoint = '/instance/create';
         method = 'POST';
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+        const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook`;
         console.log(`[Evolution API] Creating instance with webhook: ${webhookUrl}`);
         
         const createPayload: any = {
           instanceName,
           qrcode: true,
           integration: 'WHATSAPP-BAILEYS',
+          // Webhook configuration with ALL necessary events
           webhook: {
             enabled: true,
             url: webhookUrl,
-            byEvents: false,
+            byEvents: false, // Receive all events at same URL
             base64: false,
             events: [
-              'MESSAGES_UPSERT',
-              'MESSAGES_UPDATE',
-              'MESSAGES_DELETE',
-              'SEND_MESSAGE',
-              'CONNECTION_UPDATE',
-              'QRCODE_UPDATED'
+              'MESSAGES_UPSERT',      // Incoming and outgoing messages
+              'MESSAGES_UPDATE',      // Message status updates (delivered, read)
+              'MESSAGES_DELETE',      // Deleted messages
+              'SEND_MESSAGE',         // Sent message confirmation
+              'CONNECTION_UPDATE',    // Connection status changes
+              'QRCODE_UPDATED'        // QR code updates
             ]
           },
+          // Settings for proper message handling
           websocket: false,
           rabbitmq: false,
           sqs: false,
           chatwoot: false
         };
         
+        // Add token if provided
         if (instanceToken) {
           createPayload.token = instanceToken;
         }
         
+        // Add phone number if provided (for pairing code)
         if (phoneNumber) {
           createPayload.number = phoneNumber;
         }
@@ -121,15 +120,20 @@ serve(async (req) => {
       }
 
       case 'connect': {
+        // Get QR code for connection - first try to create instance with webhook, then get QR
         console.log(`[Evolution API] Getting QR code for instance: ${instanceName}`);
         
+        const supabaseUrlConnect = Deno.env.get('SUPABASE_URL') || '';
+        const webhookUrlConnect = `${supabaseUrlConnect}/functions/v1/evolution-webhook`;
+        
+        // Create instance payload with comprehensive webhook config
         const connectPayload: any = {
           instanceName,
           qrcode: true,
           integration: 'WHATSAPP-BAILEYS',
           webhook: {
             enabled: true,
-            url: webhookUrl,
+            url: webhookUrlConnect,
             byEvents: false,
             base64: false,
             events: [
@@ -147,14 +151,17 @@ serve(async (req) => {
           chatwoot: false
         };
         
+        // Add token if provided
         if (instanceToken) {
           connectPayload.token = instanceToken;
         }
         
+        // Add phone number if provided
         if (phoneNumber) {
           connectPayload.number = phoneNumber;
         }
         
+        // Try to create instance first with webhook (will fail if exists, that's ok)
         try {
           console.log('[Evolution API] Attempting to create/update instance with webhook config');
           const createRes = await fetch(`${baseUrl}/instance/create`, {
@@ -168,43 +175,51 @@ serve(async (req) => {
           console.log(`[Evolution API] Instance may already exist: ${e}`);
         }
 
+        // Now get the QR code
         endpoint = `/instance/connect/${instanceName}`;
         method = 'GET';
         break;
       }
 
       case 'connectionState':
+        // Check connection status
         endpoint = `/instance/connectionState/${instanceName}`;
         method = 'GET';
         break;
 
       case 'instanceInfo':
+        // Get instance info including connected phone number
         endpoint = `/instance/fetchInstances?instanceName=${instanceName}`;
         method = 'GET';
         break;
 
       case 'fetchInstances':
+        // List all instances
         endpoint = '/instance/fetchInstances';
         method = 'GET';
         break;
 
       case 'logout':
+        // Disconnect instance (just logout, keeps instance)
         endpoint = `/instance/logout/${instanceName}`;
         method = 'DELETE';
         break;
 
       case 'deleteInstance':
+        // Delete instance completely from Evolution API
         console.log(`[Evolution API] Deleting instance: ${instanceName}`);
         endpoint = `/instance/delete/${instanceName}`;
         method = 'DELETE';
         break;
 
       case 'restart':
+        // Restart instance
         endpoint = `/instance/restart/${instanceName}`;
         method = 'PUT';
         break;
 
       case 'getWebhook': {
+        // Get current webhook configuration
         endpoint = `/webhook/find/${instanceName}`;
         method = 'GET';
         console.log('[Evolution API] Getting webhook config for:', instanceName);
@@ -212,13 +227,17 @@ serve(async (req) => {
       }
 
       case 'setWebhook': {
+        // Update webhook configuration for existing instance
         endpoint = `/webhook/set/${instanceName}`;
         method = 'POST';
+        const supabaseUrlWebhook = Deno.env.get('SUPABASE_URL') || '';
+        const webhookUrlSet = `${supabaseUrlWebhook}/functions/v1/evolution-webhook`;
         
+        // Evolution API 2.0 - requires 'webhook' wrapper
         body = JSON.stringify({
           webhook: {
             enabled: true,
-            url: webhookUrl,
+            url: webhookUrlSet,
             webhookByEvents: false,
             webhookBase64: false,
             events: [
@@ -232,14 +251,16 @@ serve(async (req) => {
           }
         });
         console.log('[Evolution API] Setting webhook:', body);
-        console.log('[Evolution API] Webhook URL:', webhookUrl);
+        console.log('[Evolution API] Webhook URL:', webhookUrlSet);
         break;
       }
 
       case 'sendText':
+        // Send text message
         endpoint = `/message/sendText/${instanceName}`;
         method = 'POST';
         
+        // Format phone number - ensure it has country code
         let formattedPhone = to.replace(/\D/g, '');
         if (!formattedPhone.startsWith('55') && formattedPhone.length <= 11) {
           formattedPhone = '55' + formattedPhone;
@@ -282,10 +303,14 @@ serve(async (req) => {
     // If sending message, log to database
     if (action === 'sendText' && barbershopId) {
       console.log('[Evolution API] Attempting to log message. BarbershopId:', barbershopId, 'To:', to);
+      console.log('[Evolution API] Response OK:', response.ok, 'Status:', response.status);
       
       try {
-        const supabase = getSupabaseClient();
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+        // Log to whatsapp_logs (existing behavior)
         const logEntry = {
           barbershop_id: barbershopId,
           recipient_phone: to,
@@ -309,6 +334,7 @@ serve(async (req) => {
           console.log('[Evolution API] Message logged to whatsapp_logs');
         }
 
+        // Also store in whatsapp_messages for chat UI - ALWAYS store, even if API failed
         const phoneNumber = to?.replace(/\D/g, '');
         const chatMessage = {
           barbershop_id: barbershopId,
@@ -345,6 +371,7 @@ serve(async (req) => {
     }
 
     if (!response.ok) {
+      // Handle 404 for connectionState - instance doesn't exist yet
       if (response.status === 404 && action === 'connectionState') {
         return new Response(
           JSON.stringify({ 

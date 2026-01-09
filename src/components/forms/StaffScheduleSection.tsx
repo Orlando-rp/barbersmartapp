@@ -29,12 +29,6 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
   return `${String(hour).padStart(2, "0")}:${minute}`;
 });
 
-// Helper to convert time to minutes for comparison
-const timeToMinutes = (time: string): number => {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
-};
-
 // Native time select component to avoid Radix ref issues in dialogs
 const NativeTimeSelect = memo(({ 
   value, 
@@ -42,52 +36,31 @@ const NativeTimeSelect = memo(({
   disabled = false,
   includeNone = false,
   hasWarning = false,
-  hasError = false,
-  minTime,
-  maxTime,
 }: { 
   value: string; 
   onChange: (value: string) => void; 
   disabled?: boolean;
   includeNone?: boolean;
   hasWarning?: boolean;
-  hasError?: boolean;
-  minTime?: string;
-  maxTime?: string;
-}) => {
-  // Filter time options based on business hours limits
-  const filteredOptions = useMemo(() => {
-    if (!minTime && !maxTime) return timeOptions;
-    return timeOptions.filter(time => {
-      const minutes = timeToMinutes(time);
-      if (minTime && minutes < timeToMinutes(minTime)) return false;
-      if (maxTime && minutes > timeToMinutes(maxTime)) return false;
-      return true;
-    });
-  }, [minTime, maxTime]);
-
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      className={`h-8 w-full rounded-md border px-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-        hasError
-          ? "border-destructive bg-destructive/10 text-destructive"
-          : hasWarning 
-            ? "border-warning bg-warning/10 text-warning-foreground" 
-            : "border-input bg-background"
-      }`}
-    >
-      {includeNone && <option value="none">Sem intervalo</option>}
-      {filteredOptions.map((time) => (
-        <option key={time} value={time}>
-          {time}
-        </option>
-      ))}
-    </select>
-  );
-});
+}) => (
+  <select
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    disabled={disabled}
+    className={`h-8 w-full rounded-md border px-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+      hasWarning 
+        ? "border-warning bg-warning/10 text-warning-foreground" 
+        : "border-input bg-background"
+    }`}
+  >
+    {includeNone && <option value="none">Sem intervalo</option>}
+    {timeOptions.map((time) => (
+      <option key={time} value={time}>
+        {time}
+      </option>
+    ))}
+  </select>
+));
 NativeTimeSelect.displayName = 'NativeTimeSelect';
 
 // Conflict indicator component
@@ -227,11 +200,7 @@ const DayScheduleRow = memo(({
               <NativeTimeSelect
                 value={daySchedule.start}
                 onChange={handleStartChange}
-                hasError={conflicts.some(c => c.message.includes('Entrada') && c.severity === 'error')}
-                hasWarning={conflicts.some(c => c.message.includes('Entrada') && c.severity === 'warning')}
-                minTime={businessHours?.start}
-                maxTime={businessHours?.end}
-                disabled={!businessHours?.enabled}
+                hasWarning={conflicts.some(c => c.message.includes('Entrada'))}
               />
             </div>
             <div>
@@ -239,11 +208,7 @@ const DayScheduleRow = memo(({
               <NativeTimeSelect
                 value={daySchedule.end}
                 onChange={handleEndChange}
-                hasError={conflicts.some(c => c.message.includes('Saída') && c.severity === 'error')}
-                hasWarning={conflicts.some(c => c.message.includes('Saída') && c.severity === 'warning')}
-                minTime={businessHours?.start}
-                maxTime={businessHours?.end}
-                disabled={!businessHours?.enabled}
+                hasWarning={conflicts.some(c => c.message.includes('Saída'))}
               />
             </div>
             <div>
@@ -252,8 +217,6 @@ const DayScheduleRow = memo(({
                 value={daySchedule.break_start || "none"}
                 onChange={handleBreakStartChange}
                 includeNone
-                minTime={daySchedule.start}
-                maxTime={daySchedule.end}
               />
             </div>
             <div>
@@ -263,8 +226,6 @@ const DayScheduleRow = memo(({
                 onChange={handleBreakEndChange}
                 disabled={!daySchedule.break_start}
                 includeNone
-                minTime={daySchedule.break_start || daySchedule.start}
-                maxTime={daySchedule.end}
               />
             </div>
           </div>
