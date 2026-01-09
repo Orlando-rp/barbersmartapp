@@ -172,7 +172,15 @@ interface BrandingProviderProps {
 }
 
 export const BrandingProvider = ({ children }: BrandingProviderProps) => {
-  const { resolvedTheme } = useTheme();
+  // Safe theme access - handle cases where ThemeProvider context isn't ready (HMR)
+  let resolvedTheme: string | undefined;
+  try {
+    const themeContext = useTheme();
+    resolvedTheme = themeContext.resolvedTheme;
+  } catch {
+    resolvedTheme = 'dark';
+  }
+  
   const [branding, setBranding] = useState<SystemBranding | null>(defaultBranding);
   const [customBranding, setCustomBranding] = useState<CustomBranding | null>(null);
   const [tenantBranding, setTenantBranding] = useState<CustomBranding | null>(null);
